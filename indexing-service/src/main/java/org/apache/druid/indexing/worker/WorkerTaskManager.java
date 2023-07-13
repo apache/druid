@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.worker;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -30,15 +29,15 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -47,13 +46,12 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -63,6 +61,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -102,7 +101,7 @@ public class WorkerTaskManager
 
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
-  private final DruidLeaderClient overlordClient;
+  private final OverlordClient overlordClient;
   private final File storageDir;
 
   @Inject
@@ -110,7 +109,7 @@ public class WorkerTaskManager
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
       TaskConfig taskConfig,
-      @IndexingService DruidLeaderClient overlordClient
+      OverlordClient overlordClient
   )
   {
     this.jsonMapper = jsonMapper;
@@ -502,51 +501,51 @@ public class WorkerTaskManager
             }
 
             ImmutableSet<String> taskIds = ImmutableSet.copyOf(completedTasks.keySet());
-            Map<String, TaskStatus> taskStatusesFromOverlord = null;
+            Either<Throwable, Map<String, TaskStatus>> apiCallResult = null;
 
             try {
-              StringFullResponseHolder fullResponseHolder = overlordClient.go(
-                  overlordClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
-                                .setContent(jsonMapper.writeValueAsBytes(taskIds))
-                                .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
-                                .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
-
-              );
-              if (fullResponseHolder.getStatus().getCode() == 200) {
-                String responseContent = fullResponseHolder.getContent();
-                taskStatusesFromOverlord = jsonMapper.readValue(
-                    responseContent,
-                    new TypeReference<Map<String, TaskStatus>>()
-                    {
-                    }
-                );
-                log.debug("Received completed task status response [%s].", responseContent);
-              } else if (fullResponseHolder.getStatus().getCode() == 404) {
-                // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
-                // this if clause should be removed in a future release.
-                log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
-                taskStatusesFromOverlord = ImmutableMap.of();
+              apiCallResult =
+                  Either.value(FutureUtils.get(overlordClient.taskStatuses(taskIds), true));
+              log.debug("Received completed task status response [%s].", apiCallResult);
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+            catch (ExecutionException e) {
+              if (e.getCause() instanceof HttpResponseException) {
+                final HttpResponseStatus status = ((HttpResponseException) e.getCause()).getResponse().getStatus();
+                if (status.getCode() == 404) {
+                  // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
+                  // this if clause should be removed in a future release.
+                  log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
+                  apiCallResult = Either.value(ImmutableMap.of());
+                } else {
+                  log.info(
+                      "Got non-success code[%s] from overlord while getting active tasks. will retry on next scheduled run.",
+                      status.getCode()
+                  );
+                }
               } else {
-                log.info(
-                    "Got non-success code[%s] from overlord while getting active tasks. will retry on next scheduled run.",
-                    fullResponseHolder.getStatus().getCode()
-                );
+                apiCallResult = Either.error(e.getCause());
               }
             }
-            catch (Exception ex) {
-              log.warn(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
-
-              if (ex instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-              }
+            catch (Exception e) {
+              apiCallResult = Either.error(e);
             }
 
-            if (taskStatusesFromOverlord == null) {
+            if (apiCallResult == null) {
+              return;
+            } else if (apiCallResult.isError()) {
+              log.warn(
+                  apiCallResult.error(),
+                  "Exception while getting active tasks from overlord. will retry on next scheduled run."
+              );
+
               return;
             }
 
             for (String taskId : taskIds) {
-              TaskStatus status = taskStatusesFromOverlord.get(taskId);
+              TaskStatus status = apiCallResult.valueOrThrow().get(taskId);
               if (status == null || status.isComplete()) {
 
                 log.debug(

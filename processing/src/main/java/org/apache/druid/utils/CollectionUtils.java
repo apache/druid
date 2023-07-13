@@ -23,8 +23,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Comparator;
@@ -37,6 +41,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -205,6 +210,51 @@ public final class CollectionUtils
     catch (NoSuchElementException e) {
       throw exceptionSupplier.apply(iterable);
     }
+  }
+
+  /**
+   * Creates a {@link CloseableIterator} from an {@link Iterator} and a {@link Closeable}. The Iterator may itself
+   * be Closeable, in which case its close method is wrapped up into the returned iterator, and it is closed _before_
+   * the provided {@link Closeable}.
+   */
+  public static <T> CloseableIterator<T> closeableIterator(
+      final Iterator<T> iterator,
+      @Nullable final Closeable closeable
+  )
+  {
+    class SimpleCloseableIterator implements CloseableIterator<T>
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public T next()
+      {
+        return iterator.next();
+      }
+
+      @Override
+      public void remove()
+      {
+        iterator.remove();
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        final Closer closer = Closer.create();
+        closer.register(closeable);
+        if (iterator instanceof Closeable) {
+          closer.register((Closeable) iterator);
+        }
+        closer.close();
+      }
+    }
+
+    return new SimpleCloseableIterator();
   }
 
   private CollectionUtils()

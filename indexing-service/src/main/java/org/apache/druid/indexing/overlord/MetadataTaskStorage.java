@@ -255,12 +255,16 @@ public class MetadataTaskStorage implements TaskStorage
     for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
       if (entry.getKey() == TaskLookupType.COMPLETE) {
         CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
-        processedTaskLookups.put(
-            entry.getKey(),
-            completeTaskLookup.hasTaskCreatedTimeFilter()
-            ? completeTaskLookup
-            : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
-        );
+
+        // Skip complete-task lookup entirely if max completed task statuses is zero.
+        if (completeTaskLookup.getMaxTaskStatuses() == null || completeTaskLookup.getMaxTaskStatuses() != 0) {
+          processedTaskLookups.put(
+              entry.getKey(),
+              completeTaskLookup.hasTaskCreatedTimeFilter()
+              ? completeTaskLookup
+              : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
+          );
+        }
       } else {
         processedTaskLookups.put(entry.getKey(), entry.getValue());
       }

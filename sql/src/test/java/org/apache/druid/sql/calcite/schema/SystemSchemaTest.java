@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.Futures;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -65,6 +66,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -118,6 +120,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -153,7 +157,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private SpecificSegmentsQuerySegmentWalker walker;
   private DruidLeaderClient client;
   private DruidLeaderClient coordinatorClient;
-  private DruidLeaderClient overlordClient;
+  private OverlordClient overlordClient;
   private TimelineServerView serverView;
   private ObjectMapper mapper;
   private StringFullResponseHolder responseHolder;
@@ -272,7 +276,7 @@ public class SystemSchemaTest extends CalciteTestBase
         serverInventoryView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
         client,
-        client,
+        overlordClient,
         druidNodeDiscoveryProvider,
         mapper
     );
@@ -753,7 +757,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testServersTable()
+  public void testServersTable() throws URISyntaxException
   {
 
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
@@ -809,7 +813,8 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
     EasyMock.expect(coordinatorClient.findCurrentLeader()).andReturn(coordinator.getDruidNode().getHostAndPortToUse()).once();
-    EasyMock.expect(overlordClient.findCurrentLeader()).andReturn(overlord.getDruidNode().getHostAndPortToUse()).once();
+    EasyMock.expect(overlordClient.findCurrentLeader())
+            .andReturn(Futures.immediateFuture(new URI(overlord.getDruidNode().getHostAndPortToUse()))).once();
 
     final List<DruidServer> servers = new ArrayList<>();
     servers.add(mockDataServer(historical1.getDruidNode().getHostAndPortToUse(), 200L, 1000L, "tier"));
@@ -1245,7 +1250,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testTasksTableAuth() throws Exception
   {
-    SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(client, mapper, authMapper);
+    SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(overlordClient, mapper, authMapper);
 
     EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks"))
             .andReturn(request)
@@ -1384,7 +1389,7 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSupervisorTableAuth() throws Exception
   {
     SystemSchema.SupervisorsTable supervisorTable =
-        new SystemSchema.SupervisorsTable(client, mapper, createAuthMapper());
+        new SystemSchema.SupervisorsTable(overlordClient, mapper, createAuthMapper());
 
     EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system"))
             .andReturn(request)

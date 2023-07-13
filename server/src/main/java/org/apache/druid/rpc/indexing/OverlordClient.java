@@ -20,19 +20,26 @@
 package org.apache.druid.rpc.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
+import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * High-level Overlord client.
- *
- * Similar to {@link org.apache.druid.client.indexing.IndexingServiceClient}, but backed by
- * {@link org.apache.druid.rpc.ServiceClient} instead of {@link org.apache.druid.discovery.DruidLeaderClient}.
  *
  * All methods return futures, enabling asynchronous logic. If you want a synchronous response, use
  * {@code FutureUtils.get} or {@code FutureUtils.getUnchecked}.
@@ -43,17 +50,132 @@ import java.util.Set;
  */
 public interface OverlordClient
 {
+  /**
+   * Contact the Overlord that we believe to be the leader, and return the result of its
+   * {@code /druid/indexer/v1/leader} API. This may be a different Overlord server than the one we contacted, if
+   * a leader change happened since the last time we updated our sense of who the leader is.
+   */
+  ListenableFuture<URI> findCurrentLeader();
+
+  /**
+   * Run a task with the provided ID and payload. The payload must be convertible by an
+   * {@link com.fasterxml.jackson.databind.ObjectMapper} into a Task object. This method does not take Task objects
+   * directly, because Task is in the indexing-service package.
+   *
+   * @param taskId     task ID
+   * @param taskObject task payload
+   */
   ListenableFuture<Void> runTask(String taskId, Object taskObject);
 
+  /**
+   * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
+   *
+   * @param idPrefix   Descriptive prefix to include at the start of task IDs
+   * @param dataSource Datasource to kill
+   * @param interval   Interval to kill
+   */
+  default ListenableFuture<Void> runKillTask(String idPrefix, String dataSource, Interval interval)
+  {
+    final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
+    return runTask(taskId, taskQuery);
+  }
+
+  /**
+   * Cancel a task.
+   *
+   * @param taskId task ID
+   */
   ListenableFuture<Void> cancelTask(String taskId);
 
+  /**
+   * Return {@link TaskStatusPlus} for all tasks matching a set of optional search parameters.
+   *
+   * @param state             task state: may be "pending", "waiting", "running", or "complete"
+   * @param dataSource        datasource
+   * @param maxCompletedTasks maximum number of completed tasks to return. Does not affect other kinds of tasks
+   *
+   * @return list of tasks that match the search parameters
+   */
+  ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+      @Nullable String state,
+      @Nullable String dataSource,
+      @Nullable Integer maxCompletedTasks
+  );
+
+  /**
+   * Return {@link TaskStatus} for a set of task IDs.
+   *
+   * @param taskIds task IDs
+   *
+   * @return map of task ID to status for known tasks. Unknown tasks are not included in the returned map.
+   */
   ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds);
 
+  /**
+   * Returns {@link TaskStatusResponse} for a particular task ID. This includes somewhat more information than
+   * the {@link TaskStatus} returned by {@link #taskStatuses(Set)}.
+   */
   ListenableFuture<TaskStatusResponse> taskStatus(String taskId);
 
+  /**
+   * Returns the report object for a task as a map. Certain task types offer live reports; for these task types,
+   * this method may return a task report while the task is running. Certain task types only write reports upon
+   * successful completion. Certain other task types do not write reports at all.
+   *
+   * Returns a {@link org.apache.druid.rpc.HttpResponseException} with code
+   * {@link javax.ws.rs.core.Response.Status#NOT_FOUND} if there is no report available for some reason.
+   */
   ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
 
+  /**
+   * Returns the payload for a task as an instance of {@link ClientTaskQuery}. This method only works for tasks
+   * that have a {@link ClientTaskQuery} model or are subclasses of {@link ClientTaskQuery}.
+   */
   ListenableFuture<TaskPayloadResponse> taskPayload(String taskId);
 
+  /**
+   * Returns all current supervisor statuses.
+   */
+  ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();
+
+  /**
+   * Returns a list of intervals locked by higher priority tasks for each datasource.
+   *
+   * @param minTaskPriority Minimum task priority for each datasource. Only the intervals that are locked by tasks with
+   *                        equal or higher priority than this are returned.
+   *
+   * @return Map from dtasource name to list of intervals locked by tasks that have priority greater than or equal to
+   * the {@code minTaskPriority} for that datasource.
+   */
+  ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority);
+
+  /**
+   * Deletes pending segments for a particular datasource created within a particular interval. The {@code created_date}
+   * field of the pending segments table is checked to find segments to be deleted.
+   *
+   * @param dataSource datasource name
+   * @param interval   created time interval
+   *
+   * @return number of pending segments deleted
+   */
+  ListenableFuture<Integer> killPendingSegments(String dataSource, Interval interval);
+
+  /**
+   * Returns the total number of worker capacity (task slots) available across the cluster.
+   */
+  ListenableFuture<Integer> getTotalWorkerCapacity();
+
+  /**
+   * Returns the total number of worker capacity (task slots) that could be available across the cluster at the
+   * maximum autoscaling limits.
+   *
+   * @return maximum total capacity, or -1 if it cannot be determined
+   */
+  ListenableFuture<Integer> getTotalWorkerCapacityWithAutoScale();
+
+  /**
+   * Returns a copy of this client with a different retry policy.
+   */
   OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
 }
