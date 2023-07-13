@@ -1,0 +1,1 @@
+SELECT col_bgint, SUM(col_bgint) OVER (ORDER by col_tmstmp) sum_bgint FROM "smlTbl.parquet"

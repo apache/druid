@@ -1,0 +1,1 @@
+SELECT c5 , LAG(c5) OVER( PARTITION BY c2 ORDER BY c1 ) LAG_c5 FROM ( SELECT col5 c5, col1 c1, col2 c2 FROM "fewRowsAllData.parquet") sub_query

@@ -145,6 +145,8 @@
              ref: https://github.com/mapstruct/mapstruct/pull/1241
              -->
          <jacocoArgLine />
+         <!--  used to enable continuous profiling of jdk17 unit tests in github actions  -->
+         <jfrProfilerArgLine></jfrProfilerArgLine>
     </properties>
 
     <modules>
@@ -1636,6 +1638,7 @@
                             -Ddruid.test.stupidPool.poison=true
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
+                            ${jfrProfilerArgLine}
                         </argLine>
                         <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
                              while its sister plugin, Failsafe, runs the "new" ITs. -->

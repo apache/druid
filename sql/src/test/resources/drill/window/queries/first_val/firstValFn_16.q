@@ -1,0 +1,1 @@
+SELECT * FROM (SELECT FIRST_VALUE(col3) OVER(PARTITION BY col7 ORDER BY col0) FIRST_VALUE_col3 FROM "allTypsUniq.parquet") sub_query WHERE FIRST_VALUE_col3 is NOT null
