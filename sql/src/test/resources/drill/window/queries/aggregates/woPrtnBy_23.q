@@ -1,0 +1,1 @@
+SELECT col_int, SUM(col_int) OVER (ORDER by col_bgint) sum_int FROM "smlTbl.parquet"
