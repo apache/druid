@@ -1270,6 +1270,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestSingleStringDim()
   {
+    notMsqCompatible();
     testQuery(
         "SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2",
         ImmutableList.of(

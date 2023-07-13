@@ -67,10 +67,6 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
     final int[] valueVector = valueDimensionVectorSelector.getRowVector();
     firstTime = buf.getLong(position);
     int index = startRow;
-    for (int i = startRow; i < endRow; i++) {
-      index = i;
-      break;
-    }
 
     final long earliestTime = timeVector[index];
     if (earliestTime < firstTime) {

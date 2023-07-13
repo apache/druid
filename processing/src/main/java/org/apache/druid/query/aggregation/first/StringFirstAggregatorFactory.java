@@ -288,11 +288,6 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return getFirstElementFromMvd;
   }
 
-  public void setGetFirstElementFromMvd(boolean getFirstElementFromMvd)
-  {
-    this.getFirstElementFromMvd = getFirstElementFromMvd;
-  }
-
   @Override
   public byte[] getCacheKey()
   {
