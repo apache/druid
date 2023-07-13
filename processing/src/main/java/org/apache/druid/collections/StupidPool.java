@@ -24,12 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.lang.ref.WeakReference;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -105,7 +106,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
   private final AtomicLong createdObjectsCounter = new AtomicLong(0);
   private final AtomicLong leakedObjectsCounter = new AtomicLong(0);
 
-  private final AtomicReference<RuntimeException> capturedException = new AtomicReference<>(null);
+  private final AtomicReference<CopyOnWriteArrayList<LeakedException>> capturedException =
+      new AtomicReference<>(null);
 
   //note that this is just the max entries in the cache, pool can still create as many buffers as needed.
   private final int objectsCacheMaxCount;
@@ -149,21 +151,32 @@ public class StupidPool<T> implements NonBlockingPool<T>
     ObjectResourceHolder resourceHolder = objects.poll();
     if (resourceHolder == null) {
       if (POISONED.get() && capturedException.get() != null) {
-        throw capturedException.get();
+        throw makeExceptionForLeaks(capturedException.get());
       }
       return makeObjectWithHandler();
     } else {
       poolSize.decrementAndGet();
       if (POISONED.get()) {
-        final RuntimeException exception = capturedException.get();
-        if (exception == null) {
-          resourceHolder.notifier.except = new RE("Thread[%s]: leaky leak!", Thread.currentThread().getName());
+        final CopyOnWriteArrayList<LeakedException> exceptionList = capturedException.get();
+        if (exceptionList == null) {
+          resourceHolder.notifier.except = new LeakedException(Thread.currentThread().getName());
         } else {
-          throw exception;
+          throw makeExceptionForLeaks(exceptionList);
         }
       }
       return resourceHolder;
     }
+  }
+
+  private RuntimeException makeExceptionForLeaks(CopyOnWriteArrayList<LeakedException> exceptionList)
+  {
+    RuntimeException toThrow = new RuntimeException(
+        "Leaks happened, each suppressed exception represents one code path that checked out an object and didn't return it."
+    );
+    for (LeakedException exception : exceptionList) {
+      toThrow.addSuppressed(exception);
+    }
+    return toThrow;
   }
 
   private ObjectResourceHolder makeObjectWithHandler()
@@ -172,7 +185,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     createdObjectsCounter.incrementAndGet();
     ObjectId objectId = new ObjectId();
     ObjectLeakNotifier notifier = new ObjectLeakNotifier(this, POISONED.get());
-    // Using objectId as referent for Cleaner, because if the object itself (e. g. ByteBuffer) is leaked after taken
+    // Using objectId as referent for Cleaner, because if the object itself (e.g. ByteBuffer) is leaked after taken
     // from the pool, and the ResourceHolder is not closed, Cleaner won't notify about the leak.
     return new ObjectResourceHolder(object, objectId, Cleaners.register(objectId, notifier), notifier);
   }
@@ -198,6 +211,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
   private void tryReturnToPool(T object, ObjectId objectId, Cleaners.Cleanable cleanable, ObjectLeakNotifier notifier)
   {
     long currentPoolSize;
+    notifier.except = null;
     do {
       currentPoolSize = poolSize.get();
       if (currentPoolSize >= objectsCacheMaxCount) {
@@ -310,14 +324,14 @@ public class StupidPool<T> implements NonBlockingPool<T>
     final AtomicLong leakedObjectsCounter;
     final AtomicBoolean disabled = new AtomicBoolean(false);
 
-    private RuntimeException except;
+    private LeakedException except;
 
     ObjectLeakNotifier(StupidPool<?> pool, boolean poisoned)
     {
       poolReference = new WeakReference<>(pool);
       leakedObjectsCounter = pool.leakedObjectsCounter;
 
-      except = poisoned ? new RE("Thread[%s]: drip drip", Thread.currentThread().getName()) : null;
+      except = poisoned ? new LeakedException(Thread.currentThread().getName()) : null;
     }
 
     @Override
@@ -329,7 +343,12 @@ public class StupidPool<T> implements NonBlockingPool<T>
           final StupidPool<?> pool = poolReference.get();
           log.warn("Not closed! Object leaked from %s. Allowing gc to prevent leak.", pool);
           if (except != null && pool != null) {
-            pool.capturedException.set(except);
+            CopyOnWriteArrayList<LeakedException> exceptions = pool.capturedException.get();
+            if (exceptions == null) {
+              pool.capturedException.compareAndSet(null, new CopyOnWriteArrayList<>());
+            }
+            exceptions = pool.capturedException.get();
+            exceptions.add(except);
             log.error(except, "notifier[%s], dumping stack trace from object checkout and poisoning pool", this);
           }
         }
@@ -356,5 +375,26 @@ public class StupidPool<T> implements NonBlockingPool<T>
    */
   private static class ObjectId
   {
+  }
+
+  /**
+   * This exception exists primarily to defer string interpolation to when getMessage is called instead of
+   * interpolating on constructor.  While not a primary bottleneck, the string interpolation for poisoned stupid
+   * pools does show up in profiling so avoiding it is just good hygiene.
+   */
+  private static class LeakedException extends RuntimeException
+  {
+    private final String threadName;
+
+    public LeakedException(String threadName)
+    {
+      this.threadName = threadName;
+    }
+
+    @Override
+    public String getMessage()
+    {
+      return StringUtils.format("Originally checked out by thread [%s]", threadName);
+    }
   }
 }

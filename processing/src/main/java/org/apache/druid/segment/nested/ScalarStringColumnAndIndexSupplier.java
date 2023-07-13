@@ -20,30 +20,16 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.IndexedStringDictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexedStringDruidPredicateIndex;
-import org.apache.druid.segment.column.IndexedUtf8LexicographicalRangeIndex;
-import org.apache.druid.segment.column.IndexedUtf8ValueSetIndex;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
-import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
@@ -53,6 +39,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -73,12 +60,10 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     final int columnNameLength = VByte.readInt(bb);
     final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
 
-
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final GenericIndexed<ByteBuffer> stringDictionary;
-        final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
+        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
 
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -92,17 +77,19 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
           final byte encodingId = stringDictionaryBuffer.get();
           if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            frontCodedStringDictionarySupplier = FrontCodedIndexed.read(
+            dictionarySupplier = FrontCodedIndexed.read(
                 stringDictionaryBuffer,
                 byteOrder
             );
-            stringDictionary = null;
           } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
             // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
             // this provides backwards compatibility should we switch at some point in the future to always
             // writing dictionaryVersion
-            stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
-            frontCodedStringDictionarySupplier = null;
+            dictionarySupplier = GenericIndexed.read(
+                stringDictionaryBuffer,
+                GenericIndexed.UTF8_STRATEGY,
+                mapper
+            )::singleThreaded;
           } else {
             throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
           }
@@ -111,8 +98,11 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
           // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
           // GenericIndexed version can be correctly read
           stringDictionaryBuffer.position(dictionaryStartPosition);
-          stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
-          frontCodedStringDictionarySupplier = null;
+          dictionarySupplier = GenericIndexed.read(
+              stringDictionaryBuffer,
+              GenericIndexed.UTF8_STRATEGY,
+              mapper
+          )::singleThreaded;
         }
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -138,8 +128,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
           size = throwAway.size();
         }
         return new ScalarStringColumnAndIndexSupplier(
-            stringDictionary,
-            frontCodedStringDictionarySupplier,
+            dictionarySupplier,
             ints,
             valueIndexes,
             bitmapSerdeFactory,
@@ -155,20 +144,13 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
-
-
-  private final GenericIndexed<ByteBuffer> stringDictionary;
-  private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
+  private final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
   private final Supplier<ColumnarInts> encodedColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
-  private final ImmutableBitmap nullValueBitmap;
-  private final BitmapFactory bitmapFactory;
-  private final ColumnConfig columnConfig;
-  private final int numRows;
+  private final ColumnIndexSupplier stringIndexSupplier;
 
   private ScalarStringColumnAndIndexSupplier(
-      GenericIndexed<ByteBuffer> stringDictionary,
-      Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
+      Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier,
       Supplier<ColumnarInts> encodedColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapSerdeFactory serdeFactory,
@@ -176,27 +158,23 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       int numRows
   )
   {
-    this.stringDictionary = stringDictionary;
-    this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
+    this.dictionarySupplier = dictionarySupplier;
     this.encodedColumnSupplier = encodedColumnSupplier;
     this.valueIndexes = valueIndexes;
-    this.bitmapFactory = serdeFactory.getBitmapFactory();
-    this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
-    this.columnConfig = columnConfig;
-    this.numRows = numRows;
+    this.stringIndexSupplier = new StringUtf8ColumnIndexSupplier<>(
+        serdeFactory.getBitmapFactory(),
+        dictionarySupplier,
+        valueIndexes,
+        null,
+        columnConfig,
+        numRows
+    );
   }
 
   @Override
   public NestedCommonFormatColumn get()
   {
-    if (frontCodedStringDictionarySupplier != null) {
-      return new StringUtf8DictionaryEncodedColumn(
-          encodedColumnSupplier.get(),
-          null,
-          frontCodedStringDictionarySupplier.get()
-      );
-    }
-    return new StringUtf8DictionaryEncodedColumn(encodedColumnSupplier.get(), null, stringDictionary.singleThreaded());
+    return new StringUtf8DictionaryEncodedColumn(encodedColumnSupplier.get(), null, dictionarySupplier.get());
   }
 
   @Nullable
@@ -204,44 +182,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
   public <T> T as(Class<T> clazz)
   {
     if (valueIndexes != null) {
-      final Indexed<ImmutableBitmap> singleThreadedBitmaps = valueIndexes.singleThreaded();
-      final Indexed<ByteBuffer> utf8Dictionary = frontCodedStringDictionarySupplier == null
-                                                 ? stringDictionary.singleThreaded()
-                                                 : frontCodedStringDictionarySupplier.get();
-      if (clazz.equals(NullValueIndex.class)) {
-        final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
-        return (T) (NullValueIndex) () -> nullIndex;
-      } else if (clazz.equals(StringValueSetIndex.class)) {
-        return (T) new IndexedUtf8ValueSetIndex<>(
-            bitmapFactory,
-            utf8Dictionary,
-            singleThreadedBitmaps
-        );
-      } else if (clazz.equals(DruidPredicateIndex.class)) {
-        return (T) new IndexedStringDruidPredicateIndex<>(
-            bitmapFactory,
-            new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary),
-            singleThreadedBitmaps,
-            columnConfig,
-            numRows
-        );
-      } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-        return (T) new IndexedUtf8LexicographicalRangeIndex<>(
-            bitmapFactory,
-            utf8Dictionary,
-            singleThreadedBitmaps,
-            utf8Dictionary.get(0) == null,
-            columnConfig,
-            numRows
-        );
-      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
-                 || clazz.equals(DictionaryEncodedValueIndex.class)) {
-        return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
-            bitmapFactory,
-            new StringEncodingStrategies.Utf8ToStringIndexed(utf8Dictionary),
-            valueIndexes
-        );
-      }
+      return stringIndexSupplier.as(clazz);
     }
     return null;
   }
