@@ -37,6 +37,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
+import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.config.NullHandling;
@@ -1096,7 +1097,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.cancelTask(conflictTaskId))
            .thenReturn(Futures.immediateFuture(null));
     Mockito.when(mockClient.getTotalWorkerCapacity())
-           .thenReturn(Futures.immediateFuture(0));
+           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
     Mockito.when(mockClient.taskPayload(ArgumentMatchers.eq(conflictTaskId)))
            .thenReturn(Futures.immediateFuture(runningConflictCompactionTaskPayload));
 
@@ -2062,15 +2063,9 @@ public class CompactSegmentsTest
     }
 
     @Override
-    public ListenableFuture<Integer> getTotalWorkerCapacity()
+    public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
     {
-      return Futures.immediateFuture(5);
-    }
-
-    @Override
-    public ListenableFuture<Integer> getTotalWorkerCapacityWithAutoScale()
-    {
-      return Futures.immediateFuture(10);
+      return Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(5, 10));
     }
 
     private void compactSegments(
@@ -2246,7 +2241,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
-           .thenReturn(Futures.immediateFuture(0));
+           .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
     Mockito.when(mockClient.runTask(ArgumentMatchers.anyString(), payloadCaptor.capture()))
            .thenReturn(Futures.immediateFuture(null));
     return payloadCaptor;

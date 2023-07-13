@@ -22,6 +22,8 @@ package org.apache.druid.rpc.indexing;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
+import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
+import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
@@ -162,17 +164,14 @@ public interface OverlordClient
   ListenableFuture<Integer> killPendingSegments(String dataSource, Interval interval);
 
   /**
-   * Returns the total number of worker capacity (task slots) available across the cluster.
+   * Returns information about workers.
    */
-  ListenableFuture<Integer> getTotalWorkerCapacity();
+  ListenableFuture<List<IndexingWorkerInfo>> getWorkers();
 
   /**
-   * Returns the total number of worker capacity (task slots) that could be available across the cluster at the
-   * maximum autoscaling limits.
-   *
-   * @return maximum total capacity, or -1 if it cannot be determined
+   * Returns total worker capacity details.
    */
-  ListenableFuture<Integer> getTotalWorkerCapacityWithAutoScale();
+  ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity();
 
   /**
    * Returns a copy of this client with a different retry policy.

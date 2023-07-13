@@ -32,6 +32,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
+import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
@@ -44,6 +45,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
@@ -57,6 +59,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -66,6 +69,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -361,18 +365,32 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     int totalWorkerCapacity;
     try {
-      if (dynamicConfig.isUseAutoScaleSlots()) {
-        totalWorkerCapacity = FutureUtils.getUnchecked(overlordClient.getTotalWorkerCapacityWithAutoScale(), true);
-        if (totalWorkerCapacity < 0) {
-          totalWorkerCapacity = FutureUtils.getUnchecked(overlordClient.getTotalWorkerCapacity(), true);
-        }
+      final IndexingTotalWorkerCapacityInfo workerCapacityInfo =
+          FutureUtils.get(overlordClient.getTotalWorkerCapacity(), true);
+
+      if (dynamicConfig.isUseAutoScaleSlots() && workerCapacityInfo.getMaximumCapacityWithAutoScale() > 0) {
+        totalWorkerCapacity = workerCapacityInfo.getMaximumCapacityWithAutoScale();
       } else {
-        totalWorkerCapacity = FutureUtils.getUnchecked(overlordClient.getTotalWorkerCapacity(), true);
+        totalWorkerCapacity = workerCapacityInfo.getCurrentClusterCapacity();
       }
     }
-    catch (Exception e) {
-      LOG.warn("Failed to get total worker capacity with auto scale slots. Falling back to current capacity count");
-      totalWorkerCapacity = FutureUtils.getUnchecked(overlordClient.getTotalWorkerCapacity(), true);
+    catch (ExecutionException e) {
+      // Call to getTotalWorkerCapacity may fail during a rolling upgrade: API was added in 0.23.0.
+      if (e.getCause() instanceof HttpResponseException
+          && ((HttpResponseException) e.getCause()).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        LOG.noStackTrace().warn(e, "Call to getTotalWorkerCapacity failed. Falling back to getWorkers.");
+        totalWorkerCapacity =
+            FutureUtils.getUnchecked(overlordClient.getWorkers(), true)
+                       .stream()
+                       .mapToInt(worker -> worker.getWorker().getCapacity())
+                       .sum();
+      } else {
+        throw new RuntimeException(e.getCause());
+      }
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
     }
 
     return Math.min(

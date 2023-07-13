@@ -107,13 +107,13 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Integer> getTotalWorkerCapacity()
+  public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Integer> getTotalWorkerCapacityWithAutoScale()
+  public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
   {
     throw new UnsupportedOperationException();
   }

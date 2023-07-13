@@ -53,7 +53,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -239,7 +238,7 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Integer> getTotalWorkerCapacity()
+  public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
   {
     final String path = "/druid/indexer/v1/workers";
 
@@ -248,19 +247,12 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> {
-          final Collection<IndexingWorkerInfo> workers = deserialize(
-              holder,
-              new TypeReference<Collection<IndexingWorkerInfo>>() {}
-          );
-
-          return workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
-        }
+        holder -> deserialize(holder, new TypeReference<List<IndexingWorkerInfo>>() {})
     );
   }
 
   @Override
-  public ListenableFuture<Integer> getTotalWorkerCapacityWithAutoScale()
+  public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
   {
     final String path = "/druid/indexer/v1/totalWorkerCapacity";
 
@@ -269,14 +261,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> {
-          final IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = deserialize(
-              holder,
-              IndexingTotalWorkerCapacityInfo.class
-          );
-
-          return indexingTotalWorkerCapacityInfo.getMaximumCapacityWithAutoScale();
-        }
+        holder -> deserialize(holder, IndexingTotalWorkerCapacityInfo.class)
     );
   }
 
