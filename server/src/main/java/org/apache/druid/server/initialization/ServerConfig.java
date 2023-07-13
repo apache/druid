@@ -20,6 +20,7 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
@@ -102,6 +103,12 @@ public class ServerConfig
   public ServerConfig()
   {
 
+  }
+
+  @VisibleForTesting
+  public ServerConfig(boolean enableQueryRequestsQueuing)
+  {
+    this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
   }
 
   @JsonProperty
