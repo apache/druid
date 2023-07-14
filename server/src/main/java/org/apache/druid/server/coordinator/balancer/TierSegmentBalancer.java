@@ -87,8 +87,9 @@ public class TierSegmentBalancer
   public void run()
   {
     log.info(
-        "Moving max [%,d] segments in tier [%s]. There are already [%,d] segments in queue.",
-        maxSegmentsToMove, tier, movingSegmentCount
+        "Moving max [%,d] segments in tier [%s] with [%d] active and [%d] decommissioning servers."
+        + " There are already [%,d] segments in queue.",
+        maxSegmentsToMove, tier, activeServers.size(), decommissioningServers.size(), movingSegmentCount
     );
 
     int numDecommSegmentsToMove = getNumDecommSegmentsToMove(maxSegmentsToMove);
@@ -102,17 +103,12 @@ public class TierSegmentBalancer
    * Moves segments from the given source servers to the active servers in this tier.
    */
   private void moveSegmentsFrom(
-      List<ServerHolder> sourceServers,
-      int numSegmentsToMove,
-      String sourceServerType
+      final List<ServerHolder> sourceServers,
+      final int numSegmentsToMove,
+      final String sourceServerType
   )
   {
-    log.info(
-        "Moving [%,d] segments from [%d] [%s] servers to [%d] active servers.",
-        numSegmentsToMove, sourceServers.size(), sourceServerType, activeServers.size()
-    );
     runStats.add(Stats.Segments.MAX_TO_MOVE, RowKey.of(Dimension.TIER, tier), numSegmentsToMove);
-
     if (numSegmentsToMove <= 0 || sourceServers.isEmpty() || activeServers.isEmpty()) {
       return;
     }
@@ -130,19 +126,19 @@ public class TierSegmentBalancer
 
     // Move loaded segments only if tier is not already busy moving segments
     if (movingSegmentCount <= 0) {
-      numSegmentsToMove -= movedCount;
+      int numLoadedSegmentsToMove = numSegmentsToMove - movedCount;
       pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
           sourceServers,
-          numSegmentsToMove,
+          numLoadedSegmentsToMove,
           server -> server.getServer().iterateAllSegments(),
           broadcastDatasources
       );
-      movedCount += moveSegmentsTo(activeServers, pickedSegments, numSegmentsToMove);
+      movedCount += moveSegmentsTo(activeServers, pickedSegments, numLoadedSegmentsToMove);
     }
 
     log.info(
-        "Moved [%,d] segments out of [%,d] from [%s] servers in tier [%s].",
-        movedCount, numSegmentsToMove, sourceServers.size(), tier
+        "Moved [%,d of %,d] segments from [%d] [%s] servers in tier [%s].",
+        movedCount, numSegmentsToMove, sourceServers.size(), sourceServerType, tier
     );
   }
 

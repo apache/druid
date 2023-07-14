@@ -252,17 +252,6 @@ public abstract class CoordinatorSimulationBaseTest implements
                           .startingAt("2022-01-01")
                           .withNumPartitions(100)
                           .eachOfSizeInMb(500);
-
-    /**
-     * Segments of datasource {@link DS#KOALA}, size 500 MB each,
-     * spanning 1000 hours containing 100 partitions each.
-     */
-    static final List<DataSegment> KOALA_100X1000H =
-        CreateDataSegments.ofDatasource(DS.KOALA)
-                          .forIntervals(1000, Granularities.HOUR)
-                          .startingAt("2022-01-01")
-                          .withNumPartitions(100)
-                          .eachOfSizeInMb(500);
   }
 
   /**

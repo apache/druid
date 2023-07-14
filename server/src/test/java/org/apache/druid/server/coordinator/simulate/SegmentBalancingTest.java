@@ -234,16 +234,16 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   @Test(timeout = 60000L)
   public void testComputedMaxSegmentsToMove()
   {
-    // Add 10 historicals of size 10TB each
-    final long size10TB = 10_000_000;
+    // Add 10 historicals of size 1 TB each
+    final long size1TB = 1_000_000;
     List<DruidServer> historicals
         = IntStream.range(0, 10)
-                   .mapToObj(i -> createHistorical(i + 1, Tier.T1, size10TB))
+                   .mapToObj(i -> createHistorical(i + 1, Tier.T1, size1TB))
                    .collect(Collectors.toList());
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withSegments(Segments.KOALA_100X1000H)
+                             .withSegments(Segments.KOALA_100X100D)
                              .withServers(historicals)
                              .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
                              .build();
@@ -252,19 +252,19 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     // Run 1: All segments are assigned to the 10 historicals
     runCoordinatorCycle();
-    verifyValue(Metric.ASSIGNED_COUNT, 100_000L);
+    verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
-    verifyValue(Metric.MOVE_SKIPPED, 1250L);
-    verifyValue(Metric.MAX_TO_MOVE, 1250L);
+    verifyValue(Metric.MOVE_SKIPPED, 125L);
+    verifyValue(Metric.MAX_TO_MOVE, 125L);
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {
-      addServer(createHistorical(i, Tier.T1, size10TB));
+      addServer(createHistorical(i, Tier.T1, size1TB));
     }
 
     runCoordinatorCycle();
-    verifyValue(Metric.MAX_TO_MOVE, 6250L);
-    verifyValue(Metric.MOVED_COUNT, 6250L);
+    verifyValue(Metric.MAX_TO_MOVE, 625L);
+    verifyValue(Metric.MOVED_COUNT, 625L);
   }
 
 }
