@@ -38,6 +38,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.LikeFilter;
@@ -366,31 +367,19 @@ public class UnnestStorageAdapter implements StorageAdapter
     final FilterSplitter filterSplitter = new FilterSplitter();
 
     if (queryFilter != null) {
-      List<Filter> preFilterList = new ArrayList<>();
-      final int origFilterSize;
       if (queryFilter.getRequiredColumns().contains(outputColumnName)) {
         // outside filter contains unnested column
-        // requires check for OR
-        if (queryFilter instanceof OrFilter) {
-          origFilterSize = ((OrFilter) queryFilter).getFilters().size();
-          for (Filter filter : ((OrFilter) queryFilter).getFilters()) {
-            if (filter.getRequiredColumns().contains(outputColumnName)) {
-              final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
-                  filter,
-                  inputColumn,
-                  inputColumnCapabilites
-              );
-              if (newFilter != null) {
-                preFilterList.add(newFilter);
-              }
-            } else {
-              preFilterList.add(filter);
-            }
-          }
-          if (preFilterList.size() == origFilterSize) {
-            // there has been successful rewrites
-            final OrFilter preOrFilter = new OrFilter(preFilterList);
-            filterSplitter.addPreFilter(preOrFilter);
+        // requires check for OR and And filters, disqualify rewrite for non-unnest filters
+        if (queryFilter instanceof BooleanFilter) {
+          List<Filter> preFilterList = recursiveRewriteOnUnnestFilters(
+              (BooleanFilter) queryFilter,
+              inputColumn,
+              inputColumnCapabilites
+          );
+          if (queryFilter instanceof AndFilter) {
+            filterSplitter.addPreFilter(new AndFilter(preFilterList));
+          } else if (queryFilter instanceof OrFilter) {
+            filterSplitter.addPreFilter(new OrFilter(preFilterList));
           }
           // add the entire query filter to unnest filter to be used in Value matcher
           filterSplitter.addPostFilterWithPreFilterIfRewritePossible(queryFilter, true);
@@ -412,7 +401,53 @@ public class UnnestStorageAdapter implements StorageAdapter
     );
   }
 
-
+  /**
+   * handles the nested rewrite for unnest columns in recursive way,
+   * it loops through all and/or filters and rewrite only required filters in the child and skip others
+   *
+   * @param queryFilter            query filter passed to makeCursors
+   * @param inputColumn            input column to unnest if it's a direct access; otherwise null
+   * @param inputColumnCapabilites input column capabilities if known; otherwise null
+   */
+  private List<Filter> recursiveRewriteOnUnnestFilters(
+      BooleanFilter queryFilter,
+      final String inputColumn,
+      final ColumnCapabilities inputColumnCapabilites
+  )
+  {
+    final List<Filter> preFilterList = new ArrayList<>();
+    for (Filter filter : queryFilter.getFilters()) {
+      if (filter.getRequiredColumns().contains(outputColumnName)) {
+        if (filter instanceof AndFilter) {
+          preFilterList.add(new AndFilter(recursiveRewriteOnUnnestFilters(
+              (BooleanFilter) filter,
+              inputColumn,
+              inputColumnCapabilites
+          )));
+        } else if (filter instanceof OrFilter) {
+          preFilterList.add(new OrFilter(recursiveRewriteOnUnnestFilters(
+              (BooleanFilter) filter,
+              inputColumn,
+              inputColumnCapabilites
+          )));
+        } else {
+          final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
+              filter,
+              inputColumn,
+              inputColumnCapabilites
+          );
+          if (newFilter != null) {
+            preFilterList.add(newFilter);
+          } else {
+            preFilterList.add(filter);
+          }
+        }
+      } else {
+        preFilterList.add(filter);
+      }
+    }
+    return preFilterList;
+  }
   /**
    * Returns the input of {@link #unnestColumn}, if it's a direct access; otherwise returns null.
    */
@@ -465,7 +500,6 @@ public class UnnestStorageAdapter implements StorageAdapter
           return false;
         }
       }
-
       return true;
     } else if (filter instanceof NotFilter) {
       return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());

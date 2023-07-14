@@ -316,7 +316,56 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       return null;
     });
   }
+  @Test
+  public void test_nested_filters_unnested_and_original_dimension_with_unnest_adapters()
+  {
+    final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(
+        new TestStorageAdapter(INCREMENTAL_INDEX),
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
 
+    final VirtualColumn vc = unnestStorageAdapter.getUnnestColumn();
+
+    final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
+
+    final OrFilter baseFilter = new OrFilter(ImmutableList.of(
+        new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null).toFilter(),
+        new AndFilter(ImmutableList.of(
+            new SelectorDimFilter(inputColumn, "2", null).toFilter(),
+            new SelectorDimFilter(OUTPUT_COLUMN_NAME, "10", null).toFilter()
+        ))
+    ));
+
+    final OrFilter expectedPushDownFilter = new OrFilter(ImmutableList.of(
+        new SelectorDimFilter(inputColumn, "1", null).toFilter(),
+        new AndFilter(ImmutableList.of(
+            new SelectorDimFilter(inputColumn, "2", null).toFilter(),
+            new SelectorDimFilter(inputColumn, "10", null).toFilter()
+        ))
+    ));
+
+    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
+        baseFilter,
+        unnestStorageAdapter.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+    final Filter pushDownFilter = base.getPushDownFilter();
+
+    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
+      final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
+      // OR-case so base filter should match the postJoinFilter
+      Assert.assertEquals(baseFilter, postFilter);
+      return null;
+    });
+  }
   @Test
   public void test_pushdown_filters_unnested_dimension_with_unnest_adapters()
   {
