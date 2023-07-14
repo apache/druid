@@ -190,7 +190,11 @@ Druid returns an HTTP 403 response for authorization failure.
 
 ## Query from deep storage
 
-> The `/sql/statements` endpoint used to query from deep storage is currently exprimental.
+> The `/sql/statements` endpoint used to query from deep storage is currently experimental.
+
+You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules. 
+
+Note that at least part of a datasource must be available on a Historical process so that Druid can plan your query.
 
 ### Submit a query
 
