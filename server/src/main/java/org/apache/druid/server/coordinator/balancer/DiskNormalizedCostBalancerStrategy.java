@@ -35,13 +35,12 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
    * This ensures that all the hosts will have the same % disk utilization.
    */
   @Override
-  protected double computeCost(
+  protected double computePlacementCost(
       final DataSegment proposalSegment,
-      final ServerHolder server,
-      final boolean includeCurrentServer
+      final ServerHolder server
   )
   {
-    double cost = super.computeCost(proposalSegment, server, includeCurrentServer);
+    double cost = super.computePlacementCost(proposalSegment, server);
 
     if (cost == Double.POSITIVE_INFINITY) {
       return cost;

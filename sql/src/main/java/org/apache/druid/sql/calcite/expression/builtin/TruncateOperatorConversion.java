@@ -37,7 +37,7 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("TRUNCATE")
       .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.INTEGER)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .returnTypeInference(ReturnTypes.ARG0)
       .functionCategory(SqlFunctionCategory.NUMERIC)
       .build();
@@ -62,7 +62,7 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
           final Expr digitsExpr = inputExpressions.size() > 1
-                                  ? inputExpressions.get(1).parse(plannerContext.getExprMacroTable())
+                                  ? plannerContext.parseExpression(inputExpressions.get(1).getExpression())
                                   : null;
 
           final String factorString;

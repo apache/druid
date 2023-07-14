@@ -230,8 +230,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     catch (RelOptPlanner.CannotPlanException e) {
       // Not sure if this is even thrown here.
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-          .ofCategory(DruidException.Category.UNCATEGORIZED)
-          .build(e, "Problem planning SQL query");
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build(e, "Problem planning SQL query");
     }
     catch (RuntimeException e) {
       state = State.FAILED;

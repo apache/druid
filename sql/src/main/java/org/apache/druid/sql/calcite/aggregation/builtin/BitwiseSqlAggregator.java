@@ -142,7 +142,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
     }
 
     final DruidExpression arg = arguments.get(0);
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String fieldName;
     if (arg.isDirectColumnAccess()) {

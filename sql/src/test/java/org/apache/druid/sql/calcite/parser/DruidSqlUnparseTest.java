@@ -30,7 +30,7 @@ import java.io.StringReader;
 import static org.junit.Assert.assertEquals;
 
 /**
- * A class containing unit tests for testing implmentations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}
+ * A class containing unit tests for testing implementations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}
  * in custom Druid SqlNode classes, like {@link DruidSqlInsert} and {@link DruidSqlReplace}.
  */
 public class DruidSqlUnparseTest
@@ -80,7 +80,6 @@ public class DruidSqlUnparseTest
                             + "CLUSTERED BY \"dim1\"";
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
-
     druidSqlReplace.unparse(sqlWriter, 0, 0);
     assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
   }

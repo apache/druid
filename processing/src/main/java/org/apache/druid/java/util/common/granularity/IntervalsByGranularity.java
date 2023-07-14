@@ -68,14 +68,15 @@ public class IntervalsByGranularity
       // intervals will be returned, both with the same value 2013-01-01T00:00:00.000Z/2013-02-01T00:00:00.000Z.
       // Thus dups can be created given the right conditions....
       final SettableSupplier<Interval> previous = new SettableSupplier<>();
-      return FluentIterable.from(sortedNonOverlappingIntervals).transformAndConcat(granularity::getIterable)
-                          .filter(interval -> {
-                            if (previous.get() != null && previous.get().equals(interval)) {
-                              return false;
-                            }
-                            previous.set(interval);
-                            return true;
-                          }).iterator();
+      return FluentIterable.from(sortedNonOverlappingIntervals)
+                           .transformAndConcat(granularity::getIterable)
+                           .filter(interval -> {
+                             if (previous.get() != null && previous.get().equals(interval)) {
+                               return false;
+                             }
+                             previous.set(interval);
+                             return true;
+                           }).iterator();
     }
   }
 }

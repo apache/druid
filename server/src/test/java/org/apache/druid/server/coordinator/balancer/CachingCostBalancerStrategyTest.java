@@ -38,6 +38,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -102,7 +103,7 @@ public class CachingCostBalancerStrategyTest
                   .findDestinationServerToMoveSegment(s, firstServer, serverHolderList);
               ServerHolder s2 = costBalancerStrategy
                   .findDestinationServerToMoveSegment(s, firstServer, serverHolderList);
-              return (s1.getServer().getName().equals(s2.getServer().getName())) ? 0 : 1;
+              return Objects.equals(s1, s2) ? 0 : 1;
             }
         )
         .sum();

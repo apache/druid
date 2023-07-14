@@ -40,7 +40,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
@@ -678,7 +678,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends StringUtf8DictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {
@@ -786,7 +786,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
         }
       };
     }
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
+    final class StringVectorSelector extends StringUtf8DictionaryEncodedColumn.StringVectorObjectSelector
     {
       public StringVectorSelector()
       {

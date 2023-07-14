@@ -43,6 +43,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -69,6 +70,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
@@ -84,9 +87,12 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.indexing.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.InputChannelFactory;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
@@ -96,10 +102,13 @@ import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContexts;
@@ -121,6 +130,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -134,7 +144,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -189,9 +198,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -226,6 +237,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
+                  .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -241,12 +253,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
                   .build();
 
-  public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =
+  public static final Map<String, Object> PARALLEL_MERGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
-                      ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                      ClusterStatisticsMergeMode.PARALLEL.toString()
                   )
                   .build();
 
@@ -259,17 +271,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String FAULT_TOLERANCE = "fault_tolerance";
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
-  public static final String SEQUENTIAL_MERGE = "sequential_merge";
+  public static final String PARALLEL_MERGE = "parallel_merge";
 
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
-  private ObjectMapper objectMapper;
-  private MSQTestOverlordServiceClient indexingServiceClient;
+  protected ObjectMapper objectMapper;
+  protected MSQTestOverlordServiceClient indexingServiceClient;
   protected MSQTestTaskActionClient testTaskActionClient;
-  private SqlStatementFactory sqlStatementFactory;
+  protected SqlStatementFactory sqlStatementFactory;
   private IndexIO indexIO;
 
   private MSQTestSegmentManager segmentManager;
@@ -355,7 +367,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
 
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
-    indexIO = new IndexIO(secondMapper, () -> 0);
+    indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
     try {
       segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
@@ -493,7 +505,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         qf.operatorTable(),
         qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
@@ -768,7 +780,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
     if (resultsReport == null) {
       return null;
     } else {
-      return resultsReport.getResults();
+      Yielder<Object[]> yielder = resultsReport.getResultYielder();
+      List<Object[]> rows = new ArrayList<>();
+      while (!yielder.isDone()) {
+        rows.add(yielder.get());
+        yielder = yielder.next(null);
+      }
+      try {
+        yielder.close();
+      }
+      catch (IOException e) {
+        throw new ISE("Unable to get results from the report");
+      }
+
+      return rows;
     }
   }
 
@@ -783,6 +808,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
+    protected List<Pair<Predicate<MSQTaskReportPayload>, String>> adhocReportAssertionAndReasons = new ArrayList<>();
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
@@ -841,6 +867,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedMSQSpec(MSQSpec expectedMSQSpec)
     {
       this.expectedMSQSpec = expectedMSQSpec;
+      return asBuilder();
+    }
+
+    public Builder addAdhocReportAssertions(Predicate<MSQTaskReportPayload> predicate, String reason)
+    {
+      this.adhocReportAssertionAndReasons.add(Pair.of(predicate, reason));
       return asBuilder();
     }
 
@@ -952,10 +984,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                     worker,
                     channel
                 );
-                Assert.assertTrue(StringUtils.format("Counters not found for stage [%d], worker [%d], channel [%s]",
-                                                     stage,
-                                                     worker,
-                                                     channel), channelToCounters.containsKey(channel));
+                Assert.assertTrue(StringUtils.format(
+                    "Counters not found for stage [%d], worker [%d], channel [%s]",
+                    stage,
+                    worker,
+                    channel
+                ), channelToCounters.containsKey(channel));
                 counter.matchQuerySnapshot(errorMessageFormat, channelToCounters.get(channel));
               }
           );
@@ -1066,7 +1100,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
 
-        MSQSpec foundSpec = indexingServiceClient.getQuerySpecForTask(controllerId);
+        MSQSpec foundSpec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
         log.info(
             "found generated segments: %s",
             segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
@@ -1204,6 +1238,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
           Assert.assertEquals(expectedTombstoneSegmentIds, tombstoneSegmentIds);
         }
+
+        for (Pair<Predicate<MSQTaskReportPayload>, String> adhocReportAssertionAndReason : adhocReportAssertionAndReasons) {
+          Assert.assertTrue(adhocReportAssertionAndReason.rhs, adhocReportAssertionAndReason.lhs.test(reportPayload));
+        }
+
         // assert results
         assertResultsEquals(sql, expectedResultRows, transformedOutputRows);
       }
@@ -1275,20 +1314,55 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyCounters(payload.getCounters());
         verifyWorkerCount(payload.getCounters());
 
+
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
         } else {
-          final List<Object[]> rows = getRows(payload.getResults());
+          MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
+
+          final MSQSpec spec = msqControllerTask.getQuerySpec();
+          final List<Object[]> rows;
+
+          if (spec.getDestination() instanceof TaskReportMSQDestination) {
+            rows = getRows(payload.getResults());
+          } else {
+            StageDefinition finalStage = Objects.requireNonNull(SqlStatementResourceHelper.getFinalStage(
+                payload)).getStageDefinition();
+            Closer closer = Closer.create();
+            InputChannelFactory inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
+                controllerId,
+                localFileStorageConnector,
+                closer,
+                true
+            );
+            rows = new FrameChannelSequence(inputChannelFactory.openChannel(
+                finalStage.getId(),
+                0,
+                0
+            )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
+                msqControllerTask,
+                finalStage,
+                frame,
+                objectMapper
+            )).withBaggage(closer).toList();
+
+          }
           if (rows == null) {
             throw new ISE("Query successful but no results found");
           }
           log.info("found row signature %s", payload.getResults().getSignature());
           log.info(rows.stream().map(Arrays::toString).collect(Collectors.joining("\n")));
 
-          final MSQSpec spec = indexingServiceClient.getQuerySpecForTask(controllerId);
+          for (Pair<Predicate<MSQTaskReportPayload>, String> adhocReportAssertionAndReason : adhocReportAssertionAndReasons) {
+            Assert.assertTrue(adhocReportAssertionAndReason.rhs, adhocReportAssertionAndReason.lhs.test(payload));
+          }
+
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }
+      }
+      catch (JsonProcessingException ex) {
+        throw new RuntimeException(ex);
       }
       catch (Exception e) {
         if (expectedExecutionErrorMatcher == null) {
