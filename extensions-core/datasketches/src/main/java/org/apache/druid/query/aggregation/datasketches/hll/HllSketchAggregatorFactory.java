@@ -62,8 +62,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   private final boolean shouldFinalize;
   private final boolean round;
 
-  private final boolean processAsArray;
-
   HllSketchAggregatorFactory(
       final String name,
       final String fieldName,
@@ -71,8 +69,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       @Nullable final String tgtHllType,
       @Nullable final StringEncoding stringEncoding,
       final Boolean shouldFinalize,
-      final boolean round,
-      final boolean processAsArray
+      final boolean round
   )
   {
     this.name = Objects.requireNonNull(name);
@@ -82,7 +79,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     this.stringEncoding = stringEncoding == null ? DEFAULT_STRING_ENCODING : stringEncoding;
     this.shouldFinalize = shouldFinalize == null ? DEFAULT_SHOULD_FINALIZE : shouldFinalize;
     this.round = round;
-    this.processAsArray = processAsArray;
   }
 
   @Override
@@ -131,13 +127,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     return round;
   }
 
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean isProcessAsArray()
-  {
-    return processAsArray;
-  }
-
   @Override
   public List<String> requiredFields()
   {
@@ -160,8 +149,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
             tgtHllType.toString(),
             stringEncoding,
             shouldFinalize,
-            round,
-            false
+            round
         )
     );
   }
@@ -296,14 +284,13 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
            && Objects.equals(name, that.name)
            && Objects.equals(fieldName, that.fieldName)
            && tgtHllType == that.tgtHllType
-           && stringEncoding == that.stringEncoding
-           && processAsArray == that.processAsArray;
+           && stringEncoding == that.stringEncoding;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round, processAsArray);
+    return Objects.hash(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
   }
 
   @Override
@@ -317,7 +304,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
            (stringEncoding != DEFAULT_STRING_ENCODING ? ", stringEncoding=" + stringEncoding : "") +
            (shouldFinalize != DEFAULT_SHOULD_FINALIZE ? ", shouldFinalize=" + shouldFinalize : "") +
            (round != DEFAULT_ROUND ? ", round=" + round : "") +
-           (processAsArray ? ", processAsArray=true" : "") +
            '}';
   }
 

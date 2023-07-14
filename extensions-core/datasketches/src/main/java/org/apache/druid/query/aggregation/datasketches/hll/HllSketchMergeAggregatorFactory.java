@@ -64,7 +64,7 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round, false);
+    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
   }
 
   @Override

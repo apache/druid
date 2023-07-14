@@ -36,7 +36,7 @@ public class OldSketchMergeAggregatorFactory extends SketchMergeAggregatorFactor
       @JsonProperty("shouldFinalize") Boolean shouldFinalize
   )
   {
-    super(name, fieldName, size, shouldFinalize, true, null, false);
+    super(name, fieldName, size, shouldFinalize, true, null);
   }
 
   @Override

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
@@ -55,8 +54,6 @@ class ObjectBloomFilterAggregator extends BaseBloomFilterAggregator<BaseObjectCo
         BloomKFilter.addFloat(buf, (float) object);
       } else if (object instanceof String) {
         BloomKFilter.addString(buf, (String) object);
-      } else if (object instanceof Object[]) {
-        BloomKFilter.addBytes(buf, ExprEval.toBytesBestEffort(object));
       } else {
         BloomKFilter.addBytes(buf, null, 0, 0);
       }

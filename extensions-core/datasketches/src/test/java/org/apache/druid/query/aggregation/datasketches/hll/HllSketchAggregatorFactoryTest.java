@@ -263,7 +263,7 @@ public class HllSketchAggregatorFactoryTest
                                        .collect(Collectors.toList());
 
     for (Field field : toStringFields) {
-      if ("shouldFinalize".equals(field.getName()) || "stringEncoding".equals(field.getName()) || "processAsArray".equals(field.getName())) {
+      if ("shouldFinalize".equals(field.getName()) || "stringEncoding".equals(field.getName())) {
         // Skip; not included in the toString if it has the default value.
         continue;
       }
@@ -290,7 +290,6 @@ public class HllSketchAggregatorFactoryTest
                       null,
                       null,
                       null,
-                      false,
                       false
                   ),
                   new HllSketchBuildAggregatorFactory(
@@ -300,8 +299,7 @@ public class HllSketchAggregatorFactoryTest
                       null,
                       null,
                       null,
-                      true,
-                      false
+                      true
                   ),
                   new HllSketchMergeAggregatorFactory(
                       "hllMerge",
@@ -384,7 +382,7 @@ public class HllSketchAggregatorFactoryTest
         boolean round
     )
     {
-      super(name, fieldName, lgK, tgtHllType, stringEncoding, null, round, false);
+      super(name, fieldName, lgK, tgtHllType, stringEncoding, null, round);
     }
 
     @Override

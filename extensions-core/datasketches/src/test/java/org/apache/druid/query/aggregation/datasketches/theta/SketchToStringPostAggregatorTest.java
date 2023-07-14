@@ -111,7 +111,7 @@ public class SketchToStringPostAggregatorTest
   {
     // not going to iterate over the selector since getting a summary of an empty sketch is sufficient
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(new Object[0]);
-    final Aggregator agg = new SketchAggregator(selector, 4096, false);
+    final Aggregator agg = new SketchAggregator(selector, 4096);
 
     final Map<String, Object> fields = new HashMap<>();
     fields.put("sketch", agg.get());

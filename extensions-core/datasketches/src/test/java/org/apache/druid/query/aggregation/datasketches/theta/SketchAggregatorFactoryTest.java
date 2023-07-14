@@ -41,10 +41,10 @@ import org.junit.Test;
 public class SketchAggregatorFactoryTest
 {
   private static final SketchMergeAggregatorFactory AGGREGATOR_16384 =
-      new SketchMergeAggregatorFactory("x", "x", 16384, null, false, null, false);
+      new SketchMergeAggregatorFactory("x", "x", 16384, null, false, null);
 
   private static final SketchMergeAggregatorFactory AGGREGATOR_32768 =
-      new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null, false);
+      new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null);
 
   @Test
   public void testGuessAggregatorHeapFootprint()
@@ -71,6 +71,7 @@ public class SketchAggregatorFactoryTest
     ColumnSelectorFactory colSelectorFactory = EasyMock.mock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(EasyMock.anyString()))
             .andReturn(EasyMock.createMock(ColumnValueSelector.class)).anyTimes();
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("x")).andReturn(null).anyTimes();
     EasyMock.replay(colSelectorFactory);
 
     AggregatorAndSize aggregatorAndSize = AGGREGATOR_16384.factorizeWithSize(colSelectorFactory);
@@ -93,8 +94,8 @@ public class SketchAggregatorFactoryTest
                   new OldSketchBuildAggregatorFactory("oldBuild", "col", 16),
                   new OldSketchMergeAggregatorFactory("oldMerge", "col", 16, false),
                   new OldSketchMergeAggregatorFactory("oldMergeFinalize", "col", 16, true),
-                  new SketchMergeAggregatorFactory("merge", "col", 16, false, false, null, false),
-                  new SketchMergeAggregatorFactory("mergeFinalize", "col", 16, true, false, null, false)
+                  new SketchMergeAggregatorFactory("merge", "col", 16, false, false, null),
+                  new SketchMergeAggregatorFactory("mergeFinalize", "col", 16, true, false, null)
               )
               .postAggregators(
                   new FieldAccessPostAggregator("oldBuild-access", "oldBuild"),

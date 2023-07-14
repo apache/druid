@@ -33,18 +33,15 @@ public class SketchVectorAggregator implements VectorAggregator
 {
   private final SketchBufferAggregatorHelper helper;
   private final Supplier<Object[]> objectSupplier;
-  private final boolean processAsArray;
 
   SketchVectorAggregator(
       final VectorColumnSelectorFactory columnSelectorFactory,
       final String column,
       final int size,
-      final int maxIntermediateSize,
-      final boolean processAsArray
+      final int maxIntermediateSize
   )
   {
     this.helper = new SketchBufferAggregatorHelper(size, maxIntermediateSize);
-    this.processAsArray = processAsArray;
     this.objectSupplier =
         ColumnProcessors.makeVectorProcessor(
             column,
@@ -68,7 +65,7 @@ public class SketchVectorAggregator implements VectorAggregator
     for (int i = startRow; i < endRow; i++) {
       final Object o = vector[i];
       if (o != null) {
-        SketchAggregator.updateUnion(union, o, processAsArray);
+        SketchAggregator.updateUnion(union, o);
       }
     }
   }
@@ -90,7 +87,7 @@ public class SketchVectorAggregator implements VectorAggregator
       if (o != null) {
         final int position = positions[i] + positionOffset;
         final Union union = helper.getOrCreateUnion(buf, position);
-        SketchAggregator.updateUnion(union, o, processAsArray);
+        SketchAggregator.updateUnion(union, o);
       }
     }
   }

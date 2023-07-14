@@ -193,8 +193,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             tgtHllType,
             stringEncoding,
             finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-            ROUND,
-            inputType.isArray()
+            ROUND
         );
       }
     }

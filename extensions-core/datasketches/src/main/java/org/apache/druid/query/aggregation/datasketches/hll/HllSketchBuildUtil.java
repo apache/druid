@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.segment.DimensionDictionarySelector;
 
 import javax.annotation.Nullable;
@@ -34,12 +33,7 @@ import java.util.List;
 
 public class HllSketchBuildUtil
 {
-  public static void updateSketch(
-      final HllSketch sketch,
-      final StringEncoding stringEncoding,
-      final Object value,
-      final boolean processAsArray
-  )
+  public static void updateSketch(final HllSketch sketch, final StringEncoding stringEncoding, final Object value)
   {
     if (value instanceof Integer || value instanceof Long) {
       sketch.update(((Number) value).longValue());
@@ -47,21 +41,11 @@ public class HllSketchBuildUtil
       sketch.update(((Number) value).doubleValue());
     } else if (value instanceof String) {
       updateSketchWithString(sketch, stringEncoding, (String) value);
-    } else if (value instanceof Object[] && processAsArray) {
-      byte[] arrayBytes = ExprEval.toBytesBestEffort(value);
-      sketch.update(arrayBytes);
     } else if (value instanceof List) {
-      if (processAsArray) {
-        final ExprEval eval = ExprEval.bestEffortArray((List) value);
-        final byte[] arrayBytes = ExprEval.toBytes(eval);
-        sketch.update(arrayBytes);
-      } else {
-        // Lists are treated as multi-value strings, which count each element as a separate distinct value
-        // noinspection rawtypes
-        for (Object entry : (List) value) {
-          if (entry != null) {
-            updateSketchWithString(sketch, stringEncoding, entry.toString());
-          }
+      // noinspection rawtypes
+      for (Object entry : (List) value) {
+        if (entry != null) {
+          updateSketchWithString(sketch, stringEncoding, entry.toString());
         }
       }
     } else if (value instanceof char[]) {

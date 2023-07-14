@@ -31,13 +31,11 @@ public class SketchBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final SketchBufferAggregatorHelper helper;
-  private final boolean processAsArray;
 
-  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize, boolean processAsArray)
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
     this.selector = selector;
     this.helper = new SketchBufferAggregatorHelper(size, maxIntermediateSize);
-    this.processAsArray = processAsArray;
   }
 
   @Override
@@ -55,7 +53,7 @@ public class SketchBufferAggregator implements BufferAggregator
     }
 
     Union union = helper.getOrCreateUnion(buf, position);
-    SketchAggregator.updateUnion(union, update, processAsArray);
+    SketchAggregator.updateUnion(union, update);
   }
 
 

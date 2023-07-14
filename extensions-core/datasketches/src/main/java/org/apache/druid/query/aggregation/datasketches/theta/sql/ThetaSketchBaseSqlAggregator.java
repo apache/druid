@@ -116,8 +116,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           sketchSize,
           finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
-          null,
-          columnArg.getDruidType() != null && columnArg.getDruidType().isArray()
+          null
       );
     } else {
       final RelDataType dataType = columnRexNode.getType();
@@ -148,8 +147,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           sketchSize,
           finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
-          null,
-          inputType.isArray()
+          null
       );
     }
 

@@ -52,7 +52,7 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
         AggregatorAdapters.factorizeBuffered(
             columnSelectorFactory,
             ImmutableList.of(
-                new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2, false),
+                new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2),
                 new CountAggregatorFactory("count")
             )
         ),

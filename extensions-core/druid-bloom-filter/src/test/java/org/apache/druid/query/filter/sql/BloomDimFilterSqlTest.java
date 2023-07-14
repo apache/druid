@@ -84,6 +84,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   @Test
   public void testBloomFilterExprFilter() throws IOException
   {
+    cannotVectorize();
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
     filter.addString("-foo");
@@ -92,7 +93,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     }
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     String base64 = StringUtils.encodeBase64String(bytes);
-    skipVectorize();
 
     // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(
