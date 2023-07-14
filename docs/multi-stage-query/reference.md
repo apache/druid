@@ -454,4 +454,3 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_WorkerFailed">`WorkerFailed`</a> | A worker task failed unexpectedly. | `errorMsg`<br /><br />`workerTaskId`: The ID of the worker task. |
 | <a name="error_WorkerRpcFailed">`WorkerRpcFailed`</a> | A remote procedure call to a worker task failed and could not recover. | `workerTaskId`: the id of the worker task |
 | <a name="error_UnknownError">`UnknownError`</a> | All other errors. | `message` |
-| <a name="error_InsertCannotOrderByDescending">`InsertCannotOrderByDescending`</a> | Deprecated. An INSERT query contained a `CLUSTERED BY` expression in descending order. Druid's segment generation code only supports ascending order. The query returns a `ValidationException` instead of the fault. | `columnName` |
