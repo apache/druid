@@ -43,6 +43,11 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 
 Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
 
+There are additional context parameters  for `sql/statements` specifically though: 
+
+   - `mode`  determines how query results are fetched. The currently supported mode is "ASYNC". 
+   - `selectDestination` instructs Druid to write the results from SELECT queries to durable storage if you have [durable storage enabled for MSQ](../multi-stage-query/reference.md#durable-storage).
+
 The response body includes the query ID, which you use to get the results.
 
 ### Get query status
