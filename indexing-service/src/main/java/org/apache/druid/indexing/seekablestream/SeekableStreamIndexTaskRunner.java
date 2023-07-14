@@ -73,7 +73,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -417,15 +416,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
 
-    try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier = task.newTaskRecordSupplier()) {
-
-      if (toolbox.getMonitorScheduler() != null) {
-        final Monitor monitor = recordSupplier.monitor();
-        if (monitor != null) {
-          toolbox.getMonitorScheduler().addMonitor(monitor);
-        }
-      }
-
+    try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
+             task.newTaskRecordSupplier(toolbox)) {
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);

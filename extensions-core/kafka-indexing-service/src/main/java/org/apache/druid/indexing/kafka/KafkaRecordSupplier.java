@@ -44,7 +44,6 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -194,8 +193,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     });
   }
 
-  @Nullable
-  @Override
+  /**
+   * Returns a Monitor that emits Kafka consumer metrics.
+   */
   public Monitor monitor()
   {
     return monitor;
