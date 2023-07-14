@@ -48,8 +48,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.apis</groupId>
-            <artifactId>google-api-services-storage</artifactId>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
             <version>${com.google.apis.storage.version}</version>
             <exclusions>
                 <exclusion>

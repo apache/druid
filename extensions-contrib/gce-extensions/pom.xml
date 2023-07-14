@@ -79,8 +79,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.apis</groupId>
-      <artifactId>google-api-services-compute</artifactId>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-compute</artifactId>
       <version>${com.google.apis.compute.version}</version>
       <scope>compile</scope>
     </dependency>

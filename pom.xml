@@ -121,9 +121,11 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
-        <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
+        <com.google.cloud.version>26.18.0</com.google.cloud.version>
+        <com.google.http.client.version>1.43.3</com.google.http.client.version>
+        <com.google.api.client.version>2.2.0</com.google.api.client.version>
+        <com.google.apis.compute.version>1.30.0</com.google.apis.compute.version>
+        <com.google.apis.storage.version>2.23.0</com.google.apis.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
@@ -515,6 +517,13 @@
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
                 <version>55.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>libraries-bom</artifactId>
+                <version>${com.google.cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
@@ -1118,7 +1127,7 @@
             <dependency>
                 <groupId>com.google.api-client</groupId>
                 <artifactId>google-api-client</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.api.client.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.google.code.findbugs</groupId>
@@ -1145,12 +1154,12 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.http.client.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.http.client.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.fasterxml.jackson.core</groupId>
@@ -1169,8 +1178,8 @@
             </dependency>
             <!-- GCE -->
             <dependency>
-                <groupId>com.google.apis</groupId>
-                <artifactId>google-api-services-compute</artifactId>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-compute</artifactId>
                 <version>${com.google.apis.compute.version}</version>
                 <scope>provided</scope>
             </dependency>

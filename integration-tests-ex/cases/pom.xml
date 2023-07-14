@@ -148,12 +148,12 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.api.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.apis</groupId>
-            <artifactId>google-api-services-storage</artifactId>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
             <version>${com.google.apis.storage.version}</version>
             <exclusions>
                 <exclusion>
@@ -188,13 +188,13 @@
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.http.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.http.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->
