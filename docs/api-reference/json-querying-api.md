@@ -25,6 +25,8 @@ sidebar_label: JSON querying
 
 This document describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache Druid.
 
+In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
+
 ## Queries
 
 ### Submit a query
@@ -32,7 +34,7 @@ This document describes the API endpoints to submit JSON-based [native queries](
 #### URL
 <code class="postAPI">POST</code> `/druid/v2/`
 
-The endpoint for submitting queries. Accepts an option `?pretty` that pretty prints the results. 
+Submits a JSON-based native query. Accepts an option `?pretty` that pretty prints the results. 
 
 Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`.
 
@@ -45,7 +47,16 @@ Queries are composed of various JSON properties and Druid has different types of
 *Successfully submitted query* 
 <!--400 BAD REQUEST-->
 <br/>
-*Error thrown due to bad query* 
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
+
+```json
+{
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
+}
+```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -109,13 +120,13 @@ Content-Length: 336
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest upvote-to-post ratio from the `social_media` datasource.
+The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest upvotes to posts ratio from the `social_media` datasource.
 
 In this query:
-* `upvoteSum` aggregation calculates the sum of `upvotes` for each user.
-* `postCount` aggregation calculates the sum of posts for each user.
-* `upvoteToPostRatio` is a post-aggregation of the `upvoteSum` and `postCount`, divided to calculate the ratio.
-* The result is sorted based on `upvoteToPostRatio` and in descending order.
+* The `upvoteSum` aggregation calculates the sum of the `upvotes` for each user.
+* The `postCount` aggregation calculates the sum of posts for each user.
+* The `upvoteToPostRatio` is a post-aggregation of the the `upvoteSum` and the `postCount`, divided to calculate the ratio.
+* The result is sorted based on the `upvoteToPostRatio` and in descending order.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -197,7 +208,7 @@ Content-Length: 817
 <details>
   <summary>Click to show sample response</summary>
   The following is a sample response of the first query, retrieving a ranked list of users and post views.
-  
+
   ```json
 [
     {
@@ -229,7 +240,7 @@ Content-Length: 817
   ```
 
 
-  The following is a sample response of the second query, retrieving the user with the highest post-to-upvotes ration.
+  The following is a sample response of the second query, retrieving the user with the highest upvotes to posts ratio.
 
   ```json
 [
@@ -249,6 +260,609 @@ Content-Length: 817
 
 ### Get segment information for query
 
-`POST /druid/v2/candidates/`
+#### URL
+<code class="postAPI">POST</code> `/druid/v2/candidates/`
 
-Returns segment information lists including server locations for the given query.
+Retrieves an array containing objects with segment information, including the server locations associated with the provided query. 
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved segment information* 
+<!--400 BAD REQUEST-->
+<br/>
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
+
+```json
+{
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2/candidates" \
+--header "Content-Type: application/json" \
+--data "{
+  \"queryType\": \"topN\",
+  \"dataSource\": \"social_media\",
+  \"dimension\": \"username\",
+  \"threshold\": 5,
+  \"metric\": \"views\",
+  \"granularity\": \"all\",
+
+  \"aggregations\": [
+    {
+      \"type\": \"longSum\",
+      \"name\": \"views\",
+      \"fieldName\": \"views\"
+    }
+  ],
+  \"intervals\": [
+    \"2020-01-01T00:00:00.000/2024-01-01T00:00:00.000\"
+  ]
+}"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/v2/candidates HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Content-Type: application/json
+Content-Length: 336
+
+{
+  "queryType": "topN",
+  "dataSource": "social_media",
+  "dimension": "username",
+  "threshold": 5,
+  "metric": "views",
+  "granularity": "all",
+
+  "aggregations": [
+    {
+      "type": "longSum",
+      "name": "views",
+      "fieldName": "views"
+    }
+  ],
+  "intervals": [
+    "2020-01-01T00:00:00.000/2024-01-01T00:00:00.000"
+  ]
+}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+[
+    {
+        "interval": "2023-07-03T18:00:00.000Z/2023-07-03T19:00:00.000Z",
+        "version": "2023-07-03T18:51:18.905Z",
+        "partitionNumber": 0,
+        "size": 21563693,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-03T19:00:00.000Z/2023-07-03T20:00:00.000Z",
+        "version": "2023-07-03T19:00:00.657Z",
+        "partitionNumber": 0,
+        "size": 6057236,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-05T21:00:00.000Z/2023-07-05T22:00:00.000Z",
+        "version": "2023-07-05T21:09:58.102Z",
+        "partitionNumber": 0,
+        "size": 223926186,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-05T21:00:00.000Z/2023-07-05T22:00:00.000Z",
+        "version": "2023-07-05T21:09:58.102Z",
+        "partitionNumber": 1,
+        "size": 20244827,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-05T22:00:00.000Z/2023-07-05T23:00:00.000Z",
+        "version": "2023-07-05T22:00:00.524Z",
+        "partitionNumber": 0,
+        "size": 104628051,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-05T22:00:00.000Z/2023-07-05T23:00:00.000Z",
+        "version": "2023-07-05T22:00:00.524Z",
+        "partitionNumber": 1,
+        "size": 1603995,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-05T23:00:00.000Z/2023-07-06T00:00:00.000Z",
+        "version": "2023-07-05T23:21:55.242Z",
+        "partitionNumber": 0,
+        "size": 181506843,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T00:00:00.000Z/2023-07-06T01:00:00.000Z",
+        "version": "2023-07-06T00:02:08.498Z",
+        "partitionNumber": 0,
+        "size": 9170974,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T00:00:00.000Z/2023-07-06T01:00:00.000Z",
+        "version": "2023-07-06T00:02:08.498Z",
+        "partitionNumber": 1,
+        "size": 23969632,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T01:00:00.000Z/2023-07-06T02:00:00.000Z",
+        "version": "2023-07-06T01:13:53.982Z",
+        "partitionNumber": 0,
+        "size": 599895,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T01:00:00.000Z/2023-07-06T02:00:00.000Z",
+        "version": "2023-07-06T01:13:53.982Z",
+        "partitionNumber": 1,
+        "size": 1627041,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T02:00:00.000Z/2023-07-06T03:00:00.000Z",
+        "version": "2023-07-06T02:55:50.701Z",
+        "partitionNumber": 0,
+        "size": 629753,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T02:00:00.000Z/2023-07-06T03:00:00.000Z",
+        "version": "2023-07-06T02:55:50.701Z",
+        "partitionNumber": 1,
+        "size": 1342360,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T04:00:00.000Z/2023-07-06T05:00:00.000Z",
+        "version": "2023-07-06T04:02:36.562Z",
+        "partitionNumber": 0,
+        "size": 2131434,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T05:00:00.000Z/2023-07-06T06:00:00.000Z",
+        "version": "2023-07-06T05:23:27.856Z",
+        "partitionNumber": 0,
+        "size": 797161,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T05:00:00.000Z/2023-07-06T06:00:00.000Z",
+        "version": "2023-07-06T05:23:27.856Z",
+        "partitionNumber": 1,
+        "size": 1176858,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T06:00:00.000Z/2023-07-06T07:00:00.000Z",
+        "version": "2023-07-06T06:46:34.638Z",
+        "partitionNumber": 0,
+        "size": 2148760,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T07:00:00.000Z/2023-07-06T08:00:00.000Z",
+        "version": "2023-07-06T07:38:28.050Z",
+        "partitionNumber": 0,
+        "size": 2040748,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T08:00:00.000Z/2023-07-06T09:00:00.000Z",
+        "version": "2023-07-06T08:27:31.407Z",
+        "partitionNumber": 0,
+        "size": 678723,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T08:00:00.000Z/2023-07-06T09:00:00.000Z",
+        "version": "2023-07-06T08:27:31.407Z",
+        "partitionNumber": 1,
+        "size": 1437866,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T10:00:00.000Z/2023-07-06T11:00:00.000Z",
+        "version": "2023-07-06T10:02:42.079Z",
+        "partitionNumber": 0,
+        "size": 1671296,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T11:00:00.000Z/2023-07-06T12:00:00.000Z",
+        "version": "2023-07-06T11:27:23.902Z",
+        "partitionNumber": 0,
+        "size": 574893,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T11:00:00.000Z/2023-07-06T12:00:00.000Z",
+        "version": "2023-07-06T11:27:23.902Z",
+        "partitionNumber": 1,
+        "size": 1427384,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T12:00:00.000Z/2023-07-06T13:00:00.000Z",
+        "version": "2023-07-06T12:52:00.846Z",
+        "partitionNumber": 0,
+        "size": 2115172,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T14:00:00.000Z/2023-07-06T15:00:00.000Z",
+        "version": "2023-07-06T14:32:33.926Z",
+        "partitionNumber": 0,
+        "size": 589108,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T14:00:00.000Z/2023-07-06T15:00:00.000Z",
+        "version": "2023-07-06T14:32:33.926Z",
+        "partitionNumber": 1,
+        "size": 1392649,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T15:00:00.000Z/2023-07-06T16:00:00.000Z",
+        "version": "2023-07-06T15:53:25.467Z",
+        "partitionNumber": 0,
+        "size": 2037851,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T16:00:00.000Z/2023-07-06T17:00:00.000Z",
+        "version": "2023-07-06T16:02:26.568Z",
+        "partitionNumber": 0,
+        "size": 230400650,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T16:00:00.000Z/2023-07-06T17:00:00.000Z",
+        "version": "2023-07-06T16:02:26.568Z",
+        "partitionNumber": 1,
+        "size": 38209056,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    },
+    {
+        "interval": "2023-07-06T17:00:00.000Z/2023-07-06T18:00:00.000Z",
+        "version": "2023-07-06T17:00:02.391Z",
+        "partitionNumber": 0,
+        "size": 211099463,
+        "locations": [
+            {
+                "name": "localhost:8083",
+                "host": "localhost:8083",
+                "hostAndTlsPort": null,
+                "maxSize": 300000000000,
+                "type": "historical",
+                "tier": "_default_tier",
+                "priority": 0
+            }
+        ]
+    }
+]
+  ```
+</details>
