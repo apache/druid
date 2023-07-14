@@ -212,7 +212,7 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 
 - There are additional context parameters  for `sql/statements`: 
 
-   - `mode`  determines how query results are fetched. The currently supported mode is "ASYNC". You can attempt to fetch results before the query completes to get partial results.
+   - `mode`  determines how query results are fetched. The currently supported mode is "ASYNC". 
    - `selectDestination` instructs Druid to write the results from SELECT queries to durable storage if you have [durable storage enabled for MSQ](../multi-stage-query/reference.md#durable-storage).
 
 - The only supported results format is JSON.
@@ -224,19 +224,19 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 GET /sql/statements/{queryID}
 ```
 
-Returns the same response as the post API.
+Returns the same response as the post API if the query is accepted or running. If the query is complete, the status also includes a `pages object`
 
 
 ### Get query results
 
 ```
-GET /sql/statements/{queryID}/results?offset=0&numRows=1
+GET /sql/statements/{queryID}/results?page=PAGENUMBER
 ```
 
-Results are separated into `pages`
+Results are separated into `pages`.
 
 ### Cancel a query
 
 DELETE /sql/statements/{queryID}
 
-Cancels a running/accepted query.
+Cancels a running or accepted query.
