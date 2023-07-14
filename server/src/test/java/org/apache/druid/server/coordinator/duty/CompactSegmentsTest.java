@@ -2004,7 +2004,7 @@ public class CompactSegmentsTest
   {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
-        .withDataSourcesSnapshotWithAllUsedSegments(dataSources)
+        .withSnapshotOfDataSourcesWithAllUsedSegments(dataSources)
         .withCompactionConfig(
             new CoordinatorCompactionConfig(
                 compactionConfigs,

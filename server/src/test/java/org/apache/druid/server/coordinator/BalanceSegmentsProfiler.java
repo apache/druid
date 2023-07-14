@@ -65,7 +65,7 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -143,7 +143,7 @@ public class BalanceSegmentsProfiler
         .build();
 
     BalanceSegments tester = new BalanceSegments();
-    RunRules runner = new RunRules(ids -> 0);
+    RunRules runner = new RunRules();
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);

@@ -338,6 +338,13 @@ public class DruidCoordinator
     return CoordinatorCompactionConfig.current(configManager);
   }
 
+  public void markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
+  {
+    log.debug("Marking [%d] segments of datasource [%s] as unused.", segmentIds.size(), datasource);
+    int updatedCount = segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
+    log.info("Successfully marked [%d] segments of datasource [%s] as unused.", updatedCount, datasource);
+  }
+
   public String getCurrentLeader()
   {
     return coordLeaderSelector.getCurrentLeader();
@@ -583,10 +590,10 @@ public class DruidCoordinator
   {
     return ImmutableList.of(
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(segmentsMetadataManager::markSegmentsAsUnused),
+        new RunRules(),
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
-        new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused),
+        new MarkOvershadowedSegmentsAsUnused(DruidCoordinator.this),
         new BalanceSegments(),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
@@ -707,7 +714,7 @@ public class DruidCoordinator
             DruidCoordinatorRuntimeParams
                 .newBuilder(coordinatorStartTime)
                 .withDatabaseRuleManager(metadataRuleManager)
-                .withDataSourcesSnapshotWithAllUsedSegments(dataSourcesSnapshot)
+                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)

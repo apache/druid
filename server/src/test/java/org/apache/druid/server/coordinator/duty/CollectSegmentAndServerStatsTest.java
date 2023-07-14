@@ -52,7 +52,7 @@ public class CollectSegmentAndServerStatsTest
                                      .withDruidCluster(DruidCluster.EMPTY)
                                      .withUsedSegmentsInTest()
                                      .withBalancerStrategy(new RandomBalancerStrategy())
-                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
+                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
                                      .build();
 
     Mockito.when(mockDruidCoordinator.getDatasourceToUnavailableSegmentCount())

@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.client.DruidServer;
@@ -29,26 +30,25 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @RunWith(JUnitParamsRunner.class)
 public class MarkOvershadowedSegmentsAsUnusedTest
 {
+  private final DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
+
   private final DateTime start = DateTimes.of("2012-01-01");
 
   private final LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
@@ -67,13 +67,8 @@ public class MarkOvershadowedSegmentsAsUnusedTest
   {
     ServerType serverType = ServerType.fromString(serverTypeString);
 
-    final Set<SegmentId> deletedSegments = new HashSet<>();
-    MarkOvershadowedSegmentsAsUnused markOvershadowedSegmentsAsUnused = new MarkOvershadowedSegmentsAsUnused(
-        ids -> {
-          deletedSegments.addAll(ids);
-          return ids.size();
-        }
-    );
+    MarkOvershadowedSegmentsAsUnused markOvershadowedSegmentsAsUnused =
+        new MarkOvershadowedSegmentsAsUnused(coordinator);
     final List<DataSegment> usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     // Dummy values for comparisons in TreeSet
@@ -86,7 +81,9 @@ public class MarkOvershadowedSegmentsAsUnusedTest
         .addDataSegment(segmentV2)
         .toImmutableDruidServer();
 
-    EasyMock.replay(mockPeon, druidDataSource);
+    coordinator.markSegmentsAsUnused("test", ImmutableSet.of(segmentV1.getId(), segmentV0.getId()));
+    EasyMock.expectLastCall();
+    EasyMock.replay(mockPeon, coordinator, druidDataSource);
 
     DruidCluster druidCluster = DruidCluster
         .builder()
@@ -102,12 +99,6 @@ public class MarkOvershadowedSegmentsAsUnusedTest
         )
         .build();
     markOvershadowedSegmentsAsUnused.run(params);
-
-    // Verify that the overshadowed segments have been deleted
-    Assert.assertEquals(2, deletedSegments.size());
-    Assert.assertTrue(deletedSegments.contains(segmentV0.getId()));
-    Assert.assertTrue(deletedSegments.contains(segmentV1.getId()));
-
-    EasyMock.verify(druidDataSource);
+    EasyMock.verify(coordinator, druidDataSource);
   }
 }

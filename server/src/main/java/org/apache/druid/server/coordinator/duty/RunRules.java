@@ -19,10 +19,9 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -30,11 +29,8 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -42,9 +38,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Duty to run retention rules for all used non-overshadowed segments.
- * Overshadowed segments are marked unused by {@link MarkOvershadowedSegmentsAsUnused}
- * duty and are eventually unloaded from all servers by {@link UnloadUnusedSegments}.
+ * Duty to run retention rules.
  * <p>
  * The params returned from {@code run()} must have these fields initialized:
  * <ul>
@@ -55,13 +49,7 @@ import java.util.stream.Collectors;
 public class RunRules implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
-
-  private final SegmentDeleteHandler deleteHandler;
-
-  public RunRules(SegmentDeleteHandler deleteHandler)
-  {
-    this.deleteHandler = deleteHandler;
-  }
+  private static final int MAX_MISSING_RULES = 10;
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -72,28 +60,30 @@ public class RunRules implements CoordinatorDuty
       return params;
     }
 
-    final Set<DataSegment> overshadowedSegments = params.getDataSourcesSnapshot().getOvershadowedSegments();
+    // Get used segments which are overshadowed by other used segments. Those would not need to be loaded and
+    // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
+    // as unused in MarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to Historical nodes
+    // to unload such segments in UnloadUnusedSegments.
+    final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
     final Set<DataSegment> usedSegments = params.getUsedSegments();
     log.info(
         "Applying retention rules on [%,d] used segments, skipping [%,d] overshadowed segments.",
-        usedSegments.size(), overshadowedSegments.size()
+        usedSegments.size(), overshadowed.size()
     );
 
     final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     final MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
 
+    int missingRules = 0;
     final DateTime now = DateTimes.nowUtc();
+    final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
 
-    final Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule = new Object2IntOpenHashMap<>();
-
+    // Run through all matched rules for used segments
     for (DataSegment segment : usedSegments) {
-      // Do not apply rules on overshadowed segments as they will be
-      // marked unused and eventually unloaded from all historicals
-      if (overshadowedSegments.contains(segment)) {
+      if (overshadowed.contains(segment)) {
+        // Skip overshadowed segments
         continue;
       }
-
-      // Find and apply matching rule
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
@@ -105,57 +95,23 @@ public class RunRules implements CoordinatorDuty
       }
 
       if (!foundMatchingRule) {
-        datasourceToSegmentsWithNoRule.addTo(segment.getDataSource(), 1);
+        if (segmentsWithMissingRules.size() < MAX_MISSING_RULES) {
+          segmentsWithMissingRules.add(segment.getId());
+        }
+        missingRules++;
       }
     }
 
-    // Alert for segments with no matching rules
-    if (!datasourceToSegmentsWithNoRule.isEmpty()) {
-      log.noStackTrace().makeAlert(
-          "No matching retention rule for segments in datasources[%s]",
-          datasourceToSegmentsWithNoRule
-      ).emit();
+    if (!segmentsWithMissingRules.isEmpty()) {
+      log.makeAlert("Unable to find matching rules!")
+         .addData("segmentsWithMissingRulesCount", missingRules)
+         .addData("segmentsWithMissingRules", segmentsWithMissingRules)
+         .emit();
     }
-
-    processSegmentDeletes(segmentAssigner, params.getCoordinatorStats());
-    alertForInvalidRules(segmentAssigner);
 
     return params.buildFromExisting()
                  .withBroadcastDatasources(getBroadcastDatasources(params))
                  .build();
-  }
-
-  private void processSegmentDeletes(
-      StrategicSegmentAssigner segmentAssigner,
-      CoordinatorRunStats runStats
-  )
-  {
-    segmentAssigner.getSegmentsToDelete().forEach((datasource, segmentIds) -> {
-      final Stopwatch stopwatch = Stopwatch.createStarted();
-      int numDeletedSegments = deleteHandler.markSegmentsAsUnused(segmentIds);
-      log.info(
-          "Marked [%d] segments of datasource[%s] as unused in [%d]ms",
-          numDeletedSegments, datasource, stopwatch.millisElapsed()
-      );
-
-      RowKey rowKey = RowKey.of(Dimension.DATASOURCE, datasource);
-      runStats.add(Stats.Segments.DELETED, rowKey, numDeletedSegments);
-
-      if (segmentIds.size() > numDeletedSegments) {
-        runStats.add(Stats.Segments.DELETE_SKIPPED, rowKey, segmentIds.size() - numDeletedSegments);
-      }
-    });
-  }
-
-  private void alertForInvalidRules(StrategicSegmentAssigner segmentAssigner)
-  {
-    segmentAssigner.getDatasourceToInvalidLoadTiers().forEach(
-        (datasource, invalidTiers) -> log.makeAlert(
-            "Load rules for datasource[%s] refer to invalid tiers[%s]."
-            + " Update the load rules or add servers for these tiers.",
-            datasource, invalidTiers
-        ).emit()
-    );
   }
 
   private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)

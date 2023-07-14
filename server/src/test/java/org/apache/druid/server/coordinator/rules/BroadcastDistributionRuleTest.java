@@ -64,7 +64,7 @@ public class BroadcastDistributionRuleTest
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
     smallSegment = new DataSegment(
         DS_SMALL,
         Intervals.of("0/1000"),

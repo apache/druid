@@ -97,7 +97,7 @@ public class LoadRuleTest
   {
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "LoadRuleTest-%d"));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-    loadQueueManager = new SegmentLoadQueueManager(null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
   }
 
   @After
