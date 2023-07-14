@@ -34,9 +34,13 @@ In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the 
 #### URL
 <code class="postAPI">POST</code> `/druid/v2/`
 
-Submits a JSON-based native query. Accepts an option `?pretty` that pretty prints the results. 
+Submits a JSON-based native query. 
 
 Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`.
+
+#### Query parameters
+* `pretty` (optional)
+  * The response is returned in a pretty-printed format using indentation and line breaks.
 
 #### Responses
 
@@ -57,6 +61,7 @@ Queries are composed of various JSON properties and Druid has different types of
     "host": "The host on which the error occurred."
 }
 ```
+For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -263,7 +268,11 @@ Content-Length: 817
 #### URL
 <code class="postAPI">POST</code> `/druid/v2/candidates/`
 
-Retrieves an array containing objects with segment information, including the server locations associated with the provided query. 
+Retrieves an array that contains objects with segment information, including the server locations associated with the provided query. 
+
+#### Query parameters
+* `pretty` (optional)
+  * The response is returned in a pretty-printed format using indentation and line breaks.
 
 #### Responses
 
@@ -284,7 +293,7 @@ Retrieves an array containing objects with segment information, including the se
     "host": "The host on which the error occurred."
 }
 ```
-
+For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
