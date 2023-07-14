@@ -72,20 +72,18 @@ HDFS, or a network mounted filesystem. In a single-server deployment, this is ty
 
 Druid uses deep storage for the following purposes:
 
-- As a backup of your data, including those that get loaded onto Historical processes
+- As a backup of your data, including those that get loaded onto Historical processes.
 - As a way to transfer data in the background between
 Druid processes. Druid stores data in files called _segments_. 
-- As the source data for queries that run against data stored only in deep storage and not in Historical processes as determined by your load rules
+- As the source data for queries that run against segments stored only in deep storage and not in Historical processes as determined by your load rules.
 
 Historical processes cache data segments on
-local disk and serve queries from that cache as well as from an in-memory cache. Segments on disk for Historical processes provide the low latency querying performance Druid is known for. But you can query from deep storage, which allows you to query segments that exist only in deep storage. This trades some performance to provide you with the ability to query more of your data without necessarily having to scale your Historical processes.
-
-Depending on the type of query you run, Druid may query segments on the Historical processes or in deep storage. 
+local disk and serve queries from that cache as well as from an in-memory cache. Segments on disk for Historical processes provide the low latency querying performance Druid is known for. You can query directly from deep storage though, which allows you to query segments that exist only in deep storage. This trades some performance to provide you with the ability to query more of your data without necessarily having to scale your Historical processes.
 
 When determining sizing for your storage, keep the following in mind:
 
 - Deep storage needs to be able to hold all the data that you ingest into Druid
-- On disk storage for Historical processes need to be able to accommodate the data you want to load onto them to run th
+- On disk storage for Historical processes need to be able to accommodate the data you want to load onto them to run queries on data you access frequently and need low latency for
 
 Deep storage is an important part of Druid's elastic, fault-tolerant design. Druid bootstraps from deep storage even
 if every single data server is lost and re-provisioned.
