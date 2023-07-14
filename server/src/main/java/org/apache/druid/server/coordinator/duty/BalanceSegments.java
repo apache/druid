@@ -64,7 +64,7 @@ public class BalanceSegments implements CoordinatorDuty
 
     CoordinatorRunStats runStats = params.getCoordinatorStats();
     params.getBalancerStrategy()
-          .getAndResetStats()
+          .getStats()
           .forEachStat(runStats::add);
 
     return params;
@@ -72,7 +72,7 @@ public class BalanceSegments implements CoordinatorDuty
 
   /**
    * Recomputes the value of {@code maxSegmentsToMove} if smart segment loading
-   * is enabled. {@code maxSegmentsToMove} defines the upper bound, the actual
+   * is enabled. {@code maxSegmentsToMove} defines only the upper bound, the actual
    * number of segments picked for moving is determined by the {@link TierSegmentBalancer}
    * based on the level of skew in the tier.
    */
@@ -83,14 +83,14 @@ public class BalanceSegments implements CoordinatorDuty
       final int totalSegmentsInCluster = getTotalSegmentsOnHistoricals(params.getDruidCluster());
       final int numHistoricals = getNumHistoricals(params.getDruidCluster());
       final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
-      final int computedMaxSegmentsToMove = SegmentLoadingConfig
+      final int maxSegmentsToMove = SegmentLoadingConfig
           .computeMaxSegmentsToMove(totalSegmentsInCluster, numBalancerThreads);
       log.info(
           "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
-          computedMaxSegmentsToMove, totalSegmentsInCluster, numHistoricals
+          maxSegmentsToMove, totalSegmentsInCluster, numHistoricals
       );
 
-      return computedMaxSegmentsToMove;
+      return maxSegmentsToMove;
     } else {
       return dynamicConfig.getMaxSegmentsToMove();
     }
@@ -99,7 +99,7 @@ public class BalanceSegments implements CoordinatorDuty
   /**
    * Total number of all segments in the cluster that would participate in cost
    * computations. This includes all replicas of all loaded, loading, dropping
-   * and moving segments across all active (non-decommissioning) historicals.
+   * and moving segments across all historicals.
    * <p>
    * This is calculated here to ensure that all assignments done by the preceding
    * {@link RunRules} duty are accounted for.
@@ -108,7 +108,6 @@ public class BalanceSegments implements CoordinatorDuty
   {
     return cluster.getHistoricals().values().stream()
                   .flatMap(Collection::stream)
-                  .filter(server -> !server.isDecommissioning())
                   .mapToInt(server -> server.getServer().getNumSegments() + server.getNumQueuedSegments())
                   .sum();
   }
@@ -116,7 +115,8 @@ public class BalanceSegments implements CoordinatorDuty
   private int getNumHistoricals(DruidCluster cluster)
   {
     return cluster.getHistoricals().values().stream()
-                  .mapToInt(Collection::size).sum();
+                  .mapToInt(Collection::size)
+                  .sum();
   }
 
 }

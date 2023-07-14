@@ -33,7 +33,6 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -51,7 +50,6 @@ import java.util.stream.Collectors;
  * <p>
  * An instance of this class is freshly created for each coordinator run.
  */
-@NotThreadSafe
 public class StrategicSegmentAssigner implements SegmentActionHandler
 {
   private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
@@ -350,7 +348,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Loads the broadcast segment if it is not already loaded on the given server.
+   * Loads the broadcast segment if it is not loaded on the given server.
    * Returns true only if the segment was successfully queued for load on the server.
    */
   private boolean loadBroadcastSegment(DataSegment segment, ServerHolder server)

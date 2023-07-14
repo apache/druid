@@ -85,7 +85,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void testLoadingDoesNotOverassignHistorical()
   {
     // historicals = 1(in T1), size 1 GB
-    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1_000);
+    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
 
     // segments = 10*1day, size 500 MB
     // strategy = cost, replicas = 1(T1)
@@ -233,7 +233,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void testImmediateLoadingDoesNotOverassignHistorical()
   {
     // historicals = 1(in T1), size 1 GB
-    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1_000);
+    final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
 
     // segments = 10*1day, size 500 MB
     // strategy = cost, replicas = 1(T1)

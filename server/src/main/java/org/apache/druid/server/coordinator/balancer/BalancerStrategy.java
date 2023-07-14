@@ -75,5 +75,5 @@ public interface BalancerStrategy
    * Returns the stats collected by the strategy in the current run and resets
    * the stats collector for the next run.
    */
-  CoordinatorRunStats getAndResetStats();
+  CoordinatorRunStats getStats();
 }

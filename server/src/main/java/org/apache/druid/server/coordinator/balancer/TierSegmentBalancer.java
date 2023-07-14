@@ -56,13 +56,11 @@ public class TierSegmentBalancer
   private final DruidCoordinatorRuntimeParams params;
   private final StrategicSegmentAssigner segmentAssigner;
 
-  private final SegmentLoadingConfig loadingConfig;
   private final CoordinatorRunStats runStats;
 
   private final List<ServerHolder> activeServers;
   private final List<ServerHolder> decommissioningServers;
-  private final int totalSegmentsToMove;
-
+  private final int maxSegmentsToMove;
   private final int movingSegmentCount;
 
   public TierSegmentBalancer(
@@ -75,8 +73,6 @@ public class TierSegmentBalancer
     this.tier = tier;
     this.params = params;
     this.segmentAssigner = params.getSegmentAssigner();
-
-    this.loadingConfig = params.getSegmentLoadingConfig();
     this.runStats = segmentAssigner.getStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
@@ -85,58 +81,40 @@ public class TierSegmentBalancer
     this.activeServers = partitions.get(false);
 
     this.movingSegmentCount = activeServers.stream().mapToInt(ServerHolder::getNumMovingSegments).sum();
-
-    this.totalSegmentsToMove = getSegmentsToMove(maxSegmentsToMove);
+    this.maxSegmentsToMove = maxSegmentsToMove;
   }
 
   public void run()
   {
-    if (activeServers.isEmpty() || (activeServers.size() <= 1 && decommissioningServers.isEmpty())) {
-      log.warn(
-          "Skipping balance for tier [%s] with [%d] active servers and [%d] decomissioning servers.",
-          tier, activeServers.size(), decommissioningServers.size()
-      );
-      return;
-    }
-
     log.info(
-        "Moving max [%,d] segments in tier [%s] with [%d] active servers and"
-        + " [%d] decommissioning servers. There are already [%,d] segments in queue.",
-        totalSegmentsToMove, tier, activeServers.size(), decommissioningServers.size(), movingSegmentCount
+        "Moving max [%,d] segments in tier [%s]. There are already [%,d] segments in queue.",
+        maxSegmentsToMove, tier, movingSegmentCount
     );
-    runStats.add(Stats.Segments.MAX_TO_MOVE, RowKey.of(Dimension.TIER, tier), totalSegmentsToMove);
 
-    // Move segments from decommissioning to active servers
-    int movedDecommSegments = 0;
-    if (!decommissioningServers.isEmpty()) {
-      int maxDecommPercentToMove = loadingConfig.getPercentDecommSegmentsToMove();
-      int maxDecommSegmentsToMove = (int) Math.ceil(totalSegmentsToMove * (maxDecommPercentToMove / 100.0));
-      movedDecommSegments +=
-          moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove);
-      log.info(
-          "Moved [%d] segments out of max [%d (%d%%)] from decommissioning to active servers in tier [%s].",
-          movedDecommSegments, maxDecommSegmentsToMove, maxDecommPercentToMove, tier
-      );
-    }
+    int numDecommSegmentsToMove = getNumDecommSegmentsToMove(maxSegmentsToMove);
+    moveSegmentsFrom(decommissioningServers, numDecommSegmentsToMove, "decommissioning");
 
-    // Move segments across active servers
-    int maxGeneralSegmentsToMove = totalSegmentsToMove - movedDecommSegments;
-    int movedGeneralSegments =
-        moveSegmentsFromTo(activeServers, activeServers, maxGeneralSegmentsToMove);
-    log.info(
-        "Moved [%d] segments out of max [%d] between active servers in tier [%s].",
-        movedGeneralSegments, maxGeneralSegmentsToMove, tier
-    );
+    int numActiveSegmentsToMove = getNumActiveSegmentsToMove(maxSegmentsToMove - numDecommSegmentsToMove);
+    moveSegmentsFrom(activeServers, numActiveSegmentsToMove, "active");
   }
 
-  private int moveSegmentsFromTo(
+  /**
+   * Moves segments from the given source servers to the active servers in this tier.
+   */
+  private void moveSegmentsFrom(
       List<ServerHolder> sourceServers,
-      List<ServerHolder> destServers,
-      int maxSegmentsToMove
+      int numSegmentsToMove,
+      String sourceServerType
   )
   {
-    if (maxSegmentsToMove <= 0 || sourceServers.isEmpty() || destServers.isEmpty()) {
-      return 0;
+    log.info(
+        "Moving [%,d] segments from [%d] [%s] servers to [%d] active servers.",
+        numSegmentsToMove, sourceServers.size(), sourceServerType, activeServers.size()
+    );
+    runStats.add(Stats.Segments.MAX_TO_MOVE, RowKey.of(Dimension.TIER, tier), numSegmentsToMove);
+
+    if (numSegmentsToMove <= 0 || sourceServers.isEmpty() || activeServers.isEmpty()) {
+      return;
     }
 
     final Set<String> broadcastDatasources = params.getBroadcastDatasources();
@@ -144,25 +122,28 @@ public class TierSegmentBalancer
     // Always move loading segments first as it is a cheaper operation
     List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
         sourceServers,
-        maxSegmentsToMove,
+        numSegmentsToMove,
         ServerHolder::getLoadingSegments,
         broadcastDatasources
     );
-    int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
+    int movedCount = moveSegmentsTo(activeServers, pickedSegments, numSegmentsToMove);
 
     // Move loaded segments only if tier is not already busy moving segments
     if (movingSegmentCount <= 0) {
-      maxSegmentsToMove -= movedCount;
+      numSegmentsToMove -= movedCount;
       pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
           sourceServers,
-          maxSegmentsToMove,
+          numSegmentsToMove,
           server -> server.getServer().iterateAllSegments(),
           broadcastDatasources
       );
-      movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
+      movedCount += moveSegmentsTo(activeServers, pickedSegments, numSegmentsToMove);
     }
 
-    return movedCount;
+    log.info(
+        "Moved [%,d] segments out of [%,d] from [%s] servers in tier [%s].",
+        movedCount, numSegmentsToMove, sourceServers.size(), tier
+    );
   }
 
   private int moveSegmentsTo(
@@ -225,21 +206,37 @@ public class TierSegmentBalancer
     runStats.add(Stats.Segments.MOVE_SKIPPED, key, 1);
   }
 
-  private int getSegmentsToMove(int maxSegmentsToMove)
+  /**
+   * Number of segments to move away from the decommissioning historicals of this tier.
+   */
+  private int getNumDecommSegmentsToMove(int maxSegmentsToMove)
   {
-    // If smartSegmentLoading is disabled, use the configured value
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    if (decommissioningServers.isEmpty()) {
+      return 0;
+    } else if (dynamicConfig.isSmartSegmentLoading()) {
+      final int decommSegmentsToMove = decommissioningServers.stream().mapToInt(
+          server -> server.getProjectedSegments().getTotalSegmentCount()
+      ).sum();
+      return Math.min(decommSegmentsToMove, maxSegmentsToMove);
+    } else {
+      int maxPercentageToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
+      return (int) Math.ceil(maxSegmentsToMove * (maxPercentageToMove / 100.0));
+    }
+  }
+
+  /**
+   * Number of segments to move between the active historicals of this tier.
+   */
+  private int getNumActiveSegmentsToMove(int maxActiveSegmentsToMove)
+  {
+    // If smartSegmentLoading is disabled, just use the configured value
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     if (!dynamicConfig.isSmartSegmentLoading()) {
-      return maxSegmentsToMove;
+      return maxActiveSegmentsToMove;
     }
 
-    // Move everything from decommissioning servers
-    int projectedDecommissioningSegments
-        = decommissioningServers.stream()
-                                .mapToInt(server -> server.getProjectedSegments().getTotalSegmentCount())
-                                .sum();
-
-    // Measure the skew in disk usage
+    // Measure the skew in disk usage of active servers
     double maxDiskUsage = 0.0f;
     double minDiskUsage = 100.0f;
     for (ServerHolder server : activeServers) {
@@ -252,17 +249,19 @@ public class TierSegmentBalancer
       }
     }
 
-    // We assume that there is always a usage diff of at least 5%
+    // We assume that there is always a usage diff of at least 10%
     // to ensure that some segments are always being balanced
     double usageDiff = Math.max(10, maxDiskUsage - minDiskUsage);
-
-    // At least 100 segments must always be picked for moving
-    final int segmentsToMove = Math.max(100, (int) (maxSegmentsToMove * usageDiff / 100));
-    log.info(
-        "Moving max [%,d] segments in tier [%s] with max usage[%.2f%%] and min usage[%.2f%%]",
-        segmentsToMove, tier, maxDiskUsage, minDiskUsage
+    final int activeSegmentsToMove = Math.max(
+        SegmentLoadingConfig.MIN_SEGMENTS_TO_MOVE,
+        (int) (maxActiveSegmentsToMove * usageDiff / 100)
     );
-    return segmentsToMove;
+
+    log.info(
+        "Trying to move [%,d] active segments in tier [%s] with max usage[%.1f%%] and min usage[%.1f%%]",
+        activeSegmentsToMove, tier, maxDiskUsage, minDiskUsage
+    );
+    return Math.min(activeSegmentsToMove, maxActiveSegmentsToMove);
   }
 
 }

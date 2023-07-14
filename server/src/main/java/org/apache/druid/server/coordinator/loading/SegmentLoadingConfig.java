@@ -28,6 +28,12 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
  */
 public class SegmentLoadingConfig
 {
+  /**
+   * At least this number of segments must be picked for moving in every cycle
+   * to keep the cluster well balanced.
+   */
+  public static final int MIN_SEGMENTS_TO_MOVE = 100;
+
   private static final Logger log = new Logger(SegmentLoadingConfig.class);
 
   private final int maxSegmentsInLoadQueue;
@@ -35,7 +41,6 @@ public class SegmentLoadingConfig
   private final int maxReplicaAssignmentsInRun;
   private final int maxLifetimeInLoadQueue;
 
-  private final int percentDecommSegmentsToMove;
   private final int balancerComputeThreads;
 
   private final boolean useRoundRobinSegmentAssignment;
@@ -64,7 +69,6 @@ public class SegmentLoadingConfig
           replicationThrottleLimit,
           Integer.MAX_VALUE,
           60,
-          100,
           true,
           balancerComputeThreads
       );
@@ -75,7 +79,6 @@ public class SegmentLoadingConfig
           dynamicConfig.getReplicationThrottleLimit(),
           dynamicConfig.getMaxNonPrimaryReplicantsToLoad(),
           dynamicConfig.getReplicantLifetime(),
-          dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove(),
           dynamicConfig.isUseRoundRobinSegmentAssignment(),
           dynamicConfig.getBalancerComputeThreads()
       );
@@ -87,7 +90,6 @@ public class SegmentLoadingConfig
       int replicationThrottleLimit,
       int maxReplicaAssignmentsInRun,
       int maxLifetimeInLoadQueue,
-      int percentDecommSegmentsToMove,
       boolean useRoundRobinSegmentAssignment,
       int balancerComputeThreads
   )
@@ -96,7 +98,6 @@ public class SegmentLoadingConfig
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
     this.maxLifetimeInLoadQueue = maxLifetimeInLoadQueue;
-    this.percentDecommSegmentsToMove = percentDecommSegmentsToMove;
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     this.balancerComputeThreads = balancerComputeThreads;
   }
@@ -124,11 +125,6 @@ public class SegmentLoadingConfig
   public int getMaxReplicaAssignmentsInRun()
   {
     return maxReplicaAssignmentsInRun;
-  }
-
-  public int getPercentDecommSegmentsToMove()
-  {
-    return percentDecommSegmentsToMove;
   }
 
   public int getBalancerComputeThreads()
@@ -167,7 +163,7 @@ public class SegmentLoadingConfig
    * cluster.
    * <p>
    * Each balancer thread can perform 2 billion computations in every coordinator
-   * cycle. Therefore,
+   * cycle (see #14484). Therefore,
    * <pre>
    * numComputations = maxSegmentsToMove * totalSegments
    *
@@ -178,12 +174,18 @@ public class SegmentLoadingConfig
    * @param totalSegmentsOnHistoricals Total number of all replicas of all segments
    *                                   loaded or queued across all historicals.
    * @return {@code maxSegmentsToMove} per tier in the range [100, 12.5% of totalSegments].
+   * @see <a href="https://github.com/apache/druid/pull/14484">#14484</a>
    */
   public static int computeMaxSegmentsToMove(int totalSegmentsOnHistoricals, int numBalancerThreads)
   {
-    // Each thread can do ~2B computations in one cycle
-    // = 2M * 1k = 2^21 * 1k (integer overflows here only if numThreads > 1000)
-    int computationsInThousands = Math.max(1, numBalancerThreads << 21L);
+    // Each thread can do ~2B computations in one cycle = 2M * 1k = 2^21 * 1k
+    final int computationsPerThreadInThousands = 1 << 21;
+
+    // Integer overflows here only if numThreads > 1000, but handle it all the same
+    final int computationsInThousands = Math.max(
+        computationsPerThreadInThousands,
+        numBalancerThreads << 21
+    );
 
     // maxSegmentsToMove(in k) = computations(in k) / totalSegments
     int divisor = totalSegmentsOnHistoricals;
@@ -192,17 +194,17 @@ public class SegmentLoadingConfig
       divisor = divisor >> 1;
       quotient = quotient >> 1;
     }
+    final int maxSegmentsToMove = quotient * 1000;
 
     // Define the bounds for maxSegmentsToMove
-    final int lowerBound = 100;
+    final int lowerBound = MIN_SEGMENTS_TO_MOVE;
     final int upperBound = totalSegmentsOnHistoricals >> 3;
 
-    if (upperBound < lowerBound) {
-      return lowerBound;
+    // Integer overflow is unlikely here but handle it all the same
+    if (maxSegmentsToMove < 0 || maxSegmentsToMove > upperBound) {
+      return Math.max(lowerBound, upperBound);
+    } else {
+      return Math.max(lowerBound, maxSegmentsToMove);
     }
-
-    // maxSegmentsToMove must be within [0, 12.5% of numUsedSegments]
-    // TODO: handle overflow here, a tad more nicely
-    return Math.max(lowerBound, Math.min(upperBound, quotient * 1000));
   }
 }

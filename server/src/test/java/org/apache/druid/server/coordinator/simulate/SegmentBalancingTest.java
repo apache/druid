@@ -25,8 +25,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Coordinator simulation test to verify behaviour of segment balancing.
@@ -234,10 +235,11 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   public void testComputedMaxSegmentsToMove()
   {
     // Add 10 historicals of size 10TB each
-    List<DruidServer> historicals = new ArrayList<>();
-    for (int i = 1; i <= 10; ++i) {
-      historicals.add(createHistorical(i, Tier.T1, 10_000_000));
-    }
+    final long size10TB = 10_000_000;
+    List<DruidServer> historicals
+        = IntStream.range(0, 10)
+                   .mapToObj(i -> createHistorical(i + 1, Tier.T1, size10TB))
+                   .collect(Collectors.toList());
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
@@ -257,7 +259,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {
-      addServer(createHistorical(i, Tier.T1, 10_000_000));
+      addServer(createHistorical(i, Tier.T1, size10TB));
     }
 
     runCoordinatorCycle();

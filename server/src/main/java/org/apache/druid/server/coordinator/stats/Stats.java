@@ -43,8 +43,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("dropSkip", "segment/dropSkipped/count");
     public static final CoordinatorStat MOVE_SKIPPED
         = CoordinatorStat.toDebugAndEmit("moveSkip", "segment/moveSkipped/count");
-    public static final CoordinatorStat DELETE_SKIPPED
-        = CoordinatorStat.toDebugAndEmit("deleteSkip", "segment/deleteSkipped/count");
 
     // Configured and computed limits
     public static final CoordinatorStat MAX_TO_MOVE
