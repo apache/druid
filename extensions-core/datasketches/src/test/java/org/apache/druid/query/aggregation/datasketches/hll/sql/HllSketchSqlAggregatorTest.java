@@ -853,9 +853,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .filters(
-                                   NullHandling.replaceWithDefault()
-                                   ? numericSelector("dim2", "0", null)
-                                   : equality("dim2", 0L, ColumnType.LONG)
+                                   numericEquality("dim2", 0L, ColumnType.LONG)
                                )
                                .granularity(Granularities.ALL)
                                .aggregators(

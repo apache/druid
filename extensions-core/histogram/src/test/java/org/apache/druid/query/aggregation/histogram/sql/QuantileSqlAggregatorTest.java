@@ -409,9 +409,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? numericSelector("dim2", "0", null)
-                      : equality("dim2", 0L, ColumnType.LONG)
+                      numericEquality("dim2", 0L, ColumnType.LONG)
                   )
                   .aggregators(
                       ImmutableList.of(

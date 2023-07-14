@@ -726,9 +726,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? numericSelector("dim2", "0", null)
-                      : equality("dim2", 0L, ColumnType.LONG)
+                      numericEquality("dim2", 0L, ColumnType.LONG)
                   )
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
@@ -777,9 +775,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? numericSelector("dim2", "0", null)
-                      : equality("dim2", 0L, ColumnType.LONG)
+                      numericEquality("dim2", 0L, ColumnType.LONG)
                   )
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),

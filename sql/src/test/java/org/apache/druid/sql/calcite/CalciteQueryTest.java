@@ -4653,7 +4653,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(
                             NullHandling.replaceWithDefault()
                             ? or(
-                                numericSelector("dim1", "10", null),
+                                numericSelector("dim1", "10"),
                                 and(
                                     selector("v0", "10.00"),
                                     bound("dim1", "9", "10.5", true, false, null, StringComparators.NUMERIC)
@@ -5709,9 +5709,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? numericSelector("dim1", "2", null)
-                      : equality("dim1", 2L, ColumnType.LONG)
+                      numericEquality("dim1", 2L, ColumnType.LONG)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -9257,9 +9255,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? numericSelector("dim2", "0", null)
-                      : equality("dim2", 0L, ColumnType.LONG)
+                      numericEquality("dim2", 0L, ColumnType.LONG)
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(
@@ -9368,9 +9364,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? numericSelector("dim2", "0", null)
-                      : equality("dim2", 0L, ColumnType.LONG)
+                      numericEquality("dim2", 0L, ColumnType.LONG)
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(
@@ -11888,9 +11882,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .filters(
-                                   NullHandling.replaceWithDefault()
-                                   ? numericSelector("dim2", "0", null)
-                                   : equality("dim2", 0L, ColumnType.LONG)
+                                   numericEquality("dim2", 0L, ColumnType.LONG)
                                )
                                .granularity(Granularities.ALL)
                                .aggregators(aggregators(

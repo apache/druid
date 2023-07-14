@@ -429,14 +429,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionDimFilter(expression, CalciteTests.createExprMacroTable());
   }
 
+  /**
+   * This method should be used instead of {@link #equality(String, Object, ColumnType)} when the match value type
+   * does not match the column type. If {@link NullHandling#sqlCompatible()} is true, this method is equivalent to
+   * {@link #equality(String, Object, ColumnType)}. When false, this method uses
+   * {@link #numericSelector(String, String)} so that the equality comparison uses a bound filter to correctly match
+   * numerical types.
+   */
+  public static DimFilter numericEquality(
+      final String fieldName,
+      final Object value,
+      final ColumnType matchValueType
+  )
+  {
+    if (NullHandling.sqlCompatible()) {
+      return equality(fieldName, value, matchValueType);
+    }
+    return numericSelector(fieldName, String.valueOf(value));
+  }
+
   public static DimFilter numericSelector(
       final String fieldName,
-      final String value,
-      final ExtractionFn extractionFn
+      final String value
   )
   {
     // We use Bound filters for numeric equality to achieve "10.0" = "10"
-    return bound(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
+    return bound(fieldName, value, value, false, false, null, StringComparators.NUMERIC);
   }
 
   /**
