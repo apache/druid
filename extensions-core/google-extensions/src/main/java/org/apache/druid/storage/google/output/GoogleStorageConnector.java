@@ -20,6 +20,11 @@
 package org.apache.druid.storage.google.output;
 
 import com.google.api.services.storage.model.StorageObject;
+import com.google.common.base.Joiner;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.google.GoogleInputDataConfig;
+import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleUtils;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 
@@ -29,10 +34,31 @@ import java.util.Iterator;
 
 public class GoogleStorageConnector extends ChunkingStorageConnector<StorageObject>
 {
+
+  private static final String DELIM = "/";
+  private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
+  private static final Logger log = new Logger(GoogleStorageConnector.class);
+
+  private final GoogleStorage storage;
+  private final GoogleOutputConfig config;
+  private final GoogleInputDataConfig inputDataConfig;
+
+  public GoogleStorageConnector(
+      GoogleStorage storage,
+      GoogleOutputConfig config,
+      GoogleInputDataConfig inputDataConfig
+  )
+  {
+    this.storage = storage;
+    this.config = config;
+    this.inputDataConfig = inputDataConfig;
+  }
+
+
   @Override
   public boolean pathExists(String path)
   {
-    return false;
+    return storage.exists(config.getBucket(), objectPath(path));
   }
 
   @Override
@@ -44,13 +70,33 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<StorageObje
   @Override
   public void deleteFile(String path) throws IOException
   {
+    try {
+      final String fullPath = objectPath(path);
+      log.debug("Deleting file at bucket: [%s], path: [%s]", config.getBucket(), fullPath);
 
+      GoogleUtils.retryGoogleCloudStorageOperation(
+          () -> {
+            storage.delete(config.getBucket(), fullPath);
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting file at path [%s]. Error: [%s]", path, e.getMessage());
+      throw new IOException(e);
+    }
   }
 
   @Override
   public void deleteFiles(Iterable<String> paths) throws IOException
   {
+    int currentItemSize = 0;
 
+
+    for (String path : paths) {
+
+
+    }
   }
 
   @Override
@@ -75,5 +121,10 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<StorageObje
   public ChunkingStorageConnectorParameters<StorageObject> buildInputParams(String path, long from, long size)
   {
     return null;
+  }
+
+  private String objectPath(String path)
+  {
+    return JOINER.join(config.getPrefix(), path);
   }
 }

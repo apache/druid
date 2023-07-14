@@ -45,7 +45,7 @@ public class GoogleUtils
     return t instanceof IOException;
   }
 
-  static <T> T retryGoogleCloudStorageOperation(RetryUtils.Task<T> f) throws Exception
+  public static <T> T retryGoogleCloudStorageOperation(RetryUtils.Task<T> f) throws Exception
   {
     return RetryUtils.retry(f, GOOGLE_RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
