@@ -22,15 +22,20 @@ import { DruidError, getDruidErrorMessage } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
-    // it('works for single error 1', () => {
-    //   const message = `Encountered "COUNT" at line 2, column 12. Was expecting one of: <EOF> "AS" ... "EXCEPT" ... "FETCH" ... "FROM" ... "INTERSECT" ... "LIMIT" ...`;
-    //
-    //   expect(DruidError.extractPosition(message)).toEqual({
-    //     match: 'at line 2, column 12',
-    //     row: 1,
-    //     column: 11,
-    //   });
-    // });
+    it('works for single error 1', () => {
+      expect(
+        DruidError.extractPosition({
+          sourceType: 'sql',
+          line: '2',
+          column: '12',
+          token: "AS \\'l\\'",
+          expected: '...',
+        }),
+      ).toEqual({
+        row: 1,
+        column: 11,
+      });
+    });
 
     it('works for range', () => {
       expect(

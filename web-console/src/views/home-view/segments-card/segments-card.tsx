@@ -67,8 +67,9 @@ WHERE is_active = 1`,
 
         return {
           active: availableSegmentNum + unavailableSegmentNum,
-          cached_on_historical: availableSegmentNum, // This is not correct
-          unavailable: unavailableSegmentNum,
+          cached_on_historical: availableSegmentNum,
+          unavailable: unavailableSegmentNum, // This is no longer fully accurate because it does not replicate the [AND replication_factor > 0] condition of the SQL, this info is not in this API
+          realtime: 0, // Realtime segments are sadly not reported by this API
         };
       } else {
         throw new Error(`must have SQL or coordinator access`);

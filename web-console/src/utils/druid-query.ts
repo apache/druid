@@ -27,11 +27,15 @@ import type { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
+// https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/error/DruidException.java#L292
 export type ErrorResponsePersona = 'USER' | 'ADMIN' | 'OPERATOR' | 'DEVELOPER';
+
+// https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/error/DruidException.java#L321
 export type ErrorResponseCategory =
   | 'DEFENSIVE'
   | 'INVALID_INPUT'
   | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
   | 'CAPACITY_EXCEEDED'
   | 'CANCELED'
   | 'RUNTIME_FAILURE'
