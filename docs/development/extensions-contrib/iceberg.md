@@ -49,7 +49,7 @@ The `druid-iceberg-extensions` extension presently only supports HDFS, S3 and lo
 To read from a HDFS warehouse, load the `druid-hdfs-storage` extension. Druid extracts data file paths from the Hive metastore catalog and uses [HDFS input source](../../ingestion/input-sources.md#hdfs-input-source) to ingest these files.
 The `warehouseSource` type in the ingestion spec should be `hdfs`.
 
-For authenticating with kerberized clusters, include `principal` and `keytab` properties in the `catalogProperties` object:
+For authenticating with Kerberized clusters, include `principal` and `keytab` properties in the `catalogProperties` object:
 
 ```json
 "catalogProperties": {
