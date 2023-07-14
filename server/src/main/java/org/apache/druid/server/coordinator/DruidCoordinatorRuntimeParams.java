@@ -28,7 +28,6 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
-import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -120,12 +119,6 @@ public class DruidCoordinatorRuntimeParams
   public MetadataRuleManager getDatabaseRuleManager()
   {
     return databaseRuleManager;
-  }
-
-  @Nullable
-  public SegmentReplicationStatus getSegmentReplicationStatus()
-  {
-    return segmentAssigner == null ? null : segmentAssigner.getReplicationStatus();
   }
 
   public StrategicSegmentAssigner getSegmentAssigner()
@@ -346,7 +339,7 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withSnapshotOfDataSourcesWithAllUsedSegments(DataSourcesSnapshot snapshot)
+    public Builder withDataSourcesSnapshot(DataSourcesSnapshot snapshot)
     {
       this.usedSegments = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
       this.dataSourcesSnapshot = snapshot;

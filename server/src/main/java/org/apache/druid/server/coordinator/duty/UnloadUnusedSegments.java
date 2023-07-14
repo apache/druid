@@ -101,7 +101,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
         if (!usedSegments.contains(segment)
             && loadQueueManager.dropSegment(segment, serverHolder)) {
           totalUnneededCount++;
-          log.info(
+          log.debug(
               "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
               segment.getId(), server.getName(), server.getTier()
           );

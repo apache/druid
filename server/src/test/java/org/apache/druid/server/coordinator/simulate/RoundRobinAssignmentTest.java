@@ -30,8 +30,6 @@ import java.util.List;
 
 public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
 {
-  private static final long SIZE_1TB = 1_000_000;
-
   private List<DruidServer> historicals;
 
   @Override
@@ -39,7 +37,7 @@ public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
   {
     historicals = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(i, Tier.T1, Size.tb(1)));
     }
   }
 

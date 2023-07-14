@@ -186,10 +186,10 @@ public abstract class CoordinatorSimulationBaseTest implements
    * Creates a historical. The {@code uniqueIdInTier} must be correctly specified
    * as it is used to identify the historical throughout the simulation.
    */
-  static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
+  static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeBytes)
   {
     final String name = tier + "__" + "hist__" + uniqueIdInTier;
-    return new DruidServer(name, name, name, serverSizeMb << 20, ServerType.HISTORICAL, tier, 1);
+    return new DruidServer(name, name, name, serverSizeBytes, ServerType.HISTORICAL, tier, 1);
   }
 
   // Utility and constant holder classes
@@ -206,10 +206,25 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String T2 = "tier_t2";
   }
 
+  static class Size
+  {
+    static long tb(long teraBytes)
+    {
+      return teraBytes << 40;
+    }
+
+    static long gb(long gigaBytes)
+    {
+      return gigaBytes << 30;
+    }
+  }
+
   static class Metric
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
+    static final String MOVE_SKIPPED = "segment/moveSkipped/count";
+    static final String MAX_TO_MOVE = "segment/maxToMove/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
@@ -247,6 +262,17 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final List<DataSegment> KOALA_100X100D =
         CreateDataSegments.ofDatasource(DS.KOALA)
                           .forIntervals(100, Granularities.DAY)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(100)
+                          .eachOfSizeInMb(500);
+
+    /**
+     * Segments of datasource {@link DS#KOALA}, size 500 MB each,
+     * spanning 1000 hours containing 100 partitions each.
+     */
+    static final List<DataSegment> KOALA_100X1000H =
+        CreateDataSegments.ofDatasource(DS.KOALA)
+                          .forIntervals(1000, Granularities.HOUR)
                           .startingAt("2022-01-01")
                           .withNumPartitions(100)
                           .eachOfSizeInMb(500);

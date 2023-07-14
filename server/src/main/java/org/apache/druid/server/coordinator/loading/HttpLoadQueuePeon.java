@@ -485,6 +485,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public CoordinatorRunStats getAndResetStats()
   {
+    stats.add(Stats.SegmentQueue.BYTES_TO_LOAD, getSizeOfSegmentsToLoad());
+    stats.add(Stats.SegmentQueue.NUM_TO_LOAD, getSegmentsToLoad().size());
+    stats.add(Stats.SegmentQueue.NUM_TO_DROP, getSegmentsToDrop().size());
     return stats.getSnapshotAndReset();
   }
 

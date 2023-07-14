@@ -33,6 +33,7 @@ import java.util.Map;
  */
 public class SegmentCountsPerInterval
 {
+  private int totalSegments;
   private final Map<String, Object2IntMap<Interval>>
       datasourceIntervalToSegmentCount = new HashMap<>();
   private final Object2IntMap<Interval> intervalToTotalSegmentCount = new Object2IntOpenHashMap<>();
@@ -47,6 +48,11 @@ public class SegmentCountsPerInterval
     updateCountInInterval(segment, -1);
   }
 
+  public int getTotalSegmentCount()
+  {
+    return totalSegments;
+  }
+
   public Object2IntMap<Interval> getIntervalToSegmentCount(String datasource)
   {
     return datasourceIntervalToSegmentCount.getOrDefault(datasource, Object2IntMaps.emptyMap());
@@ -59,6 +65,7 @@ public class SegmentCountsPerInterval
 
   private void updateCountInInterval(DataSegment segment, int delta)
   {
+    totalSegments += delta;
     intervalToTotalSegmentCount.mergeInt(segment.getInterval(), delta, Integer::sum);
     datasourceIntervalToSegmentCount
         .computeIfAbsent(segment.getDataSource(), ds -> new Object2IntOpenHashMap<>())

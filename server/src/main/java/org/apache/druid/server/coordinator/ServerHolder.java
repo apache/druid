@@ -196,6 +196,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return isDecommissioning;
   }
 
+  public boolean isLoadQueueFull()
+  {
+    return totalAssignmentsInRun >= maxAssignmentsInRun;
+  }
+
   public long getAvailableSize()
   {
     return getMaxSize() - getSizeUsed();
@@ -310,6 +315,11 @@ public class ServerHolder implements Comparable<ServerHolder>
   public int getNumLoadingReplicas()
   {
     return loadingReplicaCount;
+  }
+
+  public int getNumQueuedSegments()
+  {
+    return queuedSegments.size();
   }
 
   public boolean startOperation(SegmentAction action, DataSegment segment)

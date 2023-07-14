@@ -29,12 +29,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -66,7 +64,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -82,7 +79,6 @@ public class RunRulesTest
   private RunRules ruleRunner;
   private StubServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
-  private SegmentsMetadataManager segmentsMetadataManager;
   private SegmentLoadQueueManager loadQueueManager;
   private final List<DataSegment> usedSegments =
       CreateDataSegments.ofDatasource(DATASOURCE)
@@ -100,9 +96,8 @@ public class RunRulesTest
     emitter = new StubServiceEmitter("coordinator", "host");
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules();
-    loadQueueManager = new SegmentLoadQueueManager(null, segmentsMetadataManager, null);
+    ruleRunner = new RunRules(Set::size);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
 
@@ -483,9 +478,8 @@ public class RunRulesTest
   }
 
   @Test
-  public void testRunRuleDoesNotExist()
+  public void testNoMatchingRule()
   {
-
     EasyMock
         .expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject()))
         .andReturn(
@@ -508,19 +502,22 @@ public class RunRulesTest
         .add(createServerHolder("serverNorm", "normal", mockPeon))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster).build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
 
     runDutyAndGetStats(params);
 
-    final List<Event> events = emitter.getEvents();
+    final List<AlertEvent> events = emitter.getAlerts();
     Assert.assertEquals(1, events.size());
 
-    AlertEvent alertEvent = (AlertEvent) events.get(0);
+    AlertEvent alertEvent = events.get(0);
     EventMap eventMap = alertEvent.toMap();
-    Assert.assertEquals("Unable to find matching rules!", eventMap.get("description"));
-
-    Map<String, Object> dataMap = alertEvent.getDataMap();
-    Assert.assertEquals(usedSegments.size(), dataMap.get("segmentsWithMissingRulesCount"));
+    Assert.assertEquals(
+        "No matching retention rule for segments in datasources[{test=>24}]",
+        eventMap.get("description")
+    );
 
     EasyMock.verify(mockPeon);
   }
@@ -531,10 +528,6 @@ public class RunRulesTest
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
-
-    EasyMock.expect(segmentsMetadataManager.markSegmentAsUnused(EasyMock.anyObject()))
-            .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
         Lists.newArrayList(
@@ -584,7 +577,7 @@ public class RunRulesTest
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server1 = createHistorical("serverNorm", "normal");
     server1.addDataSegment(usedSegments.get(0));
@@ -641,7 +634,7 @@ public class RunRulesTest
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server1 = createHistorical("server1", "hot");
     server1.addDataSegment(usedSegments.get(0));
@@ -685,7 +678,7 @@ public class RunRulesTest
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server1 = createHistorical("server1", "hot");
     DruidServer server2 = createHistorical("serverNorm2", "normal");
@@ -853,9 +846,6 @@ public class RunRulesTest
   @Test
   public void testReplicantThrottleAcrossTiers()
   {
-    EasyMock.expect(segmentsMetadataManager.markSegmentAsUnused(EasyMock.anyObject()))
-            .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
@@ -1003,7 +993,8 @@ public class RunRulesTest
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null))).atLeastOnce();
+        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null))
+    ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = DruidCluster.builder().add(

@@ -333,8 +333,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(taskMaster);
 
     // Move the segment from source to dest
-    SegmentLoadQueueManager loadQueueManager =
-        new SegmentLoadQueueManager(baseView, segmentsMetadataManager, taskMaster);
+    SegmentLoadQueueManager loadQueueManager = new SegmentLoadQueueManager(baseView, taskMaster);
     StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(loadQueueManager, coordinatorRuntimeParams);
     segmentAssigner.moveSegment(
         segmentToMove,

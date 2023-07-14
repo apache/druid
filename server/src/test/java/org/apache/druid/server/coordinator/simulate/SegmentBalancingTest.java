@@ -25,6 +25,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -42,8 +43,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   public void setUp()
   {
     // Setup historicals for 2 tiers, size 10 GB each
-    historicalT11 = createHistorical(1, Tier.T1, 10_000);
-    historicalT12 = createHistorical(2, Tier.T1, 10_000);
+    historicalT11 = createHistorical(1, Tier.T1, Size.gb(10));
+    historicalT12 = createHistorical(2, Tier.T1, Size.gb(10));
   }
 
   @Test
@@ -227,6 +228,44 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     runCoordinatorCycle();
     Assert.assertTrue(getValue(Metric.MOVED_COUNT, null).intValue() > 0);
+  }
+
+  @Test(timeout = 60000L)
+  public void testComputedMaxSegmentsToMove()
+  {
+    // Add 10 historicals of size 10TB each
+    List<DruidServer> historicals = new ArrayList<>();
+    for (int i = 1; i <= 10; ++i) {
+      historicals.add(createHistorical(i, Tier.T1, Size.tb(10)));
+    }
+
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.KOALA_100X1000H)
+                             .withServers(historicals)
+                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: All segments are assigned to the 10 historicals
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 100_000L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
+    verifyValue(Metric.MOVE_SKIPPED, 1250L);
+    verifyValue(Metric.MAX_TO_MOVE, 1250L);
+
+    // Run 2: Add 10 more historicals, some segments are moved to them
+    for (int i = 11; i <= 20; ++i) {
+      addServer(createHistorical(i, Tier.T1, Size.tb(10)));
+    }
+
+    runCoordinatorCycle();
+    verifyValue(Metric.MAX_TO_MOVE, 5960L);
+    verifyValue(Metric.MOVED_COUNT, 5960L);
+
+    // loadQueuedSegments();
+    // verifyDatasourceIsFullyLoaded(DS.KOALA);
   }
 
 }

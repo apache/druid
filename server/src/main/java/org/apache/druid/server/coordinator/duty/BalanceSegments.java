@@ -20,14 +20,17 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 
+import java.util.Collection;
+
 /**
- *
+ * Coordinator duty to balance segments across historicals in a tier.
  */
 public class BalanceSegments implements CoordinatorDuty
 {
@@ -43,19 +46,20 @@ public class BalanceSegments implements CoordinatorDuty
 
     final DruidCluster cluster = params.getDruidCluster();
     final SegmentLoadingConfig loadingConfig = params.getSegmentLoadingConfig();
-    final int maxSegmentsToMove = loadingConfig.getMaxSegmentsToMove();
+
+    final int maxSegmentsToMove = getMaxSegmentsToMove(params);
     if (maxSegmentsToMove <= 0) {
       log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
       return params;
     } else {
       log.info(
-          "Balancing segments in tiers [%s] with maxSegmentsToMove=[%d], maxLifetime=[%d].",
+          "Balancing segments in tiers [%s] with maxSegmentsToMove[%,d] and maxLifetime[%d].",
           cluster.getTierNames(), maxSegmentsToMove, loadingConfig.getMaxLifetimeInLoadQueue()
       );
     }
 
     cluster.getHistoricals().forEach(
-        (tier, servers) -> new TierSegmentBalancer(tier, servers, params).run()
+        (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
     );
 
     CoordinatorRunStats runStats = params.getCoordinatorStats();
@@ -64,6 +68,55 @@ public class BalanceSegments implements CoordinatorDuty
           .forEachStat(runStats::add);
 
     return params;
+  }
+
+  /**
+   * Recomputes the value of {@code maxSegmentsToMove} if smart segment loading
+   * is enabled. {@code maxSegmentsToMove} defines the upper bound, the actual
+   * number of segments picked for moving is determined by the {@link TierSegmentBalancer}
+   * based on the level of skew in the tier.
+   */
+  private int getMaxSegmentsToMove(DruidCoordinatorRuntimeParams params)
+  {
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    if (dynamicConfig.isSmartSegmentLoading()) {
+      final int totalSegmentsInCluster = getTotalSegmentsOnHistoricals(params.getDruidCluster());
+      final int numHistoricals = getNumHistoricals(params.getDruidCluster());
+      final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
+      final int computedMaxSegmentsToMove = SegmentLoadingConfig
+          .computeMaxSegmentsToMove(totalSegmentsInCluster, numBalancerThreads);
+      log.info(
+          "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
+          computedMaxSegmentsToMove, totalSegmentsInCluster, numHistoricals
+      );
+
+      return computedMaxSegmentsToMove;
+    } else {
+      return dynamicConfig.getMaxSegmentsToMove();
+    }
+  }
+
+  /**
+   * Total number of all segments in the cluster that would participate in cost
+   * computations. This includes all replicas of all loaded, loading, dropping
+   * and moving segments across all active (non-decommissioning) historicals.
+   * <p>
+   * This is calculated here to ensure that all assignments done by the preceding
+   * {@link RunRules} duty are accounted for.
+   */
+  private int getTotalSegmentsOnHistoricals(DruidCluster cluster)
+  {
+    return cluster.getHistoricals().values().stream()
+                  .flatMap(Collection::stream)
+                  .filter(server -> !server.isDecommissioning())
+                  .mapToInt(server -> server.getServer().getNumSegments() + server.getNumQueuedSegments())
+                  .sum();
+  }
+
+  private int getNumHistoricals(DruidCluster cluster)
+  {
+    return cluster.getHistoricals().values().stream()
+                  .mapToInt(Collection::size).sum();
   }
 
 }

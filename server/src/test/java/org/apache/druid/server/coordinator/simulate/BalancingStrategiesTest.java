@@ -32,8 +32,6 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 {
-  private static final long SIZE_1TB = 1_000_000;
-
   private final String strategy;
   private final List<DataSegment> segments = Segments.WIKI_10X100D;
 
@@ -59,7 +57,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(i, Tier.T1, Size.tb(1)));
     }
 
     CoordinatorSimulation sim =
@@ -93,7 +91,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 4; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(i, Tier.T1, Size.tb(1)));
     }
 
     CoordinatorSimulation sim =
@@ -117,7 +115,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     }
 
     // Add another historical
-    final DruidServer newHistorical = createHistorical(4, Tier.T1, SIZE_1TB);
+    final DruidServer newHistorical = createHistorical(4, Tier.T1, Size.tb(1));
     addServer(newHistorical);
     historicals.add(newHistorical);
 
@@ -139,7 +137,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      historicals.add(createHistorical(i, Tier.T1, SIZE_1TB));
+      historicals.add(createHistorical(i, Tier.T1, Size.tb(1)));
     }
 
     CoordinatorSimulation sim =
