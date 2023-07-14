@@ -19,10 +19,11 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableList;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordination.ServerType;
@@ -30,21 +31,19 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.SegmentId;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @RunWith(JUnitParamsRunner.class)
@@ -52,6 +51,8 @@ public class MarkOvershadowedSegmentsAsUnusedTest
 {
   private final DateTime start = DateTimes.of("2012-01-01");
 
+  private final LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
+  private final ImmutableDruidDataSource druidDataSource = EasyMock.createMock(ImmutableDruidDataSource.class);
   private final DataSegment segmentV0 = DataSegment.builder().dataSource("test")
                                                    .interval(new Interval(start, start.plusHours(1)))
                                                    .version("0")
@@ -60,63 +61,53 @@ public class MarkOvershadowedSegmentsAsUnusedTest
   private final DataSegment segmentV1 = segmentV0.withVersion("1");
   private final DataSegment segmentV2 = segmentV0.withVersion("2");
 
-  private TestSegmentsMetadataManager segmentsMetadataManager;
-
-  @Before
-  public void setup()
-  {
-    segmentsMetadataManager = new TestSegmentsMetadataManager();
-  }
-
   @Test
   @Parameters({"historical", "broker"})
-  public void testRun(String serverType)
+  public void testRun(String serverTypeString)
   {
-    segmentsMetadataManager.addSegment(segmentV0);
-    segmentsMetadataManager.addSegment(segmentV1);
-    segmentsMetadataManager.addSegment(segmentV2);
+    ServerType serverType = ServerType.fromString(serverTypeString);
 
-    final ImmutableDruidServer druidServer =
-        new DruidServer("", "", "", 0L, ServerType.fromString(serverType), "", 0)
-            .addDataSegment(segmentV1)
-            .addDataSegment(segmentV2)
-            .toImmutableDruidServer();
+    final Set<SegmentId> deletedSegments = new HashSet<>();
+    MarkOvershadowedSegmentsAsUnused markOvershadowedSegmentsAsUnused = new MarkOvershadowedSegmentsAsUnused(
+        ids -> {
+          deletedSegments.addAll(ids);
+          return ids.size();
+        }
+    );
+    final List<DataSegment> usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
+
+    // Dummy values for comparisons in TreeSet
+    EasyMock.expect(mockPeon.getSegmentsInQueue())
+            .andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop())
+            .andReturn(Collections.emptySet()).anyTimes();
+    final ImmutableDruidServer druidServer = new DruidServer("", "", "", 0L, serverType, "", 0)
+        .addDataSegment(segmentV1)
+        .addDataSegment(segmentV2)
+        .toImmutableDruidServer();
+
+    EasyMock.replay(mockPeon, druidDataSource);
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier("normal", new ServerHolder(druidServer, new LoadQueuePeonTester()))
+        .addTier("normal", new ServerHolder(druidServer, mockPeon))
         .build();
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
-        .withDataSourcesSnapshot(
-            segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
-        )
+        .withUsedSegmentsInTest(usedSegments)
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build()
         )
         .build();
+    markOvershadowedSegmentsAsUnused.run(params);
 
-    SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
-                                                      .getUsedSegmentsTimelinesPerDataSource()
-                                                      .get("test");
+    // Verify that the overshadowed segments have been deleted
+    Assert.assertEquals(2, deletedSegments.size());
+    Assert.assertTrue(deletedSegments.contains(segmentV0.getId()));
+    Assert.assertTrue(deletedSegments.contains(segmentV1.getId()));
 
-    // Verify that the segments V0 and V1 are overshadowed
-    Assert.assertTrue(timeline.isOvershadowed(segmentV0));
-    Assert.assertTrue(timeline.isOvershadowed(segmentV1));
-
-    // Run the duty and verify that the overshadowed segments are marked unused
-    params = new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
-
-    Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
-    Assert.assertEquals(1, updatedUsedSegments.size());
-    Assert.assertTrue(updatedUsedSegments.contains(segmentV2));
-
-    CoordinatorRunStats runStats = params.getCoordinatorStats();
-    Assert.assertEquals(
-        2L,
-        runStats.get(Stats.Segments.OVERSHADOWED, RowKey.of(Dimension.DATASOURCE, "test"))
-    );
+    EasyMock.verify(druidDataSource);
   }
 }

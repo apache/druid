@@ -30,7 +30,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import java.util.Collection;
 
 /**
- * Coordinator duty to balance segments across historicals in a tier.
+ *
  */
 public class BalanceSegments implements CoordinatorDuty
 {

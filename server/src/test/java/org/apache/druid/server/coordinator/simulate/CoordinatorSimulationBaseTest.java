@@ -186,10 +186,10 @@ public abstract class CoordinatorSimulationBaseTest implements
    * Creates a historical. The {@code uniqueIdInTier} must be correctly specified
    * as it is used to identify the historical throughout the simulation.
    */
-  static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeBytes)
+  static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
   {
     final String name = tier + "__" + "hist__" + uniqueIdInTier;
-    return new DruidServer(name, name, name, serverSizeBytes, ServerType.HISTORICAL, tier, 1);
+    return new DruidServer(name, name, name, serverSizeMb << 20, ServerType.HISTORICAL, tier, 1);
   }
 
   // Utility and constant holder classes
@@ -204,19 +204,6 @@ public abstract class CoordinatorSimulationBaseTest implements
   {
     static final String T1 = "tier_t1";
     static final String T2 = "tier_t2";
-  }
-
-  static class Size
-  {
-    static long tb(long teraBytes)
-    {
-      return teraBytes << 40;
-    }
-
-    static long gb(long gigaBytes)
-    {
-      return gigaBytes << 30;
-    }
   }
 
   static class Metric

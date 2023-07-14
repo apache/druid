@@ -43,8 +43,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   public void setUp()
   {
     // Setup historicals for 2 tiers, size 10 GB each
-    historicalT11 = createHistorical(1, Tier.T1, Size.gb(10));
-    historicalT12 = createHistorical(2, Tier.T1, Size.gb(10));
+    historicalT11 = createHistorical(1, Tier.T1, 10_000);
+    historicalT12 = createHistorical(2, Tier.T1, 10_000);
   }
 
   @Test
@@ -236,7 +236,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // Add 10 historicals of size 10TB each
     List<DruidServer> historicals = new ArrayList<>();
     for (int i = 1; i <= 10; ++i) {
-      historicals.add(createHistorical(i, Tier.T1, Size.tb(10)));
+      historicals.add(createHistorical(i, Tier.T1, 10_000_000));
     }
 
     CoordinatorSimulation sim =
@@ -257,15 +257,12 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {
-      addServer(createHistorical(i, Tier.T1, Size.tb(10)));
+      addServer(createHistorical(i, Tier.T1, 10_000_000));
     }
 
     runCoordinatorCycle();
-    verifyValue(Metric.MAX_TO_MOVE, 5960L);
-    verifyValue(Metric.MOVED_COUNT, 5960L);
-
-    // loadQueuedSegments();
-    // verifyDatasourceIsFullyLoaded(DS.KOALA);
+    verifyValue(Metric.MAX_TO_MOVE, 6250L);
+    verifyValue(Metric.MOVED_COUNT, 6250L);
   }
 
 }
