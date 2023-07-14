@@ -518,9 +518,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(
-                      numericEquality("dim2", 0L, ColumnType.LONG)
-                  )
+                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .aggregators(ImmutableList.of(
                       new FixedBucketsHistogramAggregatorFactory(
                           "a0:agg",

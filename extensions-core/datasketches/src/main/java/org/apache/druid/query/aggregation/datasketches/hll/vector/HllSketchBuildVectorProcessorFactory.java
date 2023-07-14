@@ -90,7 +90,7 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
       VectorObjectSelector selector
   )
   {
-    throw DruidException.defensive("ARRAY types are not supported for distinct count");
+    throw DruidException.defensive("ARRAY types are not supported for hll sketch");
   }
 
   @Override
