@@ -53,6 +53,7 @@ This topic contains configuration reference information for the Apache Kafka sup
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
 |`idleConfig`|Object|Defines how and when Kafka Supervisor can become idle. See [Idle Supervisor Configuration](#idle-supervisor-configuration) for more details.|no (default == null)|
+|`multiTopic`|Boolean|Set this to true if you want to ingest data from multiple topics from single supervisor. See [Ingesting from multiple topics](#ingesting-from-multi-topics) for more details.|no (default == false)|
 
 ## Task Autoscaler Properties
 
@@ -136,6 +137,8 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler an
     }
 }
 ```
+## Ingesting from multiple topics
+To ingest from multiple topics, you have to set `multiTopic` in the supervisor IO config to `true`. Multiple topics can be passed as a comma separated list as the value for `topic` in the io config. For example, to ingest data from clicks and impressions, you will set `topic` to `clicks,impressions` in the io config. 
 
 ## More on consumerProperties
 

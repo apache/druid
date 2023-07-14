@@ -232,7 +232,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
 
@@ -264,7 +264,8 @@ public class KafkaRecordSupplierTest
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         properties,
         OBJECT_MAPPER,
-        null
+        null,
+        false
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -291,7 +292,8 @@ public class KafkaRecordSupplierTest
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
             properties,
             OBJECT_MAPPER,
-            null
+            null,
+            false
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
@@ -309,7 +311,8 @@ public class KafkaRecordSupplierTest
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
             properties,
             OBJECT_MAPPER,
-            null
+            null,
+            false
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
@@ -335,7 +338,8 @@ public class KafkaRecordSupplierTest
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         properties,
         OBJECT_MAPPER,
-        null
+        null,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -371,7 +375,8 @@ public class KafkaRecordSupplierTest
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         kafkaServer.consumerProperties(),
         OBJECT_MAPPER,
-        null
+        null,
+        false
     );
 
     recordSupplier.assign(partitions);
@@ -413,7 +418,7 @@ public class KafkaRecordSupplierTest
 
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -484,7 +489,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -527,7 +532,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -560,7 +565,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
 
     recordSupplier.assign(partitions);
 
@@ -586,7 +591,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -621,7 +626,7 @@ public class KafkaRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -633,7 +638,7 @@ public class KafkaRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -645,7 +650,7 @@ public class KafkaRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -657,7 +662,7 @@ public class KafkaRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null, false);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);

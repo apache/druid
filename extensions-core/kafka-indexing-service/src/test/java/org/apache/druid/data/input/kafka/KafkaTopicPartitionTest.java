@@ -72,7 +72,7 @@ public class KafkaTopicPartitionTest
   public void testMultiTopicDeserialization() throws JsonProcessingException
   {
     ObjectMapper objectMapper = new ObjectMapper();
-    KafkaTopicPartition partition = objectMapper.readerFor(KafkaTopicPartition.class).readValue("\"0:topic\"");
+    KafkaTopicPartition partition = objectMapper.readerFor(KafkaTopicPartition.class).readValue("\"topic:0\"");
     Assert.assertEquals(0, partition.partition());
     Assert.assertEquals("topic", partition.topic().orElse(null));
     Assert.assertTrue(partition.isMultiTopicPartition());

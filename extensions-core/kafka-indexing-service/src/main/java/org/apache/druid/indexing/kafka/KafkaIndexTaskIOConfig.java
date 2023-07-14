@@ -40,6 +40,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
   private final long pollTimeout;
   private final KafkaConfigOverrides configOverrides;
 
+  private final boolean multiTopic;
+
   @JsonCreator
   public KafkaIndexTaskIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
@@ -60,7 +62,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-      @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides
+      @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
+      @JsonProperty("multiTopic") @Nullable Boolean multiTopic
   )
   {
     super(
@@ -79,6 +82,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
+    this.multiTopic = multiTopic != null ? multiTopic : KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC;
 
     final SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> myEndSequenceNumbers = getEndSequenceNumbers();
     for (KafkaTopicPartition partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
@@ -119,7 +123,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        configOverrides
+        configOverrides,
+        KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC
     );
   }
 
@@ -167,6 +172,12 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
   public KafkaConfigOverrides getConfigOverrides()
   {
     return configOverrides;
+  }
+
+  @JsonProperty
+  public boolean isMultiTopic()
+  {
+    return multiTopic;
   }
 
   @Override

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -32,7 +33,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -65,7 +65,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   private final KafkaConsumer<byte[], byte[]> consumer;
   private boolean closed;
 
-  private boolean isMultiTopic;
+  private boolean multiTopic;
 
   // Store the stream information when partitions get assigned. This is required because the consumer does not
   // know about the parent stream which could be a list of topics.
@@ -74,10 +74,12 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public KafkaRecordSupplier(
       Map<String, Object> consumerProperties,
       ObjectMapper sortingMapper,
-      KafkaConfigOverrides configOverrides
+      KafkaConfigOverrides configOverrides,
+      boolean multiTopic
   )
   {
     this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides));
+    this.multiTopic = multiTopic;
   }
 
   @VisibleForTesting
@@ -86,6 +88,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   )
   {
     this.consumer = consumer;
+    this.multiTopic = false;
   }
 
   @Override
@@ -95,18 +98,12 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       wrapExceptions(() -> consumer.assign(Collections.emptyList()));
       return;
     }
-    // We assume that assign is called before assignment() or poll() method is called. That way, we know that
-    // stream would have been set.
+
     Set<String> streams = streamPartitions.stream().map(StreamPartition::getStream).collect(Collectors.toSet());
-    try {
-      this.stream = CollectionUtils.getOnlyElement(streams, (Function<Set<String>, Throwable>) strings -> {
-        throw new IAE("[%s] streams found. Only one stream is supported.", strings);
-      });
-      this.isMultiTopic = stream.contains(",");
+    if (streams.size() > 1) {
+      throw InvalidInput.exception("[%s] streams found. Only one stream is supported.", streams);
     }
-    catch (Throwable e) {
-      throw new RuntimeException(e);
-    }
+    this.stream = streams.iterator().next();
     wrapExceptions(() -> consumer.assign(streamPartitions
                                              .stream()
                                              .map(x -> x.getPartitionId().asTopicPartition(x.getStream()))
@@ -147,7 +144,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
                                         .stream()
                                         .map(e -> new StreamPartition<>(
                                             stream,
-                                            new KafkaTopicPartition(isMultiTopic, e.topic(),
+                                            new KafkaTopicPartition(multiTopic, e.topic(),
                                                                     e.partition()
                                             )
                                         ))
@@ -163,7 +160,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
 
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
-          new KafkaTopicPartition(isMultiTopic, record.topic(), record.partition()),
+          new KafkaTopicPartition(multiTopic, record.topic(), record.partition()),
           record.offset(),
           record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
       ));
@@ -210,8 +207,11 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   {
     return wrapExceptions(() -> {
       List<PartitionInfo> allPartitions = new ArrayList<>();
-      boolean isMultiTopic = stream.contains(",");
       for (String topic : stream.split(",")) {
+        if (!multiTopic && !allPartitions.isEmpty()) {
+          throw InvalidInput.exception("Comma separated list of topics [%s] is not supported unless you enabled "
+                                       + "multiTopic in the KafkaSupervisorSpec.", stream);
+        }
         List<PartitionInfo> partitions = consumer.partitionsFor(topic.trim());
         if (partitions == null) {
           throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", topic.trim());
@@ -220,7 +220,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       }
 
       return allPartitions.stream()
-                          .map(p -> new KafkaTopicPartition(isMultiTopic, p.topic(), p.partition()))
+                          .map(p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition()))
                           .collect(Collectors.toSet());
     });
   }

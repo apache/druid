@@ -128,7 +128,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   ) throws InterruptedException, IOException
   {
     final String stream = task.getIOConfig().getStartSequenceNumbers().getStream();
-    final boolean isMultiTopic = stream.contains(",");
+    final boolean isMultiTopic = task.getIOConfig().isMultiTopic();
     final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
     boolean doReset = false;
     if (task.getTuningConfig().isResetOffsetAutomatically()) {

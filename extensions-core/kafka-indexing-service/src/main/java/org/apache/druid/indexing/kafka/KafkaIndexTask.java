@@ -108,7 +108,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
 
       props.put("auto.offset.reset", "none");
 
-      return new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides());
+      return new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
+                                     kafkaIndexTaskIOConfig.isMultiTopic());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

@@ -131,7 +131,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     return new KafkaRecordSupplier(
         spec.getIoConfig().getConsumerProperties(),
         sortingMapper,
-        spec.getIoConfig().getConfigOverrides()
+        spec.getIoConfig().getConfigOverrides(),
+        spec.getIoConfig().isMultiTopic()
     );
   }
 
@@ -196,6 +197,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     return new KafkaIndexTaskIOConfig(
         groupId,
         baseSequenceName,
+        null,
+        null,
         new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getTopic(), startPartitions, Collections.emptySet()),
         new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getTopic(), endPartitions),
         kafkaIoConfig.getConsumerProperties(),
@@ -204,7 +207,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.getInputFormat(),
-        kafkaIoConfig.getConfigOverrides()
+        kafkaIoConfig.getConfigOverrides(),
+        kafkaIoConfig.isMultiTopic()
     );
   }
 
