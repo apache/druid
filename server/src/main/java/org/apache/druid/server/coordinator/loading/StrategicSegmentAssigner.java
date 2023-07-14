@@ -365,21 +365,19 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     } else if (server.isDroppingSegment(segment)) {
       return server.cancelOperation(SegmentAction.DROP, segment);
-    } else if (server.canLoadSegment(segment)) {
-      return loadSegment(segment, server);
     }
 
-    final String skipReason;
-    if (server.getAvailableSize() < segment.getSize()) {
-      skipReason = "Not enough disk space";
-    } else if (server.isLoadQueueFull()) {
-      skipReason = "Load queue is full";
+    if (server.canLoadSegment(segment) && loadSegment(segment, server)) {
+      return true;
     } else {
-      skipReason = "Unknown error";
+      log.makeAlert("Could not assign broadcast segment for datasource [%s]", segment.getDataSource())
+         .addData("segmentId", segment.getId())
+         .addData("segmentSize", segment.getSize())
+         .addData("hostName", server.getServer().getHost())
+         .addData("availableSize", server.getAvailableSize())
+         .emit();
+      return false;
     }
-
-    incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
-    return false;
   }
 
   /**

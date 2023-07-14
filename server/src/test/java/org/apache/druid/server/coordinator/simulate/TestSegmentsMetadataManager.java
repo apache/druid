@@ -27,7 +27,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -45,9 +45,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 
   private volatile DataSourcesSnapshot snapshot;
 
-  /**
-   * Adds the segment to the metadata manager and marks it as used.
-   */
   public void addSegment(DataSegment segment)
   {
     segments.put(segment.getId().toString(), segment);
@@ -55,9 +52,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     snapshot = null;
   }
 
-  /**
-   * Removes the segment from the metadata manager.
-   */
   public void removeSegment(DataSegment segment)
   {
     segments.remove(segment.getId().toString());
@@ -180,12 +174,13 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       boolean requiresLatest
   )
   {
-    SegmentTimeline usedSegmentsTimeline = getSnapshotOfDataSourcesWithAllUsedSegments()
-        .getUsedSegmentsTimelinesPerDataSource().get(datasource);
-    return Optional.fromNullable(usedSegmentsTimeline).transform(
-        timeline ->
-            timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE)
-    );
+    VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline
+        = getSnapshotOfDataSourcesWithAllUsedSegments().getUsedSegmentsTimelinesPerDataSource().get(datasource);
+    return Optional.fromNullable(usedSegmentsTimeline)
+                   .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(
+                       interval,
+                       Partitions.ONLY_COMPLETE
+                   ));
   }
 
   @Override

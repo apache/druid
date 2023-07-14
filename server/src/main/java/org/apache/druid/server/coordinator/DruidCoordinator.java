@@ -589,7 +589,7 @@ public class DruidCoordinator
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused),
         new BalanceSegments(),
-        new CollectSegmentAndServerStats()
+        new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
   }
 
@@ -831,10 +831,6 @@ public class DruidCoordinator
       final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
       cancelLoadsOnDecommissioningServers(cluster);
 
-      final CoordinatorRunStats runStats = params.getCoordinatorStats();
-      collectClusterStats(cluster, runStats);
-      collectUsedSegmentStats(params, runStats);
-
       final BalancerStrategy balancerStrategy
           = createBalancerStrategy(segmentLoadingConfig.getBalancerComputeThreads());
       return params.buildFromExisting()
@@ -874,30 +870,6 @@ public class DruidCoordinator
             cancelledCount.get(), decommissioningServers.size()
         );
       }
-    }
-
-    void collectClusterStats(DruidCluster cluster, CoordinatorRunStats stats)
-    {
-      cluster.getHistoricals().forEach((tier, historicals) -> {
-        final RowKey rowKey = RowKey.of(Dimension.TIER, tier);
-        stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
-        long totalCapacity = historicals.stream().mapToLong(ServerHolder::getMaxSize).sum();
-        stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
-      });
-    }
-
-    void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)
-    {
-      params.getUsedSegmentsTimelinesPerDataSource().forEach(
-          (dataSource, timeline) -> {
-            long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
-                                                   .mapToLong(DataSegment::getSize).sum();
-
-            RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
-            stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
-            stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
-          }
-      );
     }
 
     List<ImmutableDruidServer> prepareCurrentServers()
@@ -985,26 +957,6 @@ public class DruidCoordinator
       // Update replication status
       final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
       segmentReplicationStatus = segmentAssigner == null ? null : segmentAssigner.getReplicationStatus();
-
-      // Collect replication stats
-      final CoordinatorRunStats stats = params.getCoordinatorStats();
-      getDatasourceToUnavailableSegmentCount().forEach(
-          (dataSource, numUnavailable) -> stats.add(
-              Stats.Segments.UNAVAILABLE,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numUnavailable
-          )
-      );
-      getTierToDatasourceToUnderReplicatedCount(false).forEach(
-          (tier, countsPerDatasource) -> countsPerDatasource.forEach(
-              (dataSource, underReplicatedCount) -> stats.addToSegmentStat(
-                  Stats.Segments.UNDER_REPLICATED,
-                  tier,
-                  dataSource,
-                  underReplicatedCount
-              )
-          )
-      );
 
       return params;
     }
