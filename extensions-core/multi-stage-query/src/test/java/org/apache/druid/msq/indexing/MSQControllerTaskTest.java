@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -61,6 +62,7 @@ public class MSQControllerTaskTest
     MSQControllerTask msqWorkerTask = new MSQControllerTask(
         null,
         MSQ_SPEC,
+        null,
         null,
         null,
         null,

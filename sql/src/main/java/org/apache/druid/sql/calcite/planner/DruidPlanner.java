@@ -151,7 +151,6 @@ public class DruidPlanner implements Closeable
     handler = createHandler(root);
     handler.validate();
     plannerContext.setResourceActions(handler.resourceActions());
-    plannerContext.setExplainAttributes(handler.explainAttributes());
     state = State.VALIDATED;
   }
 

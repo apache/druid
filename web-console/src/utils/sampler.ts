@@ -312,7 +312,7 @@ export async function sampleForConnect(
       dataSource,
       intervals,
       merge: true,
-      lenientAggregatorMerge: true,
+      aggregatorMergeStrategy: 'lenient',
       analysisTypes: ['aggregators', 'rollup'],
     });
 

@@ -162,4 +162,10 @@ public class HllSketchHolder
       return this;
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "HllSketchHolder{" + (union != null ? union.toString() : sketch.toString()) + "}";
+  }
 }

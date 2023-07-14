@@ -104,6 +104,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -111,6 +112,8 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -146,11 +149,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000"));
   static final DimensionsSpec DEFAULT_DIM_SPEC = new DimensionsSpec(
       ImmutableList.<DimensionSchema>builder()
-          .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "timeDim")))
-          .add(new DoubleDimensionSchema("d0"))
-          .add(new FloatDimensionSchema("f0"))
-          .add(new LongDimensionSchema("l0"))
-          .build()
+                   .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                       "dim0",
+                       "dim1",
+                       "dim2",
+                       "dim3",
+                       "timeDim"
+                   )))
+                   .add(new DoubleDimensionSchema("d0"))
+                   .add(new FloatDimensionSchema("f0"))
+                   .add(new LongDimensionSchema("l0"))
+                   .build()
   );
 
   static final InputRowParser<Map<String, Object>> DEFAULT_PARSER = new MapInputRowParser(
@@ -350,32 +359,35 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "mmappedAutoTypesMerged",
                         input -> {
-                          input.mapSchema(
-                              schema ->
-                                  new IncrementalIndexSchema(
-                                      schema.getMinTimestamp(),
-                                      schema.getTimestampSpec(),
-                                      schema.getGran(),
-                                      schema.getVirtualColumns(),
-                                      schema.getDimensionsSpec().withDimensions(
-                                          schema.getDimensionsSpec()
-                                                .getDimensions()
-                                                .stream()
-                                                .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
-                                                )
-                                                .collect(Collectors.toList())
-                                      ),
-                                      schema.getMetrics(),
-                                      schema.isRollup()
+                          final QueryableIndex index =
+                              input
+                                  .mapSchema(
+                                      schema ->
+                                          new IncrementalIndexSchema(
+                                              schema.getMinTimestamp(),
+                                              schema.getTimestampSpec(),
+                                              schema.getGran(),
+                                              schema.getVirtualColumns(),
+                                              schema.getDimensionsSpec().withDimensions(
+                                                  schema.getDimensionsSpec()
+                                                        .getDimensions()
+                                                        .stream()
+                                                        .map(
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                        )
+                                                        .collect(Collectors.toList())
+                                              ),
+                                              schema.getMetrics(),
+                                              schema.isRollup()
+                                          )
                                   )
-                          );
-                          // if 1 row per segment some of the columns have null values for the row which causes 'auto'
-                          // typing default value coercion to be lost in default value mode, so make sure there is at
-                          // least one number in each segment for these tests to pass correctly because the column
-                          // is typeless and so doesn't write out zeros like regular numbers do
-                          input.intermediaryPersistSize(3);
-                          final QueryableIndex index = input.buildMMappedMergedIndex();
+                                  // if 1 row per segment some of the columns have null values for the row which causes 'auto'
+                                  // typing default value coercion to be lost in default value mode, so make sure there is at
+                                  // least one number in each segment for these tests to pass correctly because the column
+                                  // is typeless and so doesn't write out zeros like regular numbers do
+                                  .intermediaryPersistSize(3)
+                                  .buildMMappedIndex();
+
                           return Pair.of(new QueryableIndexStorageAdapter(index), index);
                         }
                     )
@@ -394,14 +406,37 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                         }
                     )
                     .put(
+                        "mmappedWithSqlCompatibleNulls",
+                        input -> {
+                          // Build mmapped index in SQL-compatible null handling mode; read it in default-value mode.
+                          Assume.assumeTrue(NullHandling.replaceWithDefault());
+                          final File file;
+                          try {
+                            NullHandling.initializeForTestsWithValues(false, null);
+                            Assert.assertTrue(NullHandling.sqlCompatible());
+                            file = input.buildMMappedIndexFile();
+                          }
+                          finally {
+                            NullHandling.initializeForTests();
+                          }
+
+                          Assert.assertTrue(NullHandling.replaceWithDefault());
+                          try {
+                            final QueryableIndex index = input.getIndexIO().loadIndex(file);
+                            return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          }
+                          catch (IOException e) {
+                            throw new RuntimeException(e);
+                          }
+                        }
+                    )
+                    .put(
                         "rowBasedWithoutTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {
-                        })
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
                     )
                     .put(
                         "rowBasedWithTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {
-                        })
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
                     )
                     .put("frame (row-based)", input -> {
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
@@ -809,7 +844,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           cursor.advance();
         }
       }
-
 
 
       return values;

@@ -40,8 +40,8 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
@@ -668,7 +668,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends StringUtf8DictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {

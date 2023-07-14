@@ -31,6 +31,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -105,10 +106,7 @@ public class IndexMergeBenchmark
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(ExprMacroTable.class, ExprMacroTable.nil());
     JSON_MAPPER.setInjectableValues(injectableValues);
-    INDEX_IO = new IndexIO(
-        JSON_MAPPER,
-        () -> 0
-    );
+    INDEX_IO = new IndexIO(JSON_MAPPER, ColumnConfig.DEFAULT);
   }
 
   @Setup

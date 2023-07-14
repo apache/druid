@@ -76,6 +76,7 @@ public class RunRulesTest
 {
   private static final long SERVER_SIZE_10GB = 10L << 30;
   private static final String DATASOURCE = "test";
+  private static final RowKey DATASOURCE_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DATASOURCE);
 
   private LoadQueuePeon mockPeon;
   private RunRules ruleRunner;
@@ -563,7 +564,7 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
+    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
   }
 
   @Test
@@ -616,7 +617,7 @@ public class RunRulesTest
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
-    Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
+    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
     EasyMock.verify(mockPeon);
   }
@@ -662,7 +663,7 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
-    Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
+    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
     EasyMock.verify(mockPeon);
   }
@@ -705,7 +706,7 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-    Assert.assertEquals(12L, stats.getDataSourceStat(Stats.Segments.DELETED, DATASOURCE));
+    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
     EasyMock.verify(mockPeon);
   }
@@ -1188,7 +1189,7 @@ public class RunRulesTest
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    final RowKey tierRowKey = RowKey.builder().add(Dimension.TIER, DruidServer.DEFAULT_TIER).build();
+    final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
         stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
@@ -1250,7 +1251,7 @@ public class RunRulesTest
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    final RowKey tierRowKey = RowKey.builder().add(Dimension.TIER, DruidServer.DEFAULT_TIER).build();
+    final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assert.assertEquals(
         dataSegment.getSize() * numReplicants,
         stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)

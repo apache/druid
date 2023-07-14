@@ -62,6 +62,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamExceptionEvent;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamState;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -1034,6 +1035,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ),
         stats.get("0")
     );
+  }
+
+  @Test
+  public void testStaleOffsetsNegativeLagNotEmitted() throws Exception
+  {
+    expectEmitterSupervisor(false);
+
+    CountDownLatch latch = new CountDownLatch(1);
+
+    final TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
+        latch,
+        TestEmittingTestSeekableStreamSupervisor.LAG,
+        // Record lag must not be emitted
+        ImmutableMap.of("0", 10L, "1", -100L),
+        null
+    );
+    supervisor.start();
+    // Forcibly set the offsets to be stale
+    supervisor.sequenceLastUpdated = DateTimes.nowUtc().minus(Integer.MAX_VALUE);
+
+    latch.await();
+
+    supervisor.emitLag();
+    Assert.assertEquals(0, emitter.getEvents().size());
   }
 
   private List<Event> filterMetrics(List<Event> events, List<String> whitelist)

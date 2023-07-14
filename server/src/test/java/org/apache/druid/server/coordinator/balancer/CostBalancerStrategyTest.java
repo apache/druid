@@ -21,17 +21,19 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;
@@ -61,7 +63,7 @@ public class CostBalancerStrategyTest
   @Before
   public void setup()
   {
-    balancerExecutor = new BlockingExecutorService("test-balance-exec-%d");
+    balancerExecutor = Execs.singleThreaded("test-balance-exec-%d");
     strategy = new CostBalancerStrategy(MoreExecutors.listeningDecorator(balancerExecutor));
 
     serviceEmitter = new StubServiceEmitter("test-service", "host");
@@ -241,7 +243,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testComputeCost()
+  public void testComputePlacementCost()
   {
     // Create segments for different granularities
     final List<DataSegment> daySegments =
@@ -265,7 +267,7 @@ public class CostBalancerStrategyTest
                           .withNumPartitions(30)
                           .eachOfSizeInMb(100);
 
-    // Distribute the segments randomly amongst 2 servers
+    // Distribute the segments randomly amongst 3 servers
     final List<DataSegment> segments = new ArrayList<>(daySegments);
     segments.addAll(monthSegments);
     segments.addAll(yearSegments);
@@ -284,35 +286,66 @@ public class CostBalancerStrategyTest
         server -> new ServerHolder(server.toImmutableDruidServer(), new LoadQueuePeonTester())
     ).collect(Collectors.toList());
 
+    final ServerHolder serverA = serverHolders.get(0);
+    final ServerHolder serverB = serverHolders.get(1);
+    final ServerHolder serverC = serverHolders.get(2);
+
     // Verify costs for DAY, MONTH and YEAR segments
-    verifyServerCosts(
-        daySegments.get(0),
-        serverHolders,
-        5191.500804, 8691.392080, 6418.467818
-    );
-    verifyServerCosts(
-        monthSegments.get(0),
-        serverHolders,
-        301935.940609, 301935.940606, 304333.677669
-    );
-    verifyServerCosts(
-        yearSegments.get(0),
-        serverHolders,
-        8468764.380437, 12098919.896931, 14501440.169452
-    );
+    final DataSegment daySegment = daySegments.get(0);
+    verifyPlacementCost(daySegment, serverA, 5191.500804);
+    verifyPlacementCost(daySegment, serverB, 8691.392080);
+    verifyPlacementCost(daySegment, serverC, 6418.467818);
+
+    final DataSegment monthSegment = monthSegments.get(0);
+    verifyPlacementCost(monthSegment, serverA, 301935.940609);
+    verifyPlacementCost(monthSegment, serverB, 301935.940606);
+    verifyPlacementCost(monthSegment, serverC, 304333.677669);
+
+    final DataSegment yearSegment = yearSegments.get(0);
+    verifyPlacementCost(yearSegment, serverA, 8468764.380437);
+    verifyPlacementCost(yearSegment, serverB, 12098919.896931);
+    verifyPlacementCost(yearSegment, serverC, 14501440.169452);
 
     // Verify costs for an ALL granularity segment
-    DataSegment allGranularitySegment =
+    final DataSegment allGranularitySegment =
         CreateDataSegments.ofDatasource(DS_WIKI)
                           .forIntervals(1, Granularities.ALL)
                           .eachOfSizeInMb(100).get(0);
-    verifyServerCosts(
-        allGranularitySegment,
-        serverHolders,
-        1.1534173737329768e7,
-        1.6340633534241956e7,
-        1.9026400521582970e7
+    verifyPlacementCost(allGranularitySegment, serverA, 1.1534173737329768e7);
+    verifyPlacementCost(allGranularitySegment, serverB, 1.6340633534241956e7);
+    verifyPlacementCost(allGranularitySegment, serverC, 1.9026400521582970e7);
+  }
+
+  @Test
+  public void testGetAndResetStats()
+  {
+    final ServerHolder serverA = new ServerHolder(
+        createHistorical().toImmutableDruidServer(),
+        new LoadQueuePeonTester()
     );
+    final ServerHolder serverB = new ServerHolder(
+        createHistorical().toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI).eachOfSizeInMb(100).get(0);
+
+    // Verify that computation stats have been tracked
+    strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
+    CoordinatorRunStats computeStats = strategy.getAndResetStats();
+
+    final RowKey rowKey = RowKey.with(Dimension.DATASOURCE, DS_WIKI)
+                                .with(Dimension.DESCRIPTION, "LOAD")
+                                .and(Dimension.TIER, "hot");
+    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT, rowKey));
+
+    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME, rowKey);
+    Assert.assertTrue(computeTime >= 0 && computeTime <= 100);
+    Assert.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
+
+    // Verify that stats have been reset
+    computeStats = strategy.getAndResetStats();
+    Assert.assertEquals(0, computeStats.rowCount());
   }
 
   @Test
@@ -334,42 +367,24 @@ public class CostBalancerStrategyTest
     );
   }
 
-  @Test(timeout = 90_000L)
-  public void testFindServerRaisesAlertOnTimeout()
+  /**
+   * Verifies that the cost of placing the segment on the server is as expected.
+   * Also verifies that this cost is equal to the total joint cost of this segment
+   * with each segment currently on the server.
+   */
+  private void verifyPlacementCost(DataSegment segment, ServerHolder server, double expectedCost)
   {
-    DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI)
-                                            .forIntervals(1, Granularities.DAY)
-                                            .startingAt("2012-10-24")
-                                            .eachOfSizeInMb(100).get(0);
+    double observedCost = strategy.computePlacementCost(segment, server);
+    Assert.assertEquals(expectedCost, observedCost, DELTA);
 
-    final LoadQueuePeonTester peon = new LoadQueuePeonTester();
-    ServerHolder serverA = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
-    ServerHolder serverB = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
-
-    strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
-
-    List<Event> events = serviceEmitter.getEvents();
-    Assert.assertEquals(1, events.size());
-    Assert.assertTrue(events.get(0) instanceof AlertEvent);
-
-    AlertEvent alertEvent = (AlertEvent) events.get(0);
-    Assert.assertEquals(
-        "Cost balancer strategy timed out in action [findServersToLoadSegment]."
-        + " Try setting a higher value of 'balancerComputeThreads'.",
-        alertEvent.getDescription()
-    );
-  }
-
-  private void verifyServerCosts(
-      DataSegment segment,
-      List<ServerHolder> serverHolders,
-      double... expectedCosts
-  )
-  {
-    for (int i = 0; i < serverHolders.size(); ++i) {
-      double observedCost = strategy.computeCost(segment, serverHolders.get(i), true);
-      Assert.assertEquals(expectedCosts[i], observedCost, DELTA);
+    double totalJointSegmentCost = 0;
+    for (DataSegment segmentOnServer : server.getServer().iterateAllSegments()) {
+      totalJointSegmentCost += CostBalancerStrategy.computeJointSegmentsCost(segment, segmentOnServer);
     }
+    if (server.isServingSegment(segment)) {
+      totalJointSegmentCost -= CostBalancerStrategy.computeJointSegmentsCost(segment, segment);
+    }
+    Assert.assertEquals(totalJointSegmentCost, observedCost, DELTA);
   }
 
   private void verifyJointSegmentsCost(

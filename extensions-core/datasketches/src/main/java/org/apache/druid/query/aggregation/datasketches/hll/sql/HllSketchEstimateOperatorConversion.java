@@ -47,7 +47,7 @@ public class HllSketchEstimateOperatorConversion implements SqlOperatorConversio
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.BOOLEAN)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .returnTypeInference(ReturnTypes.DOUBLE)
       .build();
 

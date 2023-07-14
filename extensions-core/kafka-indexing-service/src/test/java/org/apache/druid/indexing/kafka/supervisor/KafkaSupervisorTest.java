@@ -3441,7 +3441,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
-    Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
+    Assert.assertEquals(ISE.class.getName(), serviceEmitter.getExceptionClass());
   }
 
   @Test

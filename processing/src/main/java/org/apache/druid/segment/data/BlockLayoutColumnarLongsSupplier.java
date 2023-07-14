@@ -47,7 +47,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       CompressionStrategy strategy
   )
   {
-    baseLongBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(order, strategy));
+    baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;

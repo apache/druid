@@ -39,7 +39,6 @@ public class SegmentLoadingConfig
   private final int percentDecommSegmentsToMove;
 
   private final boolean useRoundRobinSegmentAssignment;
-  private final boolean emitBalancingStats;
 
   /**
    * Creates a new SegmentLoadingConfig with recomputed coordinator config values from
@@ -61,7 +60,7 @@ public class SegmentLoadingConfig
 
       log.info(
           "Smart segment loading is enabled. Recomputed replicationThrottleLimit"
-          + " [%,d] (%d%% of used segments [%,d]) and maxSegmentsToMove [%d].",
+          + " [%,d] (%d%% of used segments [%,d]) and maxSegmentsToMove [%,d].",
           replicationThrottleLimit, throttlePercentage, numUsedSegments, maxSegmentsToMove
       );
 
@@ -69,11 +68,10 @@ public class SegmentLoadingConfig
           0,
           replicationThrottleLimit,
           Integer.MAX_VALUE,
-          dynamicConfig.getReplicantLifetime(),
+          60,
           maxSegmentsToMove,
           100,
-          true,
-          false
+          true
       );
     } else {
       // Use the configured values
@@ -84,8 +82,7 @@ public class SegmentLoadingConfig
           dynamicConfig.getReplicantLifetime(),
           dynamicConfig.getMaxSegmentsToMove(),
           dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove(),
-          dynamicConfig.isUseRoundRobinSegmentAssignment(),
-          dynamicConfig.emitBalancingStats()
+          dynamicConfig.isUseRoundRobinSegmentAssignment()
       );
     }
   }
@@ -97,8 +94,7 @@ public class SegmentLoadingConfig
       int maxLifetimeInLoadQueue,
       int maxSegmentsToMove,
       int percentDecommSegmentsToMove,
-      boolean useRoundRobinSegmentAssignment,
-      boolean emitBalancingStats
+      boolean useRoundRobinSegmentAssignment
   )
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
@@ -108,7 +104,6 @@ public class SegmentLoadingConfig
     this.maxSegmentsToMove = maxSegmentsToMove;
     this.percentDecommSegmentsToMove = percentDecommSegmentsToMove;
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
-    this.emitBalancingStats = emitBalancingStats;
   }
 
   public int getMaxSegmentsInLoadQueue()
@@ -129,11 +124,6 @@ public class SegmentLoadingConfig
   public boolean isUseRoundRobinSegmentAssignment()
   {
     return useRoundRobinSegmentAssignment;
-  }
-
-  public boolean isEmitBalancingStats()
-  {
-    return emitBalancingStats;
   }
 
   public int getMaxLifetimeInLoadQueue()

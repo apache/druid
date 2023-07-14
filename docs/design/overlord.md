@@ -31,7 +31,7 @@ For basic tuning guidance for the Overlord process, see [Basic cluster tuning](.
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Overlord, please see the [API reference](../api-reference/api-reference.md#overlord).
+For a list of API endpoints supported by the Overlord, please see the [Service status API reference](../api-reference/service-status-api.md#overlord).
 
 ### Overview
 
