@@ -16,38 +16,22 @@
  * limitations under the License.
  */
 
-@import './variables';
+import React from 'react';
 
-.console-application {
-  .view-container {
-    position: absolute;
-    top: $header-bar-height;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: $standard-padding;
-    overflow-y: auto;
+import './column-value.scss';
 
-    &.narrow-pad {
-      padding: $standard-padding $thin-padding;
-    }
-
-    &.thin {
-      padding: 10px;
-    }
-
-    &.thinner {
-      padding: 5px;
-    }
-
-    .app-view {
-      position: relative;
-    }
-  }
-
-  .control-separator {
-    width: 100%;
-    height: 22px;
-    border-top: 2px solid #6d8ea9;
-  }
+export interface ColumnValueProps {
+  value: any;
 }
+
+export const ColumnValue = function ColumnValue(props: ColumnValueProps) {
+  const { value } = props;
+
+  if (value === '') {
+    return <span className="column-value empty">empty</span>;
+  } else if (value === null) {
+    return <span className="column-value null">null</span>;
+  }
+
+  return <span className="column-value">{String(value)}</span>;
+};

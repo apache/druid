@@ -16,38 +16,27 @@
  * limitations under the License.
  */
 
-@import './variables';
+.filter-menu {
+  width: 400px;
 
-.console-application {
-  .view-container {
-    position: absolute;
-    top: $header-bar-height;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: $standard-padding;
-    overflow-y: auto;
+  &.main {
+    padding: 15px;
+  }
 
-    &.narrow-pad {
-      padding: $standard-padding $thin-padding;
-    }
+  .controls .bp4-form-content {
+    display: flex;
+    gap: 15px;
 
-    &.thin {
-      padding: 10px;
-    }
-
-    &.thinner {
-      padding: 5px;
-    }
-
-    .app-view {
-      position: relative;
+    .type-selector {
+      flex: 1;
     }
   }
 
-  .control-separator {
+  textarea {
     width: 100%;
-    height: 22px;
-    border-top: 2px solid #6d8ea9;
+  }
+
+  .button-bar {
+    text-align: right;
   }
 }

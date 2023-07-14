@@ -55,6 +55,9 @@ export const LocalStorageKeys = {
   WORKBENCH_TASK_PANEL: 'workbench-task-panel' as const,
 
   SQL_DATA_LOADER_CONTENT: 'sql-data-loader-content' as const,
+
+  EXPLORE_CONTENT: 'explore-content' as const,
+  EXPLORE_ESSENCE: 'explore-essence' as const,
 };
 export type LocalStorageKeys = (typeof LocalStorageKeys)[keyof typeof LocalStorageKeys];
 
