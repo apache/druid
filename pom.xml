@@ -121,7 +121,6 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.cloud.version>26.18.0</com.google.cloud.version>
         <com.google.http.client.version>1.43.3</com.google.http.client.version>
         <com.google.api.client.version>2.2.0</com.google.api.client.version>
         <com.google.apis.compute.version>1.30.0</com.google.apis.compute.version>
@@ -517,13 +516,6 @@
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
                 <version>55.1</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.cloud</groupId>
-                <artifactId>libraries-bom</artifactId>
-                <version>${com.google.cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
