@@ -238,7 +238,7 @@ public class ColumnComparisonFilter implements Filter
     @Override
     public Supplier<String[]> makeArrayProcessor(
         BaseObjectColumnValueSelector<?> selector,
-        ColumnCapabilities columnCapabilities
+        @Nullable ColumnCapabilities columnCapabilities
     )
     {
       return () -> {

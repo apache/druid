@@ -238,6 +238,23 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
             rootType
         );
       }
+      if (spec.getExtractionFn() == null) {
+        return new BaseSingleValueDimensionSelector()
+        {
+          @Nullable
+          @Override
+          protected String getValue()
+          {
+            return Evals.asString(rootLiteralSelector.getObject());
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+
+          }
+        };
+      }
       return new BaseSingleValueDimensionSelector()
       {
         @Nullable
@@ -245,10 +262,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         protected String getValue()
         {
           final String s = Evals.asString(rootLiteralSelector.getObject());
-          if (spec.getExtractionFn() != null) {
-            return spec.getExtractionFn().apply(s);
-          }
-          return s;
+          return spec.getExtractionFn().apply(s);
         }
 
         @Override

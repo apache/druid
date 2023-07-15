@@ -29,7 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -73,8 +73,8 @@ public class ColumnSelectorColumnIndexSelectorTest
     ).anyTimes();
     EasyMock.expect(holder.getColumn()).andReturn(stringColumn).anyTimes();
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).anyTimes();
-    StringValueSetIndex someIndex = EasyMock.createMock(StringValueSetIndex.class);
-    EasyMock.expect(indexSupplier.as(StringValueSetIndex.class)).andReturn(someIndex).anyTimes();
+    StringValueSetIndexes someIndex = EasyMock.createMock(StringValueSetIndexes.class);
+    EasyMock.expect(indexSupplier.as(StringValueSetIndexes.class)).andReturn(someIndex).anyTimes();
     DictionaryEncodedStringValueIndex valueIndex = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(valueIndex).anyTimes();
     BitmapColumnIndex columnIndex = EasyMock.createMock(BitmapColumnIndex.class);
@@ -108,7 +108,7 @@ public class ColumnSelectorColumnIndexSelectorTest
     );
     Assert.assertNotNull(bitmapIndex);
 
-    StringValueSetIndex valueIndex = supplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueIndex = supplier.as(StringValueSetIndexes.class);
     Assert.assertNotNull(valueIndex);
     ImmutableBitmap valueBitmap = valueIndex.forValue("foo")
                                             .computeBitmapResult(
@@ -127,7 +127,7 @@ public class ColumnSelectorColumnIndexSelectorTest
     );
     Assert.assertNull(bitmapIndex);
 
-    StringValueSetIndex valueIndex = supplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueIndex = supplier.as(StringValueSetIndexes.class);
     Assert.assertNull(valueIndex);
     EasyMock.verify(bitmapFactory, virtualColumns, index, indexSupplier);
   }

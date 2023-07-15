@@ -61,6 +61,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -280,7 +281,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     @Override
     public Supplier<Object> makeArrayProcessor(
         BaseObjectColumnValueSelector<?> selector,
-        ColumnCapabilities columnCapabilities
+        @Nullable ColumnCapabilities columnCapabilities
     )
     {
       return selector::getObject;

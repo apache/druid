@@ -84,7 +84,6 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,9 +52,11 @@ import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
-import org.apache.druid.segment.index.semantic.NumericRangeIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -65,22 +66,22 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 {
   private final String column;
   private final ColumnType matchValueType;
+  private final ExpressionType matchValueExpressionType;
 
   @Nullable
   private final Object upper;
-
   @Nullable
   private final Object lower;
-
   private final ExprEval<?> upperEval;
   private final ExprEval<?> lowerEval;
-  private final boolean lowerStrict;
-  private final boolean upperStrict;
+  private final boolean lowerOpen;
+  private final boolean upperOpen;
   @Nullable
   private final ExtractionFn extractionFn;
   @Nullable
@@ -89,6 +90,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+  private final ConcurrentHashMap<TypeSignature<ValueType>, Predicate<Object[]>> arrayPredicates;
+  private final Supplier<Predicate<Object[]>> typeDetectingArrayPredicateSupplier;
 
   @JsonCreator
   public RangeFilter(
@@ -96,8 +99,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       @JsonProperty("matchValueType") ColumnType matchValueType,
       @JsonProperty("lower") @Nullable Object lower,
       @JsonProperty("upper") @Nullable Object upper,
-      @JsonProperty("lowerStrict") @Nullable Boolean lowerStrict,
-      @JsonProperty("upperStrict") @Nullable Boolean upperStrict,
+      @JsonProperty("lowerOpen") @Nullable Boolean lowerOpen,
+      @JsonProperty("upperOpen") @Nullable Boolean upperOpen,
       @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
@@ -110,24 +113,25 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       throw InvalidInput.exception("Invalid range filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
-    if (lower == null && upper == null) {
+    this.matchValueExpressionType = ExpressionType.fromColumnType(matchValueType);
+    this.upper = upper;
+    this.lower = lower;
+    this.upperEval = ExprEval.ofType(matchValueExpressionType, upper);
+    this.lowerEval = ExprEval.ofType(matchValueExpressionType, lower);
+
+    if (lowerEval.value() == null && upperEval.value() == null) {
       throw InvalidInput.exception(
           "Invalid range filter on column [%s], lower and upper cannot be null at the same time",
           column
       );
     }
-    final ExpressionType expressionType = ExpressionType.fromColumnType(matchValueType);
-    this.upper = upper;
-    this.lower = lower;
-    this.upperEval = ExprEval.ofType(expressionType, upper);
-    this.lowerEval = ExprEval.ofType(expressionType, lower);
-    if (expressionType.isNumeric()) {
+    if (matchValueExpressionType.isNumeric()) {
       if (lower != null && lowerEval.value() == null) {
         throw InvalidInput.exception(
             "Invalid range filter on column [%s], lower bound [%s] cannot be parsed as specified match value type [%s]",
             column,
             lower,
-            expressionType
+            matchValueExpressionType
         );
       }
       if (upper != null && upperEval.value() == null) {
@@ -135,12 +139,12 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             "Invalid range filter on column [%s], upper bound [%s] cannot be parsed as specified match value type [%s]",
             column,
             upper,
-            expressionType
+            matchValueExpressionType
         );
       }
     }
-    this.lowerStrict = lowerStrict != null && lowerStrict;
-    this.upperStrict = upperStrict != null && upperStrict;
+    this.lowerOpen = lowerOpen != null && lowerOpen;
+    this.upperOpen = upperOpen != null && upperOpen;
     // remove once SQL planner no longer uses extractionFn
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
@@ -148,6 +152,9 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     this.longPredicateSupplier = makeLongPredicateSupplier();
     this.floatPredicateSupplier = makeFloatPredicateSupplier();
     this.doublePredicateSupplier = makeDoublePredicateSupplier();
+    this.arrayPredicates = new ConcurrentHashMap<>();
+    this.typeDetectingArrayPredicateSupplier = makeTypeDetectingArrayPredicate();
+
   }
 
   @JsonProperty
@@ -180,26 +187,16 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean isLowerStrict()
+  public boolean isLowerOpen()
   {
-    return lowerStrict;
+    return lowerOpen;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean isUpperStrict()
+  public boolean isUpperOpen()
   {
-    return upperStrict;
-  }
-
-  public boolean hasLowerBound()
-  {
-    return lower != null;
-  }
-
-  public boolean hasUpperBound()
-  {
-    return upper != null;
+    return upperOpen;
   }
 
   @Nullable
@@ -216,6 +213,16 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   public FilterTuning getFilterTuning()
   {
     return filterTuning;
+  }
+
+  public boolean hasLowerBound()
+  {
+    return lower != null;
+  }
+
+  public boolean hasUpperBound()
+  {
+    return upper != null;
   }
 
   @Override
@@ -248,8 +255,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       boundType = 0x3;
     }
 
-    final byte lowerStrictByte = this.isLowerStrict() ? (byte) 1 : 0x0;
-    final byte upperStrictByte = this.isUpperStrict() ? (byte) 1 : 0x0;
+    final byte lowerStrictByte = this.isLowerOpen() ? (byte) 1 : 0x0;
+    final byte upperStrictByte = this.isUpperOpen() ? (byte) 1 : 0x0;
 
     return new CacheKeyBuilder(DimFilterUtils.RANGE_CACHE_ID)
         .appendByte(boundType)
@@ -288,22 +295,28 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    // range partitioning converts stuff to strings.. so do that i guess
+    if (!(Objects.equals(column, dimension) && getExtractionFn() == null)) {
+      return null;
+    }
+
+    // We need to return a RangeSet<String>, but we have Object, not String.  We align with the interface by
+    // converting things to String, but we'd probably be better off adjusting the interface to something that is
+    // more type aware in the future
 
     String lowerString = lowerEval.asString();
     String upperString = upperEval.asString();
     RangeSet<String> retSet = TreeRangeSet.create();
     Range<String> range;
     if (getLower() == null) {
-      range = isUpperStrict() ? Range.lessThan(upperString) : Range.atMost(upperString);
+      range = isUpperOpen() ? Range.lessThan(upperString) : Range.atMost(upperString);
     } else if (getUpper() == null) {
-      range = isLowerStrict() ? Range.greaterThan(lowerString) : Range.atLeast(lowerString);
+      range = isLowerOpen() ? Range.greaterThan(lowerString) : Range.atLeast(lowerString);
     } else {
       range = Range.range(
           lowerString,
-          isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
+          isLowerOpen() ? BoundType.OPEN : BoundType.CLOSED,
           upperString,
-          isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED
+          isUpperOpen() ? BoundType.OPEN : BoundType.CLOSED
       );
     }
     retSet.add(range);
@@ -317,52 +330,35 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
       return null;
     }
-    if (matchValueType.is(ValueType.STRING) && extractionFn == null) {
-      final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
-      if (indexSupplier == null) {
-        return Filters.makeNullIndex(false, selector);
-      }
-      final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
-      if (rangeIndex != null) {
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
+    if (indexSupplier == null) {
+      return new AllFalseBitmapColumnIndex(selector);
+    }
+
+    if (matchValueType.is(ValueType.STRING)) {
+      final LexicographicalRangeIndexes rangeIndexes = indexSupplier.as(LexicographicalRangeIndexes.class);
+      if (rangeIndexes != null) {
         final String lower = hasLowerBound() ? lowerEval.asString() : null;
         final String upper = hasUpperBound() ? upperEval.asString() : null;
-        if (NullHandling.isNullOrEquivalent(lower) && NullHandling.isNullOrEquivalent(upper)) {
-          return Filters.makeNullIndex(false, selector);
-        }
-        final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
-            lower,
-            lowerStrict,
-            upper,
-            upperStrict
-        );
-        if (rangeBitmaps != null) {
-          return rangeBitmaps;
-        }
+        return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     }
-    if (matchValueType.isNumeric() && extractionFn == null) {
-      final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
-      if (indexSupplier == null) {
-        return Filters.makeNullIndex(false, selector);
-      }
-      final NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
-      if (rangeIndex != null) {
+    if (matchValueType.isNumeric()) {
+      final NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
+      if (rangeIndexes != null) {
         final Number lower = (Number) lowerEval.value();
         final Number upper = (Number) upperEval.value();
-        final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
-            lower,
-            isLowerStrict(),
-            upper,
-            isUpperStrict()
-        );
-        if (rangeBitmaps != null) {
-          return rangeBitmaps;
-        }
+        return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     }
 
     // fall back to predicate based index if it is available
-    return Filters.makePredicateIndex(column, selector, getPredicateFactory());
+    final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+    if (predicateIndexes != null) {
+      return predicateIndexes.forPredicate(getPredicateFactory());
+    }
+    // index doesn't exist
+    return null;
   }
 
   @Override
@@ -422,8 +418,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         matchValueType,
         lower,
         upper,
-        lowerStrict,
-        upperStrict,
+        lowerOpen,
+        upperOpen,
         extractionFn,
         filterTuning
     );
@@ -431,14 +427,13 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 
   public boolean isEquality()
   {
-    if (!hasUpperBound() || !hasLowerBound() || lowerStrict || upperStrict) {
+    if (!hasUpperBound() || !hasLowerBound() || lowerOpen || upperOpen) {
       return false;
     }
     if (matchValueType.isArray()) {
-      ExpressionType matchArrayType = ExpressionType.fromColumnType(matchValueType);
       return Arrays.deepEquals(
-          ExprEval.ofType(matchArrayType, upper).asArray(),
-          ExprEval.ofType(matchArrayType, lower).asArray()
+          lowerEval.asArray(),
+          upperEval.asArray()
       );
     } else {
       return Objects.equals(upper, lower);
@@ -459,22 +454,21 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     boolean upperSame;
     boolean lowerSame;
     if (matchValueType.isArray()) {
-      ExpressionType matchArrayType = ExpressionType.fromColumnType(matchValueType);
       upperSame = Arrays.deepEquals(
-          ExprEval.ofType(matchArrayType, upper).asArray(),
-          ExprEval.ofType(matchArrayType, that.upper).asArray()
+          upperEval.asArray(),
+          that.upperEval.asArray()
       );
       lowerSame = Arrays.deepEquals(
-          ExprEval.ofType(matchArrayType, lower).asArray(),
-          ExprEval.ofType(matchArrayType, that.lower).asArray()
+          lowerEval.asArray(),
+          that.lowerEval.asArray()
       );
     } else {
       upperSame = Objects.equals(upper, that.upper);
       lowerSame = Objects.equals(lower, that.lower);
     }
 
-    return lowerStrict == that.lowerStrict &&
-           upperStrict == that.upperStrict &&
+    return lowerOpen == that.lowerOpen &&
+           upperOpen == that.upperOpen &&
            column.equals(that.column) &&
            Objects.equals(matchValueType, that.matchValueType) &&
            upperSame &&
@@ -491,8 +485,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         matchValueType,
         upper,
         lower,
-        lowerStrict,
-        upperStrict,
+        lowerOpen,
+        upperOpen,
         extractionFn,
         filterTuning
     );
@@ -505,7 +499,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 
     if (lower != null) {
       builder.append(lower);
-      if (lowerStrict) {
+      if (lowerOpen) {
         builder.append(" < ");
       } else {
         builder.append(" <= ");
@@ -517,7 +511,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     builder.append(StringUtils.format(" as %s", matchValueType.toString()));
 
     if (upper != null) {
-      if (upperStrict) {
+      if (upperOpen) {
         builder.append(" < ");
       } else {
         builder.append(" <= ");
@@ -536,10 +530,10 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
   {
     return Suppliers.memoize(() -> {
-      boolean hasLowerBound;
-      boolean hasUpperBound;
-      long lowerBound;
-      long upperBound;
+      final boolean hasLowerBound;
+      final boolean hasUpperBound;
+      final long lowerBound;
+      final long upperBound;
 
       if (hasLowerBound()) {
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.LONG);
@@ -568,14 +562,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         hasUpperBound = false;
         upperBound = Long.MAX_VALUE;
       }
-      return BoundDimFilter.makeLongPredicateFromBounds(
-          hasLowerBound,
-          hasUpperBound,
-          lowerStrict,
-          upperStrict,
-          lowerBound,
-          upperBound
-      );
+      final RangeType rangeType = RangeType.of(hasLowerBound, lowerOpen, hasUpperBound, upperOpen);
+      return makeLongPredicate(rangeType, lowerBound, upperBound);
     });
   }
 
@@ -590,10 +578,10 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
   {
     return Suppliers.memoize(() -> {
-      boolean hasLowerBound;
-      boolean hasUpperBound;
-      double lowerBound;
-      double upperBound;
+      final boolean hasLowerBound;
+      final boolean hasUpperBound;
+      final double lowerBound;
+      final double upperBound;
 
       if (hasLowerBound()) {
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.DOUBLE);
@@ -623,14 +611,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         upperBound = Double.POSITIVE_INFINITY;
       }
 
-      return BoundDimFilter.makeDoublePredicateFromBounds(
-          hasLowerBound,
-          hasUpperBound,
-          lowerStrict,
-          upperStrict,
-          lowerBound,
-          upperBound
-      );
+      RangeType rangeType = RangeType.of(hasLowerBound, lowerOpen, hasUpperBound, upperOpen);
+      return makeDoublePredicate(rangeType, lowerBound, upperBound);
     });
   }
 
@@ -640,107 +622,33 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       final Comparator<String> stringComparator = matchValueType.isNumeric()
                                                   ? StringComparators.NUMERIC
                                                   : StringComparators.LEXICOGRAPHIC;
-      final String lowerBound = lowerEval.castTo(ExpressionType.STRING).asString();
-      final String upperBound = upperEval.castTo(ExpressionType.STRING).asString();
+      final String lowerBound = hasLowerBound() ? lowerEval.castTo(ExpressionType.STRING).asString() : null;
+      final String upperBound = hasUpperBound() ? upperEval.castTo(ExpressionType.STRING).asString() : null;
 
-      if (hasLowerBound() && hasUpperBound()) {
-        if (upperStrict && lowerStrict) {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int lowerComparing = stringComparator.compare(input, lowerBound);
-            final int upperComparing = stringComparator.compare(upperBound, input);
-            return ((lowerComparing > 0)) && (upperComparing > 0);
-          };
-        } else if (lowerStrict) {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int lowerComparing = stringComparator.compare(input, lowerBound);
-            final int upperComparing = stringComparator.compare(upperBound, input);
-            return (lowerComparing > 0) && (upperComparing >= 0);
-          };
-        } else if (upperStrict) {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int lowerComparing = stringComparator.compare(input, lowerBound);
-            final int upperComparing = stringComparator.compare(upperBound, input);
-            return (lowerComparing >= 0) && (upperComparing > 0);
-          };
-        } else {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int lowerComparing = stringComparator.compare(input, lowerBound);
-            final int upperComparing = stringComparator.compare(upperBound, input);
-            return (lowerComparing >= 0) && (upperComparing >= 0);
-          };
-        }
-      } else if (hasUpperBound()) {
-        if (upperStrict) {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int upperComparing = stringComparator.compare(upperBound, input);
-            return upperComparing > 0;
-          };
-        } else {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int upperComparing = stringComparator.compare(upperBound, input);
-            return upperComparing >= 0;
-          };
-        }
-      } else if (hasLowerBound()) {
-        if (lowerStrict) {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int lowerComparing = stringComparator.compare(input, lowerBound);
-            return lowerComparing > 0;
-          };
-        } else {
-          return input -> {
-            if (NullHandling.isNullOrEquivalent(input)) {
-              return false;
-            }
-            final int lowerComparing = stringComparator.compare(input, lowerBound);
-            return lowerComparing >= 0;
-          };
-        }
-      } else {
-        return Predicates.notNull();
-      }
+      final RangeType rangeType = RangeType.of(hasLowerBound(), lowerOpen, hasUpperBound(), upperOpen);
+
+      return makeComparatorPredicate(rangeType, stringComparator, lowerBound, upperBound);
     });
   }
 
-  private Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+
+
+  private Predicate<Object[]> makeArrayPredicate(TypeSignature<ValueType> inputType)
   {
-    if (hasLowerBound() && hasUpperBound()) {
-      if (upperStrict && lowerStrict) {
-        if (arrayType != null) {
-          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int lowerComparing = arrayComparator.compare(input, lowerBound);
-            final int upperComparing = arrayComparator.compare(upperBound, input);
-            return ((lowerComparing > 0)) && (upperComparing > 0);
-          };
-        } else {
-          // fall back to per row type detection
+    final Comparator<Object[]> arrayComparator = inputType.getNullableStrategy();
+    final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(inputType);
+    final RangeType rangeType = RangeType.of(hasLowerBound(), lowerOpen, hasUpperBound(), upperOpen);
+    final Object[] lowerBound = hasLowerBound() ? lowerEval.castTo(expressionType).asArray() : null;
+    final Object[] upperBound = hasUpperBound() ? upperEval.castTo(expressionType).asArray() : null;
+    return makeComparatorPredicate(rangeType, arrayComparator, lowerBound, upperBound);
+  }
+
+  private Supplier<Predicate<Object[]>> makeTypeDetectingArrayPredicate()
+  {
+    return Suppliers.memoize(() -> {
+      RangeType rangeType = RangeType.of(hasLowerBound(), lowerOpen, hasUpperBound(), upperOpen);
+      switch (rangeType) {
+        case OPEN:
           return input -> {
             if (input == null) {
               return false;
@@ -753,22 +661,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int upperComparing = comparator.compare(upperBound, val.asArray());
             return ((lowerComparing > 0)) && (upperComparing > 0);
           };
-        }
-      } else if (lowerStrict) {
-        if (arrayType != null) {
-          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int lowerComparing = arrayComparator.compare(input, lowerBound);
-            final int upperComparing = arrayComparator.compare(upperBound, input);
-            return (lowerComparing > 0) && (upperComparing >= 0);
-          };
-        } else {
-          // fall back to per row type detection
+        case LOWER_OPEN_UPPER_CLOSED:
           return input -> {
             if (input == null) {
               return false;
@@ -781,22 +674,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return (lowerComparing > 0) && (upperComparing >= 0);
           };
-        }
-      } else if (upperStrict) {
-        if (arrayType != null) {
-          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int lowerComparing = arrayComparator.compare(input, lowerBound);
-            final int upperComparing = arrayComparator.compare(upperBound, input);
-            return (lowerComparing >= 0) && (upperComparing > 0);
-          };
-        } else {
-          // fall back to per row type detection
+        case LOWER_CLOSED_UPPER_OPEN:
           return input -> {
             if (input == null) {
               return false;
@@ -809,22 +687,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return (lowerComparing >= 0) && (upperComparing > 0);
           };
-        }
-      } else {
-        if (arrayType != null) {
-          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int lowerComparing = arrayComparator.compare(input, lowerBound);
-            final int upperComparing = arrayComparator.compare(upperBound, input);
-            return (lowerComparing >= 0) && (upperComparing >= 0);
-          };
-        } else {
-          // fall back to per row type detection
+        case CLOSED:
           return input -> {
             if (input == null) {
               return false;
@@ -837,22 +700,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return (lowerComparing >= 0) && (upperComparing >= 0);
           };
-        }
-      }
-    } else if (hasUpperBound()) {
-      if (upperStrict) {
-        if (arrayType != null) {
-          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int upperComparing = arrayComparator.compare(upperBound, input);
-            return upperComparing > 0;
-          };
-        } else {
-          // fall back to per row type detection
+        case LOWER_UNBOUNDED_UPPER_OPEN:
           return input -> {
             if (input == null) {
               return false;
@@ -863,20 +711,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return upperComparing > 0;
           };
-        }
-      } else {
-        if (arrayType != null) {
-          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int upperComparing = arrayComparator.compare(upperBound, input);
-            return upperComparing >= 0;
-          };
-        } else {
-          // fall back to per row type detection
+        case LOWER_UNBOUNDED_UPPER_CLOSED:
           return input -> {
             if (input == null) {
               return false;
@@ -887,22 +722,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return upperComparing >= 0;
           };
-        }
-      }
-    } else if (hasLowerBound()) {
-      if (lowerStrict) {
-        if (arrayType != null) {
-          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int lowerComparing = arrayComparator.compare(input, lowerBound);
-            return lowerComparing > 0;
-          };
-        } else {
-          // fall back to per row type detection
+        case LOWER_OPEN_UPPER_UNBOUNDED:
           return input -> {
             if (input == null) {
               return false;
@@ -913,20 +733,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int lowerComparing = arrayComparator.compare(lowerBound, val.asArray());
             return lowerComparing > 0;
           };
-        }
-      } else {
-        if (arrayType != null) {
-          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          return input -> {
-            if (input == null) {
-              return false;
-            }
-            final int lowerComparing = arrayComparator.compare(input, lowerBound);
-            return lowerComparing >= 0;
-          };
-        } else {
-          // fall back to per row type detection
+        case LOWER_CLOSED_UPPER_UNBOUNDED:
           return input -> {
             if (input == null) {
               return false;
@@ -937,11 +744,11 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             final int lowerComparing = arrayComparator.compare(lowerBound, val.asArray());
             return lowerComparing >= 0;
           };
-        }
+        case UNBOUNDED:
+        default:
+          return Predicates.notNull();
       }
-    } else {
-      return Predicates.notNull();
-    }
+    });
   }
 
   private class RangePredicateFactory implements DruidPredicateFactory
@@ -992,7 +799,13 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     @Override
     public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> inputType)
     {
-      return RangeFilter.this.makeArrayPredicate(inputType);
+      if (inputType == null) {
+        return typeDetectingArrayPredicateSupplier.get();
+      }
+      return arrayPredicates.computeIfAbsent(
+          inputType,
+          (existing) -> RangeFilter.this.makeArrayPredicate(inputType)
+      );
     }
 
     @Override
@@ -1020,6 +833,230 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       return "RangePredicateFactory{" +
              "rangeFilter=" + rangeFilter +
              '}';
+    }
+  }
+
+  public static DruidLongPredicate makeLongPredicate(
+      final RangeType rangeType,
+      final long lowerLongBound,
+      final long upperLongBound
+  )
+  {
+    switch (rangeType) {
+      case OPEN:
+        return input -> input > lowerLongBound && input < upperLongBound;
+      case LOWER_OPEN_UPPER_CLOSED:
+        return input -> input > lowerLongBound && input <= upperLongBound;
+      case LOWER_CLOSED_UPPER_OPEN:
+        return input -> input >= lowerLongBound && input < upperLongBound;
+      case CLOSED:
+        return input -> input >= lowerLongBound && input <= upperLongBound;
+      case LOWER_UNBOUNDED_UPPER_OPEN:
+        return input -> input < upperLongBound;
+      case LOWER_UNBOUNDED_UPPER_CLOSED:
+        return input -> input <= upperLongBound;
+      case LOWER_OPEN_UPPER_UNBOUNDED:
+        return input -> input > lowerLongBound;
+      case LOWER_CLOSED_UPPER_UNBOUNDED:
+        return input -> input >= lowerLongBound;
+      case UNBOUNDED:
+      default:
+        return DruidLongPredicate.ALWAYS_TRUE;
+    }
+  }
+
+  public static DruidDoublePredicate makeDoublePredicate(
+      final RangeType rangeType,
+      final double lowerDoubleBound,
+      final double upperDoubleBound
+  )
+  {
+    switch (rangeType) {
+      case OPEN:
+        return input -> {
+          final int lowerComparing = Double.compare(input, lowerDoubleBound);
+          final int upperComparing = Double.compare(upperDoubleBound, input);
+          return ((lowerComparing > 0)) && (upperComparing > 0);
+        };
+      case LOWER_OPEN_UPPER_CLOSED:
+        return input -> {
+          final int lowerComparing = Double.compare(input, lowerDoubleBound);
+          final int upperComparing = Double.compare(upperDoubleBound, input);
+          return (lowerComparing > 0) && (upperComparing >= 0);
+        };
+      case LOWER_CLOSED_UPPER_OPEN:
+        return input -> {
+          final int lowerComparing = Double.compare(input, lowerDoubleBound);
+          final int upperComparing = Double.compare(upperDoubleBound, input);
+          return (lowerComparing >= 0) && (upperComparing > 0);
+        };
+      case CLOSED:
+        return input -> {
+          final int lowerComparing = Double.compare(input, lowerDoubleBound);
+          final int upperComparing = Double.compare(upperDoubleBound, input);
+          return (lowerComparing >= 0) && (upperComparing >= 0);
+        };
+      case LOWER_UNBOUNDED_UPPER_OPEN:
+        return input -> {
+          final int upperComparing = Double.compare(upperDoubleBound, input);
+          return upperComparing > 0;
+        };
+      case LOWER_UNBOUNDED_UPPER_CLOSED:
+        return input -> {
+          final int upperComparing = Double.compare(upperDoubleBound, input);
+          return upperComparing >= 0;
+        };
+      case LOWER_OPEN_UPPER_UNBOUNDED:
+        return input -> {
+          final int lowerComparing = Double.compare(input, lowerDoubleBound);
+          return lowerComparing > 0;
+        };
+      case LOWER_CLOSED_UPPER_UNBOUNDED:
+        return input -> {
+          final int lowerComparing = Double.compare(input, lowerDoubleBound);
+          return lowerComparing >= 0;
+        };
+      case UNBOUNDED:
+      default:
+        return DruidDoublePredicate.ALWAYS_TRUE;
+    }
+  }
+
+  public static <T> Predicate<T> makeComparatorPredicate(
+      RangeType rangeType,
+      Comparator<T> comparator,
+      @Nullable T lowerBound,
+      @Nullable T upperBound
+  )
+  {
+    switch (rangeType) {
+      case OPEN:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int lowerComparing = comparator.compare(input, lowerBound);
+          final int upperComparing = comparator.compare(upperBound, input);
+          return ((lowerComparing > 0)) && (upperComparing > 0);
+        };
+      case LOWER_OPEN_UPPER_CLOSED:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int lowerComparing = comparator.compare(input, lowerBound);
+          final int upperComparing = comparator.compare(upperBound, input);
+          return (lowerComparing > 0) && (upperComparing >= 0);
+        };
+      case LOWER_CLOSED_UPPER_OPEN:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int lowerComparing = comparator.compare(input, lowerBound);
+          final int upperComparing = comparator.compare(upperBound, input);
+          return (lowerComparing >= 0) && (upperComparing > 0);
+        };
+      case CLOSED:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int lowerComparing = comparator.compare(input, lowerBound);
+          final int upperComparing = comparator.compare(upperBound, input);
+          return (lowerComparing >= 0) && (upperComparing >= 0);
+        };
+      case LOWER_UNBOUNDED_UPPER_OPEN:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int upperComparing = comparator.compare(upperBound, input);
+          return upperComparing > 0;
+        };
+      case LOWER_UNBOUNDED_UPPER_CLOSED:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int upperComparing = comparator.compare(upperBound, input);
+          return upperComparing >= 0;
+        };
+      case LOWER_OPEN_UPPER_UNBOUNDED:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int lowerComparing = comparator.compare(input, lowerBound);
+          return lowerComparing > 0;
+        };
+      case LOWER_CLOSED_UPPER_UNBOUNDED:
+        return input -> {
+          if (input == null) {
+            return false;
+          }
+          final int lowerComparing = comparator.compare(input, lowerBound);
+          return lowerComparing >= 0;
+        };
+      case UNBOUNDED:
+      default:
+        return Predicates.notNull();
+    }
+  }
+
+  public enum RangeType
+  {
+    /**
+     * (...)
+     */
+    OPEN,
+    /**
+     * [...]
+     */
+    CLOSED,
+    /**
+     * [...)
+     */
+    LOWER_CLOSED_UPPER_OPEN,
+    /**
+     * (...]
+     */
+    LOWER_OPEN_UPPER_CLOSED,
+    /**
+     * (...∞
+     */
+    LOWER_OPEN_UPPER_UNBOUNDED,
+    /**
+     * [...∞
+     */
+    LOWER_CLOSED_UPPER_UNBOUNDED,
+    /**
+     * -∞...)
+     */
+    LOWER_UNBOUNDED_UPPER_OPEN,
+    /**
+     * -∞...]
+     */
+    LOWER_UNBOUNDED_UPPER_CLOSED,
+    /**
+     * -∞...∞
+     */
+    UNBOUNDED;
+
+    public static RangeType of(boolean hasLower, boolean lowerOpen, boolean hasUpper, boolean upperOpen)
+    {
+      if (hasLower && hasUpper) {
+        if (lowerOpen) {
+          return upperOpen ? OPEN : LOWER_OPEN_UPPER_CLOSED;
+        } else {
+          return upperOpen ? LOWER_CLOSED_UPPER_OPEN : CLOSED;
+        }
+      } else if (hasLower) {
+        return lowerOpen ? LOWER_OPEN_UPPER_UNBOUNDED : LOWER_CLOSED_UPPER_UNBOUNDED;
+      } else if (hasUpper) {
+        return upperOpen ? LOWER_UNBOUNDED_UPPER_OPEN : LOWER_UNBOUNDED_UPPER_CLOSED;
+      }
+      return UNBOUNDED;
     }
   }
 }

@@ -64,7 +64,6 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
@@ -103,7 +102,6 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

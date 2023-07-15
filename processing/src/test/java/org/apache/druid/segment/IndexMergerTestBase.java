@@ -60,7 +60,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -127,7 +127,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       return BitmapValues.EMPTY;
     }
 
-    final StringValueSetIndex index = indexSupplier.as(StringValueSetIndex.class);
+    final StringValueSetIndexes index = indexSupplier.as(StringValueSetIndexes.class);
     if (index == null) {
       return BitmapValues.EMPTY;
     }

@@ -57,11 +57,11 @@ import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
-import org.apache.druid.segment.index.semantic.NumericRangeIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
-import org.apache.druid.segment.index.semantic.TypedValueIndex;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -196,14 +196,14 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
       }
       return (T) (NullValueIndex) () -> nullIndex;
-    } else if (clazz.equals(TypedValueIndex.class)) {
-      return (T) new LongValueIndex();
-    } else if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new LongStringValueSetIndex();
-    } else if (clazz.equals(NumericRangeIndex.class)) {
+    } else if (clazz.equals(ValueIndexes.class)) {
+      return (T) new LongValueIndexes();
+    } else if (clazz.equals(StringValueSetIndexes.class)) {
+      return (T) new LongStringValueSetIndexes();
+    } else if (clazz.equals(NumericRangeIndexes.class)) {
       return (T) new LongNumericRangeIndex();
-    } else if (clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new LongPredicateIndex();
+    } else if (clazz.equals(DruidPredicateIndexes.class)) {
+      return (T) new LongPredicateIndexes();
     } else if (
         clazz.equals(DictionaryEncodedStringValueIndex.class) ||
         clazz.equals(DictionaryEncodedValueIndex.class)
@@ -224,7 +224,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
-  private class LongValueIndex implements TypedValueIndex
+  private class LongValueIndexes implements ValueIndexes
   {
     @Nullable
     @Override
@@ -262,7 +262,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     }
   }
 
-  private class LongStringValueSetIndex implements StringValueSetIndex
+  private class LongStringValueSetIndexes implements StringValueSetIndexes
   {
     final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
     int defaultValueIndex = dictionary.indexOf(NullHandling.defaultLongValue());
@@ -401,7 +401,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     }
   }
 
-  private class LongNumericRangeIndex implements NumericRangeIndex
+  private class LongNumericRangeIndex implements NumericRangeIndexes
   {
     @Nullable
     @Override
@@ -451,7 +451,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     }
   }
 
-  private class LongPredicateIndex implements DruidPredicateIndex
+  private class LongPredicateIndexes implements DruidPredicateIndexes
   {
     @Nullable
     @Override

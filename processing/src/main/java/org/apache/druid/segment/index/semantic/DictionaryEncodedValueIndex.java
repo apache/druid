@@ -30,8 +30,8 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
  * either already know what value the dictionary id represents, not care at all, or have some other means to know
  * exactly which bitmaps to retrieve.
  *
- * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
- * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}.
+ * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndexes},
+ * {@link LexicographicalRangeIndexes}, {@link NumericRangeIndexes}, or {@link DruidPredicateIndexes}.
  */
 public interface DictionaryEncodedValueIndex
 {

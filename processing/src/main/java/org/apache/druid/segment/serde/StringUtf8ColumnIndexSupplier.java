@@ -31,19 +31,19 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.IndexedStringDictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.index.IndexedStringDruidPredicateIndex;
-import org.apache.druid.segment.index.IndexedUtf8LexicographicalRangeIndex;
-import org.apache.druid.segment.index.IndexedUtf8ValueSetIndex;
+import org.apache.druid.segment.index.IndexedStringDruidPredicateIndexes;
+import org.apache.druid.segment.index.IndexedUtf8LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.IndexedUtf8ValueIndexes;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
-import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.SpatialIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
-import org.apache.druid.segment.index.semantic.TypedValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -116,25 +116,25 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
         }
         return (T) (NullValueIndex) () -> nullIndex;
       } else if (
-          clazz.equals(StringValueSetIndex.class) ||
+          clazz.equals(StringValueSetIndexes.class) ||
           clazz.equals(Utf8ValueSetIndex.class) ||
-          clazz.equals(TypedValueIndex.class)
+          clazz.equals(ValueIndexes.class)
       ) {
-        return (T) new IndexedUtf8ValueSetIndex<>(
+        return (T) new IndexedUtf8ValueIndexes<>(
             bitmapFactory,
             dict,
             singleThreadedBitmaps
         );
-      } else if (clazz.equals(DruidPredicateIndex.class)) {
-        return (T) new IndexedStringDruidPredicateIndex<>(
+      } else if (clazz.equals(DruidPredicateIndexes.class)) {
+        return (T) new IndexedStringDruidPredicateIndexes<>(
             bitmapFactory,
             new StringEncodingStrategies.Utf8ToStringIndexed(dict),
             singleThreadedBitmaps,
             columnConfig,
             numRows
         );
-      } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-        return (T) new IndexedUtf8LexicographicalRangeIndex<>(
+      } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
+        return (T) new IndexedUtf8LexicographicalRangeIndexes<>(
             bitmapFactory,
             dict,
             singleThreadedBitmaps,

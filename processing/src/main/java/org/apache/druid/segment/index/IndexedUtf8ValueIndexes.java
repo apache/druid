@@ -33,9 +33,9 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
-import org.apache.druid.segment.index.semantic.TypedValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -44,8 +44,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
-public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuffer>>
-    implements StringValueSetIndex, Utf8ValueSetIndex, TypedValueIndex
+public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffer>>
+    implements StringValueSetIndexes, Utf8ValueSetIndex, ValueIndexes
 {
   // This determines the cut-off point to switch the merging algorithm from doing binary-search per element in the value
   // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
@@ -60,7 +60,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
   private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
 
-  public IndexedUtf8ValueSetIndex(
+  public IndexedUtf8ValueIndexes(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps
@@ -75,6 +75,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
   @Override
   public BitmapColumnIndex forValue(@Nullable String value)
   {
+    final ByteBuffer utf8 = StringUtils.toUtf8ByteBuffer(value);
     return new SimpleBitmapColumnIndex()
     {
       @Override
@@ -92,7 +93,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
 
       private ImmutableBitmap getBitmapForValue()
       {
-        final int idx = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(value));
+        final int idx = dictionary.indexOf(utf8);
         return getBitmap(idx);
       }
     };

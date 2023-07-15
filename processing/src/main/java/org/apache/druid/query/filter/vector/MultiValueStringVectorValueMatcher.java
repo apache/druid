@@ -92,7 +92,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
@@ -170,7 +169,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
@@ -210,7 +208,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };

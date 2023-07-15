@@ -26,5 +26,5 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
  */
 public interface NullValueIndex
 {
-  BitmapColumnIndex forNull();
+  BitmapColumnIndex get();
 }

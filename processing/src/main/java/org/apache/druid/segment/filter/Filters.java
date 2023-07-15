@@ -44,7 +44,7 @@ import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -131,9 +131,9 @@ public class Filters
     Preconditions.checkNotNull(predicateFactory, "predicateFactory");
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier != null) {
-      final DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
-      if (predicateIndex != null) {
-        return predicateIndex.forPredicate(predicateFactory);
+      final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+      if (predicateIndexes != null) {
+        return predicateIndexes.forPredicate(predicateFactory);
       }
       // index doesn't exist
       return null;
@@ -144,7 +144,7 @@ public class Filters
            : new AllFalseBitmapColumnIndex(selector);
   }
 
-  public static BitmapColumnIndex makeNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  public static BitmapColumnIndex makeMissingColumnNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
   {
     return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
   }

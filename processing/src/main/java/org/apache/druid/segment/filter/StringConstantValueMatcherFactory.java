@@ -80,7 +80,7 @@ public class StringConstantValueMatcherFactory implements ColumnProcessorFactory
   @Override
   public ValueMatcher makeArrayProcessor(
       BaseObjectColumnValueSelector<?> selector,
-      ColumnCapabilities columnCapabilities
+      @Nullable ColumnCapabilities columnCapabilities
   )
   {
     // this is gonna fail because SelectorPredicateFactory does not implement array predicate...

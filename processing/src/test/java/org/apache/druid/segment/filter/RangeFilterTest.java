@@ -193,20 +193,29 @@ public class RangeFilterTest extends BaseFilterTest
   @Test
   public void testLexicographicMatchNull()
   {
-    assertFilterMatches(
-        new RangeFilter("dim0", ColumnType.STRING, "", "", false, false, null, null),
-        ImmutableList.of()
-    );
-    assertFilterMatches(
-        new RangeFilter("dim1", ColumnType.STRING, "", "", false, false, null, null),
-        NullHandling.replaceWithDefault() ? ImmutableList.of() : ImmutableList.of("0")
-    );
+
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
-          new RangeFilter("dim2", ColumnType.STRING, "", "", false, false, null, null),
-          ImmutableList.of()
+      // in default value mode this is null on both ends...
+      Throwable t = Assert.assertThrows(
+          DruidException.class,
+          () -> assertFilterMatches(
+              new RangeFilter("dim0", ColumnType.STRING, "", "", false, false, null, null),
+              ImmutableList.of()
+          )
+      );
+      Assert.assertEquals(
+          "Invalid range filter on column [dim0], lower and upper cannot be null at the same time",
+          t.getMessage()
       );
     } else {
+      assertFilterMatches(
+          new RangeFilter("dim0", ColumnType.STRING, "", "", false, false, null, null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new RangeFilter("dim1", ColumnType.STRING, "", "", false, false, null, null),
+          ImmutableList.of("0")
+      );
       // still matches even with auto-schema because match-values are upcast to array types
       assertFilterMatches(
           new RangeFilter("dim2", ColumnType.STRING, "", "", false, false, null, null),
@@ -219,31 +228,31 @@ public class RangeFilterTest extends BaseFilterTest
   public void testLexicographicMatchMissingColumn()
   {
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, "", "", false, false, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, "", "z", false, false, null, null),
         ImmutableList.of()
     );
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, "", null, false, true, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, "a", null, false, true, null, null),
         ImmutableList.of()
     );
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, null, "", false, true, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, null, "z", false, true, null, null),
         ImmutableList.of()
     );
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, "", "", true, false, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, "", "z", true, false, null, null),
         ImmutableList.of()
     );
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, "", "", false, true, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, "", "z", false, true, null, null),
         ImmutableList.of()
     );
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, null, "", false, false, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, null, "z", false, false, null, null),
         ImmutableList.of()
     );
     assertFilterMatches(
-        new RangeFilter("dim3", ColumnType.STRING, null, "", false, true, null, null),
+        new RangeFilter("dim3", ColumnType.STRING, null, "z", false, true, null, null),
         ImmutableList.of()
     );
   }
@@ -755,7 +764,7 @@ public class RangeFilterTest extends BaseFilterTest
     ExtractionFn makeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     assertFilterMatches(
-        new RangeFilter("dim0", ColumnType.STRING, "", "", false, false, makeNullFn, null),
+        new RangeFilter("dim0", ColumnType.STRING, "", "z", false, false, makeNullFn, null),
         ImmutableList.of()
     );
 
@@ -958,8 +967,8 @@ public class RangeFilterTest extends BaseFilterTest
   @Test
   public void testRequiredColumnRewrite()
   {
-    RangeFilter filter = new RangeFilter("dim0", ColumnType.STRING, "", "", false, false, null, null);
-    RangeFilter filter2 = new RangeFilter("dim1", ColumnType.STRING, "", "", false, false, null, null);
+    RangeFilter filter = new RangeFilter("dim0", ColumnType.STRING, "abc", "def", false, false, null, null);
+    RangeFilter filter2 = new RangeFilter("dim1", ColumnType.STRING, "abc", "def", false, false, null, null);
     Assert.assertTrue(filter.supportsRequiredColumnRewrite());
     Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
 
@@ -1311,13 +1320,16 @@ public class RangeFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(RangeFilter.class)
                   .withNonnullFields("column", "matchValueType")
                   .withIgnoredFields(
+                      "matchValueExpressionType",
                       "lowerEval",
                       "upperEval",
                       "cachedOptimizedFilter",
                       "stringPredicateSupplier",
                       "longPredicateSupplier",
                       "floatPredicateSupplier",
-                      "doublePredicateSupplier"
+                      "doublePredicateSupplier",
+                      "arrayPredicates",
+                      "typeDetectingArrayPredicateSupplier"
                   )
                   .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
                   .usingGetClass()

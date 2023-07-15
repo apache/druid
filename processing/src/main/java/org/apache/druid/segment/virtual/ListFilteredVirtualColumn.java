@@ -51,10 +51,10 @@ import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
-import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -226,12 +226,12 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
         if (clazz.equals(NullValueIndex.class)) {
           return (T) new ListFilteredNullValueIndex(underlyingIndex, idMapping, numRows);
-        } else if (clazz.equals(StringValueSetIndex.class)) {
-          return (T) new ListFilteredStringValueSetIndex(underlyingIndex, idMapping);
-        } else if (clazz.equals(DruidPredicateIndex.class)) {
-          return (T) new ListFilteredDruidPredicateIndex(underlyingIndex, idMapping);
-        } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-          return (T) new ListFilteredLexicographicalRangeIndex(underlyingIndex, idMapping);
+        } else if (clazz.equals(StringValueSetIndexes.class)) {
+          return (T) new ListFilteredStringValueSetIndexes(underlyingIndex, idMapping);
+        } else if (clazz.equals(DruidPredicateIndexes.class)) {
+          return (T) new ListFilteredDruidPredicateIndexes(underlyingIndex, idMapping);
+        } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
+          return (T) new ListFilteredLexicographicalRangeIndexes(underlyingIndex, idMapping);
         } else if (clazz.equals(DictionaryEncodedStringValueIndex.class) || clazz.equals(DictionaryEncodedValueIndex.class)) {
           return (T) new ListFilteredDictionaryEncodedStringValueIndex(underlyingIndex, idMapping);
         }
@@ -376,7 +376,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public BitmapColumnIndex forNull()
+    public BitmapColumnIndex get()
     {
       return new SimpleImmutableBitmapIterableIndex()
       {
@@ -405,11 +405,11 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
   }
 
-  private static class ListFilteredStringValueSetIndex extends BaseListFilteredColumnIndex
-      implements StringValueSetIndex
+  private static class ListFilteredStringValueSetIndexes extends BaseListFilteredColumnIndex
+      implements StringValueSetIndexes
   {
 
-    private ListFilteredStringValueSetIndex(
+    private ListFilteredStringValueSetIndexes(
         DictionaryEncodedStringValueIndex delegate,
         IdMapping idMapping
     )
@@ -494,11 +494,11 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
   }
 
-  private static class ListFilteredDruidPredicateIndex extends BaseListFilteredColumnIndex
-      implements DruidPredicateIndex
+  private static class ListFilteredDruidPredicateIndexes extends BaseListFilteredColumnIndex
+      implements DruidPredicateIndexes
   {
 
-    private ListFilteredDruidPredicateIndex(DictionaryEncodedStringValueIndex delegate, IdMapping idMapping)
+    private ListFilteredDruidPredicateIndexes(DictionaryEncodedStringValueIndex delegate, IdMapping idMapping)
     {
       super(delegate, idMapping);
     }
@@ -531,11 +531,11 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     }
   }
 
-  private static class ListFilteredLexicographicalRangeIndex extends BaseListFilteredColumnIndex
-      implements LexicographicalRangeIndex
+  private static class ListFilteredLexicographicalRangeIndexes extends BaseListFilteredColumnIndex
+      implements LexicographicalRangeIndexes
   {
 
-    private ListFilteredLexicographicalRangeIndex(
+    private ListFilteredLexicographicalRangeIndexes(
         DictionaryEncodedStringValueIndex delegate,
         IdMapping idMapping
     )

@@ -26,7 +26,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.primitives.Doubles;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.math.expr.Evals;
@@ -41,6 +40,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
@@ -1013,18 +1013,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               longVector[i] = 0L;
               nullVector[i] = true;
             } else {
-              Long l;
-              if (v instanceof Number) {
-                l = ((Number) v).longValue();
-              } else {
-                final String s = String.valueOf(v);
-                final Double d = Doubles.tryParse(s);
-                if (d != null) {
-                  l = d.longValue();
-                } else {
-                  l = GuavaUtils.tryParseLong(s);
-                }
-              }
+              Long l = DimensionHandlerUtils.convertObjectToLong(v);
               if (l != null) {
                 longVector[i] = l;
                 if (nullVector != null) {
@@ -1082,12 +1071,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               doubleVector[i] = 0.0;
               nullVector[i] = true;
             } else {
-              Double d;
-              if (v instanceof Number) {
-                d = ((Number) v).doubleValue();
-              } else {
-                d = Doubles.tryParse(String.valueOf(v));
-              }
+              Double d = DimensionHandlerUtils.convertObjectToDouble(v);
               if (d != null) {
                 doubleVector[i] = d;
                 if (nullVector != null) {

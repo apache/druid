@@ -52,7 +52,7 @@ public class Ranges
           range.getMatchValueType(),
           range.getUpper(),
           null,
-          !range.isUpperStrict(),
+          !range.isUpperOpen(),
           false,
           range.getExtractionFn(),
           range.getFilterTuning()
@@ -65,7 +65,7 @@ public class Ranges
           null,
           range.getLower(),
           false,
-          !range.isLowerStrict(),
+          !range.isLowerOpen(),
           range.getExtractionFn(),
           range.getFilterTuning()
       );
@@ -82,12 +82,12 @@ public class Ranges
                              : null;
 
     if (lower == null) {
-      return range.isUpperStrict() ? Range.lessThan(upper) : Range.atMost(upper);
+      return range.isUpperOpen() ? Range.lessThan(upper) : Range.atMost(upper);
     } else if (upper == null) {
-      return range.isLowerStrict() ? Range.greaterThan(lower) : Range.atLeast(lower);
+      return range.isLowerOpen() ? Range.greaterThan(lower) : Range.atLeast(lower);
     } else {
-      BoundType lowerBoundType = range.isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED;
-      BoundType upperBoundType = range.isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED;
+      BoundType lowerBoundType = range.isLowerOpen() ? BoundType.OPEN : BoundType.CLOSED;
+      BoundType upperBoundType = range.isUpperOpen() ? BoundType.OPEN : BoundType.CLOSED;
       return Range.range(lower, lowerBoundType, upper, upperBoundType);
     }
   }
@@ -105,12 +105,12 @@ public class Ranges
                              : null;
 
     if (lower == null) {
-      return range.isUpperStrict() ? Range.lessThan(upper) : Range.atMost(upper);
+      return range.isUpperOpen() ? Range.lessThan(upper) : Range.atMost(upper);
     } else if (upper == null) {
-      return range.isLowerStrict() ? Range.greaterThan(lower) : Range.atLeast(lower);
+      return range.isLowerOpen() ? Range.greaterThan(lower) : Range.atLeast(lower);
     } else {
-      BoundType lowerBoundType = range.isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED;
-      BoundType upperBoundType = range.isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED;
+      BoundType lowerBoundType = range.isLowerOpen() ? BoundType.OPEN : BoundType.CLOSED;
+      BoundType upperBoundType = range.isUpperOpen() ? BoundType.OPEN : BoundType.CLOSED;
       return Range.range(lower, lowerBoundType, upper, upperBoundType);
     }
   }

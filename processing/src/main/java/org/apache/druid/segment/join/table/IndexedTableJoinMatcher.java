@@ -495,7 +495,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public ConditionMatcher makeArrayProcessor(
         BaseObjectColumnValueSelector<?> selector,
-        ColumnCapabilities columnCapabilities
+        @Nullable ColumnCapabilities columnCapabilities
     )
     {
       return () -> {

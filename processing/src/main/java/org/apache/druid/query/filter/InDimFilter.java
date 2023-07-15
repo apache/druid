@@ -60,7 +60,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -292,7 +292,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
       if (indexSupplier == null) {
         // column doesn't exist, match against null
-        return Filters.makeNullIndex(
+        return Filters.makeMissingColumnNullIndex(
             predicateFactory.makeStringPredicate().apply(null),
             selector
         );
@@ -303,9 +303,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         return utf8ValueSetIndex.forSortedValuesUtf8(valuesUtf8);
       }
 
-      final StringValueSetIndex stringValueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (stringValueSetIndex != null) {
-        return stringValueSetIndex.forSortedValues(values);
+      final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (stringValueSetIndexes != null) {
+        return stringValueSetIndexes.forSortedValues(values);
       }
     }
     return Filters.makePredicateIndex(

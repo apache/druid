@@ -47,9 +47,9 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -371,9 +371,9 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     SingleValueDimensionVectorSelector dimensionVectorSelector =
         expectedLogicalType.isPrimitive() ? column.makeSingleValueDimensionVectorSelector(vectorOffset) : null;
 
-    StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
     Assert.assertNull(valueSetIndex);
-    DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
+    DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     Assert.assertNull(predicateIndex);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullValueIndex);
@@ -427,7 +427,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             }
           }
         }
-        Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
 
       } else {
         Assert.assertNull(valueSelector.getObject());
@@ -439,7 +439,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             Assert.assertNull(dimensionVectorSelector.lookupName(dimensionVectorSelector.getRowVector()[0]));
           }
         }
-        Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
       }
 
       offset.increment();

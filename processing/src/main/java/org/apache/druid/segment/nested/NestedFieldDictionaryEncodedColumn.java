@@ -192,13 +192,21 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
     if (singleType != null) {
       switch (singleType.getType()) {
         case LONG:
-          final int globalLong = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          final Long l = GuavaUtils.tryParseLong(val);
+          if (l == null) {
+            return -1;
+          }
+          final int globalLong = globalLongDictionary.indexOf(l);
           if (globalLong < 0) {
             return -1;
           }
           return globalLong + adjustLongId;
         case DOUBLE:
-          final int globalDouble = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          final Double d = Doubles.tryParse(val);
+          if (d == null) {
+            return -1;
+          }
+          final int globalDouble = globalDoubleDictionary.indexOf(d);
           if (globalDouble < 0) {
             return -1;
           }
@@ -209,15 +217,21 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
     } else {
       int candidate = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       if (candidate < 0) {
-        candidate = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
-        if (candidate >= 0) {
-          candidate += adjustLongId;
+        final Long l = GuavaUtils.tryParseLong(val);
+        if (l != null) {
+          candidate = globalLongDictionary.indexOf(l);
+          if (candidate >= 0) {
+            candidate += adjustLongId;
+          }
         }
       }
       if (candidate < 0) {
-        candidate = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
-        if (candidate >= 0) {
-          candidate += adjustDoubleId;
+        final Double d = Doubles.tryParse(val);
+        if (d != null) {
+          candidate = globalDoubleDictionary.indexOf(d);
+          if (candidate >= 0) {
+            candidate += adjustDoubleId;
+          }
         }
       }
       return candidate;

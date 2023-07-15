@@ -26,13 +26,14 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<String>> implements DruidPredicateIndex
+public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexed<String>> implements
+    DruidPredicateIndexes
 {
   private final BitmapFactory bitmapFactory;
   private final TDictionary dictionary;
@@ -40,7 +41,7 @@ public final class IndexedStringDruidPredicateIndex<TDictionary extends Indexed<
   private final ColumnConfig columnConfig;
   private final int numRows;
 
-  public IndexedStringDruidPredicateIndex(
+  public IndexedStringDruidPredicateIndexes(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,

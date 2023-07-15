@@ -91,7 +91,6 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
@@ -129,7 +128,6 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

@@ -100,7 +100,6 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
@@ -168,7 +167,6 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
@@ -194,7 +192,6 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };

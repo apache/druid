@@ -23,6 +23,8 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
+
 /**
  * Class that encapsulates knowledge about how to create "column processors", which are... objects that process columns
  * and want to have type-specific logic. Used by {@link ColumnProcessors#makeProcessor}.
@@ -77,7 +79,13 @@ public interface ColumnProcessorFactory<T>
    */
   T makeLongProcessor(BaseLongColumnValueSelector selector);
 
-  T makeArrayProcessor(BaseObjectColumnValueSelector<?> selector, ColumnCapabilities columnCapabilities);
+  /**
+   *
+   * @param selector            array selector
+   * @param columnCapabilities  information about the underlying column to match. Null here just means the capabilities
+   *                            are unknown, and not necessarily indicative that the column doesn't exist
+   */
+  T makeArrayProcessor(BaseObjectColumnValueSelector<?> selector, @Nullable ColumnCapabilities columnCapabilities);
 
   /**
    * Create a processor for a complex column.

@@ -61,6 +61,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -156,7 +157,7 @@ public class JoinTestHelper
         @Override
         public Supplier<Object> makeArrayProcessor(
             BaseObjectColumnValueSelector<?> selector,
-            ColumnCapabilities columnCapabilities
+            @Nullable ColumnCapabilities columnCapabilities
         )
         {
           return selector::getObject;

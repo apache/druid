@@ -289,7 +289,7 @@ public class ColumnProcessors
       case ARRAY:
         return processorFactory.makeArrayProcessor(
             valueSelectorFunction.apply(selectorFactory),
-            capabilities != null ? capabilities : ColumnCapabilitiesImpl.createDefault().setType(effectiveType)
+            capabilities
         );
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));

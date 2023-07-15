@@ -35,7 +35,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -284,7 +284,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
     final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
-    final StringValueSetIndex valueIndex = Mockito.mock(StringValueSetIndex.class);
+    final StringValueSetIndexes valueIndex = Mockito.mock(StringValueSetIndexes.class);
     final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
 
     final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
@@ -292,7 +292,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
     Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(null); // Will check for UTF-8 first.
-    Mockito.when(indexSupplier.as(StringValueSetIndex.class)).thenReturn(valueIndex);
+    Mockito.when(indexSupplier.as(StringValueSetIndexes.class)).thenReturn(valueIndex);
     Mockito.when(valueIndex.forSortedValues(expectedValuesSet)).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);

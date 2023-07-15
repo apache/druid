@@ -94,7 +94,6 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
@@ -131,7 +130,6 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

@@ -20,9 +20,9 @@
 package org.apache.druid.segment.column;
 
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
-import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
-import org.apache.druid.segment.index.semantic.NumericRangeIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
 
 public interface ColumnConfig
 {
@@ -48,7 +48,7 @@ public interface ColumnConfig
 
   /**
    * If the total number of rows in a column multiplied by this value is smaller than the total number of bitmap
-   * index operations required to perform to use a {@link LexicographicalRangeIndex} or {@link NumericRangeIndex},
+   * index operations required to perform to use {@link LexicographicalRangeIndexes} or {@link NumericRangeIndexes},
    * then for any {@link ColumnIndexSupplier} which chooses to participate in this config it will skip computing the
    * index, indicated by a return value of null from the 'forRange' methods, to force the filter to be processed
    * with a scan using a {@link org.apache.druid.query.filter.ValueMatcher} instead.
@@ -81,7 +81,7 @@ public interface ColumnConfig
 
   /**
    * If the total number of rows in a column multiplied by this value is smaller than the total number of bitmap
-   * index operations required to perform to use a {@link DruidPredicateIndex} then for any {@link ColumnIndexSupplier}
+   * index operations required to perform to use {@link DruidPredicateIndexes} then for any {@link ColumnIndexSupplier}
    * which chooses to participate in this config it will skip computing the index, in favor of doing a full scan and
    * using a {@link org.apache.druid.query.filter.ValueMatcher} instead. This is indicated returning null from
    * {@link ColumnIndexSupplier#as(Class)} even though it would have otherwise been able to create a

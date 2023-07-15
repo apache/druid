@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -149,13 +150,13 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier == null) {
-      return Filters.makeNullIndex(true, selector);
+      return new AllTrueBitmapColumnIndex(selector);
     }
     final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
     if (nullValueIndex == null) {
       return null;
     }
-    return nullValueIndex.forNull();
+    return nullValueIndex.get();
   }
 
   @Override

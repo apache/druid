@@ -55,7 +55,7 @@ public class NullValueIndexSupplier implements ColumnIndexSupplier
   private final class NullableNumericNullValueIndex implements NullValueIndex
   {
     @Override
-    public BitmapColumnIndex forNull()
+    public BitmapColumnIndex get()
     {
       return nullValueIndex;
     }

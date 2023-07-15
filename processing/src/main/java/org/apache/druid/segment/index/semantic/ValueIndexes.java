@@ -19,22 +19,26 @@
 
 package org.apache.druid.segment.index.semantic;
 
-import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 
-/**
- * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
- */
-public interface DruidPredicateIndex
+public interface ValueIndexes
 {
+
   /**
-   * Get a {@link BitmapColumnIndex} corresponding to all the rows that match the supplied {@link DruidPredicateFactory}
-   * <p>
-   * If this method returns null it indicates that there was no index that matched the respective values and a
-   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
+   * Get the {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when passed a
+   * value that doesn't exist. May return null if a value index cannot be computed for the supplied value type.
+   *
+   * @param value       value to match
+   * @param valueType   type of the value to match, used to assist conversion from the match value type to the column
+   *                    value type
+   * @return            {@link ImmutableBitmap} corresponding to the rows which match the value, or null if an index
+   *                    connot be computed for the supplied value type
    */
   @Nullable
-  BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
+  BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType);
 }

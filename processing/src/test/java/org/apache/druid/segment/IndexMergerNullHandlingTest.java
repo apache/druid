@@ -36,7 +36,7 @@ import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -185,8 +185,8 @@ public class IndexMergerNullHandlingTest
             final DictionaryEncodedStringValueIndex valueIndex = columnHolder.getIndexSupplier().as(
                 DictionaryEncodedStringValueIndex.class
             );
-            final StringValueSetIndex valueSetIndex = columnHolder.getIndexSupplier().as(
-                StringValueSetIndex.class
+            final StringValueSetIndexes valueSetIndex = columnHolder.getIndexSupplier().as(
+                StringValueSetIndexes.class
             );
 
             // Read through the column to find all the rows that should match null.

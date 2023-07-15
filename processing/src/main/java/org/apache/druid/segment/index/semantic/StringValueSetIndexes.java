@@ -20,18 +20,26 @@
 package org.apache.druid.segment.index.semantic;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
+import java.util.SortedSet;
 
-public interface TypedValueIndex
+/**
+ * Index on individual values, and provides bitmaps for the rows which contain these values
+ */
+public interface StringValueSetIndexes
 {
   /**
    * Get the {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when passed a
-   * value that doesn't exist. May return null if a value index cannot be computed for the supplied value type.
+   * value that doesn't exist.  Never returns null.
    */
-  @Nullable
-  BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType);
+  BitmapColumnIndex forValue(@Nullable String value);
+
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column). The set must be sorted using
+   * {@link org.apache.druid.java.util.common.guava.Comparators#naturalNullsFirst()}.
+   */
+  BitmapColumnIndex forSortedValues(SortedSet<String> values);
 }

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -56,9 +58,10 @@ import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.semantic.StringValueSetIndex;
-import org.apache.druid.segment.index.semantic.TypedValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -68,6 +71,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class EqualityFilter extends AbstractOptimizableDimFilter implements Filter
 {
@@ -252,19 +256,19 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
 
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier == null) {
-      return Filters.makeNullIndex(false, selector);
+      return new AllFalseBitmapColumnIndex(selector);
     }
 
-    final TypedValueIndex valueSetIndex = indexSupplier.as(TypedValueIndex.class);
-    if (valueSetIndex != null) {
-      return valueSetIndex.forValue(matchValue, matchValueType);
+    final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
+    if (valueIndexes != null) {
+      return valueIndexes.forValue(matchValue, matchValueType);
     }
 
     if (matchValueType.isPrimitive()) {
-      final StringValueSetIndex stringValueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (stringValueSetIndex != null) {
+      final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (stringValueSetIndexes != null) {
 
-        return stringValueSetIndex.forValue(String.valueOf(matchValue));
+        return stringValueSetIndexes.forValue(String.valueOf(matchValue));
       }
     }
     // column exists, but has no indexes we can use
@@ -276,7 +280,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   {
     return ColumnProcessors.makeProcessor(
         column,
-        new TypedConstantValueMatcherFactory(matchValue, matchValueType),
+        new TypedConstantValueMatcherFactory(matchValue, matchValueType, predicateFactory),
         factory
     );
   }
@@ -350,134 +354,143 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   {
     private final ExprEval<?> matchValue;
     private final ColumnType matchValueType;
-
-    private final Object initLock = new Object();
-
-    private volatile DruidLongPredicate longPredicate;
-    private volatile DruidFloatPredicate floatPredicate;
-    private volatile DruidDoublePredicate doublePredicate;
+    private final Supplier<Predicate<String>> stringPredicateSupplier;
+    private final Supplier<DruidLongPredicate> longPredicateSupplier;
+    private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
+    private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+    private final ConcurrentHashMap<TypeSignature<ValueType>, Predicate<Object[]>> arrayPredicates;
+    private final Supplier<Predicate<Object[]>> typeDetectingArrayPredicateSupplier;
+    private final Supplier<Predicate<Object>> objectPredicateSupplier;
 
     public EqualityPredicateFactory(Object matchValue, ColumnType matchValueType)
     {
       this.matchValue = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
       this.matchValueType = matchValueType;
+      this.stringPredicateSupplier = makeStringPredicateSupplier();
+      this.longPredicateSupplier = makeLongPredicateSupplier();
+      this.floatPredicateSupplier = makeFloatPredicateSupplier();
+      this.doublePredicateSupplier = makeDoublePredicateSupplier();
+      this.objectPredicateSupplier = makeObjectPredicateSupplier();
+      this.arrayPredicates = new ConcurrentHashMap<>();
+      this.typeDetectingArrayPredicateSupplier = makeTypeDetectingArrayPredicate();
     }
 
     @Override
     public Predicate<String> makeStringPredicate()
     {
-      return Predicates.equalTo(matchValue.castTo(ExpressionType.STRING).asString());
+      return stringPredicateSupplier.get();
     }
 
     @Override
     public DruidLongPredicate makeLongPredicate()
     {
-      initLongPredicate();
-      return longPredicate;
+      return longPredicateSupplier.get();
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
-      initFloatPredicate();
-      return floatPredicate;
+      return floatPredicateSupplier.get();
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
-      initDoublePredicate();
-      return doublePredicate;
+      return doublePredicateSupplier.get();
     }
 
     @Override
     public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
-      if (arrayType != null) {
-        final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-        final Object[] matchArray = matchValue.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
-        return input -> arrayComparator.compare(input, matchArray) == 0;
-      } else {
+      if (arrayType == null) {
         // fall back to per row detection if input array type is unknown
-        return input -> {
-          final ExprEval<?> eval = ExprEval.bestEffortOf(input);
-          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-          final Object[] matchArray = matchValue.castTo(eval.type()).asArray();
-          return arrayComparator.compare(input, matchArray) == 0;
-        };
+        return typeDetectingArrayPredicateSupplier.get();
       }
+
+      return arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType));
     }
 
     @Override
     public Predicate<Object> makeObjectPredicate()
     {
-      if (matchValueType.equals(ColumnType.NESTED_DATA)) {
-        return input -> Objects.equals(StructuredData.unwrap(input), StructuredData.unwrap(matchValue.value()));
-      }
-      return Predicates.equalTo(matchValue.valueOrDefault());
+      return objectPredicateSupplier.get();
     }
 
-    private void initLongPredicate()
+    private Supplier<Predicate<String>> makeStringPredicateSupplier()
     {
-      if (longPredicate != null) {
-        return;
-      }
-      synchronized (initLock) {
-        if (longPredicate != null) {
-          return;
-        }
+      return Suppliers.memoize(() -> Predicates.equalTo(matchValue.castTo(ExpressionType.STRING).asString()));
+    }
+
+    private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
+    {
+      return Suppliers.memoize(() -> {
         final Long valueAsLong = (Long) matchValue.castTo(ExpressionType.LONG).valueOrDefault();
 
         if (valueAsLong == null) {
-          longPredicate = DruidLongPredicate.ALWAYS_FALSE;
+          return DruidLongPredicate.ALWAYS_FALSE;
         } else {
           // store the primitive, so we don't unbox for every comparison
           final long unboxedLong = valueAsLong;
-          longPredicate = input -> input == unboxedLong;
+          return input -> input == unboxedLong;
         }
-      }
+      });
     }
 
-    private void initFloatPredicate()
+    private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
     {
-      if (floatPredicate != null) {
-        return;
-      }
-      synchronized (initLock) {
-        if (floatPredicate != null) {
-          return;
-        }
+      return Suppliers.memoize(() -> {
         final Double doubleValue = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();
 
         if (doubleValue == null) {
-          floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
+          return DruidFloatPredicate.ALWAYS_FALSE;
         } else {
           // Compare with floatToIntBits instead of == to canonicalize NaNs.
           final int floatBits = Float.floatToIntBits(doubleValue.floatValue());
-          floatPredicate = input -> Float.floatToIntBits(input) == floatBits;
+          return input -> Float.floatToIntBits(input) == floatBits;
         }
-      }
+      });
     }
 
-    private void initDoublePredicate()
+    private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
     {
-      if (doublePredicate != null) {
-        return;
-      }
-      synchronized (initLock) {
-        if (doublePredicate != null) {
-          return;
-        }
+      return Suppliers.memoize(() -> {
         final Double aDouble = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();
 
         if (aDouble == null) {
-          doublePredicate = DruidDoublePredicate.ALWAYS_FALSE;
+          return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           // Compare with doubleToLongBits instead of == to canonicalize NaNs.
           final long bits = Double.doubleToLongBits(aDouble);
-          doublePredicate = input -> Double.doubleToLongBits(input) == bits;
+          return input -> Double.doubleToLongBits(input) == bits;
         }
-      }
+      });
+    }
+
+    private Supplier<Predicate<Object>> makeObjectPredicateSupplier()
+    {
+      return Suppliers.memoize(() -> {
+        if (matchValueType.equals(ColumnType.NESTED_DATA)) {
+          return input -> Objects.equals(StructuredData.unwrap(input), StructuredData.unwrap(matchValue.value()));
+        }
+        return Predicates.equalTo(matchValue.valueOrDefault());
+      });
+    }
+
+    private Supplier<Predicate<Object[]>> makeTypeDetectingArrayPredicate()
+    {
+      return Suppliers.memoize(() -> input -> {
+        final ExprEval<?> eval = ExprEval.bestEffortOf(input);
+        final Comparator<Object[]> arrayComparator = eval.type().getNullableStrategy();
+        final Object[] matchArray = matchValue.castTo(eval.type()).asArray();
+        return arrayComparator.compare(input, matchArray) == 0;
+      });
+    }
+    private Predicate<Object[]> makeArrayPredicateInternal(TypeSignature<ValueType> arrayType)
+    {
+      final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(arrayType);
+      final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+      final Object[] matchArray = matchValue.castTo(expressionType).asArray();
+      return input -> arrayComparator.compare(input, matchArray) == 0;
     }
 
     @Override
@@ -493,6 +506,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return Objects.equals(matchValue, that.matchValue) && Objects.equals(matchValueType, that.matchValueType);
     }
 
+
     @Override
     public int hashCode()
     {
@@ -503,12 +517,16 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   private static class TypedConstantValueMatcherFactory implements ColumnProcessorFactory<ValueMatcher>
   {
     private final ExprEval<?> matchValue;
-    private final ColumnType matchValueType;
+    private final PredicateValueMatcherFactory predicateMatcherFactory;
 
-    public TypedConstantValueMatcherFactory(Object matchValue, ColumnType matchValueType)
+    public TypedConstantValueMatcherFactory(
+        Object matchValue,
+        ColumnType matchValueType,
+        DruidPredicateFactory predicateFactory
+    )
     {
       this.matchValue = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
-      this.matchValueType = matchValueType;
+      this.predicateMatcherFactory = new PredicateValueMatcherFactory(predicateFactory);
     }
 
     @Override
@@ -548,20 +566,16 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeArrayProcessor(
         BaseObjectColumnValueSelector<?> selector,
-        ColumnCapabilities columnCapabilities
+        @Nullable ColumnCapabilities columnCapabilities
     )
     {
-      return new PredicateValueMatcherFactory(
-          new EqualityPredicateFactory(matchValue.valueOrDefault(), matchValueType)
-      ).makeArrayProcessor(selector, columnCapabilities);
+      return predicateMatcherFactory.makeArrayProcessor(selector, columnCapabilities);
     }
 
     @Override
     public ValueMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
     {
-      return new PredicateValueMatcherFactory(
-          new EqualityPredicateFactory(matchValue.valueOrDefault(), matchValueType)
-      ).makeComplexProcessor(selector);
+      return predicateMatcherFactory.makeComplexProcessor(selector);
     }
   }
 }

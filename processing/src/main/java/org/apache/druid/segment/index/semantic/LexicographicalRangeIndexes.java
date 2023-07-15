@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
  * allowing short-circuit processing of string value ranges. This index does not match null values, union the results
  * of this index with {@link NullValueIndex} if null values should be considered part of the value range.
  */
-public interface LexicographicalRangeIndex
+public interface LexicographicalRangeIndexes
 {
   /**
    * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range. If supplied starting

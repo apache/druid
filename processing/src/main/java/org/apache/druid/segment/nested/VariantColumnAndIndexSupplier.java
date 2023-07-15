@@ -51,7 +51,7 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
-import org.apache.druid.segment.index.semantic.TypedValueIndex;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -304,10 +304,9 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     if (clazz.equals(NullValueIndex.class)) {
       final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
       return (T) (NullValueIndex) () -> nullIndex;
-    } else if (clazz.equals(TypedValueIndex.class) && variantTypeSetByte == null && logicalType.isArray()) {
-      return (T) new ArrayValueIndex();
+    } else if (clazz.equals(ValueIndexes.class) && variantTypeSetByte == null && logicalType.isArray()) {
+      return (T) new ArrayValueIndexes();
     }
-    // coming soon...
     return null;
   }
 
@@ -321,7 +320,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
-  private class ArrayValueIndex implements TypedValueIndex
+  private class ArrayValueIndexes implements ValueIndexes
   {
     @Nullable
     @Override

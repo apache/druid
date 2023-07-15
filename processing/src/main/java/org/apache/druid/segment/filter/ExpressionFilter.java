@@ -194,7 +194,7 @@ public class ExpressionFilter implements Filter
     final Expr.BindingAnalysis details = bindingDetails.get();
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
-      return Filters.makeNullIndex(
+      return Filters.makeMissingColumnNullIndex(
           expr.get().eval(InputBindings.nilBindings()).asBoolean(),
           selector
       );

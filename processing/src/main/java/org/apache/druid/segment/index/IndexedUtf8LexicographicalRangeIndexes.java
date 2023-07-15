@@ -32,15 +32,15 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Indexed<ByteBuffer>>
-    implements LexicographicalRangeIndex
+public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends Indexed<ByteBuffer>>
+    implements LexicographicalRangeIndexes
 {
   private final BitmapFactory bitmapFactory;
   private final TDictionary dictionary;
@@ -50,7 +50,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   private final ColumnConfig columnConfig;
   private final int numRows;
 
-  public IndexedUtf8LexicographicalRangeIndex(
+  public IndexedUtf8LexicographicalRangeIndexes(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,

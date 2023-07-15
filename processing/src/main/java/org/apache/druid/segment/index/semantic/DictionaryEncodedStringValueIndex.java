@@ -29,8 +29,8 @@ import javax.annotation.Nullable;
  * to directly retrieve bitmaps via dictionary ids, as well as access to lower level details of such a column like
  * value lookup and value cardinality.
  *
- * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
- * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}
+ * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndexes},
+ * {@link LexicographicalRangeIndexes}, {@link NumericRangeIndexes}, or {@link DruidPredicateIndexes}
  */
 public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValueIndex
 {

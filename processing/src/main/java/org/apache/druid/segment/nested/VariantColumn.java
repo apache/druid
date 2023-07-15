@@ -297,15 +297,21 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     if (candidate >= 0) {
       return candidate;
     }
-    candidate = longDictionary.indexOf(GuavaUtils.tryParseLong(val));
-    if (candidate >= 0) {
-      candidate += adjustLongId;
-      return candidate;
+    final Long l = GuavaUtils.tryParseLong(val);
+    if (l != null) {
+      candidate = longDictionary.indexOf(l);
+      if (candidate >= 0) {
+        candidate += adjustLongId;
+        return candidate;
+      }
     }
-    candidate = doubleDictionary.indexOf(Doubles.tryParse(val));
-    if (candidate >= 0) {
-      candidate += adjustDoubleId;
-      return candidate;
+    final Double d = Doubles.tryParse(val);
+    if (d != null) {
+      candidate = doubleDictionary.indexOf(d);
+      if (candidate >= 0) {
+        candidate += adjustDoubleId;
+        return candidate;
+      }
     }
 
     // not in here, we can't really do anything cool here
@@ -324,15 +330,21 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     if (candidate >= 0) {
       intList.add(candidate);
     }
-    candidate = longDictionary.indexOf(GuavaUtils.tryParseLong(val));
-    if (candidate >= 0) {
-      candidate += adjustLongId;
-      intList.add(candidate);
+    Long l = GuavaUtils.tryParseLong(val);
+    if (l != null) {
+      candidate = longDictionary.indexOf(l);
+      if (candidate >= 0) {
+        candidate += adjustLongId;
+        intList.add(candidate);
+      }
     }
-    candidate = doubleDictionary.indexOf(Doubles.tryParse(val));
-    if (candidate >= 0) {
-      candidate += adjustDoubleId;
-      intList.add(candidate);
+    Double d = Doubles.tryParse(val);
+    if (d != null) {
+      candidate = doubleDictionary.indexOf(d);
+      if (candidate >= 0) {
+        candidate += adjustDoubleId;
+        intList.add(candidate);
+      }
     }
 
     return intList;
