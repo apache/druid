@@ -949,7 +949,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`millisToWaitBeforeDeleting`|How long does the Coordinator need to be a leader before it can start marking overshadowed segments as unused in metadata storage.|900000 (15 mins)|
 |`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
-|`smartSegmentLoading`|Whether to turn on the new ["smart"-mode of segment loading]() which dynamically computes the optimal values of several parameters that maximize Coordinator performance.|true|
+|`smartSegmentLoading`|Whether to turn on the new ["smart"-mode of segment loading](#smart-segment-loading) which dynamically computes the optimal values of several parameters that maximize Coordinator performance.|true|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|100|
 |`replicantLifetime`|The maximum number of Coordinator runs for which a segment can wait in the load queue of a Historical before Druid raises an alert.|15|
 |`replicationThrottleLimit`|The maximum number of segment replicas that can be assigned to a Historical tier in a single Coordinator run. This parameter is a defensive measure to prevent Historicals from getting overwhelmed loading extra replicas of segments that are already available in the cluster.|500|
