@@ -951,8 +951,8 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
 |`smartSegmentLoading`|Whether to turn on the new ["smart"-mode of segment loading]() which dynamically computes the optimal values of several parameters that maximize Coordinator performance.|true|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|100|
-|`replicantLifetime`|The maximum number of Coordinator runs for which a segment can be queued for replication before Druid raises an alert.|15|
-|`replicationThrottleLimit`|The maximum number of replicas that can be assigned to a historical tier in a single Coordinator run. This parameter is a defensive measure to prevent Historicals from getting overwhelmed loading extra replicas of segments that are already available in the cluster.|500|
+|`replicantLifetime`|The maximum number of Coordinator runs for which a segment can wait in the load queue of a Historical before Druid raises an alert.|15|
+|`replicationThrottleLimit`|The maximum number of segment replicas that can be assigned to a Historical tier in a single Coordinator run. This parameter is a defensive measure to prevent Historicals from getting overwhelmed loading extra replicas of segments that are already available in the cluster.|500|
 |`balancerComputeThreads`|Thread pool size for computing moving cost of segments during segment balancing. Consider increasing this if you have a lot of segments and moving segments starts to get stuck.|1|
 |`killDataSourceWhitelist`|List of specific data sources for which kill tasks are sent if property `druid.coordinator.kill.on` is true. This can be a list of comma-separated data source names or a JSON array.|none|
 |`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
