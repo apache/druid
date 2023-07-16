@@ -19,7 +19,9 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.collect.Lists;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -41,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ReservoirSegmentSamplerTest
 {
@@ -216,21 +219,72 @@ public class ReservoirSegmentSamplerTest
     }
   }
 
-  @Test(timeout = 60_000)
-  public void testNumberOfIterationsToCycleThroughAllSegments()
+  @Test
+  public void testSegmentsFromAllServersAreEquallyLikelyToBePicked()
   {
-    // The number of runs required for each sample percentage
+    // Create 4 servers, each having an equal number of segments
+    final List<List<DataSegment>> subSegmentLists = Lists.partition(segments, segments.size() / 4);
+    final List<ServerHolder> servers = IntStream.range(0, 4).mapToObj(
+        i -> createHistorical("server_" + i, subSegmentLists.get(i).toArray(new DataSegment[0]))
+    ).collect(Collectors.toList());
+
+    // Get the distribution of picked segments for different sample percentage
+    final int[] samplePercentages = {50, 20, 10, 5};
+    for (int samplePercentage : samplePercentages) {
+      final int numSegmentsToPick = (int) (segments.size() * samplePercentage / 100.0);
+      final int[] numSegmentsPickedFromServer = new int[servers.size()];
+      int totalSegmentsPicked = 0;
+
+      // Perform a few picking iterations
+      for (int i = 0; i < 50; ++i) {
+        List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
+            servers,
+            numSegmentsToPick,
+            ServerHolder::getServedSegments,
+            Collections.emptySet()
+        );
+        totalSegmentsPicked += pickedSegments.size();
+
+        // Get the number of segments picked from each server
+        for (BalancerSegmentHolder pickedSegment : pickedSegments) {
+          int serverIndex = servers.indexOf(pickedSegment.getServer());
+          numSegmentsPickedFromServer[serverIndex]++;
+        }
+      }
+
+      // Segments picked from each server are always 24-26% of total
+      final int expectedMin = (int) (totalSegmentsPicked * 0.24);
+      final int expectedMax = (int) (totalSegmentsPicked * 0.26);
+      for (int numPickedFromEachServer : numSegmentsPickedFromServer) {
+        Assert.assertTrue(
+            StringUtils.format(
+                "Mismatch in picked segments for sample percentage [%d], value [%s], expected range [%d-%d]",
+                samplePercentage, numPickedFromEachServer, expectedMin, expectedMax
+            ),
+            numPickedFromEachServer >= expectedMin && numPickedFromEachServer <= expectedMax
+        );
+      }
+    }
+  }
+
+  @Test(timeout = 60_000)
+  public void testNumberOfSamplingsRequiredToPickAllSegments()
+  {
+    // The number of sampling iterations required for each sample percentage
     // remains more or less fixed, even with a larger number of segments
     final int[] samplePercentages = {100, 50, 10, 5, 1};
     final int[] expectedIterations = {1, 20, 100, 200, 1000};
 
     final int[] totalObservedIterations = new int[5];
+
+    // For every sample percentage, count the minimum number of required samplings
     for (int i = 0; i < 50; ++i) {
       for (int j = 0; j < samplePercentages.length; ++j) {
-        totalObservedIterations[j] += countMinRunsWithSamplePercent(samplePercentages[j]);
+        totalObservedIterations[j] += countMinRunsToPickAllSegments(samplePercentages[j]);
       }
     }
 
+    // Compute the avg value from the 50 observations for each sample percentage
     for (int j = 0; j < samplePercentages.length; ++j) {
       double avgObservedIterations = totalObservedIterations[j] / 50.0;
       Assert.assertTrue(avgObservedIterations <= expectedIterations[j]);
@@ -244,7 +298,7 @@ public class ReservoirSegmentSamplerTest
    * <p>
    * {@code k = sampleSize = totalNumSegments * samplePercentage}
    */
-  private int countMinRunsWithSamplePercent(int samplePercentage)
+  private int countMinRunsToPickAllSegments(int samplePercentage)
   {
     final int numSegments = segments.size();
     final List<ServerHolder> servers = Arrays.asList(
