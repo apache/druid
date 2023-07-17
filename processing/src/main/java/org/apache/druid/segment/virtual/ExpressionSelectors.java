@@ -321,7 +321,7 @@ public class ExpressionSelectors
   )
   {
     final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
-    final Map<String, InputBindings.InputSupplier> suppliers = new HashMap<>();
+    final Map<String, InputBindings.InputSupplier<?>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();

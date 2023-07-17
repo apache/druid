@@ -58,6 +58,9 @@ public class ExpressionTypeConversion
     if (Types.is(type, ExprType.STRING) && Types.is(otherType, ExprType.STRING)) {
       return ExpressionType.STRING;
     }
+    if (type.isArray() || otherType.isArray()) {
+      return leastRestrictiveType(type, otherType);
+    }
 
     type = eval.value() != null ? type : otherType;
     otherType = otherEval.value() != null ? otherType : type;
