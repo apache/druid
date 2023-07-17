@@ -16,18 +16,20 @@ For example, use the `loadByInterval` load rule and set  `tieredReplicants.YOUR_
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
 ```sql
-SELECT "segment_id", "replication_factor" FROM sys."segments" 
+SELECT "segment_id", "replication_factor" FROM sys."segments" WHERE "replication_factor" = 0 AND "datasource" = YOUR_DATASOURCE
 ```
 
 Segments with a `replication_factor` of `0` are not assigned to any Historical tiers and won't get loaded onto them. Queries you run against these segments are run directly against the segment in deep storage.
 
-Note that at least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. But the segment on the Historical process can be any segment from the datasource. It does not need to be any specific segment. It 
+You can also confirm this through the Druid console. On the **Segments** page, see the **Replication factor** column.
+
+Note that at least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. But the segment on the Historical process can be any segment from the datasource. It does not need to be any specific segment. 
 
 ## Run a query from deep storage
 
 ### Submit a query
 
-You can query data from deep storage bv submitting a query to the the API using `POST /sql/statements`  or the Druid console. Druid uses the multi-stage query (MSQ) task engine to perform the query.
+You can query data from deep storage by submitting a query to the API using `POST /sql/statements`  or the Druid console. Druid uses the multi-stage query (MSQ) task engine to perform the query.
 
 To run a query from deep storage, send your query to the Router using the POST method:
 
@@ -45,20 +47,22 @@ Generally, the request body fields are the same between the `sql` and `sql/state
 
 There are additional context parameters  for `sql/statements` specifically though: 
 
-   - `mode`  determines how query results are fetched. The currently supported mode is "ASYNC". 
+   - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
    - `selectDestination` instructs Druid to write the results from SELECT queries to durable storage if you have [durable storage enabled for MSQ](../multi-stage-query/reference.md#durable-storage).
 
-The response body includes the query ID, which you use to get the results.
+The response body includes the query ID, which you use to get the status and results for the query.
+
+If you're using the Druid console to submit the query, make sure that the **Engine** is set to `sql-msq-task` and that you've added the `executionMode` context parameter and set it to `ASYNC`.
 
 ### Get query status
 
 You can check the status of a query with the following API call:
 
 ```
-/druid/v2/sql/statements/QUERYID
+GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID
 ```
 
-In addition to the state of the query, such as `ACCEPTED` or `RUNNING`. Before you attempt to get results, make sure the state is `SUCCESS`. 
+The query returns the status of the query, such as `ACCEPTED` or `RUNNING`. Before you attempt to get results, make sure the state is `SUCCESS`. 
 
 When you check the status on a successful query,  it includes useful information about your query results including a sample record and information about how the results are organized by `pages`. The information for each page includes the following:
 
@@ -68,6 +72,48 @@ When you check the status on a successful query,  it includes useful information
 
 You can use this as a parameter to refine the results you retrieve. 
 
+<detail><summary>Show the response template for a successful query</summary>
+
+```json
+{
+  "queryId": "query-ALPHANUMBERIC-STRING",
+  "state": "SUCCESS",
+  "createdAt": CREATION_TIMESTAMP,
+"schema": [
+  {
+    "name": COLUMN_NAME,
+    "type": COLUMN_TYPE,
+    "nativeType": COLUMN_TYPE
+  },
+  ...
+],
+"durationMs": DURATION_IN_MS
+"result": {
+  "numTotalRows": INTEGER,
+  "totalSizeInBytes": INTEGER,
+  "dataSource": "__query_select",
+  "sampleRecords": [
+    [
+      RECORD_1,
+      RECORD_2,
+      ...
+    ]
+  ],
+  "pages": [
+    {
+      "numRows": INTEGER,
+      "sizeInBytes": INTEGER,
+      "id": INTEGER_PAGE_NUMBER
+    }
+    ...
+  ]
+}
+}
+
+```
+
+</detail>
+
 ### Get query results
 
 Only the user who submitted a query can retrieve the results for the query.
@@ -75,10 +121,10 @@ Only the user who submitted a query can retrieve the results for the query.
 Use the following endpoint to retrieve results:
 
 ```
-GET /druid/v2/sq/statements/QUERYID/results?page=PAGENUMBER&size=RESULT_SIZE&timeout=TIMEOUT_MS
+GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID/results?page=PAGENUMBER&size=RESULT_SIZE&timeout=TIMEOUT_MS
 ```
 
-You can use the `page`, `size`, and `timeout` parameters to refine your results. You can view the information for your `pages` by getting the status of a completed query.
+You can use the optional `page`, `size`, and `timeout` parameters to refine your results. The `page` information for a set of results can be retrieved by fetching the status of its completed query.
 
 When you try to get results for a query from deep storage, you may receive an error that states the query is still running. Wait until the query completes before you try again.
 

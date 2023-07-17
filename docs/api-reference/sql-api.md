@@ -196,6 +196,8 @@ You can use the `sql/statements` endpoint to query segments that exist only in d
 
 Note that at least part of a datasource must be available on a Historical process so that Druid can plan your query.
 
+For more information, see [Query from deep storage](../querying/query-from-deep-storage.md).
+
 ### Submit a query
 
 To run a query from deep storage, send your query to the Router using the POST method:
@@ -216,31 +218,36 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 
 - There are additional context parameters  for `sql/statements`: 
 
-   - `mode`  determines how query results are fetched. The currently supported mode is "ASYNC". 
+   - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
    - `selectDestination` instructs Druid to write the results from SELECT queries to durable storage if you have [durable storage enabled for MSQ](../multi-stage-query/reference.md#durable-storage).
 
 - The only supported results format is JSON.
-- Only the user who submits a query can see the results
+- Only the user who submits a query can see the results.
+
 
 ### Get query status
 
 ```
-GET /sql/statements/{queryID}
+GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 ```
 
-Returns the same response as the post API if the query is accepted or running. If the query is complete, the status also includes a `pages object`
+Returns the same response as the post API if the query is accepted or running. If the query is complete, the status also includes a `pages` object and sample record.
 
 
 ### Get query results
 
 ```
-GET /sql/statements/{queryID}/results?page=PAGENUMBER
+GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}/results?page=PAGENUMBER
 ```
 
-Results are separated into `pages`.
+Results are separated into `pages`. Note that if you attempt to get the results for an in-progress query, Druid returns an error. 
 
 ### Cancel a query
 
-DELETE /sql/statements/{queryID}
+```
+DELETE https://ROUTER:8888/druid/v2/sql/statements/{queryID}
+```
 
-Cancels a running or accepted query.
+Cancels a running or accepted query. 
+
+Druid returns an HTTP 202 response for successful cancelation requests. If the query is already complete or can't be found, Druid returns an HTTP 500 error with an error message describing the issue such as the following.
