@@ -142,27 +142,6 @@ public abstract class ExprEval<T>
     }
   }
 
-  public static byte[] toBytes(ExpressionType expressionType, Object o)
-  {
-    final ExprEval<?> eval = ExprEval.ofType(expressionType, o);
-    return toBytes(eval);
-  }
-
-  public static byte[] toBytesBestEffort(Object o)
-  {
-    final ExprEval<?> eval = ExprEval.bestEffortOf(o);
-    return toBytes(eval);
-  }
-
-  public static byte[] toBytes(ExprEval<?> eval)
-  {
-    final NullableTypeStrategy<Object> strategy = eval.type().getNullableStrategy();
-    final int size = strategy.estimateSizeBytes(eval.valueOrDefault());
-    final ByteBuffer buffer = ByteBuffer.allocate(size);
-    strategy.write(buffer, eval.valueOrDefault(), size);
-    return buffer.array();
-  }
-
   /**
    * Converts a List to an appropriate array type, optionally doing some conversion to make multi-valued strings
    * consistent across selector types, which are not consistent in treatment of null, [], and [null].
