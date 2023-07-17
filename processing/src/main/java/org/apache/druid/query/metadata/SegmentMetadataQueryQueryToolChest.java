@@ -367,12 +367,24 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
     } else if (AggregatorMergeStrategy.EARLIST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
-      // followed by arg2. So for earliest, the order should be arg2 and arg1.
-      addAggregatorFromSegmentAnalyses(ImmutableList.of(arg2, arg1), aggregators);
+      // followed by arg2. So for earliest strategy, the iteration order should be arg2 and arg1.
+      for (SegmentAnalysis analysis : ImmutableList.of(arg2, arg1)) {
+        if (analysis.getAggregators() != null) {
+          for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
+            aggregators.putIfAbsent(entry.getKey(), entry.getValue());
+          }
+        }
+      }
     } else if (AggregatorMergeStrategy.LATEST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
-      // followed by arg2. So for latest, the order should be arg1 and arg2.
-      addAggregatorFromSegmentAnalyses(ImmutableList.of(arg1, arg2), aggregators);
+      // followed by arg2. So for latest strategy, the iteration order should be arg1 and arg2.
+      for (SegmentAnalysis analysis : ImmutableList.of(arg1, arg2)) {
+        if (analysis.getAggregators() != null) {
+          for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
+            aggregators.putIfAbsent(entry.getKey(), entry.getValue());
+          }
+        }
+      }
     } else {
       throw DruidException.defensive("[%s] merge strategy is not implemented.", aggregatorMergeStrategy);
     }
@@ -439,21 +451,5 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   public SegmentMetadataQueryConfig getConfig()
   {
     return this.config;
-  }
-
-  private static void addAggregatorFromSegmentAnalyses(
-      final ImmutableList<SegmentAnalysis> segmentAnalyses,
-      final Map<String, AggregatorFactory> aggregators
-  )
-  {
-    for (SegmentAnalysis analysis : segmentAnalyses) {
-      if (analysis.getAggregators() != null) {
-        for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
-          final String aggregatorName = entry.getKey();
-          final AggregatorFactory aggregator = entry.getValue();
-          aggregators.putIfAbsent(aggregatorName, aggregator);
-        }
-      }
-    }
   }
 }
