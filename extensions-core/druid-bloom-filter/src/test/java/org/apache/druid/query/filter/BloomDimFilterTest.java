@@ -199,9 +199,9 @@ public class BloomDimFilterTest extends BaseFilterTest
   public void testMultiValueStringColumn() throws IOException
   {
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           new BloomDimFilter("dim2", bloomKFilter(1000, (String) null), null),
-          isAutoSchema() ? ImmutableList.of("5") : ImmutableList.of("1", "2", "5")
+          ImmutableList.of("1", "2", "5")
       );
     } else {
       assertFilterMatchesSkipArrays(
