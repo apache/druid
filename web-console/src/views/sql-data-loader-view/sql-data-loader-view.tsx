@@ -19,7 +19,8 @@
 import type { IconName } from '@blueprintjs/core';
 import { Card, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import type { ExternalConfig, QueryContext, QueryWithContext } from '../../druid-models';
