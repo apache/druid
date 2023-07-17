@@ -203,7 +203,8 @@ For more information about partitioning, see [Partitioning](concepts.md#partitio
 ### `CLUSTERED BY`
 
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
-column names or expressions.
+column names or expressions. Druid's segment generation only supports ascending order, so an `INSERT` or `REPLACE` query with
+`CLUSTERED BY` columns in `DESC` ordering is not allowed.
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
 
