@@ -33,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -228,33 +229,19 @@ public class ReservoirSegmentSamplerTest
         i -> createHistorical("server_" + i, subSegmentLists.get(i).toArray(new DataSegment[0]))
     ).collect(Collectors.toList());
 
-    // Get the distribution of picked segments for different sample percentage
+    // Get the distribution of picked segments for different sample percentages
     final int[] samplePercentages = {50, 20, 10, 5};
     for (int samplePercentage : samplePercentages) {
-      final int numSegmentsToPick = (int) (segments.size() * samplePercentage / 100.0);
-      final int[] numSegmentsPickedFromServer = new int[servers.size()];
-      int totalSegmentsPicked = 0;
+      final int[] numSegmentsPickedFromServer = pickSegmentsAndGetTotalPickedFromEachServer(
+          servers,
+          samplePercentage,
+          50
+      );
 
-      // Perform a few picking iterations
-      for (int i = 0; i < 50; ++i) {
-        List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
-            servers,
-            numSegmentsToPick,
-            ServerHolder::getServedSegments,
-            Collections.emptySet()
-        );
-        totalSegmentsPicked += pickedSegments.size();
-
-        // Get the number of segments picked from each server
-        for (BalancerSegmentHolder pickedSegment : pickedSegments) {
-          int serverIndex = servers.indexOf(pickedSegment.getServer());
-          numSegmentsPickedFromServer[serverIndex]++;
-        }
-      }
-
-      // Segments picked from each server are always 24-26% of total
-      final int expectedMin = (int) (totalSegmentsPicked * 0.24);
-      final int expectedMax = (int) (totalSegmentsPicked * 0.26);
+      // Segments picked from each server are always 23-27% of total
+      final int totalSegmentsPicked = Arrays.stream(numSegmentsPickedFromServer).sum();
+      final int expectedMin = (int) (totalSegmentsPicked * 0.23);
+      final int expectedMax = (int) (totalSegmentsPicked * 0.27);
       for (int numPickedFromEachServer : numSegmentsPickedFromServer) {
         Assert.assertTrue(
             StringUtils.format(
@@ -264,6 +251,45 @@ public class ReservoirSegmentSamplerTest
             numPickedFromEachServer >= expectedMin && numPickedFromEachServer <= expectedMax
         );
       }
+    }
+  }
+
+  @Test
+  public void testSegmentsFromMorePopulousServerAreMoreLikelyToBePicked()
+  {
+    // Create 4 servers, first one having twice as many segments as the rest
+    final List<List<DataSegment>> subSegmentLists = Lists.partition(segments, segments.size() / 5);
+
+    final List<ServerHolder> servers = new ArrayList<>();
+    List<DataSegment> segmentsForServer0 = new ArrayList<>(subSegmentLists.get(0));
+    segmentsForServer0.addAll(subSegmentLists.get(1));
+    servers.add(createHistorical("server_" + 0, segmentsForServer0));
+
+    IntStream.range(1, 4).mapToObj(
+        i -> createHistorical("server_" + i, subSegmentLists.get(i + 1))
+    ).forEach(servers::add);
+
+    final int[] samplePercentages = {50, 20, 10, 5};
+    for (int samplePercentage : samplePercentages) {
+      final int[] numSegmentsPickedFromServer = pickSegmentsAndGetTotalPickedFromEachServer(
+          servers,
+          samplePercentage,
+          50
+      );
+
+      // Segments picked from server0 are always 38-42% of total
+      final int totalSegmentsPicked = Arrays.stream(numSegmentsPickedFromServer).sum();
+      final int expectedMin = (int) (totalSegmentsPicked * 0.38);
+      final int expectedMax = (int) (totalSegmentsPicked * 0.42);
+
+      int numPickedFromServer0 = numSegmentsPickedFromServer[0];
+      Assert.assertTrue(
+          StringUtils.format(
+              "Mismatch in picked segments for sample percentage [%d], value [%s], expected range [%d-%d]",
+              samplePercentage, numPickedFromServer0, expectedMin, expectedMax
+          ),
+          numPickedFromServer0 >= expectedMin && numPickedFromServer0 <= expectedMax
+      );
     }
   }
 
@@ -322,6 +348,38 @@ public class ReservoirSegmentSamplerTest
     }
 
     return numIterations;
+  }
+
+  private int[] pickSegmentsAndGetTotalPickedFromEachServer(
+      List<ServerHolder> servers,
+      int samplePercentage,
+      int numIterations
+  )
+  {
+    final int numSegmentsToPick = (int) (segments.size() * samplePercentage / 100.0);
+    final int[] numSegmentsPickedFromServer = new int[servers.size()];
+
+    for (int i = 0; i < numIterations; ++i) {
+      List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
+          servers,
+          numSegmentsToPick,
+          ServerHolder::getServedSegments,
+          Collections.emptySet()
+      );
+
+      // Get the number of segments picked from each server
+      for (BalancerSegmentHolder pickedSegment : pickedSegments) {
+        int serverIndex = servers.indexOf(pickedSegment.getServer());
+        numSegmentsPickedFromServer[serverIndex]++;
+      }
+    }
+
+    return numSegmentsPickedFromServer;
+  }
+
+  private ServerHolder createHistorical(String serverName, List<DataSegment> loadedSegments)
+  {
+    return createHistorical(serverName, loadedSegments.toArray(new DataSegment[0]));
   }
 
   private ServerHolder createHistorical(String serverName, DataSegment... loadedSegments)
