@@ -25,14 +25,14 @@ sidebar_label: JSON querying
 
 This document describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache Druid.
 
-In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
+In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
 
 ## Submit a query
 
 Submits a JSON-based native query. 
 
-Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`.
+Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`. For guidance on constructing the requests and choosing query types, see [available native queries](../querying/querying.md#available-queries).
 
 ### URL
 <code class="postAPI">POST</code> `/druid/v2/`
@@ -65,7 +65,7 @@ For more information on possible error messages, see [query execution failures](
 
 ---
 
-### Sample request
+### Sample request: `topN` query
 
 The following example submits a JSON query of the `topN` type to retrieve a ranked list of users and their post views. 
 
@@ -73,7 +73,7 @@ The following example submits a JSON query of the `topN` type to retrieve a rank
 
 <!--cURL-->
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2?pretty=null" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2?pretty=null" \
 --header "Content-Type: application/json" \
 --data "{
   \"queryType\": \"topN\",
@@ -82,7 +82,6 @@ curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2?pretty=null" \
   \"threshold\": 5,
   \"metric\": \"views\",
   \"granularity\": \"all\",
-
   \"aggregations\": [
     {
       \"type\": \"longSum\",
@@ -98,7 +97,7 @@ curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2?pretty=null" \
 <!--HTTP-->
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 336
 
@@ -109,7 +108,6 @@ Content-Length: 336
   "threshold": 5,
   "metric": "views",
   "granularity": "all",
-
   "aggregations": [
     {
       "type": "longSum",
@@ -124,6 +122,44 @@ Content-Length: 336
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+### Sample response: `topN` query
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+[
+    {
+        "timestamp": "2023-07-03T18:49:54.848Z",
+        "result": [
+            {
+                "views": 11591218026,
+                "username": "gus"
+            },
+            {
+                "views": 11578638578,
+                "username": "miette"
+            },
+            {
+                "views": 11561618880,
+                "username": "leon"
+            },
+            {
+                "views": 11552609824,
+                "username": "mia"
+            },
+            {
+                "views": 11551537517,
+                "username": "milton"
+            }
+        ]
+    }
+]
+  ```
+</details>
+
+### Sample request: `groupBy` query
+
 The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest votes to posts ratio from the `social_media` datasource.
 
 In this query:
@@ -136,7 +172,7 @@ In this query:
 
 <!--cURL-->
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2?pretty=null" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2?pretty=null" \
 --header "Content-Type: application/json" \
 --data "{
   \"queryType\": \"groupBy\",
@@ -171,7 +207,7 @@ curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2?pretty=null" \
 <!--HTTP-->
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 817
 
@@ -207,46 +243,11 @@ Content-Length: 817
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response
+### Sample response: `groupBy` query
 
 <details>
   <summary>Click to show sample response</summary>
-  The following is a sample response of the first query, retrieving a ranked list of users and post views.
-
-  ```json
-[
-    {
-        "timestamp": "2023-07-03T18:49:54.848Z",
-        "result": [
-            {
-                "views": 11591218026,
-                "username": "gus"
-            },
-            {
-                "views": 11578638578,
-                "username": "miette"
-            },
-            {
-                "views": 11561618880,
-                "username": "leon"
-            },
-            {
-                "views": 11552609824,
-                "username": "mia"
-            },
-            {
-                "views": 11551537517,
-                "username": "milton"
-            }
-        ]
-    }
-]
-  ```
-
-
-  The following is a sample response of the second query, retrieving the user with the highest votes to posts ratio.
-
-  ```json
+```json
 [
     {
         "version": "v1",
@@ -259,12 +260,12 @@ Content-Length: 817
         }
     }
 ]
-  ```
+```
 </details>
 
 ## Get segment information for query
 
-Retrieves an array that contains objects with segment information, including the server locations associated with the provided query. 
+Retrieves an array that contains objects with segment information, including the server locations associated with the query provided in the request body. 
 
 ### URL
 <code class="postAPI">POST</code> `/druid/v2/candidates/`
@@ -303,7 +304,7 @@ For more information on possible error messages, see [query execution failures](
 
 <!--cURL-->
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2/candidates" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/candidates" \
 --header "Content-Type: application/json" \
 --data "{
   \"queryType\": \"topN\",
@@ -328,7 +329,7 @@ curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/v2/candidates" \
 <!--HTTP-->
 ```HTTP
 POST /druid/v2/candidates HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 336
 
