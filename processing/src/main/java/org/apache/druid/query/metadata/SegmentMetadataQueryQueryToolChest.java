@@ -277,6 +277,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     SegmentId mergedSegmentId = null;
 
+    // Union datasources can have multiple datasources. So we iterate through all the datasources to parse the segment id.
     for (String dataSource : dataSources) {
       final SegmentId id1 = SegmentId.tryParse(dataSource, arg1.getId());
       final SegmentId id2 = SegmentId.tryParse(dataSource, arg2.getId());
@@ -366,11 +367,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
     } else if (AggregatorMergeStrategy.EARLIST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
-      // followed by arg2.
+      // followed by arg2. So for earliest, the order should be arg2 and arg1.
       addAggregatorFromSegmentAnalyses(ImmutableList.of(arg2, arg1), aggregators);
     } else if (AggregatorMergeStrategy.LATEST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
-      // followed by arg2.
+      // followed by arg2. So for latest, the order should be arg1 and arg2.
       addAggregatorFromSegmentAnalyses(ImmutableList.of(arg1, arg2), aggregators);
     } else {
       throw DruidException.defensive("[%s] merge strategy is not implemented.", aggregatorMergeStrategy);

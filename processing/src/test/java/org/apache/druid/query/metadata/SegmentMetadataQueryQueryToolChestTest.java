@@ -32,6 +32,7 @@ import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -1262,6 +1263,92 @@ public class SegmentMetadataQueryQueryToolChestTest
             .invalidInput()
             .expectMessageIs(
                 "SegementMetadata queries require at least one datasource.")
+    );
+  }
+
+
+  @Test
+  public void testMergeWithUnionDatasource()
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis(
+        TEST_SEGMENT_ID1.toString(),
+        null,
+        new LinkedHashMap<>(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar")
+        ),
+        null,
+        null,
+        null
+    );
+    final SegmentAnalysis analysis2 = new SegmentAnalysis(
+        TEST_SEGMENT_ID2.toString(),
+        null,
+        new LinkedHashMap<>(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
+            "baz", new LongMaxAggregatorFactory("baz", "baz")
+        ),
+        null,
+        null,
+        false
+    );
+
+    final SegmentAnalysis expectedMergedAnalysis = new SegmentAnalysis(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
+        null,
+        new LinkedHashMap<>(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
+            "baz", new LongMaxAggregatorFactory("baz", "baz")
+        ),
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        expectedMergedAnalysis,
+        SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
+            SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+                new UnionDataSource(
+                    ImmutableList.of(
+                        new TableDataSource("foo"),
+                        new TableDataSource("dummy")
+                    )
+                ).getTableNames(),
+                analysis1,
+                analysis2,
+                AggregatorMergeStrategy.LATEST
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        expectedMergedAnalysis,
+        SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
+            SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+                new UnionDataSource(
+                    ImmutableList.of(
+                        new TableDataSource("dummy"),
+                        new TableDataSource("foo"),
+                        new TableDataSource("bar")
+                    )
+                ).getTableNames(),
+                analysis1,
+                analysis2,
+                AggregatorMergeStrategy.LATEST
+            )
+        )
     );
   }
 
