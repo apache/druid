@@ -18,8 +18,8 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from 'druid-query-toolkit';
-import { C, F } from 'druid-query-toolkit';
+import type { SqlExpression } from '@druid-toolkit/query';
+import { C, F } from '@druid-toolkit/query';
 import type { Filter } from 'react-table';
 
 import { addOrUpdate, caseInsensitiveContains, filterMap } from '../utils';

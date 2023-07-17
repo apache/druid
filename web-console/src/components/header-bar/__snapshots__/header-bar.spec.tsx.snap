@@ -239,6 +239,17 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Overlord dynamic config"
           />
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            icon="compressed"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Compaction dynamic config"
+          />
           <Blueprint4.MenuDivider />
           <Blueprint4.MenuItem
             active={false}

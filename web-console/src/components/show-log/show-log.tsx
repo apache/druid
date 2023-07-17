@@ -137,7 +137,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     }
   };
 
-  render(): JSX.Element {
+  render() {
     const { endpoint, downloadFilename, tail } = this.props;
     const { logState } = this.state;
 

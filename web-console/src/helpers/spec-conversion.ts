@@ -24,7 +24,7 @@ import {
   SqlExpression,
   SqlType,
   T,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
 import type {

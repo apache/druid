@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 
-import type { SqlQuery } from 'druid-query-toolkit';
+import type { SqlQuery } from '@druid-toolkit/query';
 
 export type QueryAction = (query: SqlQuery) => SqlQuery;

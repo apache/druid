@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlBase, SqlQuery } from 'druid-query-toolkit';
-import { L } from 'druid-query-toolkit';
+import type { SqlBase, SqlQuery } from '@druid-toolkit/query';
+import { L } from '@druid-toolkit/query';
 
 export const EMPTY_LITERAL = L('');
 
@@ -37,7 +37,6 @@ export function prettyPrintSql(b: SqlBase): string {
 }
 
 export interface RowColumn {
-  match: string;
   row: number;
   column: number;
   endRow?: number;
@@ -55,7 +54,6 @@ export function findEmptyLiteralPosition(query: SqlQuery): RowColumn | undefined
   const row = lines.length - 1;
   const lastLine = lines[row];
   return {
-    match: '',
     row,
     column: lastLine.length,
   };

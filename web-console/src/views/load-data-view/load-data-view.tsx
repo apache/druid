@@ -41,6 +41,7 @@ import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
+import type { JSX } from 'react';
 import React from 'react';
 
 import {
@@ -688,7 +689,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { mode } = this.props;
     const { step, continueToSpec } = this.state;
     const type = mode === 'all' ? '' : `${mode} `;
