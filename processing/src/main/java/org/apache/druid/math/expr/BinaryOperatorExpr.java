@@ -237,6 +237,6 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
     ExpressionType leftType = left.getOutputType(inspector);
     ExpressionType rightType = right.getOutputType(inspector);
     ExpressionType commonType = ExpressionTypeConversion.leastRestrictiveType(leftType, rightType);
-    return inspector.canVectorize(left, right) && !(commonType == null || commonType.isArray());
+    return inspector.canVectorize(left, right) && (commonType == null || commonType.isPrimitive());
   }
 }
