@@ -713,7 +713,6 @@ DurableStorageConfiguration
 ColumnTypeNotSupported
 InsertCannotAllocateSegment
 InsertCannotBeEmpty
-InsertCannotOrderByDescending
 InsertCannotReplaceExistingSegment
 InsertLockPreempted
 InsertTimeNull
