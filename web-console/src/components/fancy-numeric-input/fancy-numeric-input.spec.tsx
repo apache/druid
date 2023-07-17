@@ -20,11 +20,13 @@ import React from 'react';
 
 import { shallow } from '../../utils/shallow-renderer';
 
-import { NumericInputWithDefault } from './numeric-input-with-default';
+import { FancyNumericInput } from './fancy-numeric-input';
 
-describe('NumericInputWithDefault', () => {
+describe('FancyNumericInput', () => {
   it('matches snapshot', () => {
-    const numericInputWithDefault = shallow(<NumericInputWithDefault value={5} defaultValue={3} />);
+    const numericInputWithDefault = shallow(
+      <FancyNumericInput value={5} defaultValue={3} onValueChange={() => {}} />,
+    );
 
     expect(numericInputWithDefault).toMatchSnapshot();
   });

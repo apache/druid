@@ -68,7 +68,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
         Array [
           "Datasource name",
           "Availability",
-          "Availability detail",
+          "Historical load/drop queues",
           "Total data size",
           "Running tasks",
           "Segment rows",
@@ -175,9 +175,9 @@ exports[`DatasourcesView matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Availability
+            Historical
             <br />
-            detail
+            load/drop queues
           </React.Fragment>,
           "accessor": "num_segments_to_load",
           "className": "padded",

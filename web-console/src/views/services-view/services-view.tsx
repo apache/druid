@@ -759,7 +759,7 @@ ORDER BY
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const { groupServicesBy, visibleColumns } = this.state;
 

@@ -19,6 +19,7 @@
 import { FormGroup, Icon } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { JSX } from 'react';
 import React from 'react';
 
 import './form-group-with-info.scss';

@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlValues, SqlWithQuery } from 'druid-query-toolkit';
-import { SqlExpression, SqlQuery, T } from 'druid-query-toolkit';
+import type { SqlValues, SqlWithQuery } from '@druid-toolkit/query';
+import { SqlExpression, SqlQuery, T } from '@druid-toolkit/query';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 
