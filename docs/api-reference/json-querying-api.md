@@ -27,22 +27,21 @@ This document describes the API endpoints to submit JSON-based [native queries](
 
 In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
 
-## Queries
 
-### Submit a query
-
-#### URL
-<code class="postAPI">POST</code> `/druid/v2/`
+## Submit a query
 
 Submits a JSON-based native query. 
 
 Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`.
 
-#### Query parameters
-* `pretty` (optional)
-  * The response is returned in a pretty-printed format using indentation and line breaks.
+### URL
+<code class="postAPI">POST</code> `/druid/v2/`
 
-#### Responses
+### Query parameters
+* `pretty` (optional)
+  * Druid returns the response in a pretty-printed format using indentation and line breaks.
+
+### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -66,7 +65,7 @@ For more information on possible error messages, see [query execution failures](
 
 ---
 
-#### Sample request
+### Sample request
 
 The following example submits a JSON query of the `topN` type to retrieve a ranked list of users and their post views. 
 
@@ -125,12 +124,12 @@ Content-Length: 336
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest upvotes to posts ratio from the `social_media` datasource.
+The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest votes to posts ratio from the `social_media` datasource.
 
 In this query:
 * The `upvoteSum` aggregation calculates the sum of the `upvotes` for each user.
 * The `postCount` aggregation calculates the sum of posts for each user.
-* The `upvoteToPostRatio` is a post-aggregation of the the `upvoteSum` and the `postCount`, divided to calculate the ratio.
+* The `upvoteToPostRatio` is a post-aggregation of the `upvoteSum` and the `postCount`, divided to calculate the ratio.
 * The result is sorted based on the `upvoteToPostRatio` and in descending order.
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -208,7 +207,7 @@ Content-Length: 817
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-#### Sample response
+### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
@@ -245,7 +244,7 @@ Content-Length: 817
   ```
 
 
-  The following is a sample response of the second query, retrieving the user with the highest upvotes to posts ratio.
+  The following is a sample response of the second query, retrieving the user with the highest votes to posts ratio.
 
   ```json
 [
@@ -263,18 +262,18 @@ Content-Length: 817
   ```
 </details>
 
-### Get segment information for query
-
-#### URL
-<code class="postAPI">POST</code> `/druid/v2/candidates/`
+## Get segment information for query
 
 Retrieves an array that contains objects with segment information, including the server locations associated with the provided query. 
 
-#### Query parameters
-* `pretty` (optional)
-  * The response is returned in a pretty-printed format using indentation and line breaks.
+### URL
+<code class="postAPI">POST</code> `/druid/v2/candidates/`
 
-#### Responses
+### Query parameters
+* `pretty` (optional)
+  *  Druid returns the response in a pretty-printed format using indentation and line breaks.
+
+### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -298,7 +297,7 @@ For more information on possible error messages, see [query execution failures](
 
 ---
 
-#### Sample request
+### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -355,7 +354,7 @@ Content-Length: 336
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-#### Sample response
+### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
