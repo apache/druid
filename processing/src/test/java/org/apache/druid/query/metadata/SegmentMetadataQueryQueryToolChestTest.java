@@ -1398,7 +1398,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
     Assert.assertNull(
         SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, AggregatorMergeStrategy.EARLIST)
+            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, AggregatorMergeStrategy.EARLIEST)
     );
     Assert.assertNull(
         SegmentMetadataQueryQueryToolChest
@@ -1437,7 +1437,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             TEST_DATASOURCE.getTableNames(),
             analysis1,
             analysis2,
-            AggregatorMergeStrategy.EARLIST
+            AggregatorMergeStrategy.EARLIEST
         )
     );
   }

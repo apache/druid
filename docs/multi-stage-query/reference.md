@@ -203,7 +203,8 @@ For more information about partitioning, see [Partitioning](concepts.md#partitio
 ### `CLUSTERED BY`
 
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
-column names or expressions.
+column names or expressions. Druid's segment generation only supports ascending order, so an `INSERT` or `REPLACE` query with
+`CLUSTERED BY` columns in `DESC` ordering is not allowed.
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
 
@@ -454,4 +455,3 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_WorkerFailed">`WorkerFailed`</a> | A worker task failed unexpectedly. | `errorMsg`<br /><br />`workerTaskId`: The ID of the worker task. |
 | <a name="error_WorkerRpcFailed">`WorkerRpcFailed`</a> | A remote procedure call to a worker task failed and could not recover. | `workerTaskId`: the id of the worker task |
 | <a name="error_UnknownError">`UnknownError`</a> | All other errors. | `message` |
-| <a name="error_InsertCannotOrderByDescending">`InsertCannotOrderByDescending`</a> | Deprecated. An INSERT query contained a `CLUSTERED BY` expression in descending order. Druid's segment generation code only supports ascending order. The query returns a `ValidationException` instead of the fault. | `columnName` |

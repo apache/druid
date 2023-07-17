@@ -365,7 +365,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           aggregators.put(aggregator.getName(), aggregator);
         }
       }
-    } else if (AggregatorMergeStrategy.EARLIST == aggregatorMergeStrategy) {
+    } else if (AggregatorMergeStrategy.EARLIEST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
       // followed by arg2. So for earliest strategy, the iteration order should be arg2 and arg1.
       for (SegmentAnalysis analysis : ImmutableList.of(arg2, arg1)) {

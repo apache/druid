@@ -20,7 +20,7 @@ import type { TreeNodeInfo } from '@blueprintjs/core';
 import { HTMLSelect, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import type { SqlExpression } from 'druid-query-toolkit';
+import type { SqlExpression } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -31,7 +31,7 @@ import {
   SqlQuery,
   SqlTable,
   T,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import type { ChangeEvent } from 'react';
 import React from 'react';
 
@@ -572,7 +572,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.forceUpdate();
   };
 
-  render(): JSX.Element | null {
+  render() {
     const { columnMetadataLoading } = this.props;
     const { currentSchemaSubtree } = this.state;
 

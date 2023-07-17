@@ -17,7 +17,7 @@
  */
 
 import type { Field } from '../../components';
-import { filterMap, typeIs } from '../../utils';
+import { filterMap, typeIsKnown } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
 import { getHeaderNamesFromSampleResponse } from '../../utils/sampler';
 import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
@@ -37,6 +37,7 @@ export interface DimensionSpec {
   readonly multiValueHandling?: string;
 }
 
+const KNOWN_TYPES = ['string', 'long', 'float', 'double', 'json'];
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'name',
@@ -48,18 +49,18 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
     name: 'type',
     type: 'string',
     required: true,
-    suggestions: ['string', 'long', 'float', 'double', 'json'],
+    suggestions: KNOWN_TYPES,
   },
   {
     name: 'createBitmapIndex',
     type: 'boolean',
-    defined: typeIs('string'),
+    defined: typeIsKnown(KNOWN_TYPES, 'string'),
     defaultValue: true,
   },
   {
     name: 'multiValueHandling',
     type: 'string',
-    defined: typeIs('string'),
+    defined: typeIsKnown(KNOWN_TYPES, 'string'),
     defaultValue: 'SORTED_ARRAY',
     suggestions: ['SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
   },
