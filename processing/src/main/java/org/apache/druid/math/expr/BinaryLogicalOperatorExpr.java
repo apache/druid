@@ -99,7 +99,8 @@ class BinLeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
-  protected boolean evalArray(ExprEval left, ExprEval right) {
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
     ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
     // type cannot be null here because ExprEval type is not nullable
     return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) <= 0;
