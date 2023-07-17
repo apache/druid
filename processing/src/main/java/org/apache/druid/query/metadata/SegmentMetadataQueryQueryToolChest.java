@@ -364,18 +364,14 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           aggregators.put(aggregator.getName(), aggregator);
         }
       }
+    } else if (AggregatorMergeStrategy.EARLIST == aggregatorMergeStrategy) {
+      // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
+      // followed by arg2.
+      addAggregatorFromSegmentAnalyses(ImmutableList.of(arg2, arg1), aggregators);
     } else if (AggregatorMergeStrategy.LATEST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
       // followed by arg2.
-      for (SegmentAnalysis analysis : ImmutableList.of(arg1, arg2)) {
-        if (analysis.getAggregators() != null) {
-          for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
-            final String aggregatorName = entry.getKey();
-            final AggregatorFactory aggregator = entry.getValue();
-            aggregators.putIfAbsent(aggregatorName, aggregator);
-          }
-        }
-      }
+      addAggregatorFromSegmentAnalyses(ImmutableList.of(arg1, arg2), aggregators);
     } else {
       throw DruidException.defensive("[%s] merge strategy is not implemented.", aggregatorMergeStrategy);
     }
@@ -442,5 +438,21 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   public SegmentMetadataQueryConfig getConfig()
   {
     return this.config;
+  }
+
+  private static void addAggregatorFromSegmentAnalyses(
+      final ImmutableList<SegmentAnalysis> segmentAnalyses,
+      final Map<String, AggregatorFactory> aggregators
+  )
+  {
+    for (SegmentAnalysis analysis : segmentAnalyses) {
+      if (analysis.getAggregators() != null) {
+        for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
+          final String aggregatorName = entry.getKey();
+          final AggregatorFactory aggregator = entry.getValue();
+          aggregators.putIfAbsent(aggregatorName, aggregator);
+        }
+      }
+    }
   }
 }

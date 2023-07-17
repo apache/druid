@@ -28,6 +28,7 @@ public enum AggregatorMergeStrategy
 {
   STRICT,
   LENIENT,
+  EARLIST,
   LATEST;
 
   @JsonValue
