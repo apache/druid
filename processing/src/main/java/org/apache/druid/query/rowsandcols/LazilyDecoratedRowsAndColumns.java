@@ -29,6 +29,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -41,6 +42,7 @@ import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.query.rowsandcols.semantic.DefaultRowsAndColumnsDecorator;
 import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
@@ -56,11 +58,16 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
+  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP =
+      RowsAndColumns.makeAsMap(LazilyDecoratedRowsAndColumns.class);
+
   private RowsAndColumns base;
   private Interval interval;
   private Filter filter;
@@ -118,33 +125,50 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   @Override
   public <T> T as(Class<T> clazz)
   {
-    if (RowsAndColumnsDecorator.class.equals(clazz)) {
-      // If we don't have a projection defined, then it's safe to continue collecting more decorations as we
-      // can meaningfully merge them together.
-      if (viewableColumns == null || viewableColumns.isEmpty()) {
-        return (T) new DefaultRowsAndColumnsDecorator(
-            base,
-            interval,
-            filter,
-            virtualColumns,
-            limit,
-            ordering
-        );
-      } else {
-        return (T) new DefaultRowsAndColumnsDecorator(this);
-      }
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
+  }
+
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public RowsAndColumnsDecorator toRowsAndColumnsDecorator()
+  {
+    // If we don't have a projection defined, then it's safe to continue collecting more decorations as we
+    // can meaningfully merge them together.
+    if (viewableColumns == null || viewableColumns.isEmpty()) {
+      return new DefaultRowsAndColumnsDecorator(base, interval, filter, virtualColumns, limit, ordering);
+    } else {
+      return new DefaultRowsAndColumnsDecorator(this);
     }
-    return null;
+  }
+
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public WireTransferable toWireTransferable()
+  {
+    return () -> {
+      final Pair<byte[], RowSignature> materialized = materialize();
+      if (materialized == null) {
+        return new byte[]{};
+      } else {
+        return materialized.lhs;
+      }
+    };
   }
 
   private void maybeMaterialize()
   {
     if (!(interval == null && filter == null && limit == -1 && ordering == null)) {
-      materialize();
+      final Pair<byte[], RowSignature> thePair = materialize();
+      if (thePair == null) {
+        reset(new EmptyRowsAndColumns());
+      } else {
+        reset(new FrameRowsAndColumns(Frame.wrap(thePair.lhs), thePair.rhs));
+      }
     }
   }
 
-  private void materialize()
+  private Pair<byte[], RowSignature> materialize()
   {
     if (ordering != null) {
       throw new ISE("Cannot reorder[%s] scan data right now", ordering);
@@ -152,13 +176,26 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
     final StorageAdapter as = base.as(StorageAdapter.class);
     if (as == null) {
-      reset(naiveMaterialize(base));
+      return naiveMaterialize(base);
     } else {
-      reset(materializeStorageAdapter(as));
+      return materializeStorageAdapter(as);
     }
+
   }
 
-  private RowsAndColumns materializeStorageAdapter(StorageAdapter as)
+  private void reset(RowsAndColumns rac)
+  {
+    base = rac;
+    interval = null;
+    filter = null;
+    virtualColumns = null;
+    limit = -1;
+    viewableColumns = null;
+    ordering = null;
+  }
+
+  @Nullable
+  private Pair<byte[], RowSignature> materializeStorageAdapter(StorageAdapter as)
   {
     final Sequence<Cursor> cursors = as.makeCursors(
         filter,
@@ -231,25 +268,15 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
       // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
       // should be completely empty.
-      return new EmptyRowsAndColumns();
+      return null;
     } else {
       final byte[] bytes = writer.toByteArray();
-      return new FrameRowsAndColumns(Frame.wrap(bytes), siggy.get());
+      return Pair.of(bytes, siggy.get());
     }
   }
 
-  private void reset(RowsAndColumns rac)
-  {
-    base = rac;
-    interval = null;
-    filter = null;
-    virtualColumns = null;
-    limit = -1;
-    viewableColumns = null;
-    ordering = null;
-  }
-
-  private RowsAndColumns naiveMaterialize(RowsAndColumns rac)
+  @Nullable
+  private Pair<byte[], RowSignature> naiveMaterialize(RowsAndColumns rac)
   {
     final int numRows = rac.numRows();
 
@@ -264,7 +291,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         // long as is required by the time filter produces all 0s, so either 0 is included and matches all rows or
         // it's not and we skip all rows.
         if (!interval.contains(0)) {
-          return new EmptyRowsAndColumns();
+          return null;
         }
       } else {
         final ColumnAccessor accessor = racColumn.toAccessor();
@@ -355,7 +382,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       frameWriter.addSelection();
     }
 
-    return new FrameRowsAndColumns(Frame.wrap(frameWriter.toByteArray()), sigBob.build());
+    return Pair.of(frameWriter.toByteArray(), sigBob.build());
   }
-
 }

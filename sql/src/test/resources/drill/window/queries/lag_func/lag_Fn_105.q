@@ -1,0 +1,1 @@
+SELECT col7 , LAG(col7) OVER(PARTITION BY col7 ORDER BY col7) LAG_col7 FROM "allTypsUniq.parquet" WHERE col7 NOT IN (true)

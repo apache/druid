@@ -1,0 +1,1 @@
+SELECT RANK () OVER (ORDER by col_tmstmp ) rnk FROM "smlTbl.parquet"

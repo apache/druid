@@ -139,29 +139,38 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   @Test
   public void nonSupportedModes()
   {
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(new SqlQuery(
+            "select * from foo",
+            null,
+            false,
+            false,
+            false,
+            new HashMap<>(),
+            null
+        ), SqlStatementResourceTest.makeOkRequest()),
+        "Execution mode is not provided to the SQL statement API. "
+        + "Please set [executionMode] to [ASYNC] in the query context",
+        Response.Status.BAD_REQUEST
+    );
+
     Map<String, Object> syncModeContext = new HashMap<>();
     syncModeContext.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name());
 
-    List<Map<String, Object>> contextList = ImmutableList.of(
-        syncModeContext,
-        new HashMap<>()
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(new SqlQuery(
+            "select * from foo",
+            null,
+            false,
+            false,
+            false,
+            syncModeContext,
+            null
+        ), SqlStatementResourceTest.makeOkRequest()),
+        "The SQL statement API currently does not support the provided execution mode [SYNC]. "
+        + "Please set [executionMode] to [ASYNC] in the query context",
+        Response.Status.BAD_REQUEST
     );
-
-    for (Map<String, Object> context : contextList) {
-      SqlStatementResourceTest.assertExceptionMessage(
-          resource.doPost(new SqlQuery(
-              "select * from foo",
-              null,
-              false,
-              false,
-              false,
-              context,
-              null
-          ), SqlStatementResourceTest.makeOkRequest()),
-          "The statement sql api only supports sync mode[ASYNC]. Please set context parameter [executionMode=ASYNC] in the context payload",
-          Response.Status.BAD_REQUEST
-      );
-    }
   }
 
 
@@ -266,13 +275,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         NilStorageConnector.getInstance()
     );
 
-    String errorMessage = StringUtils.format(
-        "The statement sql api cannot read from select destination [%s=%s] since its not configured. "
-        + "Its recommended to configure durable storage as it allows the user to fetch big results. "
-        + "Please contact your cluster admin to configure durable storage.",
-        MultiStageQueryContext.CTX_SELECT_DESTINATION,
-        MSQSelectDestination.DURABLE_STORAGE.name()
-    );
+    String errorMessage = "The SQL Statement API cannot read from the select destination [DURABLE_STORAGE] provided in "
+                          + "the query context [selectDestination] since it is not configured. It is recommended to "
+                          + "configure the durable storage as it allows the user to fetch large result sets. "
+                          + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();
     context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
 

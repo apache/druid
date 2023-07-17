@@ -2099,8 +2099,8 @@ public class MSQSelectTest extends MSQTestBase
                     )
                 ))
                 .destination(isDurableStorageDestination()
-                             ? DurableStorageMSQDestination.INSTANCE
-                             : TaskReportMSQDestination.INSTANCE)
+                             ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                             : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(queryContext)
