@@ -525,7 +525,7 @@ ORDER BY
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const {
       groupTasksBy,
       taskSpecDialogOpen,

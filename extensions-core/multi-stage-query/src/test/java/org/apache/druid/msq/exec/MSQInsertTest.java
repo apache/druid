@@ -26,6 +26,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -1024,11 +1025,13 @@ public class MSQInsertTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Field \"__time\" must be of type TIMESTAMP"))
-        ))
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.USER,
+                DruidException.Category.INVALID_INPUT,
+                "invalidInput"
+            ).expectMessageIs("Field [__time] was the wrong type [VARCHAR], expected TIMESTAMP")
+        )
         .verifyPlanningErrors();
   }
 
@@ -1106,11 +1109,13 @@ public class MSQInsertTest extends MSQTestBase
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(
-                         ThrowableMessageMatcher.hasMessage(
-                             CoreMatchers.startsWith(
-                                 MultiStageQueryContext.CTX_MAX_NUM_TASKS
-                                 + " cannot be less than 2 since at least 1 controller and 1 worker is necessary."
-                             )
+                         new DruidExceptionMatcher(
+                             DruidException.Persona.USER,
+                             DruidException.Category.INVALID_INPUT,
+                             "invalidInput"
+                         ).expectMessageIs(
+                             "MSQ context maxNumTasks [1] cannot be less than 2, since at least 1 controller "
+                             + "and 1 worker is necessary"
                          )
                      )
                      .verifyExecutionError();

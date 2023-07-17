@@ -19,16 +19,13 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.util.List;
 
 public class LimitTimeIntervalOperator implements Operator
 {
@@ -37,16 +34,11 @@ public class LimitTimeIntervalOperator implements Operator
 
   public LimitTimeIntervalOperator(
       Operator segmentOperator,
-      QueryPlus<RowsAndColumns> queryPlus
+      Interval interval
   )
   {
     this.segmentOperator = segmentOperator;
-
-    final List<Interval> intervals = queryPlus.getQuery().getIntervals();
-    if (intervals.size() != 1) {
-      throw new ISE("Can only handle a single interval, got[%s]", intervals);
-    }
-    interval = intervals.get(0);
+    this.interval = interval;
   }
 
   @Nullable
@@ -61,11 +53,13 @@ public class LimitTimeIntervalOperator implements Operator
       @Override
       public Signal push(RowsAndColumns rac)
       {
-        final RowsAndColumnsDecorator decor = RowsAndColumnsDecorator.fromRAC(rac);
-        if (!Intervals.isEternity(interval)) {
+        if (Intervals.isEternity(interval)) {
+          return receiver.push(rac);
+        } else {
+          final RowsAndColumnsDecorator decor = RowsAndColumnsDecorator.fromRAC(rac);
           decor.limitTimeRange(interval);
+          return receiver.push(decor.toRowsAndColumns());
         }
-        return receiver.push(decor.toRowsAndColumns());
       }
 
       @Override

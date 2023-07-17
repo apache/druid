@@ -1,0 +1,15 @@
+TX	RI
+RI	NY
+NY	NJ
+NJ	NC
+NC	MA
+MA	KS
+KS	IN
+IN	IA
+IA	GA
+GA	null
+SD	SC
+SC	OR
+OR	NE
+NE	MN
+MN	null
