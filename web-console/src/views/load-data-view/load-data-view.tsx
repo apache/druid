@@ -2670,8 +2670,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               .
             </Radio>
             <Radio value="string-only-discovery">
-              Use classic string-only schema discovery. This will discover all new columns as
-              strings, columns with multiple values will be ingested as multi-value-strings.
+              Use classic string-only schema discovery to discover all new columns as
+              strings. Columns with multiple values will be ingested as multi-value-strings.
             </Radio>
           </RadioGroup>
         )}
