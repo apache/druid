@@ -26,6 +26,7 @@ import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components'
 import type { InputFormat, InputSource } from '../../../druid-models';
 import {
   BATCH_INPUT_FORMAT_FIELDS,
+  chooseByBestTimestamp,
   DETECTION_TIMESTAMP_SPEC,
   guessColumnTypeFromSampleResponse,
   guessIsArrayFromSampleResponse,
@@ -40,7 +41,6 @@ import {
   deepSet,
   EMPTY_ARRAY,
   filterMap,
-  findMap,
   timeFormatToSql,
 } from '../../../utils';
 import type { SampleResponse, SampleSpec } from '../../../utils/sampler';
@@ -58,6 +58,7 @@ export interface InputFormatAndMore {
 
 interface PossibleTimeExpression {
   column: string;
+  format: string;
   timeExpression: SqlExpression;
 }
 
@@ -116,9 +117,8 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
   let possibleTimeExpression: PossibleTimeExpression | undefined;
   if (previewSampleResponse) {
-    possibleTimeExpression = findMap(
-      getHeaderNamesFromSampleResponse(previewSampleResponse),
-      column => {
+    possibleTimeExpression = chooseByBestTimestamp(
+      filterMap(getHeaderNamesFromSampleResponse(previewSampleResponse), column => {
         const values = filterMap(previewSampleResponse.data, d => d.input?.[column]);
         const possibleDruidFormat = possibleDruidFormatForValues(values);
         if (!possibleDruidFormat) return;
@@ -127,6 +127,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
         if (column === TIME_COLUMN) {
           return {
             column,
+            format: '',
             timeExpression: C(column),
           };
         }
@@ -136,9 +137,10 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
         return {
           column,
+          format: possibleDruidFormat,
           timeExpression: formatSql.fillPlaceholders([C(column)]),
         };
-      },
+      }),
     );
   }
 
