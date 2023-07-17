@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -35,14 +34,12 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -58,9 +55,6 @@ public class ReservoirSegmentSamplerTest
                         .startingAt("2022-01-01")
                         .withNumPartitions(10)
                         .eachOfSizeInMb(100);
-
-  private final Function<ServerHolder, Collection<DataSegment>> GET_SERVED_SEGMENTS
-      = serverHolder -> serverHolder.getServer().iterateAllSegments();
 
   @Before
   public void setUp()
@@ -84,7 +78,7 @@ public class ReservoirSegmentSamplerTest
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
       segmentCountMap.compute(
           ReservoirSegmentSampler
-              .pickMovableSegmentsFrom(servers, 1, GET_SERVED_SEGMENTS, Collections.emptySet())
+              .pickMovableSegmentsFrom(servers, 1, ServerHolder::getServedSegments, Collections.emptySet())
               .get(0).getSegment(),
           (segment, count) -> count == null ? 1 : count + 1
       );
@@ -155,9 +149,16 @@ public class ReservoirSegmentSamplerTest
     Assert.assertTrue(pickedSegments.containsAll(loadingSegments));
 
     // Pick only loaded segments
-    pickedSegments = ReservoirSegmentSampler
-        .pickMovableSegmentsFrom(Arrays.asList(server1, server2), 10, GET_SERVED_SEGMENTS, Collections.emptySet())
-        .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
+    List<BalancerSegmentHolder> pickedHolders = ReservoirSegmentSampler.pickMovableSegmentsFrom(
+        Arrays.asList(server1, server2),
+        10,
+        ServerHolder::getServedSegments,
+        Collections.emptySet()
+    );
+    pickedSegments = pickedHolders
+        .stream()
+        .map(BalancerSegmentHolder::getSegment)
+        .collect(Collectors.toSet());
 
     // Verify that only loaded segments are picked
     Assert.assertEquals(loadedSegments.size(), pickedSegments.size());
@@ -181,7 +182,7 @@ public class ReservoirSegmentSamplerTest
     List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
         Arrays.asList(historical, broker),
         10,
-        GET_SERVED_SEGMENTS,
+        ServerHolder::getServedSegments,
         Collections.emptySet()
     );
 
@@ -210,8 +211,12 @@ public class ReservoirSegmentSamplerTest
     );
 
     // Try to pick all the segments on the servers
-    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler
-        .pickMovableSegmentsFrom(servers, 10, GET_SERVED_SEGMENTS, Collections.singleton(broadcastDatasource));
+    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
+        servers,
+        10,
+        ServerHolder::getServedSegments,
+        Collections.singleton(broadcastDatasource)
+    );
 
     // Verify that none of the broadcast segments are picked
     Assert.assertEquals(2, pickedSegments.size());
@@ -232,24 +237,16 @@ public class ReservoirSegmentSamplerTest
     // Get the distribution of picked segments for different sample percentages
     final int[] samplePercentages = {50, 20, 10, 5};
     for (int samplePercentage : samplePercentages) {
-      final int[] numSegmentsPickedFromServer = pickSegmentsAndGetTotalPickedFromEachServer(
-          servers,
-          samplePercentage,
-          50
-      );
+      final int[] numSegmentsPickedFromServer
+          = pickSegmentsAndGetPickedCountPerServer(servers, samplePercentage, 50);
 
-      // Segments picked from each server are always 23-27% of total
       final int totalSegmentsPicked = Arrays.stream(numSegmentsPickedFromServer).sum();
-      final int expectedMin = (int) (totalSegmentsPicked * 0.23);
-      final int expectedMax = (int) (totalSegmentsPicked * 0.27);
-      for (int numPickedFromEachServer : numSegmentsPickedFromServer) {
-        Assert.assertTrue(
-            StringUtils.format(
-                "Mismatch in picked segments for sample percentage [%d], value [%s], expected range [%d-%d]",
-                samplePercentage, numPickedFromEachServer, expectedMin, expectedMax
-            ),
-            numPickedFromEachServer >= expectedMin && numPickedFromEachServer <= expectedMax
-        );
+
+      // Number of segments picked from each server is ~25% of total
+      final double expectedPickedSegments = totalSegmentsPicked * 0.25;
+      final double error = totalSegmentsPicked * 0.02;
+      for (int pickedSegments : numSegmentsPickedFromServer) {
+        Assert.assertEquals(expectedPickedSegments, pickedSegments, error);
       }
     }
   }
@@ -271,25 +268,19 @@ public class ReservoirSegmentSamplerTest
 
     final int[] samplePercentages = {50, 20, 10, 5};
     for (int samplePercentage : samplePercentages) {
-      final int[] numSegmentsPickedFromServer = pickSegmentsAndGetTotalPickedFromEachServer(
-          servers,
-          samplePercentage,
-          50
-      );
+      final int[] numSegmentsPickedFromServer
+          = pickSegmentsAndGetPickedCountPerServer(servers, samplePercentage, 50);
 
-      // Segments picked from server0 are always 38-42% of total
       final int totalSegmentsPicked = Arrays.stream(numSegmentsPickedFromServer).sum();
-      final int expectedMin = (int) (totalSegmentsPicked * 0.38);
-      final int expectedMax = (int) (totalSegmentsPicked * 0.42);
 
-      int numPickedFromServer0 = numSegmentsPickedFromServer[0];
-      Assert.assertTrue(
-          StringUtils.format(
-              "Mismatch in picked segments for sample percentage [%d], value [%s], expected range [%d-%d]",
-              samplePercentage, numPickedFromServer0, expectedMin, expectedMax
-          ),
-          numPickedFromServer0 >= expectedMin && numPickedFromServer0 <= expectedMax
-      );
+      // Number of segments picked from server0 are ~40% of total and
+      // number of segments picked from other servers are each ~20% of total
+      double error = totalSegmentsPicked * 0.02;
+      Assert.assertEquals(totalSegmentsPicked * 0.40, numSegmentsPickedFromServer[0], error);
+
+      for (int serverId = 1; serverId < servers.size(); ++serverId) {
+        Assert.assertEquals(totalSegmentsPicked * 0.20, numSegmentsPickedFromServer[serverId], error);
+      }
     }
   }
 
@@ -339,7 +330,7 @@ public class ReservoirSegmentSamplerTest
     int numIterations = 1;
     for (; numIterations < 10000; ++numIterations) {
       ReservoirSegmentSampler
-          .pickMovableSegmentsFrom(servers, sampleSize, GET_SERVED_SEGMENTS, Collections.emptySet())
+          .pickMovableSegmentsFrom(servers, sampleSize, ServerHolder::getServedSegments, Collections.emptySet())
           .forEach(holder -> pickedSegments.add(holder.getSegment()));
 
       if (pickedSegments.size() >= numSegments) {
@@ -350,7 +341,7 @@ public class ReservoirSegmentSamplerTest
     return numIterations;
   }
 
-  private int[] pickSegmentsAndGetTotalPickedFromEachServer(
+  private int[] pickSegmentsAndGetPickedCountPerServer(
       List<ServerHolder> servers,
       int samplePercentage,
       int numIterations
