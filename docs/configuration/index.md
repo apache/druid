@@ -968,7 +968,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 
 The `smartSegmentLoading` mode of the Coordinator makes configuring it for segment loading and balancing much easier.
 In this mode, the Coordinator does not require the user to provide values of the following parameters and computes them automatically instead.
-If provided, the values are simply ignored.
+**If provided, the values are simply ignored.**
 The computed values are based on the current state of the cluster and are meant to optimize the performance of the Coordinator.
 
 |Property|Computed value|Explanation|
