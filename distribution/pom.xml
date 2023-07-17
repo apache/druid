@@ -258,8 +258,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-iceberg-extensions</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
@@ -442,8 +440,6 @@
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-iceberg-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
@@ -637,6 +633,8 @@
                                         <argument>org.apache.druid.extensions.contrib:aliyun-oss-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-iceberg-extensions</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
