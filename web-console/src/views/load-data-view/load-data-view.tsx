@@ -2658,8 +2658,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             }}
           >
             <Radio value="type-aware-discovery">
-              Use the new type-aware schema discovery capability. This will discover columns with
-              the best type, columns with multiple values will be ingested as ARRAY types. For more
+              Use the new type-aware schema discovery capability to discover columns according to data type. Columns with multiple values will be ingested as ARRAY types. For more
               information see the{' '}
               <ExternalLink
                 href={`${getLink(
