@@ -98,6 +98,7 @@
         "label": "Druid SQL",
         "ids": [
           "querying/sql",
+          "querying/query-deep-storage",
           "querying/sql-data-types",
           "querying/sql-operators",
           "querying/sql-scalar",
@@ -200,6 +201,7 @@
     "Operations": [
       "operations/web-console",
       "operations/java",
+      "operations/durable-storage",
       {
         "type": "subcategory",
         "label": "Security",
