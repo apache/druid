@@ -98,15 +98,15 @@ export const TimeIntervalFilterControl = React.memo(function TimeIntervalFilterC
       <FormGroup label="Start">
         <InputGroup
           value={startString}
-          onChange={e => setStartString(e.target.value.replace(/[^\-0-9T:./Z]/g, ''))}
-          placeholder="2022-02-01T00:00:00"
+          onChange={e => setStartString(e.target.value.replace(/[^\-0-9T:./Z ]/g, ''))}
+          placeholder="2022-02-01 00:00:00"
         />
       </FormGroup>
       <FormGroup label="End">
         <InputGroup
           value={endString}
-          onChange={e => setEndString(e.target.value.replace(/[^\-0-9T:./Z]/g, ''))}
-          placeholder="2022-02-01T00:00:00"
+          onChange={e => setEndString(e.target.value.replace(/[^\-0-9T:./Z ]/g, ''))}
+          placeholder="2022-02-01 00:00:00"
         />
       </FormGroup>
       <div className="button-bar">
