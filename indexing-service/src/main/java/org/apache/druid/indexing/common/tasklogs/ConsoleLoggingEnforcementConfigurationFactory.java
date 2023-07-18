@@ -94,15 +94,16 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       List<Appender> consoleAppenders = findConsoleAppenders();
       if (consoleAppenders.isEmpty()) {
         // create a ConsoleAppender with default pattern if no console appender is configured in the configuration file
-        consoleAppenders.add(
-            ConsoleAppender.newBuilder()
-                           .setName("_Injected_Console_Appender_")
-                           .setLayout(PatternLayout.newBuilder()
-                                                   .withPattern("%d{ISO8601} %p [%t] %c - %m%n")
-                                                   .build()
-                           )
-                           .build()
-        );
+        Appender injectedConsoleAppender = ConsoleAppender.newBuilder()
+                                                          .setName("_Injected_Console_Appender_")
+                                                          .setLayout(
+                                                              PatternLayout.newBuilder()
+                                                                           .withPattern("%d{ISO8601} %p [%t] %c - %m%n")
+                                                                           .build()
+                                                          )
+                                                          .build();
+        injectedConsoleAppender.start();
+        consoleAppenders.add(injectedConsoleAppender);
       }
 
       List<LoggerConfig> loggerConfigList = new ArrayList<>();
