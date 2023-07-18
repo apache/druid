@@ -23,7 +23,7 @@ import { C, F, L, SqlExpression, SqlLiteral } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { useQueryManager } from '../../../../../hooks';
-import { caseInsensitiveContains } from '../../../../../utils';
+import { caseInsensitiveContains, nonEmptyArray } from '../../../../../utils';
 import { ColumnPicker } from '../../../column-picker/column-picker';
 import type { Dataset } from '../../../utils';
 import { toggle } from '../../../utils';
@@ -37,13 +37,15 @@ export interface ValuesFilterControlProps {
   initFilterPattern: ValuesFilterPattern;
   negated: boolean;
   setFilterPattern(filterPattern: ValuesFilterPattern): void;
+  onClose(): void;
   queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]>;
 }
 
 export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   props: ValuesFilterControlProps,
 ) {
-  const { dataset, filter, initFilterPattern, negated, setFilterPattern, queryDruidSql } = props;
+  const { dataset, filter, initFilterPattern, negated, setFilterPattern, onClose, queryDruidSql } =
+    props;
   const [column, setColumn] = useState<string>(initFilterPattern.column);
   const [selectedValues, setSelectedValues] = useState<any[]>(initFilterPattern.values);
   const [searchString, setSearchString] = useState('');
@@ -145,9 +147,11 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
           text="OK"
           onClick={() => {
             const newPattern = makePattern();
-            // TODO: check if pattern is valid
-            // if (!isFilterPatternValid(newPattern)) return;
-            setFilterPattern(newPattern);
+            if (nonEmptyArray(newPattern.values)) {
+              setFilterPattern(newPattern);
+            } else {
+              onClose();
+            }
           }}
         />
       </div>

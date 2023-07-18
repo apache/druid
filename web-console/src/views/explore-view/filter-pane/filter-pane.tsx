@@ -87,6 +87,8 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                     initPattern={pattern}
                     onPatternChange={newPattern => {
                       changePatterns(patterns.map((c, idx) => (idx === i ? newPattern : c)));
+                    }}
+                    onClose={() => {
                       setMenuIndex(-1);
                     }}
                     queryDruidSql={queryDruidSql}
@@ -123,6 +125,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
         <Popover2
           className="add-button"
           isOpen={Boolean(menuNew)}
+          position="bottom"
           onClose={() => setMenuNew(undefined)}
           content={
             <FilterMenu
@@ -131,12 +134,13 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
               initPattern={menuNew?.column ? initPatternForColumn(menuNew?.column) : undefined}
               onPatternChange={newPattern => {
                 changePatterns(patterns.concat(newPattern));
+              }}
+              onClose={() => {
                 setMenuNew(undefined);
               }}
               queryDruidSql={queryDruidSql}
             />
           }
-          position="bottom"
         >
           <Button icon={IconNames.PLUS} onClick={() => setMenuNew({})} minimal />
         </Popover2>

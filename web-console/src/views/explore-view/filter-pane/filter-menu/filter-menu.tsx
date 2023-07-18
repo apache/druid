@@ -52,11 +52,12 @@ export interface FilterMenuProps {
   filter: SqlExpression;
   initPattern?: FilterPattern;
   onPatternChange(newPattern: FilterPattern): void;
+  onClose(): void;
   queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]>;
 }
 
 export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps) {
-  const { dataset, filter, initPattern, onPatternChange, queryDruidSql } = props;
+  const { dataset, filter, initPattern, onPatternChange, onClose, queryDruidSql } = props;
 
   const [pattern, setPattern] = useState<FilterPattern | undefined>(initPattern);
   const [negated, setNegated] = useState(Boolean(pattern?.negated));
@@ -77,6 +78,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
 
   function onAcceptPattern(pattern: FilterPattern) {
     onPatternChange({ ...pattern, negated });
+    onClose();
   }
 
   let cont: JSX.Element;
@@ -89,6 +91,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
           initFilterPattern={pattern}
           negated={negated}
           setFilterPattern={onAcceptPattern}
+          onClose={onClose}
           queryDruidSql={queryDruidSql}
         />
       );
