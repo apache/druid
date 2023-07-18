@@ -51,6 +51,7 @@ export default typedVisualModule({
           PT5M: '5 minutes',
           PT30M: '30 minutes',
           PT1H: 'Hour',
+          PT6H: '6 hours',
           P1D: 'Day',
         },
       },

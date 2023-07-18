@@ -23,6 +23,10 @@
   flex-wrap: wrap;
   gap: 5px;
 
+  .filter-label {
+    pointer-events: none;
+  }
+
   .filter-pill {
     position: relative;
     @include card-like;

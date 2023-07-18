@@ -18,6 +18,7 @@
 
 import './modules';
 
+import { Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
 import { C, L, sql, SqlLiteral, SqlQuery, T } from '@druid-toolkit/query';
@@ -29,6 +30,7 @@ import {
 } from '@druid-toolkit/visuals-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useLocalStorageState, useQueryManager } from '../../hooks';
 import { deepGet, filterMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
 
@@ -88,6 +90,29 @@ const VISUAL_MODULES = [
 
 type ModuleType = (typeof VISUAL_MODULES)[number]['moduleName'];
 
+// ---------------------------------------
+
+interface QueryHistoryEntry {
+  time: Date;
+  sqlQuery: string;
+}
+
+const MAX_PAST_QUERIES = 10;
+const QUERY_HISTORY: QueryHistoryEntry[] = [];
+
+function addQueryToHistory(sqlQuery: string): void {
+  QUERY_HISTORY.unshift({ time: new Date(), sqlQuery });
+  while (QUERY_HISTORY.length > MAX_PAST_QUERIES) QUERY_HISTORY.pop();
+}
+
+function getFormattedQueryHistory(): string {
+  return QUERY_HISTORY.map(
+    ({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`,
+  ).join('\n\n-----------------------------------------------------\n\n');
+}
+
+// ---------------------------------------
+
 async function introspect(tableName: SqlTable): Promise<Dataset> {
   const columns = await queryDruidSql({
     query: `SELECT COLUMN_NAME AS "name", DATA_TYPE AS "sqlType" FROM INFORMATION_SCHEMA.COLUMNS
@@ -146,12 +171,14 @@ async function extendedQueryDruidSql<T = any>(sqlQueryPayload: Record<string, an
     }
   }
 
+  addQueryToHistory(sqlQueryPayload.query);
   console.debug(`Running query:\n${sqlQueryPayload.query}`);
 
   return queryDruidSql(sqlQueryPayload);
 }
 
 export const ExploreView = React.memo(function ExploreView() {
+  const [shownText, setShownText] = useState<string | undefined>();
   const filterPane = useRef<{ filterOn(column: ExpressionMeta): void }>();
 
   const [moduleName, setModuleName] = useLocalStorageState<ModuleType>(
@@ -269,6 +296,24 @@ export const ExploreView = React.memo(function ExploreView() {
             }
           }
         }}
+        moreMenu={
+          <Menu>
+            <MenuItem
+              icon={IconNames.HISTORY}
+              text="Show query history"
+              onClick={() => {
+                setShownText(getFormattedQueryHistory());
+              }}
+            />
+            <MenuItem
+              icon={IconNames.RESET}
+              text="Reset visualization state"
+              onClick={() => {
+                resetParameterValues();
+              }}
+            />
+          </Menu>
+        }
       />
       <div className="resource-pane-cnt">
         {!dataset && datasetState.loading && 'Loading...'}
@@ -311,6 +356,15 @@ export const ExploreView = React.memo(function ExploreView() {
           />
         )}
       </div>
+      {shownText && (
+        <ShowValueDialog
+          title="Query history"
+          str={shownText}
+          onClose={() => {
+            setShownText(undefined);
+          }}
+        />
+      )}
     </div>
   );
 });

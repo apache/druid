@@ -26,13 +26,15 @@ export default typedVisualModule({
   parameters: {
     timeGranularity: {
       type: 'option',
-      options: ['PT1M', 'PT5M', 'PT1H', 'P1D'],
+      options: ['PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
       default: 'PT1H',
       control: {
         optionLabels: {
           PT1M: 'Minute',
           PT5M: '5 minutes',
+          PT30M: '30 minutes',
           PT1H: 'Hour',
+          PT6H: '6 hours',
           P1D: 'Day',
         },
       },

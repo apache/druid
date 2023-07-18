@@ -73,6 +73,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
 
   return (
     <DroppableContainer className="filter-pane" onDropColumn={filterOn}>
+      <Button className="filter-label" minimal text="Filter:" />
       {patterns.map((pattern, i) => {
         return (
           <div className="filter-pill" key={i}>
