@@ -1,0 +1,9 @@
+#!/bin/bash -eu
+
+mkdir "$STAGING_DIR"/quickstart
+
+cp quickstart/*.json "$STAGING_DIR/quickstart/"
+
+gzip -c -d \
+  quickstart/wikipedia-2016-06-27-sampled.json.gz > \
+  "$STAGING_DIR/quickstart/wikipedia-2016-06-27-sampled.json"

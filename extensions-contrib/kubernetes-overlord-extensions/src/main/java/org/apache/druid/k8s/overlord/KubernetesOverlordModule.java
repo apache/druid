@@ -34,8 +34,10 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -72,7 +74,11 @@ public class KubernetesOverlordModule implements DruidModule
     biddy.addBinding(KubernetesTaskRunnerFactory.TYPE_NAME)
          .to(KubernetesTaskRunnerFactory.class)
          .in(LazySingleton.class);
+    biddy.addBinding(KubernetesAndWorkerTaskRunnerFactory.TYPE_NAME)
+        .to(KubernetesAndWorkerTaskRunnerFactory.class)
+        .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
+    binder.bind(KubernetesAndWorkerTaskRunnerFactory.class).in(LazySingleton.class);
     configureTaskLogs(binder);
   }
 

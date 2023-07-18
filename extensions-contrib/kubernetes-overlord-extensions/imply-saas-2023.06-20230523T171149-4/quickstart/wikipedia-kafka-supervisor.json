@@ -1,0 +1,56 @@
+{
+  "type": "kafka",
+  "dataSchema": {
+    "dataSource": "wikipedia-kafka",
+    "parser": {
+      "type": "string",
+      "parseSpec": {
+        "format": "json",
+        "timestampSpec": {
+          "column": "timestamp",
+          "format": "iso"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
+            "isRobot",
+            "channel",
+            "flags",
+            "isUnpatrolled",
+            "page",
+            "diffUrl",
+            "comment",
+            "isNew",
+            "isMinor",
+            "user",
+            "namespace",
+            { "name" : "commentLength", "type" : "long" },
+            { "name" : "deltaBucket", "type" : "long" },
+            "cityName",
+            "countryIsoCode",
+            "countryName",
+            "isAnonymous",
+            "metroCode",
+            "regionIsoCode",
+            "regionName",
+            { "name": "added", "type": "long" },
+            { "name": "deleted", "type": "long" },
+            { "name": "delta", "type": "long" }
+          ]
+        }
+      }
+    },
+    "metricsSpec" : [],
+    "granularitySpec": {
+      "type": "uniform",
+      "segmentGranularity": "HOUR",
+      "queryGranularity": "NONE",
+      "rollup": true
+    }
+  },
+  "ioConfig": {
+    "topic": "wikipedia",
+    "consumerProperties": {
+      "bootstrap.servers": "localhost:9092"
+    }
+  }
+}

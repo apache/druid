@@ -1,0 +1,46 @@
+# The port on which the Pivot server will listen on.
+port: 9095
+
+# runtime directory
+varDir: var/pivot
+
+servingMode: clustered
+
+# User management mode
+# By default Imply will not show a login screen and anyone accessing it will automatically be treated as an 'admin'
+# Uncomment the line below to enable user authentication, for more info see: https://docs.imply.io/on-prem/configure/config-api
+#userMode: native-users
+
+
+# The initial settings that will be loaded in, in this case a connection will be created for a Druid cluster that is running locally.
+initialSettings:
+  connections:
+    - name: druid
+      type: druid
+      title: My Druid
+      host: localhost:8888
+
+#
+# Pivot must have a state store in order to function
+# The state (data cubes, dashboards, etc) can be stored in two ways.
+# Choose just one option and comment out the other.
+#
+#  1) Stored in a sqlite file, editable at runtime with Settings View. Not suitable for running in a cluster.
+#  2) Stored in a database, editable at runtime with Settings View. Works well with a cluster of Imply servers.
+#
+
+#
+# 1) File-backed (sqlite) state (not suitable for running in a cluster)
+#
+
+stateStore:
+  type: sqlite
+  connection: var/pivot/pivot-settings.sqlite
+
+#
+# 2) Database-backed state 'mysql' (MySQL) or 'pg' (Postgres)
+#
+
+# stateStore:
+#   location: mysql
+#   connection: 'mysql://user:pw@192.168.99.100:3306/pivot'

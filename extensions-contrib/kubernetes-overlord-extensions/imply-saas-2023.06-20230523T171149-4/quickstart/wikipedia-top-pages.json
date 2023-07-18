@@ -1,0 +1,15 @@
+{
+  "queryType" : "topN",
+  "dataSource" : "wikipedia",
+  "intervals" : ["2016-06-27/2016-06-28"],
+  "granularity" : "all",
+  "dimension" : "page",
+  "metric" : "count",
+  "threshold" : 25,
+  "aggregations" : [
+    {
+      "type" : "count",
+      "name" : "count"
+    }
+  ]
+}
