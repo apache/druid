@@ -51,6 +51,10 @@ function utcParseDate(dateString: string): Date | undefined {
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second)); // Month is zero-based
 }
 
+function normalizeDateString(dateString: string): string {
+  return dateString.replace(/[^\-0-9T:./Z ]/g, '');
+}
+
 function formatDate(date: Date): string {
   return date.toISOString().replace(/Z$/, '').replace('.000', '').replace(/T/g, ' ');
 }
@@ -98,14 +102,14 @@ export const TimeIntervalFilterControl = React.memo(function TimeIntervalFilterC
       <FormGroup label="Start">
         <InputGroup
           value={startString}
-          onChange={e => setStartString(e.target.value.replace(/[^\-0-9T:./Z ]/g, ''))}
+          onChange={e => setStartString(normalizeDateString(e.target.value))}
           placeholder="2022-02-01 00:00:00"
         />
       </FormGroup>
       <FormGroup label="End">
         <InputGroup
           value={endString}
-          onChange={e => setEndString(e.target.value.replace(/[^\-0-9T:./Z ]/g, ''))}
+          onChange={e => setEndString(normalizeDateString(e.target.value))}
           placeholder="2022-02-01 00:00:00"
         />
       </FormGroup>
