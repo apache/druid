@@ -26,7 +26,7 @@ For example, the following interval load rule assigns 0 replicants for the speci
   }
 ```
 
-This means that any segments within that interval don't get loaded onto `_default_tier` . Then, create a corresponding drop rule so that Druid drops the data from the Historical tiers if they were previously loaded.
+This means that any segments within that interval don't get loaded onto `_default_tier` . Then, create a corresponding drop rule so that Druid drops the segments from Historical tiers if they were previously loaded.
 
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
