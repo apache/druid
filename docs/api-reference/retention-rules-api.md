@@ -25,11 +25,13 @@ sidebar_label: Retention rules
 
 This document describes the API endpoints for managing retention rules in Apache Druid.
 
+Druid uses retention rules to determine what data should be retained in the cluster. Druid supports load, drop, and broadcast rules. For reference, see [using rules to drop and retain data](../operations/rule-configuration.md). 
+
 In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
-## Create retention rules for a datasource or update a datasource's retention rules
+## Create or update retention rules for a datasource
 
-Update a datasource with a list of rules. The retention rules can be submitted as an array of rule objects in the request body. 
+Update a datasource with a list of rules. Retention rules can be submitted as an array of rule objects in the request body. The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
 
 Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` is invalid.
 
@@ -114,7 +116,90 @@ Content-Length: 192
 
 A successful request returns an HTTP `200 OK` and empty response body.
 
-## Get all retention rules
+## Create or update default retention rules for all datasources
+
+Create or update one or more default retention rules for all datasources. To remove default retention rules for all datasources, submit an empty rule array in the request body. 
+
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
+
+### URL
+
+<code class="postAPI">POST</code> `/druid/coordinator/v1/rules/_default`
+
+### Header parameters
+
+* `X-Druid-Author`
+  * Type: String
+  * A string representing the author making the configuration change.
+* `X-Druid-Comment`
+  * Type: String
+  * A string describing the change being done.
+
+### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully updated default retention rules* 
+<!--500 SERVER ERROR-->
+<br/>
+*Error with request body* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+### Sample request
+The following example updates the default retention rule for all datasources with two new rules, `dropByPeriod` and `broadcastByPeriod`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
+--header "Content-Type: application/json" \
+--data "[
+    {
+        \"type\": \"dropByPeriod\",
+        \"period\": \"P1M\",
+        \"includeFuture\": true
+    },
+    {
+        \"type\": \"broadcastByPeriod\",
+        \"period\": \"P1M\",
+        \"includeFuture\": true
+    }
+]"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/coordinator/v1/rules/_default HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Content-Length: 207
+
+[
+    {
+        "type": "dropByPeriod",
+        "period": "P1M",
+        "includeFuture": true
+    },
+    {
+        "type": "broadcastByPeriod",
+        "period": "P1M",
+        "includeFuture": true
+    }
+]
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+### Sample response
+
+A successful request returns an HTTP `200 OK` and empty response body.
+
+
+## Get an array of all retention rules
 
 Retrieves all current retention rules in the cluster including the default retention rule. The response object is an array of objects for each datasource with a retention rule.
 
@@ -203,7 +288,7 @@ Note that this endpoint returns an `HTTP 200 Success` code message even if the `
 
 ### Sample request
 
-The following example retrieves retention rules for datasource with specified ID `social_media`.
+The following example retrieves the custom retention rules and default retention rules for datasource with specified ID `social_media`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
