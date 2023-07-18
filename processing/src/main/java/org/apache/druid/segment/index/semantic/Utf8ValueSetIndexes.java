@@ -17,15 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
 
-import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
-public interface BitmapColumnIndex
+import java.nio.ByteBuffer;
+import java.util.SortedSet;
+
+public interface Utf8ValueSetIndexes
 {
-  ColumnIndexCapabilities getIndexCapabilities();
-
-  double estimateSelectivity(int totalRows);
-
-  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column). The set must be sorted using
+   * {@link org.apache.druid.java.util.common.ByteBufferUtils#utf8Comparator()}.
+   */
+  BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
 }

@@ -17,13 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
-import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
-/**
- */
-public interface SpatialIndex
+public interface BitmapColumnIndex
 {
-  ImmutableRTree getRTree();
+  ColumnIndexCapabilities getIndexCapabilities();
+
+  double estimateSelectivity(int totalRows);
+
+  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
 }

@@ -17,28 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+
+import javax.annotation.Nullable;
+import java.util.SortedSet;
 
 /**
- * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
+ * Index on individual values, and provides bitmaps for the rows which contain these values
  */
-public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
+public interface StringValueSetIndexes
 {
-  @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-  }
+  /**
+   * Get the {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when passed a
+   * value that doesn't exist.  Never returns null.
+   */
+  BitmapColumnIndex forValue(@Nullable String value);
 
-  @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-  {
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
-  }
-
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column). The set must be sorted using
+   * {@link org.apache.druid.java.util.common.guava.Comparators#naturalNullsFirst()}.
+   */
+  BitmapColumnIndex forSortedValues(SortedSet<String> values);
 }

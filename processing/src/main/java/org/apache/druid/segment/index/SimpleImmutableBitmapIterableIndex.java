@@ -17,23 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
-import org.apache.druid.query.filter.DruidPredicateFactory;
-
-import javax.annotation.Nullable;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.segment.filter.Filters;
 
 /**
- * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
+ * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
  */
-public interface DruidPredicateIndex
+public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
 {
-  /**
-   * Get a {@link BitmapColumnIndex} corresponding to all the rows that match the supplied {@link DruidPredicateFactory}
-   * <p>
-   * If this method returns null it indicates that there was no index that matched the respective values and a
-   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
-   */
-  @Nullable
-  BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
+  @Override
+  public double estimateSelectivity(int totalRows)
+  {
+    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
+  }
+
+  @Override
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  {
+    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+  }
+
+  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
 }

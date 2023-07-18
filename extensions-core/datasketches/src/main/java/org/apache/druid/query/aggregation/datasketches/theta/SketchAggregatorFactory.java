@@ -27,6 +27,7 @@ import org.apache.datasketches.common.Util;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.thetacommon.ThetaUtil;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -78,6 +80,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && capabilities.isArray()) {
+      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
+    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchAggregator(selector, size);
   }
@@ -85,6 +91,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && capabilities.isArray()) {
+      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
+    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     final SketchAggregator aggregator = new SketchAggregator(selector, size);
     return new AggregatorAndSize(aggregator, aggregator.getInitialSizeBytes());
@@ -94,6 +104,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && capabilities.isArray()) {
+      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
+    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
