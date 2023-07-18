@@ -228,6 +228,73 @@ public class ConsoleLoggingEnforcementTest
     Assert.assertEquals("%m", layout.getConversionPattern());
   }
 
+  @Test
+  public void testMultipleConsoleAppender() throws IOException
+  {
+    // this logger configuration contains multiple appenders and appender refers
+    String log4jConfiguration = "<Configuration status=\"WARN\">\n"
+                                + "  <Appenders>\n"
+                                + "    <Console name=\"Console\" target=\"SYSTEM_OUT\">\n"
+                                + "      <PatternLayout pattern=\"%m\"/>\n"
+                                + "    </Console>\n"
+                                + "    <Console name=\"Console1\" target=\"SYSTEM_OUT\">\n"
+                                + "      <PatternLayout pattern=\"%m\"/>\n"
+                                + "    </Console>\n"
+                                + "    <Console name=\"Console2\" target=\"SYSTEM_OUT\">\n"
+                                + "      <PatternLayout pattern=\"%m\"/>\n"
+                                + "    </Console>\n"
+                                + "    <Http name=\"Http\" url=\"http://localhost:9200/\">\n"
+                                + "      <JsonLayout properties=\"true\"/>\n"
+                                + "    </Http>\n"
+                                + "  </Appenders>\n"
+                                + "  <Loggers>\n"
+                                + "    <Root level=\"info\">\n"
+                                + "      <AppenderRef ref=\"Http\"/>\n"
+                                + "      <AppenderRef ref=\"Console\"/>\n"
+                                + "    </Root>\n"
+                                + "    <Logger level=\"debug\" name=\"org.apache.druid\" additivity=\"false\">\n"
+                                + "      <AppenderRef ref=\"Http\"/>\n"
+                                + "      <AppenderRef ref=\"Console\"/>\n"
+                                + "    </Logger>\n"
+                                + "    <Logger level=\"debug\" name=\"org.apache.mmon1\" additivity=\"false\">\n"
+                                + "      <AppenderRef ref=\"Http\"/>\n"
+                                + "      <AppenderRef ref=\"Console1\"/>\n"
+                                + "    </Logger>\n"
+                                + "    <Logger level=\"debug\" name=\"org.apache.mmon2\" additivity=\"false\">\n"
+                                + "      <AppenderRef ref=\"Http\"/>\n"
+                                + "      <AppenderRef ref=\"Console2\"/>\n"
+                                + "    </Logger>\n"
+                                + "    <Logger level=\"debug\" name=\"org.apache.mmon3\" additivity=\"false\">\n"
+                                + "      <AppenderRef ref=\"Http\"/>\n"
+                                + "    </Logger>\n"
+                                + "    <Logger level=\"debug\" name=\"org.apache.mmon4\" additivity=\"false\">\n"
+                                + "    </Logger>\n"
+                                + "  </Loggers>\n"
+                                + "</Configuration>";
+
+    LoggerContext context = enforceConsoleLogger(log4jConfiguration);
+
+    // this logger is not defined in configuration, it derivates ROOT logger configuration
+    assertHasConsoleAppenderAndHttpAppender(getLogger(context, "name_not_in_config"), Level.INFO);
+
+    assertHasConsoleAppenderAndHttpAppender(getLogger(context, "org.apache.druid"), Level.DEBUG);
+    assertHasConsoleAppenderAndHttpAppender(getLogger(context, ROOT), Level.INFO);
+
+    assertHasConsoleAppenderAndHttpAppenderWithNameValidation(getLogger(context, "org.apache.mmon1"), Level.DEBUG, "Console1", "Http");
+    assertHasConsoleAppenderAndHttpAppenderWithNameValidation(getLogger(context, "org.apache.mmon2"), Level.DEBUG, "Console2", "Http");
+    assertHasOnlyOneConsoleAppender(getLogger(context, "org.apache.mmon3"), Level.DEBUG);
+    assertHasOnlyOneConsoleAppender(getLogger(context, "org.apache.mmon4"), Level.DEBUG);
+
+    // the ConsoleAppender should be exactly the same as it's in the configuration
+    PatternLayout layout = (PatternLayout) getLogger(context, "anything").getAppenders()
+                                                                         .values()
+                                                                         .stream()
+                                                                         .findFirst()
+                                                                         .get()
+                                                                         .getLayout();
+    Assert.assertEquals("%m", layout.getConversionPattern());
+  }
+
   private LoggerContext enforceConsoleLogger(String configuration) throws IOException
   {
     LoggerContext context = new LoggerContext("test");
@@ -240,17 +307,28 @@ public class ConsoleLoggingEnforcementTest
 
   private void assertHasConsoleAppenderAndHttpAppender(Logger logger, Level level)
   {
+    assertHasConsoleAppenderAndHttpAppenderWithNameValidation(logger, level, "Console", "Http");
+  }
+
+  private void assertHasConsoleAppenderAndHttpAppenderWithNameValidation(
+      Logger logger,
+      Level level,
+      String consoleName,
+      String httpName
+  )
+  {
     // there's two appenders
     Assert.assertEquals(2, logger.getAppenders().size());
 
     // and the appenders must be ConsoleAppender and HttpAppender
-    Assert.assertEquals(ConsoleAppender.class, logger.getAppenders().get("Console").getClass());
-    Assert.assertEquals(HttpAppender.class, logger.getAppenders().get("Http").getClass());
+    Assert.assertEquals(ConsoleAppender.class, logger.getAppenders().get(consoleName).getClass());
+    Assert.assertEquals(HttpAppender.class, logger.getAppenders().get(httpName).getClass());
 
     if (level != null) {
       Assert.assertEquals(level, logger.getLevel());
     }
   }
+
 
   private void assertHasOnlyOneConsoleAppender(Logger logger, Level level)
   {
