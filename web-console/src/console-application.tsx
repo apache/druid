@@ -397,7 +397,7 @@ export class ConsoleApplication extends React.PureComponent<
       'services',
       <ServicesView
         filters={stringToTableFilters(p.match.params.filters)}
-        onFiltersChange={viewFilterChange('tasks')}
+        onFiltersChange={viewFilterChange('services')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
       />,
@@ -414,7 +414,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  render(): JSX.Element {
+  render() {
     const { capabilities, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {

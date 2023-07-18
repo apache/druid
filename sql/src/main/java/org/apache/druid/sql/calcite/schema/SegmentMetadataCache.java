@@ -1013,7 +1013,8 @@ public class SegmentMetadataCache
         ),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null // we don't care about merging strategy because merge is false
     );
 
     return queryLifecycleFactory

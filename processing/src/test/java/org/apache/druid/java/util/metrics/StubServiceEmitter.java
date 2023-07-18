@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
@@ -32,6 +33,7 @@ import java.util.Map;
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
   private final List<Event> events = new ArrayList<>();
+  private final List<AlertEvent> alertEvents = new ArrayList<>();
   private final Map<String, List<ServiceMetricEvent>> metricEvents = new HashMap<>();
 
   public StubServiceEmitter(String service, String host)
@@ -46,6 +48,8 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
       metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
                   .add(metricEvent);
+    } else if (event instanceof AlertEvent) {
+      alertEvents.add((AlertEvent) event);
     }
     events.add(event);
   }
@@ -56,6 +60,11 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   public List<Event> getEvents()
   {
     return events;
+  }
+
+  public List<AlertEvent> getAlerts()
+  {
+    return alertEvents;
   }
 
   @Override
@@ -92,6 +101,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   public void flush()
   {
     events.clear();
+    alertEvents.clear();
     metricEvents.clear();
   }
 

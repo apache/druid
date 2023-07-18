@@ -118,7 +118,7 @@ public class CastOperatorConversion implements SqlOperatorConversion
         return TimeFloorOperatorConversion.applyTimestampFloor(
             typeCastExpression,
             new PeriodGranularity(Period.days(1), null, plannerContext.getTimeZone()),
-            plannerContext.getExprMacroTable()
+            plannerContext
         );
       } else {
         return typeCastExpression;
@@ -148,7 +148,7 @@ public class CastOperatorConversion implements SqlOperatorConversion
       return TimeFloorOperatorConversion.applyTimestampFloor(
           timestampExpression,
           new PeriodGranularity(Period.days(1), null, plannerContext.getTimeZone()),
-          plannerContext.getExprMacroTable()
+          plannerContext
       );
     } else if (toType == SqlTypeName.TIMESTAMP) {
       return timestampExpression;

@@ -51,23 +51,6 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps,
-      boolean hasNull
-  )
-  {
-    this(
-        bitmapFactory,
-        dictionary,
-        bitmaps,
-        hasNull,
-        IndexedStringDruidPredicateIndex.ALWAYS_USE_INDEXES,
-        Integer.MAX_VALUE
-    );
-  }
-
-  public IndexedUtf8LexicographicalRangeIndex(
-      BitmapFactory bitmapFactory,
-      TDictionary dictionary,
-      Indexed<ImmutableBitmap> bitmaps,
       boolean hasNull,
       @Nullable ColumnConfig columnConfig,
       int numRows

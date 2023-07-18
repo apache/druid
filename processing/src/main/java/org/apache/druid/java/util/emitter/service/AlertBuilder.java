@@ -24,12 +24,20 @@ import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Map;
 
 /**
-*/
+ *
+ */
 public class AlertBuilder extends ServiceEventBuilder<AlertEvent>
 {
+  public static final String EXCEPTION_TYPE_KEY = "exceptionType";
+  public static final String EXCEPTION_MESSAGE_KEY = "exceptionMessage";
+  public static final String EXCEPTION_STACK_TRACE_KEY = "exceptionStackTrace";
+
   protected final Map<String, Object> dataMap = Maps.newLinkedHashMap();
   protected final String description;
   protected final ServiceEmitter emitter;
@@ -64,6 +72,20 @@ public class AlertBuilder extends ServiceEventBuilder<AlertEvent>
   public AlertBuilder addData(Map<String, Object> data)
   {
     dataMap.putAll(data);
+    return this;
+  }
+
+  public AlertBuilder addThrowable(@Nullable final Throwable t)
+  {
+    if (t != null) {
+      final StringWriter trace = new StringWriter();
+      final PrintWriter pw = new PrintWriter(trace);
+      t.printStackTrace(pw);
+      addData(EXCEPTION_TYPE_KEY, t.getClass().getName());
+      addData(EXCEPTION_MESSAGE_KEY, t.getMessage());
+      addData(EXCEPTION_STACK_TRACE_KEY, trace.toString());
+    }
+
     return this;
   }
 

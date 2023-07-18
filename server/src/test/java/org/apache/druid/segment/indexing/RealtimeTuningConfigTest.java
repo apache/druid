@@ -26,6 +26,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -82,7 +83,7 @@ public class RealtimeTuningConfigTest
     );
 
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertEquals(Duration.standardMinutes(15).getMillis(), config.getHandoffConditionTimeout());
     Assert.assertEquals(0, config.getAlertTimeout());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());

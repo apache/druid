@@ -28,10 +28,8 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.Collections;
 import java.util.Set;
 
-
 public class CachingCostBalancerStrategy extends CostBalancerStrategy
 {
-
   private final ClusterCostCache clusterCostCache;
 
   public CachingCostBalancerStrategy(ClusterCostCache clusterCostCache, ListeningExecutorService exec)
@@ -41,13 +39,8 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
   }
 
   @Override
-  protected double computeCost(DataSegment proposalSegment, ServerHolder server, boolean includeCurrentServer)
+  protected double computePlacementCost(DataSegment proposalSegment, ServerHolder server)
   {
-    // (optional) Don't include server if it cannot load the segment
-    if (!includeCurrentServer && !server.canLoadSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
-
     final String serverName = server.getServer().getName();
 
     double cost = clusterCostCache.computeCost(serverName, proposalSegment);

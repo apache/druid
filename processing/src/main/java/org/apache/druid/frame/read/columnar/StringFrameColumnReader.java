@@ -34,6 +34,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
+import org.apache.druid.query.rowsandcols.column.accessor.ObjectColumnAccessorBase;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -59,6 +62,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class StringFrameColumnReader implements FrameColumnReader
@@ -70,6 +74,27 @@ public class StringFrameColumnReader implements FrameColumnReader
   {
     this.columnNumber = columnNumber;
     this.asArray = asArray;
+  }
+
+  @Override
+  public Column readRACColumn(Frame frame)
+  {
+    final Memory memory = frame.region(columnNumber);
+    validate(memory);
+
+    if (isMultiValue(memory)) {
+      // When we implement handling of multi-value, we should actually make this look like an Array of String instead
+      // of perpetuating the multi-value idea.  Thus, when we add support for Arrays to the RAC stuff, that's when
+      // we can start supporting multi-value.
+      throw new ISE("Multivalue not yet handled by RAC");
+    }
+    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), false);
+    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), false);
+
+    StringFrameColumn frameCol = new StringFrameColumn(frame, false, memory, positionOfLengths, positionOfPayloads);
+
+    return new ColumnAccessorBasedColumn(frameCol);
+
   }
 
   @Override
@@ -171,7 +196,7 @@ public class StringFrameColumnReader implements FrameColumnReader
   }
 
   @VisibleForTesting
-  static class StringFrameColumn implements DictionaryEncodedColumn<String>
+  static class StringFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
   {
     private final Frame frame;
     private final boolean multiValue;
@@ -457,6 +482,30 @@ public class StringFrameColumnReader implements FrameColumnReader
     public void close()
     {
       // Do nothing.
+    }
+
+    @Override
+    public ColumnType getType()
+    {
+      return ColumnType.STRING;
+    }
+
+    @Override
+    public int numRows()
+    {
+      return length();
+    }
+
+    @Override
+    protected Object getVal(int rowNum)
+    {
+      return getString(frame.physicalRow(rowNum));
+    }
+
+    @Override
+    protected Comparator<Object> getComparator()
+    {
+      return Comparator.nullsFirst(Comparator.comparing(o -> ((String) o)));
     }
 
     /**

@@ -64,9 +64,6 @@ public class BalancerStrategyBenchmark
   private static final Interval TEST_SEGMENT_INTERVAL = Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000");
   private static final int NUMBER_OF_SERVERS = 20;
 
-  @Param({"default", "useBatchedSegmentSampler"})
-  private String mode;
-  
   @Param({"10000", "100000", "1000000"})
   private int numberOfSegments;
   
@@ -79,9 +76,7 @@ public class BalancerStrategyBenchmark
   @Setup(Level.Trial)
   public void setup()
   {
-    if ("useBatchedSegmentSampler".equals(mode)) {
-      reservoirSize = maxSegmentsToMove;
-    }
+    reservoirSize = maxSegmentsToMove;
     
     List<List<DataSegment>> segmentList = new ArrayList<>(NUMBER_OF_SERVERS);
     IntStream.range(0, NUMBER_OF_SERVERS).forEach(i -> segmentList.add(new ArrayList<>()));

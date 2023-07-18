@@ -241,7 +241,8 @@ public class DumpSegment extends GuiceRunnable
         null,
         EnumSet.allOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null
     );
     withOutputStream(
         new Function<OutputStream, Object>()
@@ -761,11 +762,6 @@ public class DumpSegment extends GuiceRunnable
                     return 1;
                   }
 
-                  @Override
-                  public int columnCacheSizeBytes()
-                  {
-                    return 25 * 1024 * 1024;
-                  }
                 }
             );
             binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
