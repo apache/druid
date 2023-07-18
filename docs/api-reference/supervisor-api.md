@@ -46,7 +46,7 @@ Returns an array of strings representing the names of active supervisors. If the
 
 #### URL
 
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor`
 
 #### Responses
 
@@ -94,7 +94,7 @@ Retrieves an array of active supervisor objects. If there are no active supervis
 
 #### URL
 
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor?full`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor?full`
 
 #### Responses
 
@@ -756,7 +756,7 @@ Retrieves an array of objects with the currently active supervisors and their cu
 
 #### URL
 
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor?state=true`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor?state=true`
 
 #### Responses
 
@@ -817,7 +817,7 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 #### URL
 
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}`
 
 #### Responses
 
@@ -1171,7 +1171,7 @@ For additional information about the status report, see the documentation for ea
 * [Apache Kafka](../development/extensions-core/kafka-supervisor-operations.md#getting-supervisor-status-report)
 
 #### URL
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}/status`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}/status`
 
 #### Responses
 
@@ -1265,7 +1265,7 @@ Retrieve an audit history of specs for all supervisors (current and past).
 
 #### URL
 
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/history`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor/history`
 
 #### Responses
 
@@ -1617,7 +1617,7 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### URL
 
-<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}/history`
+<code class="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}/history`
 
 
 #### Responses
@@ -1978,7 +1978,7 @@ When you call this endpoint on an existing supervisor for the same datasource, t
 
 #### URL
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor`
 
 #### Responses
 
@@ -2133,7 +2133,7 @@ Content-Length: 1359
 Suspends a single running supervisor. Returns the updated supervisor spec, where the `suspended` property is set to `true`. The suspended supervisor continues to emit logs and metrics.
 
 #### URL
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/suspend`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
 #### Responses
 
@@ -2485,7 +2485,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` code message even if there are no supervisors or running supervisors to suspend.
 
 #### URL
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/suspendAll`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/suspendAll`
 
 #### Responses
 
@@ -2531,7 +2531,7 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 #### URL
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/resume`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/resume`
 
 #### Responses
 
@@ -2884,7 +2884,7 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 #### URL
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/resumeAll`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/resumeAll`
 
 #### Responses
 
@@ -2927,13 +2927,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Reset a supervisor
 
-Resets the specified supervisor. This endpoint clears stored offsets, causing the supervisor to start reading offsets from either the earliest or the latest offsets in Kafka. It kills and recreates active tasks to read from valid offsets. 
+Resets the specified supervisor. This endpoint clears stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). It kills and recreates active tasks to read from valid positions.
 
-Use this endpoint for recovering when the supervisor stops due to missing offsets. Use this endpoint with caution as it may result in skipped, resulting in data loss, or duplicate data. 
+Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages, resulting in data loss, or duplicate data. 
 
 #### URL
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/reset`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/reset`
 
 #### Responses
 
@@ -2952,7 +2952,7 @@ Use this endpoint for recovering when the supervisor stops due to missing offset
 
 #### Sample request
 
-The following example resets the a supervisor with the specified ID `social_media`. 
+The following example shows how to reset a supervisor with the specified ID `social_media`. 
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -2981,13 +2981,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Terminate a supervisor
 
-Terminate a supervisor of the provided ID and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker will be placed in the database to prevent reloading on restart. 
+Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart. 
 
-The terminated supervisor will still exist in the metadata store and its history can be retrieved.
+The terminated supervisor still exists in the metadata store and its history can be retrieved.
 
 #### URL 
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/terminate`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/terminate`
 
 #### Responses
 
@@ -3033,11 +3033,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Terminate all supervisors
 
-Terminate all supervisors. Terminated supervisors will still exist in the metadata store and their history can be retrieved. Note that this endpoint returns an HTTP `200 Success` code even if there are no supervisors or running supervisors to terminate.
+Terminates all supervisors. Terminated supervisors still exist in the metadata store and their history can be retrieved. Note that this endpoint returns an HTTP `200 Success` code even if there are no supervisors or running supervisors to terminate.
 
 #### URL
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/terminateAll`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/terminateAll`
 
 #### Responses
 
@@ -3082,6 +3082,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### URL
 
-<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/shutdown`
+<code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/shutdown`
 
-Shuts down a supervisor. This API is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
+Shuts down a supervisor. This endpoint is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
