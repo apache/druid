@@ -11,10 +11,11 @@ Any data you ingest into Druid is already stored in deep storage, so you don't n
 
 To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to load only the segments you do want on Historical processes. 
 
-For example, use the `loadByInterval` load rule and set  `tieredReplicants.YOUR_TIER` (such as `tieredReplicants._default_tier`) to 0 for a specific interval. This results in that interval only being available from deep storage.
+For example, use the `loadByInterval` load rule and set  `tieredReplicants.YOUR_TIER` (such as `tieredReplicants._default_tier`) to 0 for a specific interval. If the default tier is the only tier in your cluster, this results in that interval only being available from deep storage.
 
-For example, the following interval load rule assigns 0 replicants for the specified interval:
+For example, the following interval load rule assigns 0 replicants for the specified interval to the tier `_default_tier`:
 
+```
   {
     "interval": "2017-01-19T00:00:00.000Z/2017-09-20T00:00:00.000Z",
     "tieredReplicants": {
@@ -23,9 +24,9 @@ For example, the following interval load rule assigns 0 replicants for the speci
     "useDefaultTierForNull": true,
     "type": "loadByInterval"
   }
+```
 
-This means that any segments within that interval don't get loaded onto Historical tiers.
-
+This means that any segments within that interval don't get loaded onto `_default_tier` . Then, create a corresponding drop rule so that Druid drops the data from the Historical tiers if they were previously loaded.
 
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
@@ -37,9 +38,9 @@ Segments with a `replication_factor` of `0` are not assigned to any Historical t
 
 You can also confirm this through the Druid console. On the **Segments** page, see the **Replication factor** column.
 
-Keep the following in mind when working with load rules for deep storage:
+Keep the following in mind when working with load rules to control what exists only in deep storage:
 
-- Note that at least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. But the segment on the Historical process can be any segment from the datasource. It does not need to be any specific segment. 
+- At least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. The segment on the Historical process can be any segment from the datasource. It does not need to be a specific segment. 
 - The actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
 
 ## Run a query from deep storage
@@ -120,6 +121,8 @@ When you check the status on a successful query,  it includes useful information
 
 You can use `page` as a parameter to refine the results you retrieve. 
 
+The following snippet shows the structure of the `result` object:
+
 ```json
 {
   ...
@@ -134,14 +137,14 @@ You can use `page` as a parameter to refine the results you retrieve.
         ...
       ]
     ],
-  "pages": [
-    {
-      "numRows": INTEGER,
-      "sizeInBytes": INTEGER,
-      "id": INTEGER_PAGE_NUMBER
-    }
-    ...
-  ]
+    "pages": [
+      {
+        "numRows": INTEGER,
+        "sizeInBytes": INTEGER,
+        "id": INTEGER_PAGE_NUMBER
+      }
+      ...
+    ]
 }
 }
 ```

@@ -107,7 +107,7 @@ In the web console you can use the up and down arrows on the right side of the i
 
 ## Load rules
 
-Load rules define how Druid assigns segments to [historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
+Load rules define how Druid assigns segments to [Historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
 
 If you have a single tier, Druid automatically names the tier `_default`. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
 
@@ -167,7 +167,7 @@ Set the following properties:
   - the segment interval starts any time after the rule interval starts.
 
   You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. If you set the replicants for a period to 0 on all tiers, you can still [query the data from deep storage](../querying/query-from-deep-storage.md)
 - `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Interval load rule
@@ -190,7 +190,7 @@ Interval load rules have type `loadByInterval`. The following example places one
 Set the following properties:
 
 - `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. If you set the replicants for an interval to 0 on all tiers, you can still [query the data from deep storage](../querying/query-from-deep-storage.md). 
 - `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ## Drop rules
@@ -256,7 +256,7 @@ Set the following property:
 
 ### Interval drop rule
 
-You can use a drop interval rule to prevent Druid from loading a specified range of data onto any tier. The range is typically your oldest data. The dropped data resides in cold storage, but is not queryable. If you need to query the data, update or remove the interval drop rule so that Druid reloads the data.
+You can use a drop interval rule to prevent Druid from loading a specified range of data onto any tier. The range is typically your oldest data. The dropped data resides in deep storage and can [queried from deep storage](../querying/query-from-deep-storage.md). 
 
 Interval drop rules have type `dropByInterval` and the following JSON structure:
 
