@@ -206,20 +206,20 @@ To run a query from deep storage, send your query to the Router using the POST m
 POST https://ROUTER:8888/druid/v2/sql/statements
 ```
 
-Submitting a query from deep storage uses the same syntax as any other Druid SQL query where the query is contained in the "query" field in the JSON object within the request payload. For example:
+Submitting a query from deep storage uses the same syntax as any other Druid SQL query where the "query" field in the JSON object within the request payload contains your query. For example:
 
 ```json
 {"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
 ```  
 
-Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints. For information about the available fields, see [submit a query to the `sql` endpoint](#submit-a-query).
+Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. For general information about the available fields, see [submit a query to the `sql` endpoint](#submit-a-query).
 
 Keep the following in mind when submitting queries to the `sql/statements` endpoint:
 
 - There are additional context parameters  for `sql/statements`: 
 
    - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
-   - `selectDestination` instructs Druid to write the results from SELECT queries to durable storage if you have [durable storage enabled for MSQ](../multi-stage-query/reference.md#durable-storage).
+   - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../multi-stage-query/reference.md#durable-storage).
 
 - The only supported results format is JSON.
 - Only the user who submits a query can see the results.
@@ -231,7 +231,13 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 ```
 
-Returns the same response as the post API if the query is accepted or running. If the query is complete, the status also includes a `pages` object and sample record.
+Returns the same response as the post API if the query is accepted or running. The response for a completed query includes the same information as an in-progress query with several additions:
+
+- A `result` object that summarizes information about your results, such as the total number of rows and a sample record
+- A `pages` object that includes the following information for each page of results:
+  -  `numRows`: the number of rows in that page of results
+  - `sizeInBytes`: the size of the page
+  - `id`: the page number that you can use to reference a specific page when you get query results
 
 
 ### Get query results
@@ -240,7 +246,12 @@ Returns the same response as the post API if the query is accepted or running. I
 GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}/results?page=PAGENUMBER
 ```
 
-Results are separated into `pages`. Note that if you attempt to get the results for an in-progress query, Druid returns an error. 
+Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. When you retrieve the status of a completed query, Druid returns information about the composition of each page and its page number (`id`). 
+
+When getting query results, keep the following in mind:
+
+- JSON is the only supported result format
+- If you attempt to get the results for an in-progress query, Druid returns an error. 
 
 ### Cancel a query
 
@@ -250,4 +261,4 @@ DELETE https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 
 Cancels a running or accepted query. 
 
-Druid returns an HTTP 202 response for successful cancelation requests. If the query is already complete or can't be found, Druid returns an HTTP 500 error with an error message describing the issue such as the following.
+Druid returns an HTTP 202 response for successful cancelation requests. If the query is already complete or can't be found, Druid returns an HTTP 500 error with an error message describing the issue.
