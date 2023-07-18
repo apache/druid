@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
+
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 
@@ -26,7 +28,7 @@ import javax.annotation.Nullable;
  * This index does not match null values, union the results of this index with {@link NullValueIndex} if null values
  * should be considered part of the value range.
  */
-public interface NumericRangeIndex
+public interface NumericRangeIndexes
 {
   /**
    * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range. If supplied starting

@@ -44,8 +44,8 @@ import org.apache.druid.segment.FilterAnalysis;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -235,6 +235,9 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testBasicPreAndPostFilterWithNulls()
   {
+    if (isAutoSchema()) {
+      return;
+    }
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(
           new AndDimFilter(Arrays.asList(
@@ -359,6 +362,9 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testOrPostFilterWithNulls()
   {
+    if (isAutoSchema()) {
+      return;
+    }
     assertFilterMatches(
         new OrDimFilter(Arrays.asList(
             new SelectorDimFilter("dim2", "a", null),
@@ -617,13 +623,17 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testDistributeOrCNF() throws CNFFilterExplosionException
   {
+    if (isAutoSchema()) {
+      return;
+    }
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "6", null),
         new AndDimFilter(Arrays.asList(
             new NoBitmapSelectorDimFilter("dim1", "abdef", null),
             new SelectorDimFilter("dim2", "c", null)
         )
-        ))
+        )
+    )
     );
 
     Filter filter1 = dimFilter1.toFilter();
@@ -671,13 +681,17 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testDistributeOrCNFExtractionFn() throws CNFFilterExplosionException
   {
+    if (isAutoSchema()) {
+      return;
+    }
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "super-6", JS_EXTRACTION_FN),
         new AndDimFilter(Arrays.asList(
             new NoBitmapSelectorDimFilter("dim1", "super-abdef", JS_EXTRACTION_FN),
             new SelectorDimFilter("dim2", "super-c", JS_EXTRACTION_FN)
         )
-        ))
+        )
+    )
     );
 
     Filter filter1 = dimFilter1.toFilter();

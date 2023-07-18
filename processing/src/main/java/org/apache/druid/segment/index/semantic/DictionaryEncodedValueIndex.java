@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
 
 /**
  * This exposes a 'raw' view into bitmap value indexes for {@link DictionaryEncodedColumn}. This allows callers
@@ -29,8 +30,8 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
  * either already know what value the dictionary id represents, not care at all, or have some other means to know
  * exactly which bitmaps to retrieve.
  *
- * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
- * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}.
+ * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndexes},
+ * {@link LexicographicalRangeIndexes}, {@link NumericRangeIndexes}, or {@link DruidPredicateIndexes}.
  */
 public interface DictionaryEncodedValueIndex
 {
