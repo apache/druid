@@ -42,7 +42,7 @@ import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.SpatialIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
-import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
@@ -117,7 +117,7 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
         return (T) (NullValueIndex) () -> nullIndex;
       } else if (
           clazz.equals(StringValueSetIndexes.class) ||
-          clazz.equals(Utf8ValueSetIndex.class) ||
+          clazz.equals(Utf8ValueSetIndexes.class) ||
           clazz.equals(ValueIndexes.class)
       ) {
         return (T) new IndexedUtf8ValueIndexes<>(

@@ -61,7 +61,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
-import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -298,9 +298,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         );
       }
 
-      final Utf8ValueSetIndex utf8ValueSetIndex = indexSupplier.as(Utf8ValueSetIndex.class);
-      if (utf8ValueSetIndex != null) {
-        return utf8ValueSetIndex.forSortedValuesUtf8(valuesUtf8);
+      final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);
+      if (utf8ValueSetIndexes != null) {
+        return utf8ValueSetIndexes.forSortedValuesUtf8(valuesUtf8);
       }
 
       final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);

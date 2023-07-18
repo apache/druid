@@ -25,7 +25,7 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import java.nio.ByteBuffer;
 import java.util.SortedSet;
 
-public interface Utf8ValueSetIndex
+public interface Utf8ValueSetIndexes
 {
   /**
    * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are

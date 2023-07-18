@@ -34,7 +34,7 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
-import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
@@ -45,7 +45,7 @@ import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
 public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffer>>
-    implements StringValueSetIndexes, Utf8ValueSetIndex, ValueIndexes
+    implements StringValueSetIndexes, Utf8ValueSetIndexes, ValueIndexes
 {
   // This determines the cut-off point to switch the merging algorithm from doing binary-search per element in the value
   // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
