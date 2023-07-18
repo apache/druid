@@ -283,19 +283,21 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|`tier`|Varies|
-|`segment/moved/count`|Number of segments moved in the cluster.|`tier`|Varies|
-|`segment/unmoved/count`|Number of segments which were chosen for balancing but were found to be already optimally placed.|`tier`|Varies|
-|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`tier`|Varies|
-|`segment/deleted/count`|Number of segments marked as unused due to drop rules.| |Varies|
-|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|`tier`|Varies|
-|`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|`tier`|Varies|
-|`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|`tier`|Varies|
-|`segment/cost/normalized`|Used in cost balancing. The normalized cost of hosting segments.|`tier`|Varies|
+|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|`dataSource`, `tier`|Varies|
+|`segment/moved/count`|Number of segments moved in the cluster.|`dataSource`, `tier`|Varies|
+|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`dataSource`, `tier`|Varies|
+|`segment/deleted/count`|Number of segments marked as unused due to drop rules.|`dataSource`|Varies|
+|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|`dataSource`, `tier`|Varies|
+|`segment/assignSkipped/count`|Number of segments that could not be assigned to any server for loading. This can occur due to replication throttling, no available disk space, or a full load queue.|`dataSource`, `tier`, `description`|Varies|
+|`segment/moveSkipped/count`|Number of segments that were chosen for balancing but could not be moved. This can occur when segments are already optimally placed.|`dataSource`, `tier`, `description`|Varies|
+|`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `tier`, `description`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
-|`segment/loadQueue/failed`|Number of segments that failed to load.|`server`|0|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
 |`segment/dropQueue/count`|Number of segments to drop.|`server`|Varies|
+|`segment/loadQueue/assigned`|Number of segments assigned for load or drop to the load queue of a server.|`dataSource`, `server`|Varies|
+|`segment/loadQueue/success`|Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
+|`segment/loadQueue/failed`|Number of segment assignments that failed to complete.|`dataSource`, `server`|0|
+|`segment/loadQueue/cancelled`|Number of segment assignments that were canceled before completion.|`dataSource`, `server`|Varies|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|Varies|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|< max|
 |`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies|
