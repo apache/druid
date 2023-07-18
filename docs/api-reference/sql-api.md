@@ -219,7 +219,7 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 - There are additional context parameters  for `sql/statements`: 
 
    - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
-   - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../multi-stage-query/reference.md#durable-storage).
+   - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 - The only supported results format is JSON.
 - Only the user who submits a query can see the results.
