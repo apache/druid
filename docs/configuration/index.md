@@ -968,7 +968,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 
 The `smartSegmentLoading` mode simplifies Coordinator configuration for segment loading and balancing.
 If you enable this mode, do not provide values for the properties in the table below as the Coordinator computes them automatically.
-The values are computed based on the current state of the cluster and are designed to optimize Coordinator performance.
+Druid computes the values to optimize Coordinator performance, based on the current state of the cluster.
 > If you enable `smartSegmentLoading` mode, Druid ignores any value you provide for the following properties.
 
 |Property|Computed value|Description|
