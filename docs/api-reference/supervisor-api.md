@@ -3080,8 +3080,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Shut down a supervisor
 
+Shuts down a supervisor. This endpoint is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
+
 #### URL
 
 <code class="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/shutdown`
-
-Shuts down a supervisor. This endpoint is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
