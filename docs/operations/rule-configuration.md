@@ -256,7 +256,7 @@ Set the following property:
 
 ### Interval drop rule
 
-You can use a drop interval rule to prevent Druid from loading a specified range of data onto any tier. The range is typically your oldest data. The dropped data resides in deep storage and can [queried from deep storage](../querying/query-from-deep-storage.md). 
+You can use a drop interval rule to prevent Druid from loading a specified range of data onto any tier. The range is typically your oldest data. The dropped data resides in deep storage and can still be [queried from deep storage](../querying/query-from-deep-storage.md). 
 
 Interval drop rules have type `dropByInterval` and the following JSON structure:
 
