@@ -1408,7 +1408,6 @@ public class RangeFilterTests
       EqualsVerifier.forClass(RangeFilter.class)
                     .withNonnullFields("column", "matchValueType", "lowerEval", "upperEval")
                     .withIgnoredFields(
-                        "matchValueExpressionType",
                         "lower",
                         "upper",
                         "cachedOptimizedFilter",
