@@ -767,6 +767,8 @@ Shuts down a running task by ID. For normal usage, you should use the `/druid/in
 
 #### Sample request
 
+The following example shuts down a task with specified ID `index_kafka_wikiticker_f7011f8ffba384b_fpeclode`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
@@ -985,7 +987,7 @@ Retrieves a flag indicating if the Broker knows about all segments in the cluste
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "http://<BROKER_IP>:<BROKER_PORT>/druid/broker/v1/loadstatus"
+curl "http://BROKER_IP:BROKER_PORT/druid/broker/v1/loadstatus"
 ```
 <!--HTTP-->
 ```http
@@ -1030,12 +1032,12 @@ Retrieves a status code to indicate Broker readiness. Readiness signifies the Br
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "http://<BROKER_IP>:<BROKER_PORT>/druid/broker/v1/readiness"
+curl "http://BROKER_IP:BROKER_PORT/druid/broker/v1/readiness"
 ```
 <!--HTTP-->
 ```http
 GET /druid/broker/v1/readiness HTTP/1.1
-Host: http://<BROKER_IP>:<BROKER_PORT>
+Host: http://BROKER_IP:BROKER_PORT
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
