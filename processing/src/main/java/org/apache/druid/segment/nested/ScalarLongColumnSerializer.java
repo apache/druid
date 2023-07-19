@@ -226,7 +226,7 @@ public class ScalarLongColumnSerializer extends NestedCommonFormatColumnSerializ
     );
     encodedValueSerializer.open();
 
-    final  GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = new GenericIndexedWriter<>(
+    final GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         name,
         indexSpec.getBitmapSerdeFactory().getObjectStrategy()
