@@ -25,27 +25,29 @@ sidebar_label: Retention rules
 
 This document describes the API endpoints for managing retention rules in Apache Druid.
 
-Druid uses retention rules to determine what data should be retained in the cluster. Druid supports load, drop, and broadcast rules. For reference, see [using rules to drop and retain data](../operations/rule-configuration.md). 
+Druid uses retention rules to determine what data should be retained in the cluster. Druid supports load, drop, and broadcast rules. See [using rules to drop and retain data](../operations/rule-configuration.md) for more information. 
 
 In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
-## Create or update retention rules for a datasource
+## Update retention rules for a datasource
 
-Update a datasource with a list of rules. Retention rules can be submitted as an array of rule objects in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information. The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
+Update one or more retention rules for a datasource. Retention rules can be submitted as an array of rule objects in the request body and overwrites any existing rules for the datasource. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
-Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` is invalid.
+Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` does not exist.
 
 ### URL
 <code class="postAPI">POST</code> `/druid/coordinator/v1/rules/{dataSource}`
 
 ### Header parameters
 
-* `X-Druid-Author`
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history. 
+
+* `X-Druid-Author`(optional)
   * Type: String
   * A string representing the author making the configuration change.
-* `X-Druid-Comment`
+* `X-Druid-Comment` (optional)
   * Type: String
-  * A string describing the change being done.
+  * A string describing the update.
 
 ### Responses
 
@@ -118,11 +120,9 @@ Content-Length: 192
 
 A successful request returns an HTTP `200 OK` and empty response body.
 
-## Create or update default retention rules for all datasources
+## Update default retention rules for all datasources
 
-Create or update one or more default retention rules for all datasources. Retention rules can be submitted as an array of rule objects in the request body. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
-
-The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
+Update one or more default retention rules for all datasources. Retention rules can be submitted as an array of rule objects in the request body and overwrites any existing rules for the datasource. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
 ### URL
 
@@ -130,12 +130,14 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 ### Header parameters
 
-* `X-Druid-Author`
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history.  
+
+* `X-Druid-Author` (optional)
   * Type: String
   * A string representing the author making the configuration change.
-* `X-Druid-Comment`
+* `X-Druid-Comment` (optional)
   * Type: String
-  * A string describing the change being done.
+  * A string describing the update.
 
 ### Responses
 
@@ -266,7 +268,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves an array of rule objects for a single datasource. If there are no retention rules, it returns an empty array. 
 
-Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` is invalid.
+Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` does not exist.
 
 ### URL
 
@@ -339,7 +341,7 @@ Retrieves the audit history of rules for all datasources.
 
 ### URL
 
-`GET /druid/coordinator/v1/rules/history`
+<code class="getAPI">GET</code> `/druid/coordinator/v1/rules/history`
 
 ### Query parameters
 
