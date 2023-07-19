@@ -283,19 +283,19 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     // converting things to String, but we'd probably be better off adjusting the interface to something that is
     // more type aware in the future
 
-    String lowerString = lowerEval.asString();
-    String upperString = upperEval.asString();
+    final Supplier<String> lowerString = () -> lowerEval.isArray() ? Arrays.deepToString(lowerEval.asArray()) : lowerEval.asString();
+    final Supplier<String> upperString = () -> upperEval.isArray() ? Arrays.deepToString(upperEval.asArray()) : upperEval.asString();
     RangeSet<String> retSet = TreeRangeSet.create();
-    Range<String> range;
-    if (getLower() == null) {
-      range = isUpperOpen() ? Range.lessThan(upperString) : Range.atMost(upperString);
-    } else if (getUpper() == null) {
-      range = isLowerOpen() ? Range.greaterThan(lowerString) : Range.atLeast(lowerString);
+    final Range<String> range;
+    if (!hasLowerBound()) {
+      range = isUpperOpen() ? Range.lessThan(upperString.get()) : Range.atMost(upperString.get());
+    } else if (!hasUpperBound()) {
+      range = isLowerOpen() ? Range.greaterThan(lowerString.get()) : Range.atLeast(lowerString.get());
     } else {
       range = Range.range(
-          lowerString,
+          lowerString.get(),
           isLowerOpen() ? BoundType.OPEN : BoundType.CLOSED,
-          upperString,
+          upperString.get(),
           isUpperOpen() ? BoundType.OPEN : BoundType.CLOSED
       );
     }

@@ -23,11 +23,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.segment.IndexBuilder;
@@ -567,6 +574,9 @@ public class EqualityFilterTests
       s = mapper.writeValueAsString(filter);
       Assert.assertEquals(filter, mapper.readValue(s, EqualityFilter.class));
 
+      filter = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
+      s = mapper.writeValueAsString(filter);
+      Assert.assertEquals(filter, mapper.readValue(s, EqualityFilter.class));
     }
 
     @Test
@@ -642,6 +652,20 @@ public class EqualityFilterTests
       Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+
+      NestedDataModule.registerHandlersAndSerde();
+      f1 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
+      f1_2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
+      f2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3, 4)), null);
+      f3 = new EqualityFilter(
+          "x",
+          ColumnType.NESTED_DATA,
+          ImmutableMap.of("x", ImmutableList.of(1, 2, 3)),
+          new FilterTuning(true, null, null)
+      );
+      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
     }
 
     @Test
@@ -662,6 +686,24 @@ public class EqualityFilterTests
           () -> new EqualityFilter("dim0", ColumnType.STRING, null, null)
       );
       Assert.assertEquals("Invalid equality filter on column [dim0], matchValue cannot be null", t.getMessage());
+    }
+
+    @Test
+    public void testGetDimensionRangeSet()
+    {
+      EqualityFilter filter = new EqualityFilter("x", ColumnType.STRING, "hello", null);
+
+      RangeSet<String> set = TreeRangeSet.create();
+      set.add(Range.singleton("hello"));
+      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
+      Assert.assertNull(filter.getDimensionRangeSet("y"));
+
+      ExprEval<?> eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"});
+      filter = new EqualityFilter("x", ColumnType.STRING_ARRAY, eval.value(), null);
+      set = TreeRangeSet.create();
+      set.add(Range.singleton(Arrays.deepToString(eval.asArray())));
+      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
+      Assert.assertNull(filter.getDimensionRangeSet("y"));
     }
 
     @Test

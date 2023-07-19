@@ -22,8 +22,12 @@ package org.apache.druid.segment.filter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -31,6 +35,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.RangeFilter;
@@ -1375,6 +1381,25 @@ public class RangeFilterTests
           "Invalid range filter on column [dim0], lower bound [abc] cannot be parsed as specified match value type [DOUBLE]",
           t.getMessage()
       );
+    }
+
+
+    @Test
+    public void testGetDimensionRangeSet()
+    {
+      RangeFilter filter = new RangeFilter("x", ColumnType.STRING, "abc", "xyz", true, true, null);
+
+      RangeSet<String> set = TreeRangeSet.create();
+      set.add(Range.range("abc", BoundType.OPEN, "xyz", BoundType.OPEN));
+      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
+      Assert.assertNull(filter.getDimensionRangeSet("y"));
+
+      ExprEval<?> evalLower = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"});
+      filter = new RangeFilter("x", ColumnType.STRING_ARRAY, evalLower.value(), null, true, false, null);
+      set = TreeRangeSet.create();
+      set.add(Range.greaterThan(Arrays.deepToString(evalLower.asArray())));
+      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
+      Assert.assertNull(filter.getDimensionRangeSet("y"));
     }
 
     @Test

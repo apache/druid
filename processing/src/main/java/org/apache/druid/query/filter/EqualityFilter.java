@@ -218,7 +218,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    retSet.add(Range.singleton(String.valueOf(matchValueEval.value())));
+    if (matchValueEval.isArray()) {
+      retSet.add(Range.singleton(Arrays.deepToString(matchValueEval.asArray())));
+    } else {
+      retSet.add(Range.singleton(matchValueEval.asString()));
+    }
     return retSet;
   }
 
