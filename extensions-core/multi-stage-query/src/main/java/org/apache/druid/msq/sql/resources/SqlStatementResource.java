@@ -536,8 +536,8 @@ public class SqlStatementResource
         rows = 0L;
         size = 0L;
         for (PageInformation pageInformation : pageList.get()) {
-          rows += pageInformation.getNumRows();
-          size += pageInformation.getSizeInBytes();
+          rows += pageInformation.getNumRows() != null ? pageInformation.getNumRows() : 0L;
+          size += pageInformation.getSizeInBytes() != null ? pageInformation.getSizeInBytes() : 0L;
         }
       }
 
