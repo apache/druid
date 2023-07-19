@@ -76,7 +76,6 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
             bound.getColumn(),
             bound.getMatchValueType(),
             bound.getUpper(),
-            bound.getExtractionFn(),
             null
         );
       } else {

@@ -372,7 +372,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static DimFilter isNull(final String fieldName, final ExtractionFn extractionFn)
   {
     if (NullHandling.sqlCompatible()) {
-      return new NullFilter(fieldName, extractionFn, null);
+      return new NullFilter(fieldName, null);
     }
     return selector(fieldName, NullHandling.defaultStringValue(), extractionFn);
   }
@@ -384,26 +384,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static DimFilter equality(final String fieldName, final Object matchValue, final ColumnType matchValueType)
   {
-    return equality(fieldName, matchValue, null, matchValueType);
-  }
-
-  public static DimFilter equality(
-      final String fieldName,
-      final Object matchValue,
-      final ExtractionFn extractionFn,
-      final ColumnType matchValueType
-  )
-  {
     if (NullHandling.sqlCompatible()) {
-      return new EqualityFilter(fieldName, matchValueType, matchValue, extractionFn, null);
+      return new EqualityFilter(fieldName, matchValueType, matchValue, null);
     }
-    return selector(fieldName, Evals.asString(matchValue), extractionFn);
+    return selector(fieldName, Evals.asString(matchValue), null);
   }
 
   /**
-   * Callers should use {@link #equality(String, Object, ColumnType)} or
-   * {@link #equality(String, Object, ExtractionFn, ColumnType)} instead of this method, since they will correctly use
-   * either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
+   * Callers should use {@link #equality(String, Object, ColumnType)} instead of this method, since they will correctly
+   * use either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
    * {@link NullHandling#sqlCompatible()}, which determines the default of
    * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
    */
@@ -413,9 +402,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   /**
-   * Callers should use {@link #equality(String, Object, ColumnType)} or
-   * {@link #equality(String, Object, ExtractionFn, ColumnType)} instead of this method, since they will correctly use
-   * either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
+   * Callers should use {@link #equality(String, Object, ColumnType)} instead of this method, since they will correctly
+   * use either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
    * {@link NullHandling#sqlCompatible()}, which determines the default of
    * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
    */
@@ -458,9 +446,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   /**
-   * Callers should use {@link #range(String, ColumnType, Object, Object, boolean, boolean)} or
-   * {@link #range(String, ColumnType, Object, Object, boolean, boolean, ExtractionFn)} instead of this method, since
-   * they will correctly use either a {@link RangeFilter} or {@link BoundDimFilter} depending on the value of
+   * Callers should use {@link #range(String, ColumnType, Object, Object, boolean, boolean)} instead of this method,
+   * since they will correctly use either a {@link RangeFilter} or {@link BoundDimFilter} depending on the value of
    * {@link NullHandling#sqlCompatible()}, which determines the default of
    * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
    */
@@ -506,21 +493,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final boolean upperStrict
   )
   {
-    return range(fieldName, matchValueType, lower, upper, lowerStrict, upperStrict, null);
-  }
-
-  public static DimFilter range(
-      final String fieldName,
-      final ColumnType matchValueType,
-      final Object lower,
-      final Object upper,
-      final boolean lowerStrict,
-      final boolean upperStrict,
-      final ExtractionFn extractionFn
-  )
-  {
     if (NullHandling.sqlCompatible()) {
-      return new RangeFilter(fieldName, matchValueType, lower, upper, lowerStrict, upperStrict, extractionFn, null);
+      return new RangeFilter(fieldName, matchValueType, lower, upper, lowerStrict, upperStrict, null);
     }
     return new BoundDimFilter(
         fieldName,
@@ -529,7 +503,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         lowerStrict,
         upperStrict,
         false,
-        extractionFn,
+        null,
         matchValueType.isNumeric() ? StringComparators.NUMERIC : StringComparators.LEXICOGRAPHIC
     );
   }

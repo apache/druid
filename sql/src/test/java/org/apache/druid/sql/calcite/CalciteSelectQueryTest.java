@@ -612,6 +612,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithCascadeExtractionFilter()
   {
+    if (NullHandling.sqlCompatible()) {
+      // cannot vectorize due to expression filter
+      cannotVectorize();
+    }
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
@@ -622,13 +626,16 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setDimFilter(
                     or(
-                        equality(
+                        NullHandling.replaceWithDefault()
+                        ? selector(
                             "dim1",
-                            "e", cascade(
+                            "e",
+                            cascade(
                                 new SubstringDimExtractionFn(1, null),
                                 new SubstringDimExtractionFn(0, 1)
-                            ), ColumnType.STRING
-                        ),
+                            )
+                        )
+                        : expressionFilter("(substring(substring(\"dim1\", 1, -1), 0, 1) == 'e')"),
                         equality("dim2", "a", ColumnType.STRING)
                     )
                 )

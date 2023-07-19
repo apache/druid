@@ -1243,7 +1243,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                     "arrayLong",
                                     ColumnType.LONG_ARRAY,
                                     new Object[]{1L, 2L, 3L},
-                                    null,
                                     null
                                 )
                             )
@@ -2286,7 +2285,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 // dont use static function since context flag indicates to always use equality
-                                new EqualityFilter("v0", ColumnType.DOUBLE, 5.5, null, null)
+                                new EqualityFilter("v0", ColumnType.DOUBLE, 5.5, null)
                             )
                             .setVirtualColumns(
                                 new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
