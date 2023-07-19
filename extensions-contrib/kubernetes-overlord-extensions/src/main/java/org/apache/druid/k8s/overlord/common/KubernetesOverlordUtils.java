@@ -19,9 +19,9 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import com.google.common.hash.Hashing;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.curator.shaded.com.google.common.hash.Hashing;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
