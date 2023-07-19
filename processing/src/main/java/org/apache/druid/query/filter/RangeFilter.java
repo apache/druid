@@ -70,7 +70,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 {
   private final String column;
   private final ColumnType matchValueType;
-  private final ExpressionType matchValueExpressionType;
 
   @Nullable
   private final Object upper;
@@ -108,9 +107,9 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       throw InvalidInput.exception("Invalid range filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
-    this.matchValueExpressionType = ExpressionType.fromColumnType(matchValueType);
     this.upper = upper;
     this.lower = lower;
+    ExpressionType matchValueExpressionType = ExpressionType.fromColumnTypeStrict(matchValueType);
     this.upperEval = ExprEval.ofType(matchValueExpressionType, upper);
     this.lowerEval = ExprEval.ofType(matchValueExpressionType, lower);
 
@@ -120,7 +119,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           column
       );
     }
-    if (matchValueExpressionType.isNumeric()) {
+    if (this.matchValueType.isNumeric()) {
       if (lower != null && lowerEval.value() == null) {
         throw InvalidInput.exception(
             "Invalid range filter on column [%s], lower bound [%s] cannot be parsed as specified match value type [%s]",
