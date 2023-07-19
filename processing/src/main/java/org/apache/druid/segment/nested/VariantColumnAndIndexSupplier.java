@@ -481,7 +481,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           }
           return bitmapResultFactory.wrapDimensionValue(getElementBitmap(elementId));
         }
-        
+
         private int getElementId()
         {
           if (eval.value() == null) {
