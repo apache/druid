@@ -33,11 +33,11 @@ public interface ArrayElementIndexes
    * an empty bitmap when passed a value that doesn't exist in any array. May return null if a value index cannot be
    * computed for the supplied value type.
    *
-   * @param value       value to match
+   * @param value       value to match against any array element in a row
    * @param valueType   type of the value to match, used to assist conversion from the match value type to the column
    *                    value type
-   * @return            {@link ImmutableBitmap} corresponding to the rows which match the value, or null if an index
-   *                    connot be computed for the supplied value type
+   * @return            {@link ImmutableBitmap} corresponding to the rows with array elements which match the value, or
+   *                    null if an index connot be computed for the supplied value type
    */
   @Nullable
   BitmapColumnIndex containsValue(Object value, TypeSignature<ValueType> valueType);
