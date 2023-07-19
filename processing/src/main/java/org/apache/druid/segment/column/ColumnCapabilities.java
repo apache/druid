@@ -75,12 +75,6 @@ public interface ColumnCapabilities extends TypeSignature<ValueType>
   boolean hasSpatialIndexes();
 
   /**
-   * All Druid primitive columns support filtering, maybe with or without indexes, but by default complex columns
-   * do not support direct filtering, unless provided by through a custom implementation.
-   */
-  boolean isFilterable();
-
-  /**
    * Does this column contain null values? If so, callers, especially for primitive numeric columns, will need to check
    * for null value rows and act accordingly
    */

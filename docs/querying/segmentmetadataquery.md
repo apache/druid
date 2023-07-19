@@ -62,7 +62,7 @@ There are several main parts to a segment metadata query:
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.md)|no|
 |analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "interval", "minmax"], but can be overridden with using the [segment metadata query config](../configuration/index.md#segmentmetadata-query-config). See section [analysisTypes](#analysistypes) for more details.|no|
-|aggregatorMergeStrategy| The strategy Druid uses to merge aggregators across segments. If true and if the `aggregators` analysis type is enabled, `aggregatorMergeStrategy` defaults to `strict`. Possible values include `strict`, `lenient`, and `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.|no|
+|aggregatorMergeStrategy| The strategy Druid uses to merge aggregators across segments. If true and if the `aggregators` analysis type is enabled, `aggregatorMergeStrategy` defaults to `strict`. Possible values include `strict`, `lenient`, `earliest`, and `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.|no|
 |lenientAggregatorMerge|Deprecated. Use `aggregatorMergeStrategy` property instead. If true, and if the `aggregators` analysis type is enabled, Druid merges aggregators leniently.|no|
 
 The format of the result is:
@@ -186,7 +186,7 @@ Currently, there is no API for retrieving this information.
 * `aggregators` in the result will contain the list of aggregators usable for querying metric columns. This may be
 null if the aggregators are unknown or unmergeable (if merging is enabled).
 
-* Merging can be `strict`, `lenient`, or `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.
+* Merging can be `strict`, `lenient`, `earliest`, or `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.
 
 * The form of the result is a map of column name to aggregator.
 
@@ -201,10 +201,12 @@ Conflicts between aggregator metadata across segments can occur if some segments
 two segments use incompatible aggregators for the same column, such as `longSum` changed to `doubleSum`.
 Druid supports the following aggregator merge strategies:
 
-- `strict`:  If there are any segments with unknown aggregators or any conflicts of any kind, the merged aggregators
+- `strict`: If there are any segments with unknown aggregators or any conflicts of any kind, the merged aggregators
   list is `null`.
-- `lenient`:  Druid ignores segments with unknown aggregators. Conflicts between aggregators set the aggregator for that particular column to null.
-- the aggregator for that particular column.
+- `lenient`: Druid ignores segments with unknown aggregators. Conflicts between aggregators set the aggregator for
+  that particular column to null.
+- `earliest`: In the event of conflicts between segments, Druid selects the aggregator from the earliest segment
+  for that particular column.
 - `latest`: In the event of conflicts between segments, Druid selects the aggregator from the most recent segment
    for that particular column.
 
