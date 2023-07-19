@@ -654,7 +654,14 @@ public class Expressions
         }
       }
 
+      final ColumnType matchValueType = Calcites.getColumnTypeForRelDataType(rhs.getType());
+
       if (plannerContext.isUseBoundsAndSelectors()) {
+        if (matchValueType == null || !matchValueType.isPrimitive()) {
+          // Fall back to expression filter.
+          return null;
+        }
+
         final String stringVal;
 
         if (rhsParsed.getLiteralValue() == null) {
@@ -710,7 +717,6 @@ public class Expressions
           return null;
         }
 
-        final ColumnType matchValueType = Calcites.getColumnTypeForRelDataType(rhs.getType());
         final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
         final DimFilter filter;
 
