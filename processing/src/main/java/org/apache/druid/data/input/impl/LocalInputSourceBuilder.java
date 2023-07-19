@@ -19,13 +19,13 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.data.input.AbstractInputSourceBuilder;
+import org.apache.druid.data.input.InputSourceBuilder;
 
 import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class LocalInputSourceBuilder extends AbstractInputSourceBuilder
+public class LocalInputSourceBuilder implements InputSourceBuilder
 {
   public static final String TYPE_KEY = "local";
 

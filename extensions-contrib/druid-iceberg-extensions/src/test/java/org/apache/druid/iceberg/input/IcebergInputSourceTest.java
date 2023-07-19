@@ -115,7 +115,7 @@ public class IcebergInputSourceTest
   }
 
   @Test
-  public void testInputSourceWithFilter() throws IOException
+  public void testInputSourceWithEmptySource() throws IOException
   {
     final File warehouseDir = FileUtils.createTempDir();
     testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
@@ -131,13 +131,48 @@ public class IcebergInputSourceTest
         new LocalInputSourceBuilder()
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    Assert.assertEquals(0, splits.count());
+    dropTableFromCatalog(tableIdentifier);
+  }
+
+  @Test
+  public void testInputSourceWithFilter() throws IOException
+  {
+    final File warehouseDir = FileUtils.createTempDir();
+    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
+    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
+
+    createAndLoadTable(tableIdentifier);
+
+    IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("id", "123988"),
+        testCatalog,
+        new LocalInputSourceBuilder()
+    );
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<File> localInputSourceList = splits.map(inputSource::withSplit)
                                             .map(inpSource -> (LocalInputSource) inpSource)
                                             .map(LocalInputSource::getFiles)
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(0, localInputSourceList.size());
+    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assert.assertEquals(1, localInputSourceList.size());
+    CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(localInputSourceList.get(0)))
+                                                      .project(tableSchema)
+                                                      .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
+                                                          tableSchema,
+                                                          fileSchema
+                                                      ))
+                                                      .build();
+
+
+    for (Record record : datafileReader) {
+      Assert.assertEquals(tableData.get("id"), record.get(0));
+      Assert.assertEquals(tableData.get("name"), record.get(1));
+    }
     dropTableFromCatalog(tableIdentifier);
   }
 

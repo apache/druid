@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
-import org.apache.druid.data.input.AbstractInputSourceBuilder;
+import org.apache.druid.data.input.InputSourceBuilder;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
@@ -39,7 +39,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class S3InputSourceBuilder extends AbstractInputSourceBuilder
+public class S3InputSourceBuilder implements InputSourceBuilder
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final ServerSideEncryptingAmazonS3.Builder s3ClientBuilder;

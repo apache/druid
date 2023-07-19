@@ -21,14 +21,14 @@ package org.apache.druid.inputsource.hdfs;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.data.input.AbstractInputSourceBuilder;
+import org.apache.druid.data.input.InputSourceBuilder;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.Hdfs;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
 
-public class HdfsInputSourceBuilder extends AbstractInputSourceBuilder
+public class HdfsInputSourceBuilder implements InputSourceBuilder
 {
   private final Configuration configuration;
   private final HdfsInputSourceConfig inputSourceConfig;
