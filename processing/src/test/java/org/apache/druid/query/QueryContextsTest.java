@@ -295,4 +295,26 @@ public class QueryContextsTest
         () -> query.context().getEnum("e2", QueryContexts.Vectorize.class, QueryContexts.Vectorize.FALSE)
     );
   }
+
+  @Test
+  public void testExecutionModeEnum()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, "SYNC", QueryContexts.CTX_EXECUTION_MODE + "_1", "ASYNC")
+    );
+
+    Assert.assertEquals(
+        ExecutionMode.SYNC,
+        query.context().getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, ExecutionMode.ASYNC)
+    );
+
+    Assert.assertEquals(
+        ExecutionMode.ASYNC,
+        query.context().getEnum(QueryContexts.CTX_EXECUTION_MODE + "_1", ExecutionMode.class, ExecutionMode.SYNC)
+    );
+  }
+
 }

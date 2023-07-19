@@ -28,10 +28,11 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -95,8 +96,10 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
     final DruidExpression leftExpr = druidExpressions.get(0);
     final DruidExpression rightExpr = druidExpressions.get(1);
 
+    // if the input column is not actually an ARRAY type, but rather an MVD, we can optimize this into
+    // selector/equality filters on the individual array elements
     if (leftExpr.isSimpleExtraction() && !(leftExpr.isDirectColumnAccess() && leftExpr.getDruidType() != null && leftExpr.getDruidType().isArray())) {
-      Expr expr = Parser.parse(rightExpr.getExpression(), plannerContext.getExprMacroTable());
+      Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
       // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
       // by traversing the Expr. Note that all implementations of Expr are defined as package-private classes in a
@@ -113,11 +116,31 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           // to create an empty array with no argument, we just return null.
           return null;
         } else if (arrayElements.length == 1) {
-          return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
+          if (plannerContext.isUseBoundsAndSelectors()) {
+            return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
+          } else {
+            return new EqualityFilter(
+                leftExpr.getSimpleExtraction().getColumn(),
+                ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
+                arrayElements[0],
+                null
+            );
+          }
         } else {
           final List<DimFilter> selectFilters = Arrays
               .stream(arrayElements)
-              .map(val -> newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val)))
+              .map(val -> {
+                if (plannerContext.isUseBoundsAndSelectors()) {
+                  return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val));
+                } else {
+                  return new EqualityFilter(
+                      leftExpr.getSimpleExtraction().getColumn(),
+                      ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
+                      val,
+                      null
+                  );
+                }
+              })
               .collect(Collectors.toList());
           return new AndDimFilter(selectFilters);
         }

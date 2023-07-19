@@ -145,6 +145,6 @@ echo "" >> $LOG_FILE
 
 # Run Druid service
 cd $DRUID_HOME
-exec java $JAVA_OPTS -cp $CP \
+exec bin/run-java $JAVA_OPTS -cp $CP \
 	org.apache.druid.cli.Main server $DRUID_SERVICE \
 	>> $LOG_FILE 2>&1

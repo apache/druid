@@ -526,7 +526,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
           .setDictionaryEncoded(false)
           .setHasMultipleValues(false)
           .setDictionaryValuesUnique(false)
-          .setFilterable(false)
           .setType(factory.getIntermediateType());
     }
 

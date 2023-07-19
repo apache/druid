@@ -30,6 +30,8 @@ public interface DruidFloatPredicate
 {
   DruidFloatPredicate ALWAYS_FALSE = input -> false;
 
+  DruidFloatPredicate ALWAYS_TRUE = input -> true;
+
   DruidFloatPredicate MATCH_NULL_ONLY = new DruidFloatPredicate()
   {
     @Override

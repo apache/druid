@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -27,6 +28,8 @@ import javax.annotation.Nullable;
 public interface VectorValueMatcherFactory
 {
   VectorValueMatcher makeMatcher(@Nullable String value);
+
+  VectorValueMatcher makeMatcher(Object value, ColumnType type);
 
   VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory);
 

@@ -105,6 +105,26 @@ SELECT "ORDINAL_POSITION", "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "JDBC_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE "TABLE_NAME" = 'foo'
 ```
+### ROUTINES table
+`INFORMATION_SCHEMA.ROUTINES` provides a list of all known functions.
+
+|Column|Type| Notes|
+|------|----|------|
+|ROUTINE_CATALOG|VARCHAR| The catalog that contains the routine. Always set as `druid`|
+|ROUTINE_SCHEMA|VARCHAR| The schema that contains the routine. Always set as `INFORMATION_SCHEMA`|
+|ROUTINE_NAME|VARCHAR| THe routine name|
+|ROUTINE_TYPE|VARCHAR| The routine type. Always set as `FUNCTION`|
+|IS_AGGREGATOR|VARCHAR| If a routine is an aggregator function, then the value will be set to `YES`, else `NO`|
+|SIGNATURES|VARCHAR| One or more routine signatures|
+
+For example, this query returns information about all the aggregator functions:
+
+```sql
+SELECT "ROUTINE_CATALOG", "ROUTINE_SCHEMA", "ROUTINE_NAME", "ROUTINE_TYPE", "IS_AGGREGATOR", "SIGNATURES"
+FROM "INFORMATION_SCHEMA"."ROUTINES"
+WHERE "IS_AGGREGATOR" = 'YES'
+```
+
 
 ## SYSTEM SCHEMA
 
@@ -137,6 +157,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |dimensions|VARCHAR|JSON-serialized form of the segment dimensions|
 |metrics|VARCHAR|JSON-serialized form of the segment metrics|
 |last_compaction_state|VARCHAR|JSON-serialized form of the compaction task's config (compaction task which created this segment). May be null if segment was not created by compaction task.|
+|replication_factor|BIGINT|Total number of replicas of the segment that are required to be loaded across all historical tiers, based on the load rule that currently applies to this segment. If this value is 0, the segment is not assigned to any historical and will not be loaded. This value is -1 if load rules for the segment have not been evaluated yet.|
 
 For example, to retrieve all currently active segments for datasource "wikipedia", use the query:
 

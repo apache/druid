@@ -55,7 +55,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
     },
   });
 
-  function renderContent(): JSX.Element | undefined {
+  function renderContent() {
     if (responseState.loading) return <Loader />;
 
     if (responseState.error) {

@@ -20,7 +20,8 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,18 +36,35 @@ public class SqlEngines
    *
    * This is a helper function used by {@link SqlEngine#validateContext} implementations.
    */
-  public static void validateNoSpecialContextKeys(final Map<String, Object> queryContext, final Set<String> specialContextKeys)
-      throws ValidationException
+  public static void validateNoSpecialContextKeys(
+      final Map<String, Object> queryContext,
+      final Set<String> specialContextKeys
+  )
   {
     for (String contextParameterName : queryContext.keySet()) {
       if (specialContextKeys.contains(contextParameterName)) {
-        throw new ValidationException(
-            StringUtils.format(
-                "Cannot execute query with context parameter [%s]",
-                contextParameterName
-            )
-        );
+        throw InvalidInput.exception("Query context parameter [%s] is not allowed", contextParameterName);
       }
     }
+  }
+
+  /**
+   * This is a helper function that provides a developer-friendly exception when an engine cannot recognize the feature.
+   */
+  public static DruidException generateUnrecognizedFeatureException(
+      final String engineName,
+      final EngineFeature unrecognizedFeature
+  )
+  {
+    return DruidException
+        .forPersona(DruidException.Persona.DEVELOPER)
+        .ofCategory(DruidException.Category.DEFENSIVE)
+        .build(
+            "Engine [%s] is unable to recognize the feature [%s] for availability. This might happen when a "
+            + "newer feature is added without updating all the implementations of SqlEngine(s) to either allow or disallow "
+            + "its availability. Please raise an issue if you encounter this exception while using Druid.",
+            engineName,
+            unrecognizedFeature
+        );
   }
 }

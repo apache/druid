@@ -28,11 +28,12 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -85,10 +86,15 @@ public class PlannerContext
    */
   public static final String CTX_ENABLE_UNNEST = "enableUnnest";
 
+  public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
+  public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
+
+
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
   private final PlannerToolbox plannerToolbox;
+  private final ExpressionParser expressionParser;
   private final String sql;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
@@ -96,6 +102,7 @@ public class PlannerContext
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
+  private final boolean useBoundsAndSelectors;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   // bindings for dynamic parameters to bind during planning
@@ -120,18 +127,21 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final boolean stringifyArrays,
+      final boolean useBoundsAndSelectors,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
   {
     this.plannerToolbox = plannerToolbox;
+    this.expressionParser = new ExpressionParserImpl(plannerToolbox.exprMacroTable());
     this.sql = sql;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
+    this.useBoundsAndSelectors = useBoundsAndSelectors;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
     String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
@@ -153,10 +163,12 @@ public class PlannerContext
     final DateTime utcNow;
     final DateTimeZone timeZone;
     final boolean stringifyArrays;
+    final boolean useBoundsAndSelectors;
 
     final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
+    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
 
     if (tsParam != null) {
       utcNow = new DateTime(tsParam, DateTimeZone.UTC);
@@ -176,12 +188,19 @@ public class PlannerContext
       stringifyArrays = true;
     }
 
+    if (useBoundsAndSelectorsParam != null) {
+      useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
+    } else {
+      useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+    }
+
     return new PlannerContext(
         plannerToolbox,
         sql,
         plannerToolbox.plannerConfig().withOverrides(queryContext),
         utcNow.withZone(timeZone),
         stringifyArrays,
+        useBoundsAndSelectors,
         engine,
         queryContext,
         hook
@@ -229,10 +248,17 @@ public class PlannerContext
     return plannerToolbox;
   }
 
-  // Deprecated: prefer using the toolbox
-  public ExprMacroTable getExprMacroTable()
+  public ExpressionParser getExpressionParser()
   {
-    return plannerToolbox.exprMacroTable();
+    return expressionParser;
+  }
+
+  /**
+   * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
+   */
+  public Expr parseExpression(final String expr)
+  {
+    return expressionParser.parse(expr);
   }
 
   // Deprecated: prefer using the toolbox
@@ -288,6 +314,11 @@ public class PlannerContext
   public boolean isStringifyArrays()
   {
     return stringifyArrays;
+  }
+
+  public boolean isUseBoundsAndSelectors()
+  {
+    return useBoundsAndSelectors;
   }
 
   public List<TypedValue> getParameters()

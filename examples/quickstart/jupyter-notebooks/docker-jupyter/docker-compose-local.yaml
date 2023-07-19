@@ -45,9 +45,7 @@ services:
   zookeeper:
     image: zookeeper:latest
     container_name: zookeeper
-    profiles: ["druid-jupyter", "all-services"]
-    ports:
-      - "2181:2181"
+    profiles: ["druid-jupyter", "kafka-jupyter", "all-services"]
     environment:
       - ZOO_MY_ID=1
       - ALLOW_ANONYMOUS_LOGIN=yes
@@ -55,17 +53,19 @@ services:
   kafka:
     image: bitnami/kafka:latest
     container_name: kafka-broker
-    profiles: ["all-services"]
+    profiles: ["kafka-jupyter", "all-services"]
     ports:
     # To learn about configuring Kafka for access across networks see
     # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
       - "9092:9092"
+      - '9094:9094'
     depends_on:
       - zookeeper
     environment:
       - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_ENABLE_KRAFT=false
@@ -163,11 +163,13 @@ services:
       context: ..
       dockerfile: Dockerfile
     container_name: jupyter
-    profiles: ["jupyter", "druid-jupyter", "all-services"]
+    profiles: ["jupyter", "kafka-jupyter", "druid-jupyter", "all-services"]
     environment:
-      DOCKER_STACKS_JUPYTER_CMD: "notebook"
+      JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: "docker"
+      DOCKER_STACKS_JUPYTER_CMD: "lab"
       NOTEBOOK_ARGS: "--NotebookApp.token=''"
     ports:
       - "${JUPYTER_PORT:-8889}:8888"
     volumes:
-      - ./notebooks:/home/jovyan/work
+      - ../notebooks:/home/jovyan/notebooks
