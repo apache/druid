@@ -271,7 +271,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     closeForWrite();
 
