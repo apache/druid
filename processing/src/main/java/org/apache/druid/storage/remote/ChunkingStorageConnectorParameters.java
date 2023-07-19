@@ -99,7 +99,7 @@ public class ChunkingStorageConnectorParameters<T>
     return tempDirSupplier;
   }
 
-  private static class Builder<T>
+  public static class Builder<T>
   {
     private long start;
     private long end;
@@ -159,7 +159,7 @@ public class ChunkingStorageConnectorParameters<T>
       return this;
     }
 
-    ChunkingStorageConnectorParameters<T> build()
+    public ChunkingStorageConnectorParameters<T> build()
     {
       Preconditions.checkArgument(start >= 0, "'start' not provided or an incorrect value [%s] passed", start);
       Preconditions.checkArgument(end >= 0, "'end' not provided or an incorrect value [%s] passed", end);

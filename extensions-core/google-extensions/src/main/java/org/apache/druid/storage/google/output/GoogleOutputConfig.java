@@ -21,7 +21,9 @@ package org.apache.druid.storage.google.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.RetryUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
@@ -38,24 +40,35 @@ public class GoogleOutputConfig
   private final File tempDir;
 
   @JsonProperty
-  private final HumanReadableBytes chunkSize;
+  private boolean chunkedDownloads = false;
 
   @JsonProperty
-  private final Integer maxRetry;
+  private HumanReadableBytes chunkSize = new HumanReadableBytes("100MiB");
+
+  @JsonProperty
+  private int maxRetry = RetryUtils.DEFAULT_MAX_TRIES;
 
   public GoogleOutputConfig(
       final String bucket,
       final String prefix,
       final File tempDir,
-      final HumanReadableBytes chunkSize,
-      final Integer maxRetry
+      @Nullable final Boolean chunkedDownloads,
+      @Nullable final HumanReadableBytes chunkSize,
+      @Nullable final Integer maxRetry
   )
   {
     this.bucket = bucket;
     this.prefix = prefix;
     this.tempDir = tempDir;
-    this.chunkSize = chunkSize;
-    this.maxRetry = maxRetry;
+    if (chunkedDownloads != null) {
+      this.chunkedDownloads = chunkedDownloads;
+    }
+    if (chunkSize != null) {
+      this.chunkSize = chunkSize;
+    }
+    if (maxRetry != null) {
+      this.maxRetry = maxRetry;
+    }
   }
 
   public String getBucket()
@@ -71,6 +84,11 @@ public class GoogleOutputConfig
   public File getTempDir()
   {
     return tempDir;
+  }
+
+  public Boolean isChunkedDownloads()
+  {
+    return chunkedDownloads;
   }
 
   public HumanReadableBytes getChunkSize()
@@ -96,6 +114,7 @@ public class GoogleOutputConfig
     return Objects.equals(bucket, that.bucket)
            && Objects.equals(prefix, that.prefix)
            && Objects.equals(tempDir, that.tempDir)
+           && Objects.equals(chunkedDownloads, that.chunkedDownloads)
            && Objects.equals(chunkSize, that.chunkSize)
            && Objects.equals(maxRetry, that.maxRetry);
   }
@@ -103,6 +122,8 @@ public class GoogleOutputConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry);
+    return Objects.hash(bucket, prefix, tempDir, chunkedDownloads, chunkSize, maxRetry);
   }
+
+
 }

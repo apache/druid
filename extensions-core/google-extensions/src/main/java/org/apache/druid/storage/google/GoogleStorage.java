@@ -20,10 +20,13 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.AbstractInputStreamContent;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpResponse;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.Storage.Objects.Get;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Supplier;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +39,7 @@ public class GoogleStorage
    * if we have a Storage instead of a supplier of it, it can cause unnecessary config validation
    * against Google storage even when it's not used at all. To perform the config validation
    * only when it is actually used, we use a supplier.
-   *
+   * <p>
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
   private final Supplier<Storage> storage;
@@ -57,6 +60,26 @@ public class GoogleStorage
   public InputStream get(final String bucket, final String path) throws IOException
   {
     return get(bucket, path, 0);
+  }
+
+  public InputStream getUsingRangeHeaders(final String bucket, final String path, long start, long end)
+      throws IOException
+  {
+    final Get get = storage.get().objects().get(bucket, path);
+    HttpHeaders httpHeaders = new HttpHeaders();
+
+    String rangeString = StringUtils.format("bytes %d-%d/*", start, end);
+
+    httpHeaders.setRange(rangeString);
+    get.setRequestHeaders(httpHeaders);
+
+    HttpResponse httpResponse = get.executeUsingHead();
+    String responseRangeString = httpResponse.getHeaders().getRange();
+    if (!responseRangeString.equals(rangeString)) {
+      throw new IOException("Unable to fetch the correct range");
+    }
+
+    return get.executeMediaAsInputStream();
   }
 
   public InputStream get(final String bucket, final String path, long start) throws IOException
@@ -86,7 +109,7 @@ public class GoogleStorage
       return false;
     }
   }
-   
+
   public long size(final String bucket, final String path) throws IOException
   {
     return storage.get().objects().get(bucket, path).execute().getSize().longValue();

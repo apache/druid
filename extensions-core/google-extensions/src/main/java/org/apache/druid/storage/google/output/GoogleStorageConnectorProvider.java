@@ -47,11 +47,12 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
       @JsonProperty(value = "bucket", required = true) final String bucket,
       @JsonProperty(value = "prefix", required = true) final String prefix,
       @JsonProperty(value = "tempDir", required = true) final File tempDir,
+      @JsonProperty(value = "chunkedDownloads") final Boolean chunkedDownloads,
       @JsonProperty(value = "chunkSize") final HumanReadableBytes chunkSize,
       @JsonProperty(value = "maxRetry") final Integer maxRetry
   )
   {
-    super(bucket, prefix, tempDir, chunkSize, maxRetry);
+    super(bucket, prefix, tempDir, chunkedDownloads, chunkSize, maxRetry);
     this.storage = Preconditions.checkNotNull(storage, "google client must be provided");
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "google input data config must be provided");
   }
