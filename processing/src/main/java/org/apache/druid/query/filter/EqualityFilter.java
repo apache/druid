@@ -197,9 +197,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return false;
     }
     if (matchValueType.isArray()) {
-      // just use predicate to see if the values are the same
-      final Predicate<Object[]> arrayPredicate = predicateFactory.makeArrayPredicate(matchValueType);
-      return arrayPredicate.apply(that.matchValueEval.asArray());
+      return Arrays.deepEquals(matchValueEval.asArray(), that.matchValueEval.asArray());
     } else {
       return Objects.equals(matchValueEval.value(), that.matchValueEval.value());
     }
