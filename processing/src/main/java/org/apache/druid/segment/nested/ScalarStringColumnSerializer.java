@@ -20,6 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -37,6 +38,7 @@ import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
+import org.apache.druid.segment.data.FixedIndexedIntWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -60,14 +62,11 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
   private final Closer closer;
   private DictionaryIdLookup dictionaryIdLookup;
   private DictionaryWriter<String> dictionaryWriter;
-  private int rowCount = 0;
   private boolean closedForWrite = false;
   private boolean dictionarySerialized = false;
-
-  private SingleValueColumnarIntsSerializer encodedValueSerializer;
-  private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter;
-  private MutableBitmap[] bitmaps;
+  private FixedIndexedIntWriter intermediateValueWriter;
   private ByteBuffer columnNameBytes = null;
+  private boolean hasNulls;
 
   public ScalarStringColumnSerializer(
       String name,
@@ -98,7 +97,7 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
   @Override
   public boolean hasNulls()
   {
-    return !bitmaps[0].isEmpty();
+    return hasNulls;
   }
 
   @Override
@@ -118,35 +117,8 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
     if (!dictionarySerialized) {
       throw new IllegalStateException("Dictionary not serialized, cannot open value serializer");
     }
-    String filenameBase = StringUtils.format("%s.forward_dim", name);
-    final CompressionStrategy compression = indexSpec.getDimensionCompression();
-    final CompressionStrategy compressionToUse;
-    if (compression != CompressionStrategy.UNCOMPRESSED && compression != CompressionStrategy.NONE) {
-      compressionToUse = compression;
-    } else {
-      // always compress
-      compressionToUse = CompressionStrategy.LZ4;
-    }
-    encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
-        name,
-        segmentWriteOutMedium,
-        filenameBase,
-        dictionaryWriter.getCardinality(),
-        compressionToUse
-    );
-    encodedValueSerializer.open();
-
-    bitmapIndexWriter = new GenericIndexedWriter<>(
-        segmentWriteOutMedium,
-        name,
-        indexSpec.getBitmapSerdeFactory().getObjectStrategy()
-    );
-    bitmapIndexWriter.open();
-    bitmapIndexWriter.setObjectsNotSorted();
-    bitmaps = new MutableBitmap[dictionaryWriter.getCardinality()];
-    for (int i = 0; i < bitmaps.length; i++) {
-      bitmaps[i] = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
-    }
+    intermediateValueWriter = new FixedIndexedIntWriter(segmentWriteOutMedium, false);
+    intermediateValueWriter.open();
   }
 
   @Override
@@ -187,21 +159,13 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
     final ExprEval<?> eval = ExprEval.bestEffortOf(value);
     final String s = eval.castTo(ExpressionType.STRING).asString();
     final int dictId = dictionaryIdLookup.lookupString(s);
-    encodedValueSerializer.addValue(dictId);
-    bitmaps[dictId].add(rowCount);
-    rowCount++;
+    intermediateValueWriter.write(dictId);
+    hasNulls = hasNulls || dictId == 0;
   }
 
-  private void closeForWrite() throws IOException
+  private void closeForWrite()
   {
     if (!closedForWrite) {
-      for (int i = 0; i < bitmaps.length; i++) {
-        final MutableBitmap bitmap = bitmaps[i];
-        bitmapIndexWriter.write(
-            indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(bitmap)
-        );
-        bitmaps[i] = null; // Reclaim memory
-      }
       columnNameBytes = computeFilenameBytes();
       closedForWrite = true;
     }
@@ -226,6 +190,56 @@ public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerial
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
+
+    // write out compressed dictionaryId int column and bitmap indexes by iterating intermediate value column
+    // the intermediate value column should be replaced someday by a cooler compressed int column writer that allows
+    // easy iteration of the values it writes out, so that we could just build the bitmap indexes here instead of
+    // doing both things
+    String filenameBase = StringUtils.format("%s.forward_dim", name);
+    final CompressionStrategy compression = indexSpec.getDimensionCompression();
+    final CompressionStrategy compressionToUse;
+    if (compression != CompressionStrategy.UNCOMPRESSED && compression != CompressionStrategy.NONE) {
+      compressionToUse = compression;
+    } else {
+      compressionToUse = CompressionStrategy.LZ4;
+    }
+    final SingleValueColumnarIntsSerializer encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
+        name,
+        segmentWriteOutMedium,
+        filenameBase,
+        dictionaryWriter.getCardinality(),
+        compressionToUse
+    );
+    encodedValueSerializer.open();
+
+    final  GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = new GenericIndexedWriter<>(
+        segmentWriteOutMedium,
+        name,
+        indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+    );
+    bitmapIndexWriter.open();
+    bitmapIndexWriter.setObjectsNotSorted();
+    final MutableBitmap[] bitmaps;
+    bitmaps = new MutableBitmap[dictionaryWriter.getCardinality()];
+    for (int i = 0; i < bitmaps.length; i++) {
+      bitmaps[i] = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+    }
+
+    final IntIterator rows = intermediateValueWriter.getIterator();
+    int rowCount = 0;
+    while (rows.hasNext()) {
+      final int dictId = rows.nextInt();
+      encodedValueSerializer.addValue(dictId);
+      bitmaps[dictId].add(rowCount++);
+    }
+
+    for (int i = 0; i < bitmaps.length; i++) {
+      final MutableBitmap bitmap = bitmaps[i];
+      bitmapIndexWriter.write(
+          indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(bitmap)
+      );
+      bitmaps[i] = null; // Reclaim memory
+    }
 
     writeV0Header(channel, columnNameBytes);
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
