@@ -123,7 +123,6 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
                 leftExpr.getSimpleExtraction().getColumn(),
                 ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
                 arrayElements[0],
-                leftExpr.getSimpleExtraction().getExtractionFn(),
                 null
             );
           }
@@ -138,7 +137,6 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
                       leftExpr.getSimpleExtraction().getColumn(),
                       ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
                       val,
-                      leftExpr.getSimpleExtraction().getExtractionFn(),
                       null
                   );
                 }

@@ -212,7 +212,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       RangeRefKey refKey = entry.getKey();
       if (entry.getKey().getMatchValueType().isNumeric()) {
         ColumnType numericTypeToUse = leastRestrictiveNumericTypes.get(refKey.getColumn());
-        refKey = new RangeRefKey(refKey.getColumn(), numericTypeToUse, refKey.getExtractionFn());
+        refKey = new RangeRefKey(refKey.getColumn(), numericTypeToUse);
       }
       final List<RangeFilter> filterList = consolidatedNumericRanges.computeIfAbsent(refKey, k -> new ArrayList<>());
       for (RangeFilter filter : entry.getValue()) {
