@@ -143,7 +143,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   )
   {
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities.isNumeric()) {
+    if (capabilities != null && capabilities.isNumeric()) {
       VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
       VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(
           timeColumn);

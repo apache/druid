@@ -44,7 +44,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
-import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -77,6 +76,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     }
   };
 
+
   private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new StringFirstBufferAggregator(
       NilColumnValueSelector.instance(),
       NilColumnValueSelector.instance(),
@@ -86,6 +86,25 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   {
     @Override
     public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
+
+  public static final VectorAggregator NIL_VECTOR_AGGREGATOR = new StringFirstVectorAggregator(
+      null,
+      null,
+      0
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+    {
+      // no-op
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
     {
       // no-op
     }
@@ -109,8 +128,6 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   private final String timeColumn;
   protected final int maxStringBytes;
 
-  private boolean getFirstElementFromMvd;
-
   @JsonCreator
   public StringFirstAggregatorFactory(
       @JsonProperty("name") String name,
@@ -132,7 +149,6 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
-    this.getFirstElementFromMvd = false;
   }
 
 
@@ -176,16 +192,10 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     if (capabilities != null) {
       if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
-        // Case 1: Multivalue string with dimension selector
-        if (capabilities.hasMultipleValues().isTrue()) {
-          if (isGetFirstElementFromMvd()) {
-            MultiValueDimensionVectorSelector mSelector = selectorFactory.makeMultiValueDimensionSelector(
-                DefaultDimensionSpec.of(
-                    fieldName));
-            return new MultiStringFirstDimensionVectorAggregator(timeSelector, mSelector, maxStringBytes);
-          }
-        } else {
-          // Case 2: Single string with dimension selector
+        // Case 1: Single value string with dimension selector
+        // For multivalue string we need to iterate a list of indexedInts which is also similar to iterating
+        // over elements for an ARRAY typed column. These two which requires an iteration will be done together.
+        if (!capabilities.hasMultipleValues().isTrue()) {
           SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
               DefaultDimensionSpec.of(
                   fieldName));
@@ -193,12 +203,12 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
         }
       }
     }
-    // Case 3: return vector object selector
+    // Case 2: return vector object selector
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
     if (capabilities != null) {
       return new StringFirstVectorAggregator(timeSelector, vSelector, maxStringBytes);
     } else {
-      return new StringFirstVectorAggregator(null, vSelector, maxStringBytes);
+      return NIL_VECTOR_AGGREGATOR;
     }
   }
 
@@ -281,11 +291,6 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   public List<String> requiredFields()
   {
     return Arrays.asList(timeColumn, fieldName);
-  }
-
-  public boolean isGetFirstElementFromMvd()
-  {
-    return getFirstElementFromMvd;
   }
 
   @Override
