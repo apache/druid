@@ -18,15 +18,36 @@
 #
 
 ARG JDK_VERSION=11
-FROM alpine as extractor
 
-ARG VERSION=
+# The platform is explicitly specified as x64 to build the Druid distribution.
+# This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
+# Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
+# Once the web-console dependency problem is resolved, we can remove the --platform directive.
+FROM --platform=linux/amd64 maven:3.8.6-jdk-11-slim as builder
 
+# Rebuild from source in this stage
+# This can be unset if the tarball was already built outside of Docker
+ARG BUILD_FROM_SOURCE="true"
+
+RUN export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -qq update \
+    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
+
+COPY . /src
 WORKDIR /src
-COPY ./target/apache-druid-${VERSION}-bin.tar.gz .
+RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+      mvn -B -ff -q dependency:go-offline \
+      install \
+      -Pdist,bundle-contrib-exts \
+      -Pskip-static-checks,skip-tests \
+      -Dmaven.javadoc.skip=true \
+      ; fi
 
-RUN tar -zxf /src/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && ln -s /opt/apache-druid-${VERSION} /opt/druid
+RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
+      -Dexpression=project.version -DforceStdout=true \
+    ) \
+ && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
+ && mv /opt/apache-druid-${VERSION} /opt/druid
 
 FROM busybox:1.34.1-glibc as busybox
 
@@ -58,9 +79,9 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
 RUN addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
-COPY --chown=druid:druid --from=extractor /opt /opt
-COPY ./docker/druid.sh /druid.sh
-COPY ./docker/peon.sh /peon.sh
+COPY --chown=druid:druid --from=builder /opt /opt
+COPY distribution/docker/druid.sh /druid.sh
+COPY distribution/docker/peon.sh /peon.sh
 
 # create necessary directories which could be mounted as volume
 #   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
