@@ -31,7 +31,7 @@ In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the serv
 
 ## Create or update retention rules for a datasource
 
-Update a datasource with a list of rules. Retention rules can be submitted as an array of rule objects in the request body. The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
+Update a datasource with a list of rules. Retention rules can be submitted as an array of rule objects in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information. The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
 
 Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` is invalid.
 
@@ -60,6 +60,8 @@ Note that this endpoint returns an `HTTP 200 Success` code message even if the `
 ---
 
 ### Sample request
+
+The following example updates the retention rules for a datasource with specified ID `kttm1`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -118,7 +120,7 @@ A successful request returns an HTTP `200 OK` and empty response body.
 
 ## Create or update default retention rules for all datasources
 
-Create or update one or more default retention rules for all datasources. To remove default retention rules for all datasources, submit an empty rule array in the request body. 
+Create or update one or more default retention rules for all datasources. Retention rules can be submitted as an array of rule objects in the request body. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
 The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property retrieved in audit history. 
 
@@ -201,7 +203,7 @@ A successful request returns an HTTP `200 OK` and empty response body.
 
 ## Get an array of all retention rules
 
-Retrieves all current retention rules in the cluster including the default retention rule. The response object is an array of objects for each datasource with a retention rule.
+Retrieves all current retention rules in the cluster including the default retention rule. The response object is an array of objects for each datasource and their associated retention rule.
 
 ### URL
 
