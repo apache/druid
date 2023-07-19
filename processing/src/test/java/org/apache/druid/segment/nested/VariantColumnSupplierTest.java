@@ -410,7 +410,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             Assert.assertArrayEquals(((List) row).toArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
             Assert.assertTrue(valueIndexes.forValue(row, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
             for (Object o : ((List) row)) {
-              Assert.assertTrue(arrayElementIndexes.containsValue(o, expectedType.getSingleType().getElementType()).computeBitmapResult(resultFactory).get(i));
+              Assert.assertTrue("Failed on row: " + row, arrayElementIndexes.containsValue(o, expectedType.getSingleType().getElementType()).computeBitmapResult(resultFactory).get(i));
             }
           } else {
             // mixed type vector object selector coerces to the most common type
