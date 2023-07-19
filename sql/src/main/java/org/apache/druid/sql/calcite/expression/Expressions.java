@@ -520,11 +520,11 @@ public class Expressions
       if (druidExpression.isSimpleExtraction() &&
           !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
         if (!plannerContext.isUseBoundsAndSelectors()) {
-          equalFilter = new NullFilter(
-              druidExpression.getSimpleExtraction().getColumn(),
-              druidExpression.getSimpleExtraction().getExtractionFn(),
-              null
-          );
+          if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
+            // return null to fallback to using an expression filter
+            return null;
+          }
+          equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
         } else {
           equalFilter = new SelectorDimFilter(
               druidExpression.getSimpleExtraction().getColumn(),
@@ -539,7 +539,7 @@ public class Expressions
         );
 
         if (!plannerContext.isUseBoundsAndSelectors()) {
-          equalFilter = new NullFilter(virtualColumn, null, null);
+          equalFilter = NullFilter.forColumn(virtualColumn);
         } else {
           equalFilter = new SelectorDimFilter(
               virtualColumn,
@@ -664,7 +664,7 @@ public class Expressions
 
             return getBoundTimeDimFilter(flippedKind, boundRefKey, rhsInterval, rhsAligned);
           } else {
-            final RangeRefKey rangeRefKey = new RangeRefKey(column, ColumnType.LONG, null);
+            final RangeRefKey rangeRefKey = new RangeRefKey(column, ColumnType.LONG);
             return getRangeTimeDimFilter(flippedKind, rangeRefKey, rhsInterval, rhsAligned);
           }
         }
@@ -719,6 +719,11 @@ public class Expressions
 
         return filter;
       } else {
+        //noinspection VariableNotUsedInsideIf
+        if (extractionFn != null) {
+          // fall back to expression filter
+          return null;
+        }
         final Object val;
         if (parsedRhsExpression != null && parsedRhsExpression.isLiteral()) {
           val = parsedRhsExpression.getLiteralValue();
@@ -728,7 +733,7 @@ public class Expressions
         }
 
         final ColumnType matchValueType = Calcites.getColumnTypeForRelDataType(rhs.getType());
-        final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType, extractionFn);
+        final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
         final DimFilter filter;
 
         // Always use RangeFilter, to simplify filter optimization later
@@ -854,7 +859,7 @@ public class Expressions
 
       return getBoundTimeDimFilter(operatorKind, boundRefKey, rhsInterval, rhsAligned);
     } else {
-      final RangeRefKey rangeRefKey = new RangeRefKey(column, ColumnType.LONG, null);
+      final RangeRefKey rangeRefKey = new RangeRefKey(column, ColumnType.LONG);
       final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
 
       // Is rhs aligned on granularity boundaries?

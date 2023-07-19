@@ -49,8 +49,7 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
 
   private static final RangeRefKey TIME_RANGE_REF_KEY = new RangeRefKey(
       ColumnHolder.TIME_COLUMN_NAME,
-      ColumnType.LONG,
-      null
+      ColumnType.LONG
   );
 
   private MoveTimeFiltersToIntervals()

@@ -19,34 +19,28 @@
 
 package org.apache.druid.sql.calcite.filtration;
 
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnType;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class RangeRefKey
 {
   private final String column;
   private final ColumnType matchValueType;
-  @Nullable
-  private final ExtractionFn extractionFn;
 
-  public RangeRefKey(String column, ColumnType matchValueType, ExtractionFn extractionFn)
+  public RangeRefKey(String column, ColumnType matchValueType)
   {
     this.column = column;
     this.matchValueType = matchValueType;
-    this.extractionFn = extractionFn;
   }
 
   public static RangeRefKey from(RangeFilter filter)
   {
     return new RangeRefKey(
         filter.getColumn(),
-        filter.getMatchValueType(),
-        filter.getExtractionFn()
+        filter.getMatchValueType()
     );
   }
 
@@ -54,8 +48,7 @@ public class RangeRefKey
   {
     return new RangeRefKey(
         filter.getColumn(),
-        filter.getMatchValueType(),
-        filter.getExtractionFn()
+        filter.getMatchValueType()
     );
   }
 
@@ -69,11 +62,6 @@ public class RangeRefKey
     return matchValueType;
   }
 
-  public ExtractionFn getExtractionFn()
-  {
-    return extractionFn;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -85,14 +73,13 @@ public class RangeRefKey
     }
     RangeRefKey that = (RangeRefKey) o;
     return Objects.equals(column, that.column)
-           && Objects.equals(matchValueType, that.matchValueType)
-           && Objects.equals(extractionFn, that.extractionFn);
+           && Objects.equals(matchValueType, that.matchValueType);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(column, matchValueType, extractionFn);
+    return Objects.hash(column, matchValueType);
   }
 
   @Override
@@ -101,7 +88,6 @@ public class RangeRefKey
     return "RangeRefKey{" +
            "column='" + column + '\'' +
            ", matchValueType=" + matchValueType +
-           ", extractionFn=" + extractionFn +
            '}';
   }
 }

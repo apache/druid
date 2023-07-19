@@ -130,7 +130,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
             }
           }
 
-          children.add(new InDimFilter(entry.getKey().getColumn(), values, entry.getKey().getExtractionFn(), null));
+          children.add(new InDimFilter(entry.getKey().getColumn(), values, null, null));
         }
       }
 

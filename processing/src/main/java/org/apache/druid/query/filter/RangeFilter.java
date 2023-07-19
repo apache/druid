@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.ordering.StringComparators;
@@ -50,7 +49,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -72,7 +70,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 {
   private final String column;
   private final ColumnType matchValueType;
-  private final ExpressionType matchValueExpressionType;
 
   @Nullable
   private final Object upper;
@@ -82,8 +79,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private final ExprEval<?> lowerEval;
   private final boolean lowerOpen;
   private final boolean upperOpen;
-  @Nullable
-  private final ExtractionFn extractionFn;
   @Nullable
   private final FilterTuning filterTuning;
   private final Supplier<Predicate<String>> stringPredicateSupplier;
@@ -101,7 +96,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       @JsonProperty("upper") @Nullable Object upper,
       @JsonProperty("lowerOpen") @Nullable Boolean lowerOpen,
       @JsonProperty("upperOpen") @Nullable Boolean upperOpen,
-      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
@@ -113,9 +107,9 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       throw InvalidInput.exception("Invalid range filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
-    this.matchValueExpressionType = ExpressionType.fromColumnType(matchValueType);
     this.upper = upper;
     this.lower = lower;
+    ExpressionType matchValueExpressionType = ExpressionType.fromColumnTypeStrict(matchValueType);
     this.upperEval = ExprEval.ofType(matchValueExpressionType, upper);
     this.lowerEval = ExprEval.ofType(matchValueExpressionType, lower);
 
@@ -125,7 +119,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           column
       );
     }
-    if (matchValueExpressionType.isNumeric()) {
+    if (this.matchValueType.isNumeric()) {
       if (lower != null && lowerEval.value() == null) {
         throw InvalidInput.exception(
             "Invalid range filter on column [%s], lower bound [%s] cannot be parsed as specified match value type [%s]",
@@ -145,8 +139,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     }
     this.lowerOpen = lowerOpen != null && lowerOpen;
     this.upperOpen = upperOpen != null && upperOpen;
-    // remove once SQL planner no longer uses extractionFn
-    this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
     this.stringPredicateSupplier = makeStringPredicateSupplier();
     this.longPredicateSupplier = makeLongPredicateSupplier();
@@ -200,14 +192,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public ExtractionFn getExtractionFn()
-  {
-    return extractionFn;
-  }
-
-  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public FilterTuning getFilterTuning()
@@ -231,19 +215,19 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     final byte[] lowerBytes;
     final byte[] upperBytes;
     if (hasLowerBound()) {
-      final TypeStrategy<Object> typeStrategy = matchValueType.getStrategy();
-      final int size = typeStrategy.estimateSizeBytes(lower);
+      final TypeStrategy<Object> typeStrategy = lowerEval.type().getStrategy();
+      final int size = typeStrategy.estimateSizeBytes(lowerEval.value());
       final ByteBuffer valueBuffer = ByteBuffer.allocate(size);
-      typeStrategy.write(valueBuffer, lower, size);
+      typeStrategy.write(valueBuffer, lowerEval.value(), size);
       lowerBytes = valueBuffer.array();
     } else {
       lowerBytes = new byte[0];
     }
     if (hasUpperBound()) {
-      final TypeStrategy<Object> typeStrategy = matchValueType.getStrategy();
-      final int size = typeStrategy.estimateSizeBytes(upper);
+      final TypeStrategy<Object> typeStrategy = upperEval.type().getStrategy();
+      final int size = typeStrategy.estimateSizeBytes(upperEval.value());
       final ByteBuffer valueBuffer = ByteBuffer.allocate(size);
-      typeStrategy.write(valueBuffer, upper, size);
+      typeStrategy.write(valueBuffer, upperEval.value(), size);
       upperBytes = valueBuffer.array();
     } else {
       upperBytes = new byte[0];
@@ -272,8 +256,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         .appendByte(lowerStrictByte)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByte(upperStrictByte)
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
         .build();
   }
 
@@ -286,16 +268,13 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public Filter toFilter()
   {
-    if (extractionFn != null) {
-      return new DimensionPredicateFilter(column, getPredicateFactory(), extractionFn, filterTuning);
-    }
     return this;
   }
 
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    if (!(Objects.equals(column, dimension) && getExtractionFn() == null)) {
+    if (!Objects.equals(column, dimension)) {
       return null;
     }
 
@@ -303,19 +282,19 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     // converting things to String, but we'd probably be better off adjusting the interface to something that is
     // more type aware in the future
 
-    String lowerString = lowerEval.asString();
-    String upperString = upperEval.asString();
+    final Supplier<String> lowerString = () -> lowerEval.isArray() ? Arrays.deepToString(lowerEval.asArray()) : lowerEval.asString();
+    final Supplier<String> upperString = () -> upperEval.isArray() ? Arrays.deepToString(upperEval.asArray()) : upperEval.asString();
     RangeSet<String> retSet = TreeRangeSet.create();
-    Range<String> range;
-    if (getLower() == null) {
-      range = isUpperOpen() ? Range.lessThan(upperString) : Range.atMost(upperString);
-    } else if (getUpper() == null) {
-      range = isLowerOpen() ? Range.greaterThan(lowerString) : Range.atLeast(lowerString);
+    final Range<String> range;
+    if (!hasLowerBound()) {
+      range = isUpperOpen() ? Range.lessThan(upperString.get()) : Range.atMost(upperString.get());
+    } else if (!hasUpperBound()) {
+      range = isLowerOpen() ? Range.greaterThan(lowerString.get()) : Range.atLeast(lowerString.get());
     } else {
       range = Range.range(
-          lowerString,
+          lowerString.get(),
           isLowerOpen() ? BoundType.OPEN : BoundType.CLOSED,
-          upperString,
+          upperString.get(),
           isUpperOpen() ? BoundType.OPEN : BoundType.CLOSED
       );
     }
@@ -420,7 +399,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         upper,
         lowerOpen,
         upperOpen,
-        extractionFn,
         filterTuning
     );
   }
@@ -436,7 +414,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           upperEval.asArray()
       );
     } else {
-      return Objects.equals(upper, lower);
+      return Objects.equals(upperEval.value(), lowerEval.value());
     }
   }
 
@@ -463,8 +441,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           that.lowerEval.asArray()
       );
     } else {
-      upperSame = Objects.equals(upper, that.upper);
-      lowerSame = Objects.equals(lower, that.lower);
+      upperSame = Objects.equals(upperEval.value(), that.upperEval.value());
+      lowerSame = Objects.equals(lowerEval.value(), that.lowerEval.value());
     }
 
     return lowerOpen == that.lowerOpen &&
@@ -473,7 +451,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
            Objects.equals(matchValueType, that.matchValueType) &&
            upperSame &&
            lowerSame &&
-           Objects.equals(extractionFn, that.extractionFn) &&
            Objects.equals(filterTuning, that.filterTuning);
   }
 
@@ -483,11 +460,10 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     return Objects.hash(
         column,
         matchValueType,
-        upper,
-        lower,
+        upperEval.value(),
+        lowerEval.value(),
         lowerOpen,
         upperOpen,
-        extractionFn,
         filterTuning
     );
   }
@@ -506,7 +482,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
     }
 
-    builder.appendDimension(column, extractionFn);
+    builder.appendDimension(column, null);
 
     builder.append(StringUtils.format(" as %s", matchValueType.toString()));
 
