@@ -261,4 +261,4 @@ DELETE https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 
 Cancels a running or accepted query. 
 
-Druid returns an HTTP 202 response for successful cancelation requests. If the query is already complete or can't be found, Druid returns an HTTP 500 error with an error message describing the issue.
+Druid returns an HTTP 202 response for successful cancellation requests. If the query is already complete or can't be found, Druid returns an HTTP 500 error with an error message describing the issue.
