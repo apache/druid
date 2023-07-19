@@ -70,16 +70,14 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
     for (int i = startRow; i < endRow; i++) {
       index = i;
       final long earliestTime = timeVector[index];
-      if (earliestTime > firstTime) {
+      if (earliestTime >= firstTime) {
         break;
       }
-      if (earliestTime < firstTime) {
-        firstTime = earliestTime;
-        if (useDefault || nullValueVector == null || !nullValueVector[index]) {
-          updateTimeWithValue(buf, position, firstTime, index);
-        } else {
-          updateTimeWithNull(buf, position, firstTime);
-        }
+      firstTime = earliestTime;
+      if (useDefault || nullValueVector == null || !nullValueVector[index]) {
+        updateTimeWithValue(buf, position, firstTime, index);
+      } else {
+        updateTimeWithNull(buf, position, firstTime);
       }
     }
   }
