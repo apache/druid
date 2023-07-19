@@ -16,8 +16,25 @@
  * limitations under the License.
  */
 
-export * from './async-query/async-query.mock';
-export * from './coordinator-dynamic-config/coordinator-dynamic-config.mock';
-export * from './execution/execution-ingest-complete.mock';
-export * from './execution/execution-ingest-error.mock';
-export * from './stages/stages.mock';
+import type { CoordinatorDynamicConfig } from './coordinator-dynamic-config';
+
+export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
+  millisToWaitBeforeDeleting: 900000,
+  mergeBytesLimit: 524288000,
+  mergeSegmentsLimit: 100,
+  maxSegmentsToMove: 100,
+  replicantLifetime: 15,
+  replicationThrottleLimit: 500,
+  balancerComputeThreads: 1,
+  killDataSourceWhitelist: [],
+  killPendingSegmentsSkipList: [],
+  maxSegmentsInNodeLoadingQueue: 500,
+  decommissioningNodes: [],
+  decommissioningMaxPercentOfMaxSegmentsToMove: 70,
+  pauseCoordination: false,
+  replicateAfterLoadTimeout: false,
+  maxNonPrimaryReplicantsToLoad: 2147483647,
+  useRoundRobinSegmentAssignment: true,
+  smartSegmentLoading: true,
+  debugDimensions: null,
+};
