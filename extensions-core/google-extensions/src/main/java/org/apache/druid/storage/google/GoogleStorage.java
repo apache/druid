@@ -68,7 +68,7 @@ public class GoogleStorage
     final Get get = storage.get().objects().get(bucket, path);
     HttpHeaders httpHeaders = new HttpHeaders();
 
-    String rangeString = StringUtils.format("bytes %d-%d/*", start, end);
+    String rangeString = StringUtils.format("bytes=%d-%d", start, end);
 
     httpHeaders.setRange(rangeString);
     get.setRequestHeaders(httpHeaders);
