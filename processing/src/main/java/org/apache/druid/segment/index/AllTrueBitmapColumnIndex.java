@@ -17,16 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
-public class AllFalseBitmapColumnIndex implements BitmapColumnIndex
+public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
 {
   private final ColumnIndexSelector selector;
 
-  public AllFalseBitmapColumnIndex(ColumnIndexSelector indexSelector)
+  public AllTrueBitmapColumnIndex(ColumnIndexSelector indexSelector)
   {
     this.selector = indexSelector;
   }
@@ -40,12 +42,15 @@ public class AllFalseBitmapColumnIndex implements BitmapColumnIndex
   @Override
   public double estimateSelectivity(int totalRows)
   {
-    return 0;
+    return 1;
   }
 
   @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
   {
-    return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
+    return bitmapResultFactory.wrapAllTrue(
+        selector.getBitmapFactory()
+                .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows())
+    );
   }
 }

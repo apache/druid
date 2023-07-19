@@ -17,18 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
+
+import org.apache.druid.collections.spatial.ImmutableRTree;
 
 /**
- * {@link BitmapColumnIndex} with Druids "default" {@link ColumnIndexCapabilities}.
  */
-public abstract class SimpleBitmapColumnIndex implements BitmapColumnIndex
+public interface SpatialIndex
 {
-  public static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
-
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities()
-  {
-    return CAPABILITIES;
-  }
+  ImmutableRTree getRTree();
 }

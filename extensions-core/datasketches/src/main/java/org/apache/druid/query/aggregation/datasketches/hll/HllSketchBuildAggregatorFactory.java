@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -221,6 +222,8 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
             }
           };
           break;
+        case ARRAY:
+          throw InvalidInput.exception("ARRAY types are not supported for hll sketch");
         default:
           updater = sketch -> {
             Object obj = selector.getObject();

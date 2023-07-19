@@ -37,6 +37,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.Equality;
@@ -110,6 +111,15 @@ public class LookupJoinMatcher implements JoinMatcher
           } else {
             return () -> selector.isNull() ? null : DimensionHandlerUtils.convertObjectToString(selector.getLong());
           }
+        }
+
+        @Override
+        public Supplier<String> makeArrayProcessor(
+            BaseObjectColumnValueSelector<?> selector,
+            @Nullable ColumnCapabilities columnCapabilities
+        )
+        {
+          throw new QueryUnsupportedException("Joining against a ARRAY columns is not supported.");
         }
 
         @Override
