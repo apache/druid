@@ -26,12 +26,12 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 
-public interface ValueIndexes
+public interface ArrayElementIndexes
 {
-
   /**
-   * Get the {@link ImmutableBitmap} corresponding to rows matching the supplied value.  Generates an empty bitmap when
-   * passed a value that doesn't exist. May return null if a value index cannot be computed for the supplied value type.
+   * Get the {@link ImmutableBitmap} corresponding to rows with array elements matching the supplied value.  Generates
+   * an empty bitmap when passed a value that doesn't exist in any array. May return null if a value index cannot be
+   * computed for the supplied value type.
    *
    * @param value       value to match
    * @param valueType   type of the value to match, used to assist conversion from the match value type to the column
@@ -40,5 +40,5 @@ public interface ValueIndexes
    *                    connot be computed for the supplied value type
    */
   @Nullable
-  BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType);
+  BitmapColumnIndex containsValue(Object value, TypeSignature<ValueType> valueType);
 }
