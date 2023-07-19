@@ -50,9 +50,9 @@ public class Stats
     public static final CoordinatorStat USED_BYTES
         = CoordinatorStat.toDebugAndEmit("usedSegmentBytes", "segment/size");
     public static final CoordinatorStat UNDER_REPLICATED
-        = CoordinatorStat.toLogAndEmit("underreplicated", "segment/underReplicated/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("underreplicated", "segment/underReplicated/count");
     public static final CoordinatorStat UNAVAILABLE
-        = CoordinatorStat.toLogAndEmit("unavailable", "segment/unavailable/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("unavailable", "segment/unavailable/count");
     public static final CoordinatorStat UNNEEDED
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
