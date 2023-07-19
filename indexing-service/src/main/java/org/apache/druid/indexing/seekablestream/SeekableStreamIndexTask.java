@@ -270,7 +270,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   /**
    * Deprecated method for providing the {@link RecordSupplier} that connects with the stream. New extensions should
-   * overide {@link #newTaskRecordSupplier(TaskToolbox)} instead.
+   * override {@link #newTaskRecordSupplier(TaskToolbox)} instead.
    */
   @Deprecated
   protected RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier()
