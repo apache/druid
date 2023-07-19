@@ -19,25 +19,26 @@
 
 package org.apache.druid.segment.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.query.lookup.LookupExtractionFn;
-import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.util.Map;
+import java.util.Arrays;
 
 @RunWith(Parameterized.class)
 public class NullFilterTest extends BaseFilterTest
@@ -176,60 +177,6 @@ public class NullFilterTest extends BaseFilterTest
   }
 
   @Test
-  public void testSelectorWithLookupExtractionFn()
-  {
-    /*
-      static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
-      makeDefaultSchemaRow("0", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
-      makeDefaultSchemaRow("1", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
-      makeDefaultSchemaRow("2", "2", ImmutableList.of(""), "2017-05-25", null, 5.5f, 40L),
-      makeDefaultSchemaRow("3", "1", ImmutableList.of("a"), "2020-01-25", 120.0245, 110.0f, null),
-      makeDefaultSchemaRow("4", "abdef", ImmutableList.of("c"), null, 60.0, null, 9001L),
-      makeDefaultSchemaRow("5", "abc", null, "2020-01-25", 765.432, 123.45f, 12345L)
-  );
-     */
-    final Map<String, String> stringMap = ImmutableMap.of(
-        "1", "HELLO",
-        "a", "HELLO",
-        "abdef", "HELLO",
-        "abc", "UNKNOWN"
-    );
-    LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
-    LookupExtractionFn lookupFn = new LookupExtractionFn(mapExtractor, false, null, false, true);
-    LookupExtractionFn lookupFnRetain = new LookupExtractionFn(mapExtractor, true, null, false, true);
-    LookupExtractionFn lookupFnReplace = new LookupExtractionFn(mapExtractor, false, "UNKNOWN", false, true);
-
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(new NullFilter("dim0", lookupFn, null), ImmutableList.of("0", "2", "3", "4", "5"));
-      assertFilterMatches(new NullFilter("dim0", lookupFnRetain, null), ImmutableList.of());
-    } else {
-      assertFilterMatches(new NullFilter("dim0", lookupFn, null), ImmutableList.of("0", "2", "3", "4", "5"));
-      assertFilterMatches(new NullFilter("dim0", lookupFnRetain, null), ImmutableList.of());
-    }
-
-    assertFilterMatches(new NullFilter("dim0", lookupFnReplace, null), ImmutableList.of());
-
-
-    final Map<String, String> stringMapEmpty = ImmutableMap.of(
-        "1", ""
-    );
-    LookupExtractor mapExtractoryEmpty = new MapLookupExtractor(stringMapEmpty, false);
-    LookupExtractionFn lookupFnEmpty = new LookupExtractionFn(mapExtractoryEmpty, false, null, false, true);
-    if (NullHandling.replaceWithDefault()) {
-      // Nulls and empty strings are considered equivalent
-      assertFilterMatches(
-          new NullFilter("dim0", lookupFnEmpty, null),
-          ImmutableList.of("0", "1", "2", "3", "4", "5")
-      );
-    } else {
-      assertFilterMatches(
-          new NullFilter("dim0", lookupFnEmpty, null),
-          ImmutableList.of("0", "2", "3", "4", "5")
-      );
-    }
-  }
-
-  @Test
   public void testArrays()
   {
     if (isAutoSchema()) {
@@ -244,18 +191,39 @@ public class NullFilterTest extends BaseFilterTest
         "5", .. [null],                   [123L, 345L],         null
      */
       assertFilterMatches(
-          new NullFilter("arrayString", null, null),
+          new NullFilter("arrayString", null),
           ImmutableList.of("2")
       );
       assertFilterMatches(
-          new NullFilter("arrayLong", null, null),
+          new NullFilter("arrayLong", null),
           ImmutableList.of("3")
       );
       assertFilterMatches(
-          new NullFilter("arrayDouble", null, null),
+          new NullFilter("arrayDouble", null),
           ImmutableList.of("5")
       );
     }
+  }
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    NullFilter filter = new NullFilter("x", null);
+    String s = mapper.writeValueAsString(filter);
+    Assert.assertEquals(filter, mapper.readValue(s, NullFilter.class));
+  }
+
+  @Test
+  public void testGetCacheKey()
+  {
+    NullFilter f1 = new NullFilter("x", null);
+    NullFilter f1_2 = new NullFilter("x", null);
+    NullFilter f2 = new NullFilter("y", null);
+    NullFilter f3 = new NullFilter("x", new FilterTuning(true, 1234, null));
+    Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+    Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+    Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
   }
 
   @Test

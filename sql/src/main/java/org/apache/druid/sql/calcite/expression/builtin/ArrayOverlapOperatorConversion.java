@@ -133,7 +133,6 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
               simpleExtractionExpr.getSimpleExtraction().getColumn(),
               ExpressionType.toColumnType(exprEval.type()),
               arrayElements[0],
-              simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
               null
           );
         }

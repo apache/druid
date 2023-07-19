@@ -54,7 +54,6 @@ public class Ranges
           null,
           !range.isUpperOpen(),
           false,
-          range.getExtractionFn(),
           range.getFilterTuning()
       );
     } else {
@@ -66,7 +65,6 @@ public class Ranges
           range.getLower(),
           false,
           !range.isLowerOpen(),
-          range.getExtractionFn(),
           range.getFilterTuning()
       );
     }
@@ -129,7 +127,6 @@ public class Ranges
         range.hasUpperBound() ? range.upperEndpoint().getValue() : null,
         range.hasLowerBound() && range.lowerBoundType() == BoundType.OPEN,
         range.hasUpperBound() && range.upperBoundType() == BoundType.OPEN,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }
@@ -143,7 +140,6 @@ public class Ranges
         value,
         false,
         false,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }
@@ -157,7 +153,6 @@ public class Ranges
         null,
         true,
         false,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }
@@ -171,7 +166,6 @@ public class Ranges
         null,
         false,
         false,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }
@@ -185,7 +179,6 @@ public class Ranges
         value,
         false,
         true,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }
@@ -199,7 +192,6 @@ public class Ranges
         value,
         false,
         false,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }
@@ -218,7 +210,6 @@ public class Ranges
         interval.getEndMillis(),
         false,
         true,
-        rangeRefKey.getExtractionFn(),
         null
     );
   }

@@ -344,14 +344,23 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
-                  .filters(not(equality("dim1", "z", new SubstringDimExtractionFn(0, 1), ColumnType.STRING)))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
+                  )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(queryContextModified)
                   .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{8L}
+        )
+        // in sql compatible mode, expression filter correctly does not match null values...
+        : ImmutableList.of(
+            new Object[]{4L}
         )
     );
   }

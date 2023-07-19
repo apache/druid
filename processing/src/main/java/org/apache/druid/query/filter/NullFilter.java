@@ -31,7 +31,6 @@ import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
@@ -41,7 +40,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -57,19 +55,16 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
 {
   public static NullFilter forColumn(String column)
   {
-    return new NullFilter(column, null, null);
+    return new NullFilter(column, null);
   }
 
   private final String column;
-  @Nullable
-  private final ExtractionFn extractionFn;
   @Nullable
   private final FilterTuning filterTuning;
 
   @JsonCreator
   public NullFilter(
       @JsonProperty("column") String column,
-      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
@@ -77,8 +72,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
       throw InvalidInput.exception("Invalid null filter, column cannot be null");
     }
     this.column = column;
-    // remove once SQL planner no longer uses extractionFn
-    this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
   }
 
@@ -86,14 +79,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   public String getColumn()
   {
     return column;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public ExtractionFn getExtractionFn()
-  {
-    return extractionFn;
   }
 
   @Nullable
@@ -110,8 +95,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     return new CacheKeyBuilder(DimFilterUtils.NULL_CACHE_ID)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendString(column)
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
         .build();
   }
 
@@ -124,11 +107,7 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public Filter toFilter()
   {
-    if (extractionFn == null) {
-      return this;
-    } else {
-      return new DimensionPredicateFilter(column, NullPredicateFactory.INSTANCE, extractionFn, filterTuning);
-    }
+    return this;
   }
 
   @Nullable
@@ -211,7 +190,7 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
           columnRewrites
       );
     }
-    return new NullFilter(rewriteDimensionTo, extractionFn, filterTuning);
+    return new NullFilter(rewriteDimensionTo, filterTuning);
   }
 
   @Override
@@ -225,20 +204,19 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
     NullFilter that = (NullFilter) o;
     return Objects.equals(column, that.column) &&
-           Objects.equals(extractionFn, that.extractionFn) &&
            Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(column, extractionFn, filterTuning);
+    return Objects.hash(column, filterTuning);
   }
 
   @Override
   public String toString()
   {
-    return new DimFilterToStringBuilder().appendDimension(column, extractionFn)
+    return new DimFilterToStringBuilder().appendDimension(column, null)
                                          .append(" IS NULL")
                                          .appendFilterTuning(filterTuning)
                                          .build();
