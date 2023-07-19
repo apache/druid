@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 
 public class LocalInputSourceBuilder implements InputSourceBuilder
 {
-  public static final String TYPE_KEY = "local";
 
   @Override
   public LocalInputSource generateInputSource(List<String> inputFilePaths)

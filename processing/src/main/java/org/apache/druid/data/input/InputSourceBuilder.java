@@ -35,7 +35,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = LocalInputSourceBuilder.TYPE_KEY, value = LocalInputSourceBuilder.class)
+    @JsonSubTypes.Type(name = "local", value = LocalInputSourceBuilder.class)
 })
 @UnstableApi
 public interface InputSourceBuilder
