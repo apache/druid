@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -54,7 +53,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
@@ -67,6 +65,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
@@ -78,8 +77,8 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   private final String column;
   private final ColumnType matchValueType;
   private final Object matchValue;
-  @Nullable
-  private final ExtractionFn extractionFn;
+  private final ExprEval<?> matchValueEval;
+
   @Nullable
   private final FilterTuning filterTuning;
   private final DruidPredicateFactory predicateFactory;
@@ -89,7 +88,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       @JsonProperty("column") String column,
       @JsonProperty("matchValueType") ColumnType matchValueType,
       @JsonProperty("matchValue") Object matchValue,
-      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
@@ -105,19 +103,18 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       throw InvalidInput.exception("Invalid equality filter on column [%s], matchValue cannot be null", column);
     }
     this.matchValue = matchValue;
-    // remove once SQL planner no longer uses extractionFn
-    this.extractionFn = extractionFn;
+    this.matchValueEval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(matchValueType), matchValue);
     this.filterTuning = filterTuning;
-    this.predicateFactory = new EqualityPredicateFactory(matchValue, matchValueType);
+    this.predicateFactory = new EqualityPredicateFactory(matchValueEval);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    final TypeStrategy<Object> typeStrategy = matchValueType.getStrategy();
-    final int size = typeStrategy.estimateSizeBytes(matchValue);
+    final TypeStrategy<Object> typeStrategy = matchValueEval.type().getStrategy();
+    final int size = typeStrategy.estimateSizeBytes(matchValueEval.value());
     final ByteBuffer valueBuffer = ByteBuffer.allocate(size);
-    typeStrategy.write(valueBuffer, matchValue, size);
+    typeStrategy.write(valueBuffer, matchValueEval.value(), size);
     return new CacheKeyBuilder(DimFilterUtils.EQUALS_CACHE_ID)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendString(column)
@@ -125,8 +122,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         .appendString(matchValueType.asTypeString())
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByteArray(valueBuffer.array())
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
         .build();
   }
 
@@ -139,11 +134,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   @Override
   public Filter toFilter()
   {
-    if (extractionFn == null) {
-      return this;
-    } else {
-      return new DimensionPredicateFilter(column, predicateFactory, extractionFn, filterTuning);
-    }
+    return this;
   }
 
   @JsonProperty
@@ -167,14 +158,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public ExtractionFn getExtractionFn()
-  {
-    return extractionFn;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public FilterTuning getFilterTuning()
   {
     return filterTuning;
@@ -184,9 +167,9 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   public String toString()
   {
     DimFilter.DimFilterToStringBuilder bob =
-        new DimFilter.DimFilterToStringBuilder().appendDimension(column, extractionFn)
+        new DimFilter.DimFilterToStringBuilder().appendDimension(column, null)
                                                 .append(" = ")
-                                                .append(matchValue);
+                                                .append(matchValueEval.value());
 
     if (!ColumnType.STRING.equals(matchValueType)) {
       bob.append(" (" + matchValueType.asTypeString() + ")");
@@ -210,39 +193,32 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     if (!Objects.equals(matchValueType, that.matchValueType)) {
       return false;
     }
-    if (!Objects.equals(extractionFn, that.extractionFn)) {
-      return false;
-    }
     if (!Objects.equals(filterTuning, that.filterTuning)) {
       return false;
     }
     if (matchValueType.isArray()) {
       // just use predicate to see if the values are the same
-      final ExprEval<?> thatValue = ExprEval.ofType(
-          ExpressionType.fromColumnType(that.matchValueType),
-          that.matchValue
-      );
       final Predicate<Object[]> arrayPredicate = predicateFactory.makeArrayPredicate(matchValueType);
-      return arrayPredicate.apply(thatValue.asArray());
+      return arrayPredicate.apply(that.matchValueEval.asArray());
     } else {
-      return Objects.equals(matchValue, that.matchValue);
+      return Objects.equals(matchValueEval.value(), that.matchValueEval.value());
     }
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(column, matchValueType, matchValue, extractionFn, filterTuning);
+    return Objects.hash(column, matchValueType, matchValueEval.value(), filterTuning);
   }
 
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    if (!Objects.equals(getColumn(), dimension) || getExtractionFn() != null) {
+    if (!Objects.equals(getColumn(), dimension)) {
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    retSet.add(Range.singleton(String.valueOf(matchValue)));
+    retSet.add(Range.singleton(String.valueOf(matchValueEval.value())));
     return retSet;
   }
 
@@ -261,14 +237,14 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
 
     final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
     if (valueIndexes != null) {
-      return valueIndexes.forValue(matchValue, matchValueType);
+      return valueIndexes.forValue(matchValueEval.value(), matchValueType);
     }
 
     if (matchValueType.isPrimitive()) {
       final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
       if (stringValueSetIndexes != null) {
 
-        return stringValueSetIndexes.forValue(String.valueOf(matchValue));
+        return stringValueSetIndexes.forValue(matchValueEval.asString());
       }
     }
     // column exists, but has no indexes we can use
@@ -280,7 +256,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   {
     return ColumnProcessors.makeProcessor(
         column,
-        new TypedConstantValueMatcherFactory(matchValue, matchValueType, predicateFactory),
+        new TypedConstantValueMatcherFactory(matchValueEval, predicateFactory),
         factory
     );
   }
@@ -295,13 +271,13 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
           column,
           VectorValueMatcherColumnProcessorFactory.instance(),
           factory
-      ).makeMatcher(matchValue, matchValueType);
+      ).makeMatcher(matchValueEval.value(), matchValueType);
     }
     return ColumnProcessors.makeVectorProcessor(
         column,
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
-    ).makeMatcher(new EqualityPredicateFactory(matchValue, matchValueType));
+    ).makeMatcher(new EqualityPredicateFactory(matchValueEval));
   }
 
   @Override
@@ -345,7 +321,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         rewriteDimensionTo,
         matchValueType,
         matchValue,
-        extractionFn,
         filterTuning
     );
   }
@@ -353,7 +328,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   private static class EqualityPredicateFactory implements DruidPredicateFactory
   {
     private final ExprEval<?> matchValue;
-    private final ColumnType matchValueType;
     private final Supplier<Predicate<String>> stringPredicateSupplier;
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
@@ -362,10 +336,9 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private final Supplier<Predicate<Object[]>> typeDetectingArrayPredicateSupplier;
     private final Supplier<Predicate<Object>> objectPredicateSupplier;
 
-    public EqualityPredicateFactory(Object matchValue, ColumnType matchValueType)
+    public EqualityPredicateFactory(ExprEval<?> matchValue)
     {
-      this.matchValue = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
-      this.matchValueType = matchValueType;
+      this.matchValue = matchValue;
       this.stringPredicateSupplier = makeStringPredicateSupplier();
       this.longPredicateSupplier = makeLongPredicateSupplier();
       this.floatPredicateSupplier = makeFloatPredicateSupplier();
@@ -469,7 +442,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<Predicate<Object>> makeObjectPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        if (matchValueType.equals(ColumnType.NESTED_DATA)) {
+        if (matchValue.type().equals(ExpressionType.NESTED_DATA)) {
           return input -> Objects.equals(StructuredData.unwrap(input), StructuredData.unwrap(matchValue.value()));
         }
         return Predicates.equalTo(matchValue.valueOrDefault());
@@ -503,14 +476,20 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         return false;
       }
       EqualityPredicateFactory that = (EqualityPredicateFactory) o;
-      return Objects.equals(matchValue, that.matchValue) && Objects.equals(matchValueType, that.matchValueType);
+      if (!Objects.equals(matchValue.type(), that.matchValue.type())) {
+        return false;
+      }
+      if (matchValue.isArray()) {
+        return Arrays.deepEquals(matchValue.asArray(), that.matchValue.asArray());
+      }
+      return Objects.equals(matchValue.value(), that.matchValue.value());
     }
 
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(matchValue, matchValueType);
+      return Objects.hash(matchValue);
     }
   }
 
@@ -520,12 +499,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private final PredicateValueMatcherFactory predicateMatcherFactory;
 
     public TypedConstantValueMatcherFactory(
-        Object matchValue,
-        ColumnType matchValueType,
+        ExprEval<?> matchValue,
         DruidPredicateFactory predicateFactory
     )
     {
-      this.matchValue = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+      this.matchValue = matchValue;
       this.predicateMatcherFactory = new PredicateValueMatcherFactory(predicateFactory);
     }
 

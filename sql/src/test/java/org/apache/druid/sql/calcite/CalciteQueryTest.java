@@ -3957,11 +3957,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(
                             or(
                                 and(
-                                    new EqualityFilter("dim1", ColumnType.STRING, "a", null, null),
+                                    new EqualityFilter("dim1", ColumnType.STRING, "a", null),
                                     NullFilter.forColumn("dim2")
                                 ),
                                 and(
-                                    new EqualityFilter("dim1", ColumnType.STRING, "abc", null, null),
+                                    new EqualityFilter("dim1", ColumnType.STRING, "abc", null),
                                     NullFilter.forColumn("dim2")
                                 ),
                                 in(
@@ -4364,6 +4364,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarOnCommonTableExpression()
   {
+    if (NullHandling.sqlCompatible()) {
+      // cannot vectorize due to substring expression
+      cannotVectorize();
+    }
     testQuery(
         "WITH beep (dim1_firstchar) AS (SELECT SUBSTRING(dim1, 1, 1) FROM foo WHERE dim2 = 'a')\n"
         + "SELECT COUNT(*) FROM beep WHERE dim1_firstchar <> 'z'",
@@ -4373,7 +4377,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(and(
                       equality("dim2", "a", ColumnType.STRING),
-                      not(equality("dim1", "z", new SubstringDimExtractionFn(0, 1), ColumnType.STRING))
+                      NullHandling.replaceWithDefault()
+                      ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -4381,7 +4387,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            // in sql compatible mode, the expression filter causes us to correctly not match null
+            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
         )
     );
   }
@@ -4389,6 +4396,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarOnView()
   {
+    if (NullHandling.sqlCompatible()) {
+      // cannot vectorize due to substring expression
+      cannotVectorize();
+    }
     testQuery(
         "SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'",
         ImmutableList.of(
@@ -4397,7 +4408,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(and(
                       equality("dim2", "a", ColumnType.STRING),
-                      not(equality("dim1", "z", new SubstringDimExtractionFn(0, 1), ColumnType.STRING))
+                      NullHandling.replaceWithDefault()
+                      ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -4405,7 +4418,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            // in sql compatible mode, the expression filter causes us to correctly not match null
+            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
         )
     );
   }
@@ -4413,6 +4427,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConfusedView()
   {
+    if (NullHandling.sqlCompatible()) {
+      // cannot vectorize due to substring expression
+      cannotVectorize();
+    }
     testQuery(
         "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'",
         ImmutableList.of(
@@ -4421,7 +4439,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(and(
                       equality("dim2", "a", ColumnType.STRING),
-                      not(equality("dim1", "z", new SubstringDimExtractionFn(0, 1), ColumnType.STRING))
+                      NullHandling.replaceWithDefault()
+                      ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
                   ))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -4429,7 +4449,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            // in sql compatible mode, the expression filter causes us to correctly not match null
+            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
         )
     );
   }
@@ -4501,8 +4522,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(
                       or(
-                          new RangeFilter("cnt", ColumnType.LONG, 3L, null, false, false, null, null),
-                          new EqualityFilter("cnt", ColumnType.LONG, 1L, null, null)
+                          new RangeFilter("cnt", ColumnType.LONG, 3L, null, false, false, null),
+                          new EqualityFilter("cnt", ColumnType.LONG, 1L, null)
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -4996,6 +5017,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations()
   {
+    if (NullHandling.sqlCompatible()) {
+      // cannot vectorize due to expression filter
+      cannotVectorize();
+    }
     testQuery(
         "SELECT "
         + "SUM(case dim1 when 'abc' then cnt end), "
@@ -5027,7 +5052,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a2", "cnt"),
-                          equality("dim1", "a", new SubstringDimExtractionFn(0, 1), ColumnType.STRING)
+                          NullHandling.replaceWithDefault()
+                          ? selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
+                          : expressionFilter("(substring(\"dim1\", 0, 1) == 'a')")
+
                       ),
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a3"),
@@ -7633,10 +7661,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(
-                            not(equality(
-                                "dim1",
-                                "x", new RegexDimExtractionFn("^(.)", 1, true, null), ColumnType.STRING
-                            ))
+                            NullHandling.replaceWithDefault()
+                            ? not(selector("dim1", "x", new RegexDimExtractionFn("^(.)", 1, true, null)))
+                            : expressionFilter("(regexp_extract(\"dim1\",'^(.)',1) != 'x')")
                         )
                         .setDimensions(
                             dimensions(
@@ -7655,8 +7682,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{NULL_STRING, NULL_STRING},
+            new Object[]{"1", "1"},
+            new Object[]{"2", "2"},
+            new Object[]{"a", "a"},
+            new Object[]{"d", "d"}
+        )
+        // sql compatible mode expression filter (correctly) leaves out nulls
+        : ImmutableList.of(
             new Object[]{"1", "1"},
             new Object[]{"2", "2"},
             new Object[]{"a", "a"},
@@ -7691,7 +7726,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize due to extractionFn in dimension spec.
     cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM foo\n"
@@ -7706,7 +7740,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .filters(
                       or(
-                          not(isNull("dim1", new RegexDimExtractionFn("^1", 0, true, null))),
+                          NullHandling.replaceWithDefault()
+                          ? not(selector("dim1", NullHandling.defaultStringValue(), new RegexDimExtractionFn("^1", 0, true, null)))
+                          : expressionFilter("notnull(regexp_extract(\"dim1\",'^1'))"),
                           notNull("v0")
                       )
                   )
@@ -8635,10 +8671,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(
-                            not(equality(
-                                "dim1",
-                                "xxx", extractionFn, ColumnType.STRING
-                            ))
+                            NullHandling.replaceWithDefault()
+                            ? not(selector("dim1", "xxx", extractionFn))
+                            : expressionFilter("(lookup(\"dim1\",'lookyloo') != 'xxx')")
                         )
                         .setDimensions(
                             dimensions(
@@ -8658,8 +8693,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{NULL_STRING, 5L},
+            new Object[]{"xabc", 1L}
+        )
+        // sql compatible mode expression filter (correctly) leaves out null values
+        : ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
     );

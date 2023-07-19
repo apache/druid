@@ -125,11 +125,7 @@ public class CaseOperatorConversion implements SqlOperatorConversion
               null
           );
         } else {
-          isNull = new NullFilter(
-              condition.getArguments().get(0).getDirectColumn(),
-              null,
-              null
-          );
+          isNull = NullFilter.forColumn(condition.getArguments().get(0).getDirectColumn());
         }
 
         if (call.getOperands().get(1) instanceof RexCall) {
