@@ -922,27 +922,35 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxLazyWorkers)
   {
+    // skip the lock and bail early if we should not mark any workers lazy (e.g. number
+    // of current workers is at or below the minNumWorkers of autoscaler config)
+    if (lazyWorkers.size() >= maxLazyWorkers) {
+      return getLazyWorkers();
+    }
+
+    // Search for new workers to mark lazy.
+    // Status lock is used to prevent any tasks being assigned to workers while we mark them lazy
     synchronized (statusLock) {
       for (Map.Entry<String, WorkerHolder> worker : workers.entrySet()) {
+        if (lazyWorkers.size() >= maxLazyWorkers) {
+          break;
+        }
         final WorkerHolder workerHolder = worker.getValue();
         try {
           if (isWorkerOkForMarkingLazy(workerHolder.getWorker()) && isLazyWorker.apply(workerHolder.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", workerHolder.getWorker().getHost());
             lazyWorkers.put(worker.getKey(), workerHolder);
-            if (lazyWorkers.size() == maxWorkers) {
-              // only mark excess workers as lazy and allow their cleanup
-              break;
-            }
           }
         }
         catch (Exception e) {
           throw new RuntimeException(e);
         }
       }
-      return getLazyWorkers();
     }
+
+    return getLazyWorkers();
   }
 
   private boolean isWorkerOkForMarkingLazy(Worker worker)
@@ -1424,11 +1432,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
+  @SuppressWarnings("GuardedBy") // Read on tasks is safe
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    synchronized (statusLock) {
-      return ImmutableList.copyOf(tasks.values());
-    }
+    return ImmutableList.copyOf(tasks.values());
   }
 
   @SuppressWarnings("GuardedBy") // Read on tasks is safe

@@ -35,16 +35,20 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -93,11 +97,36 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class MSQSelectTest extends MSQTestBase
 {
+
+  public static final String QUERY_RESULTS_WITH_DURABLE_STORAGE = "query_results_with_durable_storage";
+
+  public static final String QUERY_RESULTS_WITH_DEFAULT = "query_results_with_default_storage";
+
+  public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
+                  .put(
+                      MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                  )
+                  .build();
+
+
+  public static final Map<String, Object> QUERY_RESULTS_WITH_DEFAULT_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                  )
+                  .build();
+
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
@@ -105,7 +134,9 @@ public class MSQSelectTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
+        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -142,6 +173,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -171,6 +205,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
@@ -226,6 +263,9 @@ public class MSQSelectTest extends MSQTestBase
                               .build())
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -291,6 +331,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(expectedColumnMappings)
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
@@ -350,6 +393,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
@@ -381,6 +427,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
@@ -413,6 +462,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
@@ -455,6 +507,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
@@ -519,6 +574,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                        ))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
@@ -573,6 +631,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
@@ -639,6 +700,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
@@ -666,6 +730,9 @@ public class MSQSelectTest extends MSQTestBase
                                    .build())
                    .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
@@ -719,6 +786,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
@@ -761,6 +831,9 @@ public class MSQSelectTest extends MSQTestBase
                    .query(query)
                    .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "cnt"))))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -929,6 +1002,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -984,6 +1060,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
@@ -1060,6 +1139,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
@@ -1134,6 +1216,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
@@ -1226,6 +1311,9 @@ public class MSQSelectTest extends MSQTestBase
                     )
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
+                .destination(isDurableStorageDestination()
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
                 .build()
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -1336,6 +1424,9 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -1401,6 +1492,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(expectedResultSignature)
         .setQueryContext(context)
@@ -1469,6 +1563,9 @@ public class MSQSelectTest extends MSQTestBase
                                        new ColumnMapping("a0", "col")
                                    )))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
@@ -1520,6 +1617,9 @@ public class MSQSelectTest extends MSQTestBase
                        )
                        ))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(expectedMultiValueFooRowsGroup())
@@ -1590,6 +1690,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
@@ -1657,6 +1760,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(expected)
@@ -1773,6 +1879,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
@@ -1824,6 +1933,9 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
@@ -1831,7 +1943,7 @@ public class MSQSelectTest extends MSQTestBase
     if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
       new File(
           localFileStorageDir,
-          DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
+          DurableStorageUtils.getWorkerOutputSuccessFilePath("query-test-query", 0, 0)
       );
 
       Mockito.verify(localFileStorageConnector, Mockito.times(2))
@@ -1840,70 +1952,7 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
-  public void testSelectRowsGetTruncatedInReports() throws IOException
-  {
-    RowSignature dummyRowSignature = RowSignature.builder().add("timestamp", ColumnType.LONG).build();
-
-    final int numFiles = 200;
-
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
-
-    String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
-
-    List<Object[]> result = new ArrayList<>();
-    for (int i = 0; i < Limits.MAX_SELECT_RESULT_ROWS; ++i) {
-      result.add(new Object[]{1});
-    }
-
-    Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.toString());
-
-    testSelectQuery()
-        .setSql(StringUtils.format(
-            " SELECT 1 as \"timestamp\"\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{ \"files\": [%s],\"type\":\"local\"}',\n"
-            + "    '{\"type\": \"csv\", \"hasHeaderRow\": true}',\n"
-            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}]'\n"
-            + "  )\n"
-            + ")",
-            externalFiles
-        ))
-        .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQSpec(
-            MSQSpec
-                .builder()
-                .query(newScanQueryBuilder()
-                           .dataSource(new ExternalDataSource(
-                               new LocalInputSource(null, null, Collections.nCopies(numFiles, toRead)),
-                               new CsvInputFormat(null, null, null, true, 0),
-                               RowSignature.builder().add("timestamp", ColumnType.STRING).build()
-                           ))
-                           .intervals(querySegmentSpec(Filtration.eternity()))
-                           .columns("v0")
-                           .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
-                           .context(defaultScanQueryContext(
-                               queryContext,
-                               RowSignature.builder().add("v0", ColumnType.LONG).build()
-                           ))
-                           .build()
-                )
-                .columnMappings(new ColumnMappings(
-                    ImmutableList.of(
-                        new ColumnMapping("v0", "timestamp")
-                    )
-                ))
-                .tuningConfig(MSQTuningConfig.defaultConfig())
-                .build())
-        .setQueryContext(queryContext)
-        .setExpectedResultRows(result)
-        .verifyResults();
-  }
-
-  @Test
-  public void testSelectRowsGetUntruncatedInReportsByDefault() throws IOException
+  public void testSelectRowsGetUntruncatedByDefault() throws IOException
   {
     RowSignature dummyRowSignature = RowSignature.builder().add("timestamp", ColumnType.LONG).build();
 
@@ -1958,9 +2007,112 @@ public class MSQSelectTest extends MSQTestBase
                     )
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
+                .destination(isDurableStorageDestination()
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
                 .build())
         .setQueryContext(context)
         .setExpectedResultRows(result)
+        .verifyResults();
+  }
+
+  @Test
+  public void testJoinUsesDifferentAlgorithm()
+  {
+
+    // This test asserts that the join algorithnm used is a different one from that supplied. In sqlCompatible() mode
+    // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
+    // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
+    // here, hence ignoring in sqlCompatible() mode
+    if (NullHandling.sqlCompatible()) {
+      return;
+    }
+
+    RowSignature rowSignature = RowSignature.builder().add("cnt", ColumnType.LONG).build();
+
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE.toString());
+
+    Query<?> expectedQuery;
+
+    expectedQuery = GroupByQuery
+        .builder()
+        .setDataSource(
+            join(
+                new QueryDataSource(
+                    newScanQueryBuilder()
+                        .dataSource("foo")
+                        .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
+                        .columns("v0")
+                        .context(defaultScanQueryContext(
+                            queryContext,
+                            RowSignature.builder().add("v0", ColumnType.LONG).build()
+                        ))
+                        .intervals(querySegmentSpec(Intervals.ETERNITY))
+                        .build()
+                ),
+                new QueryDataSource(
+                    GroupByQuery.builder()
+                                .setDataSource("foo")
+                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                .setDimensions(
+                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                )
+                                .setContext(queryContext)
+                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                .setGranularity(Granularities.ALL)
+                                .build()
+
+                ),
+                "j0.",
+                "(floor(100) == \"j0.d0\")",
+                JoinType.LEFT
+            )
+        )
+        .setAggregatorSpecs(
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("a0"),
+                new SelectorDimFilter("j0.d1", null, null),
+                "a0"
+            )
+        )
+        .setContext(queryContext)
+        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    testSelectQuery()
+        .setSql(
+            "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) AS cnt "
+            + "FROM foo"
+        )
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("a0", "cnt")
+                    )
+                ))
+                .destination(isDurableStorageDestination()
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(queryContext)
+        .addAdhocReportAssertions(
+            msqTaskReportPayload -> msqTaskReportPayload.getStages().getStages().stream().noneMatch(
+                stage -> stage.getStageDefinition()
+                              .getProcessorFactory()
+                              .getClass()
+                              .equals(SortMergeJoinFrameProcessorFactory.class)
+            ),
+            "assert the query didn't use sort merge"
+        )
+        .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
         .verifyResults();
   }
 
@@ -2007,5 +2159,10 @@ public class MSQSelectTest extends MSQTestBase
                                                    .put("groupByEnableMultiValueUnnesting", value)
                                                    .build();
     return localContext;
+  }
+
+  public boolean isDurableStorageDestination()
+  {
+    return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName) || QUERY_RESULTS_WITH_DEFAULT_CONTEXT.equals(context);
   }
 }

@@ -1,0 +1,25 @@
+{
+    "testId": "window_functions_optimization_plan",
+    "type": "group",
+    "description": "Window function tests: make sure tests return correct resuts, matching plans are in plans directory",
+    "categories": [ "functional" ],
+    "matrices": [
+        {
+            "query-file": ".*.sql",
+            "schema": "dfs.subqueries",
+            "output-format": "tsv",
+            "expected-file": ".*.res",
+            "verification-type": [
+                "regex"
+            ]
+        }
+    ],
+    "datasources": [
+        {
+            "mode": "cp",
+            "src": "Datasources/subqueries",
+            "dest": "subqueries"
+        }
+    ]
+}
+

@@ -241,7 +241,8 @@ public class DumpSegment extends GuiceRunnable
         null,
         EnumSet.allOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null
     );
     withOutputStream(
         new Function<OutputStream, Object>()
