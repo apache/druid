@@ -23,6 +23,7 @@ package org.apache.druid.msq.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -359,7 +360,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         MSQTestOverlordServiceClient.CREATED_TIME,
         null,
         MSQTestOverlordServiceClient.DURATION,
-        new ResultSetInformation(5L, 0L, null, "foo1", null, null),
+        new ResultSetInformation(NullHandling.sqlCompatible() ? 6L : 5L, 0L, null, "foo1", null, null),
         null
     );
     Assert.assertEquals(expected, actual);
@@ -368,9 +369,11 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
     Assert.assertEquals(expected, getResponse.getEntity());
 
-    Response resultsResponse = resource.doGetResults(actual.getQueryId(),
-                                                     null,
-                                                     SqlStatementResourceTest.makeOkRequest());
+    Response resultsResponse = resource.doGetResults(
+        actual.getQueryId(),
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
     Assert.assertNull(resultsResponse.getEntity());
   }
@@ -399,7 +402,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         MSQTestOverlordServiceClient.CREATED_TIME,
         null,
         MSQTestOverlordServiceClient.DURATION,
-        new ResultSetInformation(5L, 0L, null, "foo1", null, null),
+        new ResultSetInformation(NullHandling.sqlCompatible() ? 6L : 5L, 0L, null, "foo1", null, null),
         null
     );
     Assert.assertEquals(expected, actual);
@@ -408,9 +411,11 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
     Assert.assertEquals(expected, getResponse.getEntity());
 
-    Response resultsResponse = resource.doGetResults(actual.getQueryId(),
-                                                     null,
-                                                     SqlStatementResourceTest.makeOkRequest());
+    Response resultsResponse = resource.doGetResults(
+        actual.getQueryId(),
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
     Assert.assertNull(resultsResponse.getEntity());
   }
