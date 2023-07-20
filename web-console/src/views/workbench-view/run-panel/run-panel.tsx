@@ -109,6 +109,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const finalizeAggregations = getFinalizeAggregations(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
+  const selectDestination = queryContext.selectDestination ?? 'TASK_REPORT';
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -317,6 +318,23 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           shouldDismissPopover={false}
                           onClick={() =>
                             changeQueryContext(deepSet(queryContext, 'sqlJoinAlgorithm', o))
+                          }
+                        />
+                      ))}
+                    </MenuItem>
+                    <MenuItem
+                      icon={IconNames.MANUALLY_ENTERED_DATA}
+                      text="SELECT destination"
+                      label={selectDestination}
+                    >
+                      {['TASK_REPORT', 'DURABLE_STORAGE'].map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(selectDestination === o)}
+                          text={o}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext(deepSet(queryContext, 'selectDestination', o))
                           }
                         />
                       ))}
