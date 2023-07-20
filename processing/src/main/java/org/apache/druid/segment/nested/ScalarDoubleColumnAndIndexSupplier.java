@@ -52,7 +52,6 @@ import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -66,6 +65,7 @@ import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -229,13 +229,10 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   {
     @Nullable
     @Override
-    public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+    public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                                        .castTo(ExpressionType.DOUBLE);
-      if (value == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
-      }
       if (eval.isNumericNull()) {
         // value wasn't null, but not a number?
         return null;

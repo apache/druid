@@ -99,11 +99,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       throw InvalidInput.exception("Invalid equality filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
-    if (matchValue == null) {
-      throw InvalidInput.exception("Invalid equality filter on column [%s], matchValue cannot be null", column);
-    }
     this.matchValue = matchValue;
     this.matchValueEval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(matchValueType), matchValue);
+    if (matchValueEval.value() == null) {
+      throw InvalidInput.exception("Invalid equality filter on column [%s], matchValue cannot be null", column);
+    }
     this.filterTuning = filterTuning;
     this.predicateFactory = new EqualityPredicateFactory(matchValueEval);
   }
@@ -239,6 +239,8 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
 
     final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
     if (valueIndexes != null) {
+      // matchValueEval.value() cannot be null here due to check in the constructor
+      //noinspection DataFlowIssue
       return valueIndexes.forValue(matchValueEval.value(), matchValueType);
     }
 

@@ -40,5 +40,5 @@ public interface ArrayElementIndexes
    *                    null if an index connot be computed for the supplied value type
    */
   @Nullable
-  BitmapColumnIndex containsValue(Object value, TypeSignature<ValueType> valueType);
+  BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> valueType);
 }

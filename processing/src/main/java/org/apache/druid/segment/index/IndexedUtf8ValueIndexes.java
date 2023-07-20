@@ -37,6 +37,7 @@ import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -101,12 +102,9 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
 
   @Nullable
   @Override
-  public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+  public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
   {
     if (valueType.isPrimitive()) {
-      if (value == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
-      }
       return forValue(
           ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                   .castTo(ExpressionType.STRING)

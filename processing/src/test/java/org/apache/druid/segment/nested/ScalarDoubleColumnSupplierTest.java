@@ -302,7 +302,6 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertNull(valueSelector.getObject());
           Assert.assertTrue(valueSelector.isNull());
           Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
-          Assert.assertFalse(valueIndexes.forValue(null, ColumnType.DOUBLE).computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))

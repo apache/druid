@@ -57,6 +57,7 @@ import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -347,13 +348,10 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   {
     @Nullable
     @Override
-    public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+    public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                                        .castTo(ExpressionType.fromColumnTypeStrict(logicalType));
-      if (value == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
-      }
       final Object[] arrayToMatch = eval.asArray();
       Indexed elements;
       final int elementOffset;
@@ -425,7 +423,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
     @Nullable
     @Override
-    public BitmapColumnIndex containsValue(Object value, TypeSignature<ValueType> elementValueType)
+    public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value)
                                        .castTo(ExpressionType.fromColumnTypeStrict(logicalType.getElementType()));

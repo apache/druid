@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface ValueIndexes
@@ -42,5 +43,5 @@ public interface ValueIndexes
    *                    connot be computed for the supplied value type
    */
   @Nullable
-  BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType);
+  BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType);
 }

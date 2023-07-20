@@ -299,7 +299,6 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertNull(dimSelector.getObject());
         Assert.assertNull(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-        Assert.assertFalse(valueIndexes.forValue(null, ColumnType.STRING).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));

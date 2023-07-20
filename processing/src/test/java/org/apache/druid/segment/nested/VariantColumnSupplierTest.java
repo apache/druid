@@ -456,7 +456,6 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         }
         Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
         if (expectedType.getSingleType() != null) {
-          Assert.assertFalse(valueIndexes.forValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
           Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
         }
       }
