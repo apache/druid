@@ -42,7 +42,7 @@ Note that this endpoint returns an `HTTP 200 Success` code message even if the `
 
 The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history. 
 
-* `X-Druid-Author`(optional)
+* `X-Druid-Author` (optional)
   * Type: String
   * A string representing the author making the configuration change.
 * `X-Druid-Comment` (optional)
@@ -337,7 +337,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ## Get audit history for all datasources
 
-Retrieves the audit history of rules for all datasources. 
+Retrieves the audit history of rules for all datasources over an interval of time. The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
 
 ### URL
 
@@ -348,8 +348,8 @@ Retrieves the audit history of rules for all datasources.
 Note that the following query parameters cannot be chained.
 
 * `inverval` (optional)
-  * Type: ISO 8601 delimited with `/`. For example, `2023-07-13/2023-07-19`.
-  * Limit the number of results to the specified time interval. The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
+  * Type: ISO 8601.
+  * Limit the number of results to the specified time interval. Delimit with `/`. For example, `2023-07-13/2023-07-19`.
 * `count` (optional)
   * Type: Int
   * Limit the number of results to the last `n` entries.
