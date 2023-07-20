@@ -605,14 +605,14 @@ public class ControllerImpl implements Controller
       if (MSQControllerTask.writeResultsToDurableStorage(task.getQuerySpec())) {
         taskContextOverridesBuilder.put(
             MultiStageQueryContext.CTX_SELECT_DESTINATION,
-            MSQSelectDestination.DURABLE_STORAGE.name()
+            MSQSelectDestination.DURABLESTORAGE.getName()
         );
       } else {
         // we need not pass the value 'TaskReport' to the worker since the worker impl does not do anything in such a case.
         // but we are passing it anyway for completeness
         taskContextOverridesBuilder.put(
             MultiStageQueryContext.CTX_SELECT_DESTINATION,
-            MSQSelectDestination.TASK_REPORT.name()
+            MSQSelectDestination.TASKREPORT.getName()
         );
       }
     }
