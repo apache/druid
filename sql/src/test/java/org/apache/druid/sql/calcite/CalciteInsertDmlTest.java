@@ -99,7 +99,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
-                .filters(selector("dim2", "a", null))
+                .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("v0")
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
@@ -129,7 +129,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                             newScanQueryBuilder()
                                 .dataSource("foo")
                                 .intervals(querySegmentSpec(Filtration.eternity()))
-                                .filters(selector("dim2", "a", null))
+                                .filters(equality("dim2", "a", ColumnType.STRING))
                                 .columns("dim1", "dim2")
                                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                                 .build()
@@ -1635,11 +1635,96 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                             new DruidExceptionMatcher(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
-                                "general"
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Column name must be provided and non-empty"
                             )
-                                .expectMessageContains(
-                                    "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Column name must be provided and non-empty"
-                                )
+                        )
+                        .verify();
+  }
+
+  @Test
+  public void testErrorWhenBothRowSignatureAndExtendsProvidedToExtern()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}]'\n"
+                             + ")\n"
+                             + ") EXTEND (\"time\" VARCHAR, \"channel\" VARCHAR)\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "EXTERN requires either a [signature] value or an EXTEND clause, but not both"
+                            )
+                        )
+                        .verify();
+  }
+
+  @Test
+  public void testErrorWhenNoneOfRowSignatureAndExtendsProvidedToExtern()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\": \"json\"}'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "EXTERN requires either a [signature] value or an EXTEND clause"
+                            )
+                        )
+                        .verify();
+  }
+
+  @Test
+  public void testErrorWhenInputSourceInvalid()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"local\"}',\n"
+                             + "'{\"type\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}]'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "Invalid value for the field [inputSource]. Reason:"
+                            )
                         )
                         .verify();
   }

@@ -988,6 +988,48 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArrayComparison()
+  {
+    Expr.ObjectBinding bindings = InputBindings.forInputSuppliers(
+        ImmutableMap.<String, InputBindings.InputSupplier<?>>builder()
+                    .put(
+                        "stringArray",
+                        InputBindings.inputSupplier(ExpressionType.STRING_ARRAY, () -> new Object[]{"a", "b", null, "c"})
+                    )
+                    .put(
+                        "longArray",
+                        InputBindings.inputSupplier(ExpressionType.LONG_ARRAY, () -> new Object[]{1L, null, 2L, 3L})
+                    )
+                    .put(
+                        "doubleArray",
+                        InputBindings.inputSupplier(ExpressionType.DOUBLE_ARRAY, () -> new Object[]{1.1, 2.2, 3.3, null})
+                    )
+                    .build()
+    );
+
+    Assert.assertEquals(0L, eval("['a','b',null,'c'] > stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("['a','b',null,'c'] >= stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("['a','b',null,'c'] == stringArray", bindings).value());
+    Assert.assertEquals(0L, eval("['a','b',null,'c'] != stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("['a','b',null,'c'] <= stringArray", bindings).value());
+    Assert.assertEquals(0L, eval("['a','b',null,'c'] < stringArray", bindings).value());
+
+    Assert.assertEquals(0L, eval("[1,null,2,3] > longArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1,null,2,3] >= longArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1,null,2,3] == longArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1,null,2,3] != longArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1,null,2,3] <= longArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1,null,2,3] < longArray", bindings).value());
+
+    Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] > doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] >= doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] == doubleArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] != doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] <= doubleArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] < doubleArray", bindings).value());
+  }
+
+  @Test
   public void testValueOrDefault()
   {
     ExprEval<?> longNull = ExprEval.ofLong(null);

@@ -732,7 +732,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
             RESULT_ROWS,
-            ImmutableList.of(new PageInformation(3L, 8L, 0L))
+            ImmutableList.of(new PageInformation(0, 3L, 8L))
         ),
         null
     )), objectMapper.writeValueAsString(response.getEntity()));
@@ -783,7 +783,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       assertExceptionMessage(
           resource.doGetResults(queryID, 0L, makeOkRequest()),
           StringUtils.format(
-              "Query[%s] failed. Hit status api for more details.",
+              "Query[%s] failed. Check the status api for more details.",
               queryID
           ),
           Response.Status.BAD_REQUEST

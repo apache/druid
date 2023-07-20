@@ -19,10 +19,11 @@
 import { Button, Code, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { QueryResult } from '@druid-toolkit/query';
+import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
 import classNames from 'classnames';
-import type { QueryResult } from 'druid-query-toolkit';
-import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
@@ -329,8 +330,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const queryPrefixes = query.getPrefixQueries();
   const extractedCtes = query.extractCteHelpers();
 
-  const onUserCancel = () => {
-    queryManager.cancelCurrent();
+  const onUserCancel = (message?: string) => {
+    queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
   };
 

@@ -22,7 +22,7 @@ import React from 'react';
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { compact, deepGet, deepSet, oneOf, typeIs } from '../../utils';
+import { compact, deepGet, deepSet, oneOf, typeIs, typeIsKnown } from '../../utils';
 import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 
 export interface InputFormat {
@@ -49,13 +49,25 @@ export interface InputFormat {
   readonly valueFormat?: InputFormat;
 }
 
+const KNOWN_TYPES = [
+  'json',
+  'csv',
+  'tsv',
+  'parquet',
+  'orc',
+  'avro_ocf',
+  'avro_stream',
+  'regex',
+  'kafka',
+  'javascript',
+];
 function generateInputFormatFields(streaming: boolean) {
   return compact([
     {
       name: 'type',
       label: 'Input format',
       type: 'string',
-      suggestions: ['json', 'csv', 'tsv', 'parquet', 'orc', 'avro_ocf', 'avro_stream', 'regex'],
+      suggestions: KNOWN_TYPES,
       required: true,
       info: (
         <>
@@ -74,7 +86,7 @@ function generateInputFormatFields(streaming: boolean) {
       name: 'featureSpec',
       label: 'JSON parser features',
       type: 'json',
-      defined: typeIs('json'),
+      defined: typeIsKnown(KNOWN_TYPES, 'json'),
       info: (
         <>
           <p>
@@ -95,7 +107,7 @@ function generateInputFormatFields(streaming: boolean) {
       ? {
           name: 'assumeNewlineDelimited',
           type: 'boolean',
-          defined: typeIs('json'),
+          defined: typeIsKnown(KNOWN_TYPES, 'json'),
           disabled: inputFormat => Boolean(inputFormat.useJsonNodeReader),
           defaultValue: false,
           info: (
@@ -125,7 +137,7 @@ function generateInputFormatFields(streaming: boolean) {
           name: 'useJsonNodeReader',
           label: 'Use JSON node reader',
           type: 'boolean',
-          defined: typeIs('json'),
+          defined: typeIsKnown(KNOWN_TYPES, 'json'),
           disabled: inputFormat => Boolean(inputFormat.assumeNewlineDelimited),
           defaultValue: false,
           info: (
@@ -154,26 +166,26 @@ function generateInputFormatFields(streaming: boolean) {
       type: 'string',
       defaultValue: '\t',
       suggestions: ['\t', ';', '|', '#'],
-      defined: typeIs('tsv'),
+      defined: typeIsKnown(KNOWN_TYPES, 'tsv'),
       info: <>A custom delimiter for data values.</>,
     },
     {
       name: 'pattern',
       type: 'string',
-      defined: typeIs('regex'),
+      defined: typeIsKnown(KNOWN_TYPES, 'regex'),
       required: true,
     },
     {
       name: 'function',
       type: 'string',
-      defined: typeIs('javascript'),
+      defined: typeIsKnown(KNOWN_TYPES, 'javascript'),
       required: true,
     },
     {
       name: 'skipHeaderRows',
       type: 'number',
       defaultValue: 0,
-      defined: typeIs('csv', 'tsv'),
+      defined: typeIsKnown(KNOWN_TYPES, 'csv', 'tsv'),
       min: 0,
       info: (
         <>
@@ -184,7 +196,7 @@ function generateInputFormatFields(streaming: boolean) {
     {
       name: 'findColumnsFromHeader',
       type: 'boolean',
-      defined: typeIs('csv', 'tsv'),
+      defined: typeIsKnown(KNOWN_TYPES, 'csv', 'tsv'),
       required: true,
       info: (
         <>
@@ -214,14 +226,14 @@ function generateInputFormatFields(streaming: boolean) {
       type: 'string',
       defaultValue: '\x01',
       suggestions: ['\x01', '\x00'],
-      defined: typeIs('csv', 'tsv', 'regex'),
+      defined: typeIsKnown(KNOWN_TYPES, 'csv', 'tsv', 'regex'),
       info: <>A custom delimiter for multi-value dimensions.</>,
     },
     {
       name: 'binaryAsString',
       type: 'boolean',
       defaultValue: false,
-      defined: typeIs('parquet', 'orc', 'avro_ocf', 'avro_stream'),
+      defined: typeIsKnown(KNOWN_TYPES, 'parquet', 'orc', 'avro_ocf', 'avro_stream'),
       info: (
         <>
           Specifies if the binary column which is not logically marked as a string should be treated
@@ -240,7 +252,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka timestamp column name',
     type: 'string',
     defaultValue: 'kafka.timestamp',
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     info: `Name of the column for the kafka record's timestamp.`,
   },
 
@@ -263,7 +275,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
       'regex',
     ],
     placeholder: `(don't parse Kafka key)`,
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     info: (
       <>
         <p>The parser used to parse the key of the Kafka message.</p>
@@ -476,7 +488,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'headerFormat.type',
     label: 'Kafka header format type',
     type: 'string',
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     placeholder: `(don't parse Kafka herders)`,
     suggestions: [undefined, 'string'],
   },
