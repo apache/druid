@@ -99,7 +99,7 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
   ) throws IOException
   {
     if (dictionarySerialized) {
-      throw new ISE("String dictionary already serialized for column [%s], cannot serialize again", name);
+      throw new ISE("Long dictionary already serialized for column [%s], cannot serialize again", name);
     }
 
     // null is always 0

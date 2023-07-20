@@ -172,7 +172,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   ) throws IOException
   {
     if (dictionarySerialized) {
-      throw new ISE("String dictionary already serialized for column [%s], cannot serialize again", name);
+      throw new ISE("Value dictionaries already serialized for column [%s], cannot serialize again", name);
     }
 
     // null is always 0
