@@ -43,12 +43,12 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -248,8 +248,8 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
     DimensionSelector dimSelector = column.makeDimensionSelector(offset, null);
 
-    StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
-    DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
+    StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
+    DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
@@ -283,7 +283,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
                                          .computeBitmapResult(resultFactory)
                                          .get(i));
-        Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
 
         Assert.assertTrue(dimSelector.makeValueMatcher(row).matches());
         Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
@@ -298,7 +298,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
 
         Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
                                         .computeBitmapResult(resultFactory)
                                         .get(i));

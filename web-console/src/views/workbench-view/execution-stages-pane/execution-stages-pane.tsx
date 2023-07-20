@@ -104,6 +104,31 @@ function inputLabelContent(stage: StageDefinition, inputIndex: number) {
   );
 }
 
+function formatInputLabel(stage: StageDefinition, inputIndex: number) {
+  const { input, broadcast } = stage.definition;
+  const stageInput = input[inputIndex];
+  let ret = 'Input ';
+  switch (stageInput.type) {
+    case 'stage':
+      ret += `Stage${stageInput.stage}`;
+      break;
+
+    case 'table':
+      ret += stageInput.dataSource;
+      break;
+
+    case 'external':
+      ret += `${stageInput.inputSource.type} external`;
+      break;
+  }
+
+  if (broadcast?.includes(inputIndex)) {
+    ret += ` (broadcast)`;
+  }
+
+  return ret;
+}
+
 export interface ExecutionStagesPaneProps {
   execution: Execution;
   onErrorClick?(): void;
@@ -354,24 +379,30 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
 
   function dataProcessedInput(stage: StageDefinition, inputNumber: number) {
     const inputCounter: CounterName = `input${inputNumber}`;
-    if (!stages.hasCounterForStage(stage, inputCounter)) return;
-    const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
-
+    const hasCounter = stages.hasCounterForStage(stage, inputCounter);
     const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
+    const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
     return (
       <div
         className="data-transfer"
         key={inputNumber}
         title={
           bytes
-            ? `Input${inputNumber} uncompressed size: ${formatBytesCompact(
+            ? `${formatInputLabel(
+                stage,
+                inputNumber,
+              )} (input${inputNumber}) uncompressed size: ${formatBytesCompact(
                 bytes,
               )} ${NOT_SIZE_ON_DISK}`
             : undefined
         }
       >
         <BracedText
-          text={formatRows(stages.getTotalCounterForStage(stage, inputCounter, 'rows'))}
+          text={
+            hasCounter
+              ? formatRows(stages.getTotalCounterForStage(stage, inputCounter, 'rows'))
+              : ''
+          }
           braces={rowsValues}
         />
         {inputFileCount ? (
