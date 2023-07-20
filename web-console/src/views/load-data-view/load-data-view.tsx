@@ -74,6 +74,7 @@ import {
   adjustForceGuaranteedRollup,
   adjustId,
   BATCH_INPUT_FORMAT_FIELDS,
+  chooseByBestTimestamp,
   cleanSpec,
   computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
@@ -114,7 +115,6 @@ import {
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
   normalizeSpec,
-  NUMERIC_TIME_FORMATS,
   possibleDruidFormatForValues,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
@@ -279,16 +279,7 @@ function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec 
     },
   );
 
-  return (
-    // Prefer a suggestion that has "time" in the name and is not a numeric format
-    timestampSpecs.find(
-      ts => /time/i.test(ts.column) && !NUMERIC_TIME_FORMATS.includes(ts.format),
-    ) ||
-    timestampSpecs.find(ts => /time/i.test(ts.column)) || // Otherwise anything that has "time" in the name
-    timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
-    timestampSpecs[0] || // Fall back to the first one
-    CONSTANT_TIMESTAMP_SPEC // Ok, empty it is...
-  );
+  return chooseByBestTimestamp(timestampSpecs) || CONSTANT_TIMESTAMP_SPEC;
 }
 
 type Step =
@@ -2385,7 +2376,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   checked={schemaMode === 'fixed'}
                   onChange={() =>
                     this.setState({
-                      newSchemaMode: schemaMode === 'fixed' ? 'string-only-discovery' : 'fixed',
+                      newSchemaMode: schemaMode === 'fixed' ? 'type-aware-discovery' : 'fixed',
                     })
                   }
                   label="Explicitly specify schema"
@@ -2654,8 +2645,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>Making this change will reset all schema configuration done so far.</p>
         {autoDetect && (
-          <Switch
-            checked={newSchemaMode === 'type-aware-discovery'}
+          <RadioGroup
+            label="Schemaless mode"
+            selectedValue={newSchemaMode}
             onChange={() => {
               this.setState({
                 newSchemaMode:
@@ -2665,18 +2657,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               });
             }}
           >
-            Use the new type-aware schema discovery capability. Avoid this if you are appending to a
-            datasource created with string-only schema discovery of Druid and want to preserve
-            schema compatibility. For more information see the{' '}
-            <ExternalLink
-              href={`${getLink(
-                'DOCS',
-              )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
-            >
-              documentation
-            </ExternalLink>
-            .
-          </Switch>
+            <Radio value="type-aware-discovery">
+              Use the new type-aware schema discovery capability to discover columns according to
+              data type. Columns with multiple values will be ingested as ARRAY types. For more
+              information see the{' '}
+              <ExternalLink
+                href={`${getLink(
+                  'DOCS',
+                )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+              >
+                documentation
+              </ExternalLink>
+              .
+            </Radio>
+            <Radio value="string-only-discovery">
+              Use classic string-only schema discovery to discover all new columns as strings.
+              Columns with multiple values will be ingested as multi-value-strings.
+            </Radio>
+          </RadioGroup>
         )}
       </AsyncActionDialog>
     );

@@ -94,19 +94,18 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
 }
 
 export function BooleanFilterInput({ filter, onChange, key }: FilterRendererProps) {
-  const filterValue = filter ? filter.value : '';
   return (
     <HTMLSelect
       className="boolean-filter-input"
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || 'all'}
+      value={filter?.value || ''}
       fill
     >
-      <option value="all">Show all</option>
-      <option value="true">true</option>
-      <option value="false">false</option>
+      <option value="">Show all</option>
+      <option value="=true">true</option>
+      <option value="=false">false</option>
     </HTMLSelect>
   );
 }

@@ -1017,7 +1017,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (v instanceof Number) {
                 l = ((Number) v).longValue();
               } else {
-                l = GuavaUtils.tryParseLong(String.valueOf(v));
+                final String s = String.valueOf(v);
+                l = GuavaUtils.tryParseLong(s);
+                if (l == null) {
+                  final Double d = Doubles.tryParse(s);
+                  if (d != null) {
+                    l = d.longValue();
+                  }
+                }
               }
               if (l != null) {
                 longVector[i] = l;
