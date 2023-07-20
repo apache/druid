@@ -37,9 +37,9 @@ You can use each endpoint with the ports for each type of service.  The followin
 |Service|Port address|
 | ----------- | ----------- |
 | Coordinator|8081|
-| Overlord   |8081|
-| Router   |8888|
-| Broker   |8082|
+| Overlord|8081|
+| Router|8888|
+| Broker|8082|
 | Historical|8083|
 | MiddleManager|8091|
 
@@ -51,15 +51,18 @@ To retrieve the service information of other services, query the individual port
 
 #### URL
 
-<code class="getAPI">GET</code> `/status`
+<code class="getAPI">GET</code> <code>/status</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved service information*  
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -69,10 +72,13 @@ To retrieve the service information of other services, query the individual port
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -81,6 +87,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
@@ -190,15 +197,18 @@ Additional checks for readiness should use the [Historical segment readiness](#g
 
 #### URL
 
-<code class="getAPI">GET</code> `/status/health`
+<code class="getAPI">GET</code> <code>/status/health</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved service health*  
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -206,10 +216,13 @@ Additional checks for readiness should use the [Historical segment readiness](#g
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/health"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /status/health HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -218,11 +231,14 @@ Host: http://ROUTER_IP:ROUTER_PORT
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
+
   ```json
   true
   ```
+
 </details>
 
 
@@ -234,15 +250,18 @@ To retrieve the service configuration property of other services, query the indi
 
 #### URL
 
-<code class="getAPI">GET</code> `/status/properties`
+<code class="getAPI">GET</code> <code>/status/properties</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
-*Successfully retrieved service configuration properties*  
+
+*Successfully retrieved service configuration properties* 
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -250,10 +269,13 @@ To retrieve the service configuration property of other services, query the indi
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/properties"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /status/properties HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -262,6 +284,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
 
@@ -361,6 +384,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "druid.server.hiddenProperties": "[\"druid.s3.accessKey\",\"druid.s3.secretKey\",\"druid.metadata.storage.connector.password\", \"password\", \"key\", \"token\", \"pwd\"]"
 }
 ```
+
 </details>
 
 
@@ -373,15 +397,18 @@ For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered"
 
 #### URL
 
-<code class="getAPI">GET</code> `/status/selfDiscovered/status`
+<code class="getAPI">GET</code> <code>/status/selfDiscovered/status</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Node was successfully added to the cluster*  
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -389,10 +416,13 @@ For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered"
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/selfDiscovered/status"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /status/selfDiscovered/status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -401,13 +431,16 @@ Host: http://ROUTER_IP:ROUTER_PORT
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
+
   ```json
   {
     "selfDiscovered": true
   }
   ```
+
 </details>
 
 
@@ -418,19 +451,24 @@ Use this endpoint for monitoring checks that are unable to examine the response 
 
 #### URL
 
-<code class="getAPI">GET</code> `/status/selfDiscovered`
+<code class="getAPI">GET</code> <code>/status/selfDiscovered</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved node status*  
 
 <!--503 SERVICE UNAVAILABLE-->
+
 <br/>
+
 *Unsuccessful node self-discovery*  
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -438,10 +476,13 @@ Use this endpoint for monitoring checks that are unable to examine the response 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/selfDiscovered"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /status/selfDiscovered HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -450,6 +491,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 A successful response to this endpoint results in an empty response body.
 
 ## Coordinator
@@ -460,15 +502,18 @@ Retrieves the address of the current leader Coordinator of the cluster. If any r
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/coordinator/v1/leader`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/leader</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
-*Successfully retrieved leader Coordinator address*  
+
+*Successfully retrieved leader Coordinator address* 
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -476,23 +521,31 @@ Retrieves the address of the current leader Coordinator of the cluster. If any r
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/leader"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/coordinator/v1/leader HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
+
   ```json
   http://localhost:8081
   ```
+
 </details>
 
 ### Get Coordinator leader status
@@ -503,18 +556,22 @@ Use this endpoint as a load balancer status check when you only want the active 
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/coordinator/v1/isLeader`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/isLeader</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Current server is the leader*  
 
 <!--404 NOT FOUND->
+
 <br/>
+
 *Current server is not the leader*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -524,25 +581,33 @@ Use this endpoint as a load balancer status check when you only want the active 
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://COORDINATOR_IP:COORDINATOR_PORT/druid/coordinator/v1/isLeader"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/coordinator/v1/isLeader HTTP/1.1
 Host: http://COORDINATOR_IP:COORDINATOR_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
+
   ```json
   {
     "leader": true
   }
   ```
+
 </details>
 
 
@@ -556,15 +621,18 @@ Retrieves the address of the current leader Overlord of the cluster. In a cluste
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/leader`
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/leader</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved leader Overlord address*  
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -572,18 +640,24 @@ Retrieves the address of the current leader Overlord of the cluster. In a cluste
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/leader"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/indexer/v1/leader HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
 
@@ -602,17 +676,22 @@ Use this endpoint as a load balancer status check when you only want the active 
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/isLeader`
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/isLeader</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Current server is the leader*  
-<!--404 NOT FOUND->
+
+<!--404 NOT FOUND-->
+
 <br/>
+
 *Current server is not the leader*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -622,18 +701,24 @@ Use this endpoint as a load balancer status check when you only want the active 
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://OVERLORD_IP:OVERLORD_PORT/druid/indexer/v1/isLeader"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/indexer/v1/isLeader HTTP/1.1
 Host: http://OVERLORD_IP:OVERLORD_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
 
@@ -642,6 +727,7 @@ Host: http://OVERLORD_IP:OVERLORD_PORT
     "leader": true
   }
   ```
+
 </details>
 
 
@@ -653,14 +739,16 @@ Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by t
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/worker/v1/enabled`
+<code class="getAPI">GET</code> <code>/druid/worker/v1/enabled</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved MiddleManager state*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -670,18 +758,24 @@ Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by t
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/enabled"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/worker/v1/enabled HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
@@ -690,6 +784,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
     "localhost:8091": true
   }
   ```
+
 </details>
 
 ### Get active tasks 
@@ -698,15 +793,18 @@ Retrieves a list of active tasks being run on MiddleManager. Returns JSON list o
 
 #### URL 
 
-<code class="getAPI">GET</code> `/druid/worker/v1/tasks`
+<code class="getAPI">GET</code> <code>/druid/worker/v1/tasks</code>
 
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved active tasks*  
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -714,18 +812,24 @@ Retrieves a list of active tasks being run on MiddleManager. Returns JSON list o
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/tasks"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/worker/v1/tasks HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
@@ -734,6 +838,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
     "index_parallel_wikipedia_mgchefio_2023-06-13T22:18:05.360Z"
   ]
   ```
+
 </details>
 
 ### Get task log
@@ -743,22 +848,24 @@ Retrieves task log output stream by task ID. For normal usage, you should use th
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/worker/v1/task/{taskid}/log`
+<code class="getAPI">GET</code> <code>/druid/worker/v1/task/:taskId/log</code>
 
 ### Shut down running task
 
-Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/{taskId}/shutdown`
+Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/:taskId/shutdown`
 [Tasks API](./tasks-api.md) endpoint instead.
 
 #### URL
 
-<code class="postAPI">POST</code> `/druid/worker/v1/task/{taskid}/shutdown`
+<code class="postAPI">POST</code> <code>/druid/worker/v1/task/:taskId/shutdown</code>
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully shut down a task*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -770,18 +877,24 @@ Shuts down a running task by ID. For normal usage, you should use the `/druid/in
 The following example shuts down a task with specified ID `index_kafka_wikiticker_f7011f8ffba384b_fpeclode`.
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown"
 ```
+
 <!--HTTP-->
+
 ```http
 POST /druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
