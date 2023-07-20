@@ -3,12 +3,8 @@ id: tasks-api
 title: Tasks API
 sidebar_label: Tasks
 ---
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 
-
-<TabItem value="0" label="">
-
+<!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -26,6 +22,11 @@ import TabItem from '@theme/TabItem';
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+ 
 
 This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion, querying, and compaction.
 
@@ -59,17 +60,23 @@ The endpoint supports a set of optional query parameters to filter results.
 <TabItem value="1" label="200 SUCCESS">
 
 <br/>
+
 *Successfully retrieved list of tasks*
+
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
 
 <br/>
+
 *Invalid `state` query parameter value*
+
 </TabItem>
 <TabItem value="3" label="500 SERVER ERROR">
 
 <br/>
+
 *Invalid query parameter*
+
 </TabItem>
 </Tabs>
 
@@ -572,7 +579,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Get task payload
 
 #### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/TASK_ID`
 
 Retrieves the payload of a task given the task ID. It returns a JSON object with the task ID and payload that includes task configuration details and relevant specifications associated with the execution of the task.
 
@@ -776,7 +783,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Get task status
 
 #### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/status`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/TASK_ID/status`
 
 Retrieves the status of a task given the task ID. It returns a JSON object with the task's status code, runner status, task type, datasource, and other relevant metadata.
 
@@ -849,7 +856,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/segments`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/TASK_ID/segments`
 
 > This API is deprecated and will be removed in future releases.
 
@@ -898,7 +905,7 @@ A successful request returns a `200 OK` response and an array of the task segmen
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/log`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/TASK_ID/log`
 
 Retrieves the event log associated with a task. It returns a list of logged events during the lifecycle of the task. The endpoint is useful for providing information about the execution of the task, including any errors or warnings raised.
 
@@ -1016,7 +1023,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/reports`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/TASK_ID/reports`
 
 Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a task. It returns a JSON object with information about the number of rows ingested, and any parse exceptions that Druid raised.
 
@@ -1251,7 +1258,7 @@ Content-Length: 952
 ### Shut down a task
 
 #### URL
-<code class="postAPI">POST</code> `/druid/indexer/v1/task/{taskId}/shutdown`
+<code class="postAPI">POST</code> `/druid/indexer/v1/task/TASK_ID/shutdown`
 
 Shuts down a task if it not already complete. Returns a JSON object with the ID of the task that was shut down successfully.
 
@@ -1309,7 +1316,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Shut down all tasks for a datasource
 
 #### URL
-<code class="postAPI">POST</code> `/druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
+<code class="postAPI"> POST</code> `/druid/indexer/v1/datasources/:datasource/shutdownAllTasks`
 
 Shuts down all tasks for a specified datasource. If successful, it returns a JSON object with the name of the datasource whose tasks are shut down.
 
@@ -1457,7 +1464,7 @@ Content-Length: 134
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> `/druid/indexer/v1/pendingSegments/{dataSource}`
+<code class="deleteAPI">DELETE</code> `/druid/indexer/v1/pendingSegments/DATASOURCE`
 
 Manually clean up pending segments table in metadata storage for `datasource`. It returns a JSON object response with
 `numDeleted` for the number of rows deleted from the pending segments table. This API is used by the
@@ -1470,6 +1477,7 @@ which automates this operation to perform periodically.
 <TabItem value="54" label="200 SUCCESS">
 
 <br/>
+
 *Successfully deleted pending segments*
 
 </TabItem>
