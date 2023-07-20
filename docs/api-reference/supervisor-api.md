@@ -31,7 +31,7 @@ In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the serv
 
 The following table lists the properties of a supervisor object:
 
-|Parameter|Type|Description|
+|Property|Type|Description|
 |---|---|---|
 |`id`|String|The unique identifier|
 |`state`|String|The generic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Apache Kafka operations](../development/extensions-core/kafka-supervisor-operations.md) for details.|
