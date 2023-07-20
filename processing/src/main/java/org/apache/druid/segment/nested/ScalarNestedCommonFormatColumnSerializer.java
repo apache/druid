@@ -80,10 +80,23 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     this.dictionaryIdLookup = new DictionaryIdLookup();
   }
 
+  /**
+   * Called during {@link #serialize(ColumnValueSelector)} to convert value to dictionary id.
+   * <p>
+   * Implementations may optionally also serialize the value to a type specific value column if they opened one with
+   * {@link #openValueColumnSerializer()}, or do whatever else is useful to do while handling a single row value.
+   */
   protected abstract int processValue(@Nullable Object rawValue) throws IOException;
 
+  /**
+   * Called during {@link #open()} to allow opening any separate type specific value column serializers
+   */
   protected abstract void openValueColumnSerializer() throws IOException;
 
+  /**
+   * Called during {@link #writeTo(WritableByteChannel, FileSmoosher)} to allow any type specific value column
+   * serializers to use the {@link FileSmoosher} to write stuff to places.
+   */
   protected abstract void writeValueColumn(FileSmoosher smoosher) throws IOException;
 
   @Override
