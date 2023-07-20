@@ -108,7 +108,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
    *
    * @return Number of deleted metadata entries
    */
-  protected abstract int cleanupEntriesCreatedBefore(DateTime minCreatedTime) throws Exception;
+  protected abstract int cleanupEntriesCreatedBefore(DateTime minCreatedTime);
 
   private void validatePeriod(Duration period, Duration metadataManagementPeriod)
   {

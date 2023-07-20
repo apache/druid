@@ -119,8 +119,8 @@ public class KillCompactionConfigTest
         )
     );
     Assert.assertEquals(
-        "Coordinator compaction configuration kill period must be"
-        + " >= druid.coordinator.period.metadataStoreManagementPeriod",
+        "[druid.coordinator.kill.compaction.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]",
         exception.getMessage()
     );
   }
