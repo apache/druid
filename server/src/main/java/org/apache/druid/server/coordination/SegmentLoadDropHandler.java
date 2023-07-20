@@ -588,7 +588,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               @Override
               public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(DataSegmentChangeResponse.Status.PENDING));
+                markRequestAsPending(changeRequest);
+
+                // Load the segment asynchronously
                 exec.submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
@@ -600,7 +602,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               @Override
               public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(DataSegmentChangeResponse.Status.PENDING));
+                markRequestAsPending(changeRequest);
+
+                // Drop the segment synchronously
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
@@ -617,6 +621,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         return status;
       }
       return requestStatuses.getIfPresent(changeRequest);
+    }
+  }
+
+  private void markRequestAsPending(DataSegmentChangeRequest changeRequest)
+  {
+    synchronized (requestStatusesLock) {
+      requestStatuses.put(changeRequest, new AtomicReference<>(DataSegmentChangeResponse.Status.PENDING));
     }
   }
 
