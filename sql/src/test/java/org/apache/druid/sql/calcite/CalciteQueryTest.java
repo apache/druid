@@ -2333,7 +2333,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     notMsqCompatible();
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
-    // When useApproximateCountDistinct=true and useGroupingSetForExactDistinct=false, planning fails due
+    // When useApproximateCountDistinct=false and useGroupingSetForExactDistinct=false, planning fails due
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
     try {
       testQuery(
