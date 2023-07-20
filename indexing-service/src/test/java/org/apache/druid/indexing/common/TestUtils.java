@@ -46,6 +46,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
@@ -82,10 +83,7 @@ public class TestUtils
   public TestUtils()
   {
     this.jsonMapper = new DefaultObjectMapper();
-    indexIO = new IndexIO(
-        jsonMapper,
-        () -> 0
-    );
+    indexIO = new IndexIO(jsonMapper, ColumnConfig.DEFAULT);
     indexMergerV9Factory = new IndexMergerV9Factory(
         jsonMapper,
         indexIO,

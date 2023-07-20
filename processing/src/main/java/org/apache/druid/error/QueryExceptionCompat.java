@@ -66,12 +66,11 @@ public class QueryExceptionCompat extends DruidException.Failure
         return DruidException.Category.RUNTIME_FAILURE;
       case CANCELED:
         return DruidException.Category.CANCELED;
-      case UNKNOWN:
-        return DruidException.Category.UNCATEGORIZED;
       case UNSUPPORTED:
         return DruidException.Category.UNSUPPORTED;
       case TIMEOUT:
         return DruidException.Category.TIMEOUT;
+      case UNKNOWN:
       default:
         return DruidException.Category.UNCATEGORIZED;
     }

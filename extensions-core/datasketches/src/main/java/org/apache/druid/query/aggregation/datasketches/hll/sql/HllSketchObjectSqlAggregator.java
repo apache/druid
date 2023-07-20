@@ -25,6 +25,7 @@ import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -47,7 +48,7 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
 
   public HllSketchObjectSqlAggregator()
   {
-    super(false);
+    super(false, HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING);
   }
 
   @Override

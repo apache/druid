@@ -62,6 +62,7 @@ import java.util.function.Function;
 /**
  * Helps tests make segments.
  */
+@SuppressWarnings({"NotNullFieldNotInitialized", "FieldMayBeFinal", "ConstantConditions", "NullableProblems"})
 public class IndexBuilder
 {
   private static final int ROWS_PER_INDEX_FOR_MERGING = 1;
@@ -98,7 +99,7 @@ public class IndexBuilder
 
   public static IndexBuilder create()
   {
-    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
+    return new IndexBuilder(TestHelper.JSON_MAPPER, ColumnConfig.ALWAYS_USE_INDEXES);
   }
 
   public static IndexBuilder create(ColumnConfig columnConfig)
@@ -108,7 +109,7 @@ public class IndexBuilder
 
   public static IndexBuilder create(ObjectMapper jsonMapper)
   {
-    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
+    return new IndexBuilder(jsonMapper, ColumnConfig.ALWAYS_USE_INDEXES);
   }
 
   public static IndexBuilder create(ObjectMapper jsonMapper, ColumnConfig columnConfig)
@@ -261,7 +262,7 @@ public class IndexBuilder
           tmpDir,
           schema.getDimensionsSpec(),
           indexSpec,
-          Integer.MAX_VALUE
+          -1
       );
     }
     catch (IOException e) {
@@ -317,7 +318,7 @@ public class IndexBuilder
           i++;
         } else {
           persisted.add(
-              TestHelper.getTestIndexIO().loadIndex(
+              indexIO.loadIndex(
                   indexMerger.persist(
                       incrementalIndex,
                       new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
@@ -335,7 +336,7 @@ public class IndexBuilder
       }
       if (i != 0) {
         persisted.add(
-            TestHelper.getTestIndexIO().loadIndex(
+            indexIO.loadIndex(
                 indexMerger.persist(
                     incrementalIndex,
                     new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
@@ -346,7 +347,7 @@ public class IndexBuilder
         );
       }
 
-      final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
+      final QueryableIndex merged = indexIO.loadIndex(
           indexMerger.mergeQueryableIndex(
               persisted,
               true,

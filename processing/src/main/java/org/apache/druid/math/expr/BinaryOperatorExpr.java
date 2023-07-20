@@ -195,6 +195,9 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
       case LONG:
         result = evalLong(leftVal.asLong(), rightVal.asLong());
         break;
+      case ARRAY:
+        result = evalArray(leftVal, rightVal);
+        break;
       case DOUBLE:
       default:
         if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
@@ -203,20 +206,19 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
         result = evalDouble(leftVal.asDouble(), rightVal.asDouble());
         break;
     }
-    if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING)) {
+    if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING) && !type.isArray()) {
       return ExprEval.ofBoolean(result, type.getType());
     }
     return ExprEval.ofLongBoolean(result);
   }
 
-  protected boolean evalString(@Nullable String left, @Nullable String right)
-  {
-    throw new IllegalArgumentException("unsupported type " + ExprType.STRING);
-  }
+  protected abstract boolean evalString(@Nullable String left, @Nullable String right);
 
   protected abstract boolean evalLong(long left, long right);
 
   protected abstract boolean evalDouble(double left, double right);
+
+  protected abstract boolean evalArray(ExprEval left, ExprEval right);
 
   @Nullable
   @Override
@@ -227,5 +229,14 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
       return ExpressionType.LONG;
     }
     return implicitCast;
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    ExpressionType leftType = left.getOutputType(inspector);
+    ExpressionType rightType = right.getOutputType(inspector);
+    ExpressionType commonType = ExpressionTypeConversion.leastRestrictiveType(leftType, rightType);
+    return inspector.canVectorize(left, right) && (commonType == null || commonType.isPrimitive());
   }
 }

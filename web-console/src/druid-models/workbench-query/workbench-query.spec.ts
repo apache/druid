@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit';
+import { sane } from '@druid-toolkit/query';
 
 import { WorkbenchQuery } from './workbench-query';
 import { WorkbenchQueryPart } from './workbench-query-part';
@@ -138,7 +138,6 @@ describe('WorkbenchQuery', () => {
           `End of input while parsing an object (missing '}') at line 40,2 >>>} ...`,
         ),
       ).toEqual({
-        match: '',
         row: 39,
         column: 1,
       });
@@ -421,9 +420,11 @@ describe('WorkbenchQuery', () => {
 
       const apiQuery = workbenchQuery.getApiQuery(makeQueryId);
       expect(apiQuery).toEqual({
+        cancelQueryId: undefined,
         engine: 'sql-msq-task',
         query: {
           context: {
+            executionMode: 'async',
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
             useCache: false,

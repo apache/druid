@@ -262,9 +262,12 @@ public class Calcites
       final boolean nullable
   )
   {
-    final RelDataType dataType = typeFactory.createArrayType(
-        createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
-        -1
+    final RelDataType dataType = typeFactory.createTypeWithNullability(
+        typeFactory.createArrayType(
+            createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
+            -1
+        ),
+        true
     );
 
     return dataType;

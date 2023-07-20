@@ -27,7 +27,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>27.0.0-SNAPSHOT</version>
+    <version>28.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -447,7 +447,7 @@
         </dependency>
       </dependencies>
       <properties>
-      <parquet.version>1.13.0</parquet.version>
+        <parquet.version>1.13.0</parquet.version>
       </properties>
     </profile>
   </profiles>

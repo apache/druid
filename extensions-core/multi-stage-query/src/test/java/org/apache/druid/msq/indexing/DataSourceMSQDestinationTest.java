@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing;
 
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.junit.Test;
 
 public class DataSourceMSQDestinationTest

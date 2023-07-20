@@ -137,29 +137,33 @@ public class WorkerMemoryParameters
    * we use a value somewhat lower than 0.5.
    */
   static final double BROADCAST_JOIN_MEMORY_FRACTION = 0.3;
+
+  /**
+   * Fraction of free memory per bundle that can be used by
+   * {@link org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessor} to buffer frames in its trackers.
+   */
+  static final double SORT_MERGE_JOIN_MEMORY_FRACTION = 0.9;
+
   /**
    * In case {@link NotEnoughMemoryFault} is thrown, a fixed estimation overhead is added when estimating total memory required for the process.
    */
   private static final long BUFFER_BYTES_FOR_ESTIMATION = 1000;
 
+  private final long processorBundleMemory;
   private final int superSorterMaxActiveProcessors;
   private final int superSorterMaxChannelsPerProcessor;
-  private final long appenderatorMemory;
-  private final long broadcastJoinMemory;
   private final int partitionStatisticsMaxRetainedBytes;
 
   WorkerMemoryParameters(
+      final long processorBundleMemory,
       final int superSorterMaxActiveProcessors,
       final int superSorterMaxChannelsPerProcessor,
-      final long appenderatorMemory,
-      final long broadcastJoinMemory,
       final int partitionStatisticsMaxRetainedBytes
   )
   {
+    this.processorBundleMemory = processorBundleMemory;
     this.superSorterMaxActiveProcessors = superSorterMaxActiveProcessors;
     this.superSorterMaxChannelsPerProcessor = superSorterMaxChannelsPerProcessor;
-    this.appenderatorMemory = appenderatorMemory;
-    this.broadcastJoinMemory = broadcastJoinMemory;
     this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
   }
 
@@ -344,10 +348,9 @@ public class WorkerMemoryParameters
     }
 
     return new WorkerMemoryParameters(
+        bundleMemoryForProcessing,
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
-        (long) (bundleMemoryForProcessing * APPENDERATOR_MEMORY_FRACTION),
-        (long) (bundleMemoryForProcessing * BROADCAST_JOIN_MEMORY_FRACTION),
         Ints.checkedCast(workerMemory) // 100% of worker memory is devoted to partition statistics
     );
   }
@@ -365,13 +368,13 @@ public class WorkerMemoryParameters
   public long getAppenderatorMaxBytesInMemory()
   {
     // Half for indexing, half for merging.
-    return Math.max(1, appenderatorMemory / 2);
+    return Math.max(1, getAppenderatorMemory() / 2);
   }
 
   public int getAppenderatorMaxColumnsToMerge()
   {
     // Half for indexing, half for merging.
-    return Ints.checkedCast(Math.max(2, appenderatorMemory / 2 / APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN));
+    return Ints.checkedCast(Math.max(2, getAppenderatorMemory() / 2 / APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN));
   }
 
   public int getStandardFrameSize()
@@ -386,12 +389,25 @@ public class WorkerMemoryParameters
 
   public long getBroadcastJoinMemory()
   {
-    return broadcastJoinMemory;
+    return (long) (processorBundleMemory * BROADCAST_JOIN_MEMORY_FRACTION);
+  }
+
+  public long getSortMergeJoinMemory()
+  {
+    return (long) (processorBundleMemory * SORT_MERGE_JOIN_MEMORY_FRACTION);
   }
 
   public int getPartitionStatisticsMaxRetainedBytes()
   {
     return partitionStatisticsMaxRetainedBytes;
+  }
+
+  /**
+   * Amount of memory to devote to {@link org.apache.druid.segment.realtime.appenderator.Appenderator}.
+   */
+  private long getAppenderatorMemory()
+  {
+    return (long) (processorBundleMemory * APPENDERATOR_MEMORY_FRACTION);
   }
 
   @Override
@@ -404,10 +420,9 @@ public class WorkerMemoryParameters
       return false;
     }
     WorkerMemoryParameters that = (WorkerMemoryParameters) o;
-    return superSorterMaxActiveProcessors == that.superSorterMaxActiveProcessors
+    return processorBundleMemory == that.processorBundleMemory
+           && superSorterMaxActiveProcessors == that.superSorterMaxActiveProcessors
            && superSorterMaxChannelsPerProcessor == that.superSorterMaxChannelsPerProcessor
-           && appenderatorMemory == that.appenderatorMemory
-           && broadcastJoinMemory == that.broadcastJoinMemory
            && partitionStatisticsMaxRetainedBytes == that.partitionStatisticsMaxRetainedBytes;
   }
 
@@ -415,10 +430,9 @@ public class WorkerMemoryParameters
   public int hashCode()
   {
     return Objects.hash(
+        processorBundleMemory,
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
-        appenderatorMemory,
-        broadcastJoinMemory,
         partitionStatisticsMaxRetainedBytes
     );
   }
@@ -427,10 +441,9 @@ public class WorkerMemoryParameters
   public String toString()
   {
     return "WorkerMemoryParameters{" +
-           "superSorterMaxActiveProcessors=" + superSorterMaxActiveProcessors +
+           "processorBundleMemory=" + processorBundleMemory +
+           ", superSorterMaxActiveProcessors=" + superSorterMaxActiveProcessors +
            ", superSorterMaxChannelsPerProcessor=" + superSorterMaxChannelsPerProcessor +
-           ", appenderatorMemory=" + appenderatorMemory +
-           ", broadcastJoinMemory=" + broadcastJoinMemory +
            ", partitionStatisticsMaxRetainedBytes=" + partitionStatisticsMaxRetainedBytes +
            '}';
   }

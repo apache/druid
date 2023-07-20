@@ -46,11 +46,9 @@ import java.util.Map;
  * the simulation. {@link CoordinatorSimulation#stop()} should not be called as
  * the simulation is stopped when cleaning up after the test in {@link #tearDown()}.
  * <p>
- * Tests that verify balancing behaviour should set
- * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
+ * Tests that verify balancing behaviour use batched segment sampling.
  * Otherwise, the segment sampling is random and can produce repeated values
- * leading to flakiness in the tests. The simulation sets this field to true by
- * default.
+ * leading to flakiness in the tests.
  */
 public abstract class CoordinatorSimulationBaseTest implements
     CoordinatorSimulation.CoordinatorState,
