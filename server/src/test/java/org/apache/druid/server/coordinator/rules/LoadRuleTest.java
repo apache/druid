@@ -162,7 +162,7 @@ public class LoadRuleTest
                                     .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
         )
-        .withSegmentAssignerUsing(loadQueueManager)
+        .withSegmentLoadQueueManager(loadQueueManager)
         .build();
   }
 
@@ -443,7 +443,7 @@ public class LoadRuleTest
                                     .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
         )
-        .withSegmentAssignerUsing(loadQueueManager)
+        .withSegmentLoadQueueManager(loadQueueManager)
         .build();
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));

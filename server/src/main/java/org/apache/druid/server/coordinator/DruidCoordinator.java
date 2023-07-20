@@ -703,10 +703,9 @@ public class DruidCoordinator
             DruidCoordinatorRuntimeParams
                 .newBuilder(coordinatorStartTime)
                 .withDatabaseRuleManager(metadataRuleManager)
-                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
+                .withDataSourcesSnapshot(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
-                .withEmitter(emitter)
                 .build();
         log.info(
             "Initialized run params for group [%s] with [%,d] used segments in [%d] datasources.",
@@ -838,7 +837,7 @@ public class DruidCoordinator
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withBalancerStrategy(balancerStrategy)
-                   .withSegmentAssignerUsing(loadQueueManager)
+                   .withSegmentLoadQueueManager(loadQueueManager)
                    .build();
     }
 

@@ -22,12 +22,10 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 /**
@@ -35,51 +33,38 @@ import org.joda.time.Duration;
  * This class has the same purpose as {@link KillSupervisors} but uses a different configuration style as
  * detailed in {@link CoordinatorCustomDuty}. This class primary purpose is as an example to demostrate the usuage
  * of the {@link CoordinatorCustomDuty} {@link org.apache.druid.guice.annotations.ExtensionPoint}
- *
+ * <p>
  * Production use case should still use {@link KillSupervisors}. In the future, we might migrate all metadata
  * management coordinator duties to {@link CoordinatorCustomDuty} but until then this class will remains undocumented
  * and should not be use in production.
  */
-public class KillSupervisorsCustomDuty implements CoordinatorCustomDuty
+public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements CoordinatorCustomDuty
 {
-  private static final Logger log = new Logger(KillSupervisorsCustomDuty.class);
-
-  private final Duration retainDuration;
   private final MetadataSupervisorManager metadataSupervisorManager;
 
   @JsonCreator
   public KillSupervisorsCustomDuty(
-      @JsonProperty("retainDuration") Duration retainDuration,
-      @JacksonInject MetadataSupervisorManager metadataSupervisorManager
+      @JsonProperty("durationToRetain") Duration retainDuration,
+      @JacksonInject MetadataSupervisorManager metadataSupervisorManager,
+      @JacksonInject DruidCoordinatorConfig coordinatorConfig
   )
   {
-    this.metadataSupervisorManager = metadataSupervisorManager;
-    this.retainDuration = retainDuration;
-    Preconditions.checkArgument(this.retainDuration != null && this.retainDuration.getMillis() >= 0, "(Custom Duty) Coordinator supervisor kill retainDuration must be >= 0");
-    log.info(
-        "Supervisor Kill Task scheduling enabled with retainDuration [%s]",
-        this.retainDuration
+    super(
+        "supervisors",
+        "Kill supervisor custom duty ",
+        // Use the same period as metadata store management so that validation passes
+        // Actual period of custom duties is configured by the user
+        coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod(),
+        retainDuration,
+        Stats.Kill.SUPERVISOR_SPECS,
+        coordinatorConfig
     );
+    this.metadataSupervisorManager = metadataSupervisorManager;
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
-    long timestamp = System.currentTimeMillis() - retainDuration.getMillis();
-    try {
-      int supervisorRemoved = metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(timestamp);
-      ServiceEmitter emitter = params.getEmitter();
-      emitter.emit(
-          new ServiceMetricEvent.Builder().build(
-              "metadata/kill/supervisor/count",
-              supervisorRemoved
-          )
-      );
-      log.info("Finished running KillSupervisors duty. Removed %,d supervisor specs", supervisorRemoved);
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to kill terminated supervisor metadata");
-    }
-    return params;
+    return metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(minCreatedTime.getMillis());
   }
 }

@@ -137,8 +137,7 @@ public class BalanceSegmentsProfiler
                 .withReplicationThrottleLimit(5)
                 .build()
         )
-        .withSegmentAssignerUsing(loadQueueManager)
-        .withEmitter(emitter)
+        .withSegmentLoadQueueManager(loadQueueManager)
         .withDatabaseRuleManager(manager)
         .build();
 
@@ -186,7 +185,7 @@ public class BalanceSegmentsProfiler
         )
         .withUsedSegmentsInTest(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
-        .withSegmentAssignerUsing(loadQueueManager)
+        .withSegmentLoadQueueManager(loadQueueManager)
         .build();
     BalanceSegments tester = new BalanceSegments();
     watch.start();

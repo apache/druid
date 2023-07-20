@@ -146,7 +146,7 @@ public class BalanceSegmentsTest
             .withDynamicConfigs(dynamicConfig)
             .withBalancerStrategy(balancerStrategy)
             .withBroadcastDatasources(broadcastDatasources)
-            .withSegmentAssignerUsing(loadQueueManager)
+            .withSegmentLoadQueueManager(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
@@ -224,7 +224,7 @@ public class BalanceSegmentsTest
         defaultRuntimeParamsBuilder(serverHolder1, serverHolder2)
             .withDynamicConfigs(dynamicConfig)
             .withBalancerStrategy(balancerStrategy)
-            .withSegmentAssignerUsing(loadQueueManager)
+            .withSegmentLoadQueueManager(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
@@ -397,7 +397,7 @@ public class BalanceSegmentsTest
         .withUsedSegmentsInTest(allSegments)
         .withBroadcastDatasources(broadcastDatasources)
         .withBalancerStrategy(balancerStrategy)
-        .withSegmentAssignerUsing(loadQueueManager);
+        .withSegmentLoadQueueManager(loadQueueManager);
   }
 
   private ServerHolder createHolder(DruidServer server, DataSegment... loadedSegments)
