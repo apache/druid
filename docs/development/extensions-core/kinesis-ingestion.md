@@ -25,17 +25,32 @@ sidebar_label: "Amazon Kinesis"
 
 When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis' own shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
 
-To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` core Apache Druid extension. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
+This document contains configuration reference information for the Kinesis indexing service supervisor for Apache Druid.
 
-> Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
+## Setup
 
-## Submitting a supervisor spec
+To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the Middle Manager. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
-To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` extension on the Overlord and the Middle Managers. Druid starts a supervisor for a datasource when you submit a supervisor spec. See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
+Before you deploy the `druid-kinesis-indexing-service` extension to production, read the [Kinesis known issues](#kinesis-known-issues).
 
-To create a new supervisor, submit a supervisor spec to the following endpoint:
+## Supervisor spec
 
-`http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
+The following table outlines the high-level configuration options for the Kinesis supervisor:
+
+|Property|Description|Required|
+|--------|-----------|--------|
+|`type`|The supervisor type; this should always be `kinesis`.|Yes|
+|`spec`|The container object for the supervisor configuration.|Yes|
+|`ioConfig`|The [I/O configuration](#kinesis-supervisor-io-config) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|Yes|
+|`dataSchema`|The schema used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
+|`tuningConfig`|The [tuning configuration](#kinesis-supervisor-tuning-config) object for configuring performance-related settings for the supervisor and indexing tasks.|No|
+
+Druid starts a supervisor for a datasource when you submit a supervisor spec.
+To create a new supervisor, submit the supervisor spec to the following endpoint:
+
+`http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor`
+
+where `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
 
 The following example shows how to submit a Kinesis supervisor spec:
 
@@ -43,106 +58,170 @@ The following example shows how to submit a Kinesis supervisor spec:
 
 <!--cURL-->
 ```shell
-curl -X POST -H 'Content-Type: application/json' -d @supervisor-spec.json http://localhost:8090/druid/indexer/v1/supervisor
-
-
-
-
-
-
-
-
-
+curl -X POST "http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor" \
+-H "Content-Type: application/json" \
+-d '{
+  "type": "kinesis",
+  "spec": {
+    "ioConfig": {
+      "type": "kinesis",
+      "stream": "KinesisStream",
+      "inputFormat": {
+        "type": "json"
+      },
+      "useEarliestSequenceNumber": true
+    },
+    "tuningConfig": {
+      "type": "kinesis"
+    },
+    "dataSchema": {
+      "dataSource": "KinesisStream",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "isRobot",
+          "channel",
+          "flags",
+          "isUnpatrolled",
+          "page",
+          "diffUrl",
+          {
+            "type": "long",
+            "name": "added"
+          },
+          "comment",
+          {
+            "type": "long",
+            "name": "commentLength"
+          },
+          "isNew",
+          "isMinor",
+          {
+            "type": "long",
+            "name": "delta"
+          },
+          "isAnonymous",
+          "user",
+          {
+            "type": "long",
+            "name": "deltaBucket"
+          },
+          {
+            "type": "long",
+            "name": "deleted"
+          },
+          "namespace",
+          "cityName",
+          "countryName",
+          "regionIsoCode",
+          "metroCode",
+          "countryIsoCode",
+          "regionName"
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "hour"
+      }
+    }
+  }
+}'
 ```
 <!--HTTP-->
 ```HTTP
-GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker HTTP/1.1
-Host: {domain}
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
+POST /druid/indexer/v1/supervisor
+HTTP/1.1
+Host: http://SERVICE_IP:SERVICE_PORT
+Content-Type: application/json
 
 {
-  \"type\": \"kinesis\",
-  \"spec\": {
+  "type": "kinesis",
+  "spec": {
+    "ioConfig": {
+      "type": "kinesis",
+      "stream": "KinesisStream",
+      "inputFormat": {
+        "type": "json"
+      },
+      "useEarliestSequenceNumber": true
+    },
+    "tuningConfig": {
+      "type": "kinesis"
+    },
     "dataSchema": {
-      "dataSource": "metrics-kinesis",
+      "dataSource": "KinesisStream",
       "timestampSpec": {
         "column": "timestamp",
-        "format": "auto"
+        "format": "iso"
       },
-     "dimensionsSpec": {
-        "dimensions": [],
-        "dimensionExclusions": [
-         "timestamp",
-         "value"
-       ]
+      "dimensionsSpec": {
+        "dimensions": [
+          "isRobot",
+          "channel",
+          "flags",
+          "isUnpatrolled",
+          "page",
+          "diffUrl",
+          {
+            "type": "long",
+            "name": "added"
+          },
+          "comment",
+          {
+            "type": "long",
+            "name": "commentLength"
+          },
+          "isNew",
+          "isMinor",
+          {
+            "type": "long",
+            "name": "delta"
+          },
+          "isAnonymous",
+          "user",
+          {
+            "type": "long",
+            "name": "deltaBucket"
+          },
+          {
+            "type": "long",
+            "name": "deleted"
+          },
+          "namespace",
+          "cityName",
+          "countryName",
+          "regionIsoCode",
+          "metroCode",
+          "countryIsoCode",
+          "regionName"
+        ]
       },
-     "metricsSpec": [
-        {
-         "name": "count",
-          "type": "count"
-       },
-       {
-          "name": "value_sum",
-          "fieldName": "value",
-          "type": "doubleSum"
-        },
-       {
-         "name": "value_min",
-         "fieldName": "value",
-         "type": "doubleMin"
-       },
-        {
-          "name": "value_max",
-         "fieldName": "value",
-         "type": "doubleMax"
-       }
-     ],
-     "granularitySpec": {
-        "type": "uniform",
-        "segmentGranularity": "HOUR",
-        "queryGranularity": "NONE"
-     }
-   },
-    \"ioConfig\": {
-     "stream": "metrics",
-     "inputFormat": {
-       "type": "json"
-      },
-      "endpoint": "kinesis.us-east-1.amazonaws.com",
-      "taskCount": 1,
-      "replicas": 1,
-      "taskDuration": "PT1H"
-   },
-   "tuningConfig": {
-     "type": "kinesis",
-     "maxRowsPerSegment": 5000000
-   }
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "hour"
+      }
+    }
   }
 }
 ```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
-## Supervisor spec
+## Kinesis supervisor I/O config
 
-|**Field**|**Description**|**Required**|
-|---------|---------------|------------|
-|`type`|The supervisor type; this should always be `kinesis`.|Yes|
-|`spec`|Container object for the supervisor configuration.|Yes|
-|`dataSchema`|The schema used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
-|`ioConfig`|An [`ioConfig`](#ioconfig) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|Yes|
-|`tuningConfig`|A [`tuningConfig`](#tuningconfig) object for configuring performance-related settings for the supervisor and indexing tasks.|No|
+The following table outlines the configuration options for `ioConfig`:
 
-### `ioConfig`
-
-|**Field**|**Type**|**Description**|**Required**|**Default**|
-|---------|--------|---------------|------------|-----------|
+|Property|Type|Description|Required|Default|
+|--------|----|-----------|--------|-------|
 |`stream`|String|The Kinesis stream to read.|Yes||
-|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|Yes||
+|`inputFormat`|Object|The [input format](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [Specify data format](#specify-data-format) for more information.|Yes||
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints in the [AWS service endpoints](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region) document.|No|`kinesis.us-east-1.amazonaws.com`|
 |`replicas`|Integer|The number of replica sets, where 1 is a single set of tasks (no replication). Druid always assigns replicate tasks to different workers to provide resiliency against process failure.|No|1|
-|`taskCount`|Integer|The maximum number of reading tasks in a replica set. Multiply `taskCount` and `replicas` to measure the maximum number of reading tasks. <br />The total number of tasks (reading and publishing) is higher than the maximum number of reading tasks. See [Capacity Planning](#capacity-planning) for more details. The number of reading tasks is less than `taskCount` if `taskCount > {numKinesisShards}`.|No|1|
+|`taskCount`|Integer|The maximum number of reading tasks in a replica set. Multiply `taskCount` and `replicas` to measure the maximum number of reading tasks. <br />The total number of tasks (reading and publishing) is higher than the maximum number of reading tasks. See [Capacity planning](#capacity-planning) for more details. When `taskCount > {numKinesisShards}`, the actual number of reading tasks is less than the `taskCount` value.|No|1|
 |`taskDuration`|ISO 8601 period|The length of time before tasks stop reading and begin publishing their segments.|No|PT1H|
 |`startDelay`|ISO 8601 period|The period to wait before the supervisor starts managing tasks.|No|PT5S|
 |`period`|ISO 8601 period|Determines how often the supervisor executes its management logic. Note that the supervisor also runs in response to certain events, such as tasks succeeding, failing, and reaching their task duration, so this value specifies the maximum time between iterations.|No|PT30S|
@@ -154,25 +233,29 @@ Host: {domain}
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|No|0|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
-|`deaggregate`|Boolean|Whether to use the deaggregate function of the KCL.|No||
-|`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks auto scaler properties](#task-auto-scaler-properties).|No|null|
+|`deaggregate`|Boolean|Whether to use the deaggregate function of the Kinesis Client Library (KCL).|No||
+|`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks auto scaler properties](#task-auto-scaler-properties) for more information.|No|null|
 
-#### Task auto scaler properties
+### Task auto scaler properties
 
-|**Property**|**Description**|**Required**|**Default**|
-|------------|---------------|------------|-----------|
+The following table outlines the configuration options for `autoScalerConfig`:
+
+|Property|Description|Required|Default|
+|--------|-----------|--------|-------|
 |`enableTaskAutoScaler`|Enables the auto scaler. If not specified, Druid disables the auto scaler even when `autoScalerConfig` is not null.|No|`false`|
 |`taskCountMax`|Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, Druid sets the maximum number of reading tasks to `{numKinesisShards}` and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of `taskCount` in `IOConfig` and uses `taskCountMin` for the initial number of tasks to launch.|Yes||
 |`minTriggerScaleActionFrequencyMillis`|Minimum time interval between two scale actions.| No|600000|
 |`autoScalerStrategy`|The algorithm of `autoScaler`. Druid only supports the `lagBased` strategy. See [Lag based auto scaler strategy related properties](#lag-based-auto-scaler-strategy-related-properties) for more information.|No|Defaults to `lagBased`.|
 
-#### Lag based auto scaler strategy related properties
+### Lag based auto scaler strategy related properties
 
-The Kinesis indexing service reports lag metrics measured in time milliseconds rather than message count which is used by Kafka.
+The Kinesis indexing service reports lag metrics measured in time milliseconds rather than message count, which is used by Kafka.
 
-|**Property**|**Description**|**Required**|**Default**|
-|------------|---------------|------------|-----------|
+The following table outlines the configuration options for `autoScalerStrategy`:
+
+|Property|Description|Required|Default|
+|--------|-----------|--------|-------|
 |`lagCollectionIntervalMillis`|The time period during which Druid collects lag metric points.|No|30000|
 |`lagCollectionRangeMillis`|The total time window of lag collection. Use with `lagCollectionIntervalMillis` to specify the intervals at which to collect lag metric points.|No|600000|
 |`scaleOutThreshold`|The threshold of scale out action. |No|6000000|
@@ -185,6 +268,7 @@ The Kinesis indexing service reports lag metrics measured in time milliseconds r
 |`scaleOutStep`|The number of tasks to add at once when scaling out.|No|2|
 
 The following example shows a supervisor spec with `lagBased` auto scaler enabled.
+
 <details>
     <summary>Click to view the example</summary>
 
@@ -267,10 +351,10 @@ The following example shows a supervisor spec with `lagBased` auto scaler enable
 
 </details>
 
-#### Specifying data format
+### Specify data format
 
-Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
-Use the `inputFormat` to specify the data format for Kinesis indexing service unless you need a format only supported by the legacy `parser`.
+The Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
+Use the `inputFormat` to specify the data format for the Kinesis indexing service unless you need a format only supported by the legacy `parser`.
 
 Supported values for `inputFormat` include:
 
@@ -283,14 +367,14 @@ Supported values for `inputFormat` include:
 
 For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
-<a name="tuningconfig"></a>
-
-### `tuningConfig`
+## Kinesis supervisor tuning config
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configurations.
 
-|**Field**|**Type**|**Description**|**Required**|**Default**|
-|---------|--------|---------------|------------|-----------|
+The following table outlines the configuration options for `tuningConfig`:
+
+|Property|Type|Description|Required|Default|
+|-----|----|-----------|--------|-------|
 |`type`|String|The indexing task type. This should always be `kinesis`.|Yes||
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|100000|
 |`maxBytesInMemory`|Long| The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
@@ -298,7 +382,7 @@ The `tuningConfig` object is optional. If you don't specify the `tuningConfig` o
 |`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number represents the post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|unlimited|
 |`intermediatePersistPeriod`|ISO 8601 period|The period that determines the rate at which intermediate persists occur.|No|PT10M|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If a new intermediate persist exceeds this limit, Druid blocks ingestion until the currently running persist finishes. One persist can be running concurrently with ingestion, and none can be queued up. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|0|
-|`indexSpec`|Object|Defines how Druid indexes data. See [IndexSpec](#indexspec) for more information.|No||
+|`indexSpec`|Object|Defines how Druid indexes the data. See [IndexSpec](#indexspec) for more information.|No||
 |`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments. You can use `indexSpecForIntermediatePersists` to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published. See [IndexSpec](#indexspec) for possible values.|No|Same as `indexSpec`|
 |`reportParseExceptions`|Boolean|If `true`, Druid throws exceptions encountered during parsing causing ingestion to halt. If `false`, Druid skips unparseable rows and fields.|No|`false`|
 |`handoffConditionTimeout`|Long|Number of milliseconds to wait for segment handoff. Set to a value >= 0, where 0 means to wait indefinitely.|No|0|
@@ -314,7 +398,7 @@ The `tuningConfig` object is optional. If you don't specify the `tuningConfig` o
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
 |`fetchThreads`|Integer|The size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|No| `procs * 2`, where `procs` is the number of processors available to the task.|
-|`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments.|No|Not specified by default. Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
+|`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments See [Additional Peon configuration: SegmentWriteOutMediumFactory](../../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|No|If not specified, Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
 |`intermediateHandoffPeriod`|ISO 8601 period|Defines how often tasks hand off segments. Handoff occurs if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|P2147483647D|
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
@@ -324,31 +408,20 @@ The `tuningConfig` object is optional. If you don't specify the `tuningConfig` o
 |`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of PT5S, the supervisor ignores the value and uses the minimum value instead.|No|PT30S|
 |`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. You must set the necessary `IAM` permissions.|No|`false`|
 
-#### IndexSpec
+### IndexSpec
 
-|**Field**|**Type**|**Description**|**Required**|**Default**|
-|---------|--------|---------------|------------|-----------|
-|`bitmap`|Object|Compression format for bitmap indexes. Should be a JSON object. See [Bitmap types](#bitmap-types) for options.|No|Roaring|
+The following table outlines the configuration options for `indexSpec`:
+
+|Property|Type|Description|Required|Default|
+|-----|----|-----------|--------|-------|
+|`bitmap`|Object|Compression format for bitmap indexes. Druid supports roaring and concise bitmap types.|No|Roaring|
 |`dimensionCompression`|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|No|`LZ4`|
 |`metricCompression`|String|Compression format for primitive type metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|No|`LZ4`|
 |`longEncoding`|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using sequence number or lookup table depending on column cardinality and stores them with variable sizes. `longs` stores the value as is with 8 bytes each.|No|`longs`|
 
-##### Bitmap types
-
-|**Compression scheme**|**Field**|**Type**|**Description**|**Required**|
-|----------------------|---------|--------|---------------|------------|
-|Roaring|`type`|String|Must be `roaring`.|Yes|
-|Concise|`type`|String|Must be `concise`.|Yes|
-
-#### SegmentWriteOutMediumFactory
-
-|**Field**|**Type**|**Description**|**Required**|
-|---------|--------|---------------|------------|
-|`type`|String|See [Additional Peon configuration: SegmentWriteOutMediumFactory](../../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|Yes|
-
 ## Operations
 
-This section describes how some supervisor APIs work in Kinesis Indexing Service.
+This section describes how some supervisor APIs work in Kinesis indexing service.
 For all supervisor APIs, check [Supervisor API reference](../../api-reference/supervisor-api.md).
 
 ### AWS authentication
@@ -356,10 +429,11 @@ For all supervisor APIs, check [Supervisor API reference](../../api-reference/su
 To authenticate with AWS, you must provide your AWS access key and AWS secret key using `runtime.properties`, for example:
 
 ```text
--Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
+druid.kinesis.accessKey=AKIAWxxxxxxxxxx4NCKS
+druid.kinesis.secretKey=Jbytxxxxxxxxxxx2+555
 ```
 
-Druid uses the AWS access key ID and secret access key for Kinesis API requests. If not provided, the service looks for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+Druid uses the AWS access key ID and secret access key for Kinesis API requests. If not provided, the service looks for credentials set in environment variables via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance profile provider (in this order).
 
 To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
 The required permissions depend on the value of `useListShards`.
@@ -417,27 +491,27 @@ The following is an example policy:
 ]
 ```
 
-### Getting supervisor status report
+### Get supervisor status report
 
 You can send a `GET` request to `/druid/indexer/v1/supervisor/<supervisorId>/status` to return a snapshot report of the current state of the tasks
 managed by the given supervisor. This includes the latest sequence numbers as reported by Kinesis. Unlike the Kafka
-Indexing Service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
+indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
 
 The status report also contains the supervisor's state and a list of recently thrown exceptions reported as
 `recentErrors`. You can control the maximum size of the exceptions using the `druid.supervisor.maxStoredExceptionEvents` configuration.
 The two fields related to the supervisor's state are `state` and `detailedState`. The `state` field contains a small number of generic states that apply to any type of supervisor, while the `detailedState` field contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities.
 
-Possible `state` values are `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`.
+Possible `state` values are `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, and `UNHEALTHY_TASKS`.
 
 The following table lists `detailedState` values and their corresponding `state` mapping:
 
-|**Detailed state**|**Corresponding state**|**Description**|
+|Detailed state|Corresponding state|Description|
 |--------------|-------------------|-----------|
 |`UNHEALTHY_SUPERVISOR`|`UNHEALTHY_SUPERVISOR`|The supervisor encountered errors on previous `druid.supervisor.unhealthinessThreshold` iterations.|
 |`UNHEALTHY_TASKS`|`UNHEALTHY_TASKS`|The last `druid.supervisor.taskUnhealthinessThreshold` tasks all failed.|
 |`UNABLE_TO_CONNECT_TO_STREAM`|`UNHEALTHY_SUPERVISOR`|The supervisor is encountering connectivity issues with Kinesis and has not successfully connected in the past.|
 |`LOST_CONTACT_WITH_STREAM`|`UNHEALTHY_SUPERVISOR`|The supervisor is encountering connectivity issues with Kinesis but has successfully connected in the past.|
-|`PENDING` (first iteration only)|`PENDING`|The supervisor has been initialized and hasn't started connecting to the stream.|
+|`PENDING` (first iteration only)|`PENDING`|The supervisor has been initialized but hasn't started connecting to the stream.|
 |`CONNECTING_TO_STREAM` (first iteration only)|`RUNNING`|The supervisor is trying to connect to the stream and update partition data.|
 |`DISCOVERING_INITIAL_TASKS` (first iteration only)|`RUNNING`|The supervisor is discovering already-running tasks.|
 |`CREATING_TASKS` (first iteration only)|`RUNNING`|The supervisor is creating tasks and discovering state.|
@@ -447,10 +521,8 @@ The following table lists `detailedState` values and their corresponding `state`
 
 On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
 
-1. Fetch the list of shards from Kinesis and determine the starting sequence number for each shard (either based on the
-  last processed sequence number if continuing, or starting from the beginning or ending of the stream if this is a new stream).
-2. Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match
-  the supervisor's configuration, else signal them to stop.
+1. Fetch the list of shards from Kinesis and determine the starting sequence number for each shard (either based on the last processed sequence number if continuing, or starting from the beginning or ending of the stream if this is a new stream).
+2. Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match the supervisor's configuration, else signal them to stop.
 3. Send a status request to each supervised task to update the view of the state of the tasks under supervision.
 4. Handle tasks that have exceeded `taskDuration` and should transition from the reading to publishing state.
 5. Handle tasks that have finished publishing and signal redundant replica tasks to stop.
@@ -460,30 +532,25 @@ On each iteration of the supervisor's run loop, the supervisor completes the fol
 The `detailedState` field shows additional values (marked with "first iteration only" in the preceding table) the first time the
 supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
 initialization-type issues, where the supervisor is unable to reach a stable state. For example, if the supervisor cannot connect to
-Kinesis, if it's unable to read from the stream, or cannot communicate with existing tasks. Once the supervisor is stable -
-that is, once it has completed a full execution without encountering any issues - `detailedState` will show a `RUNNING`
+Kinesis, if it's unable to read from the stream, or cannot communicate with existing tasks. Once the supervisor is stable;
+that is, once it has completed a full execution without encountering any issues, `detailedState` will show a `RUNNING`
 state until it is stopped, suspended, or hits a failure threshold and transitions to an unhealthy state.
 
-### Updating existing supervisors
+### Update existing supervisors
 
-You can send a `POST` request to `/druid/indexer/v1/supervisor` to update the existing supervisor spec.
-Calling this endpoint when there is already an existing supervisor for the same datasource will cause:
+To update an existing supervisor spec, send a `POST` request to `/druid/indexer/v1/supervisor`.
+Calling this endpoint when there is already an existing supervisor for the same datasource causes the running supervisor to signal its managed tasks to stop reading and begin publishing. Then, the running supervisor exits and a new supervisor is created using the configuration provided in the request body. The new supervisor retains the existing publishing tasks and creates new tasks starting at the sequence numbers the publishing tasks ended on.
 
-- The running supervisor to signal its managed tasks to stop reading and begin publishing.
-- The running supervisor to exit.
-- A new supervisor to be created using the configuration provided in the request body. This supervisor retains the
-existing publishing tasks and creates new tasks starting at the sequence numbers the publishing tasks ended on.
+You can achieve seamless schema migrations by submitting the new schema using the `/druid/indexer/v1/supervisor` endpoint.
 
-Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
-
-### Suspending and resuming supervisors
+### Suspend and resume supervisors
 
 To suspend a supervisor, send a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/suspend`.
 To resume a supervisor, send a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/resume`.
 
-The supervisor still operates and emits logs and metrics, and it ensures that no indexing tasks are running until the supervisor resumes.
+Suspending a supervisor does not prevent it from operating and emitting logs and metrics. It ensures that no indexing tasks are running until the supervisor resumes.
 
-### Resetting supervisors
+### Reset supervisors
 
 Sending a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/reset` clears stored
 sequence numbers, causing the supervisor to start reading from either the earliest or the
@@ -505,16 +572,13 @@ no longer available in Kinesis (typically because the message retention period h
 removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation
 enables you to recover from this condition.
 
-Note that the supervisor must be running for this endpoint to be available.
+The supervisor must be running for this endpoint to be available.
 
-### Terminating supervisors
+### Terminate supervisors
 
 Sending a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes
 all associated indexing tasks managed by this supervisor to immediately stop and begin
-publishing their segments. This supervisor will still exist in the metadata store and its history may be retrieved
-with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can its configuration
-or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
-spec to the create API.
+publishing their segments. This supervisor will still exist in the metadata store and its history may be retrieved with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can its configuration or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor spec to the create API.
 
 ### Capacity planning
 
@@ -577,7 +641,7 @@ events for the interval 13:00 - 14:00 may be split across the previous and the n
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 See [Segment size optimization](../../operations/segment-optimization.md) for details on how to optimize the segment size.
 
-### Determining fetch settings
+### Determine fetch settings
 
 Kinesis indexing tasks fetch records using `fetchThreads` threads.
 If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
