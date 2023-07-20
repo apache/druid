@@ -349,7 +349,7 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testTotalLimitWithQueryQueuing() throws Exception
+  public void testTotalLimitWithQueryQueuing()
   {
     ServerConfig serverConfig = new ServerConfig();
     QueryScheduler queryScheduler = new QueryScheduler(
@@ -362,7 +362,7 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testTotalLimitWithouQueryQueuing() throws Exception
+  public void testTotalLimitWithouQueryQueuing()
   {
     ServerConfig serverConfig = new ServerConfig(true);
     QueryScheduler queryScheduler = new QueryScheduler(
