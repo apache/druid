@@ -36,6 +36,7 @@ integration-tests/gen-scripts/
 **/druidapi.egg-info/
 examples/quickstart/jupyter-notebooks/docker-jupyter/notebooks
 website/i18n/*
+website/.docusaurus/
 # ignore NetBeans IDE specific files
 nbproject
 nbactions.xml
