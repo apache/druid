@@ -36,7 +36,7 @@ Update one or more retention rules for a datasource. Retention rules can be subm
 Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` does not exist.
 
 ### URL
-<code class="postAPI">POST</code> `/druid/coordinator/v1/rules/{dataSource}`
+<code class="postAPI">POST</code> `/druid/coordinator/v1/rules/{datasource}`
 
 ### Header parameters
 
@@ -205,7 +205,7 @@ A successful request returns an HTTP `200 OK` and an empty response body.
 
 ## Get an array of all retention rules
 
-Retrieves all current retention rules in the cluster including the default retention rule. The response object is an array of objects for each datasource and their associated retention rule.
+Retrieves all current retention rules in the cluster including the default retention rule. Returns an array of objects for each datasource and their associated retention rule.
 
 ### URL
 
@@ -347,7 +347,7 @@ Retrieves the audit history of rules for all datasources over an interval of tim
 
 Note that the following query parameters cannot be chained.
 
-* `inverval` (optional)
+* `interval` (optional)
   * Type: ISO 8601.
   * Limit the number of results to the specified time interval. Delimit with `/`. For example, `2023-07-13/2023-07-19`.
 * `count` (optional)
