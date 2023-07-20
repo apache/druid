@@ -19,11 +19,8 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -32,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
@@ -95,10 +93,33 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   private volatile boolean started = false;
 
-  // Keep history of load/drop request status in a LRU cache to maintain idempotency if same request shows up
-  // again and to return status of a completed request. Maximum size of this cache must be significantly greater
-  // than number of pending load/drop requests. so that history is not lost too quickly.
-  private final Cache<DataSegmentChangeRequest, AtomicReference<Status>> requestStatuses;
+  /**
+   * Used to cache the status of a completed load or drop request until it has
+   * been served to the (Coordinator) client exactly once.
+   * <p>
+   * The cache is used as follows:
+   * <ol>
+   * <li>An entry with state PENDING is added to the cache upon receiving a
+   * request to load or drop a segment.</li>
+   * <li>A duplicate request received at this point is immediately answered with PENDING.</li>
+   * <li>Once the load/drop finishes, the entry is updated to either SUCCESS or FAILED.</li>
+   * <li>A duplicate request received at this point is immediately answered with
+   * SUCCESS or FAILED and the entry is removed from the cache.</li>
+   * <li>If the first request itself finishes after the load or drop has already
+   * completed, it is answered with a SUCCESS or FAILED and the entry is removed
+   * from the cache.</li>
+   * </ol>
+   * <p>
+   * Maximum size of this cache must be significantly greater than the number of
+   * pending load/drop requests. This is generally the case because the
+   * Coordinator sends load/drop requests in small batches and does not send new
+   * requests until the previously submitted ones have either succeeded or failed.
+   * <p>
+   * The cache must be updated in a thread-safe manner so that stale statuses
+   * are not served.
+   */
+  @GuardedBy("requestStatusesLock")
+  private final Cache<DataSegmentChangeRequest, AtomicReference<DataSegmentChangeResponse.Status>> requestStatuses;
   private final Object requestStatusesLock = new Object();
 
   // This is the list of unresolved futures returned to callers of processBatch(List<DataSegmentChangeRequest>)
@@ -320,7 +341,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @Override
   public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
-    Status result = null;
+    DataSegmentChangeResponse.Status result = null;
     try {
       log.info("Loading segment %s", segment.getId());
       /*
@@ -349,13 +370,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
       }
 
-      result = Status.SUCCESS;
+      result = DataSegmentChangeResponse.Status.SUCCESS;
     }
     catch (Throwable e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
          .addData("segment", segment)
          .emit();
-      result = Status.failed(e.toString());
+      result = DataSegmentChangeResponse.Status.failed(e.toString());
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
@@ -466,7 +487,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       final boolean scheduleDrop
   )
   {
-    Status result = null;
+    DataSegmentChangeResponse.Status result = null;
     try {
       announcer.unannounceSegment(segment);
       segmentsToDelete.add(segment);
@@ -506,13 +527,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         runnable.run();
       }
 
-      result = Status.SUCCESS;
+      result = DataSegmentChangeResponse.Status.SUCCESS;
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to remove segment")
          .addData("segment", segment)
          .emit();
-      result = Status.failed(e.getMessage());
+      result = DataSegmentChangeResponse.Status.failed(e.getMessage());
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
@@ -527,15 +548,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return ImmutableList.copyOf(segmentsToDelete);
   }
 
-  public ListenableFuture<List<DataSegmentChangeRequestAndStatus>> processBatch(List<DataSegmentChangeRequest> changeRequests)
+  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests)
   {
     boolean isAnyRequestDone = false;
 
-    Map<DataSegmentChangeRequest, AtomicReference<Status>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
+    Map<DataSegmentChangeRequest, AtomicReference<DataSegmentChangeResponse.Status>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
 
     for (DataSegmentChangeRequest cr : changeRequests) {
-      AtomicReference<Status> status = processRequest(cr);
-      if (status.get().getState() != Status.STATE.PENDING) {
+      AtomicReference<DataSegmentChangeResponse.Status> status = processRequest(cr);
+      if (status.get().getState() != DataSegmentChangeResponse.State.PENDING) {
         isAnyRequestDone = true;
       }
       statuses.put(cr, status);
@@ -554,20 +575,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return future;
   }
 
-  private AtomicReference<Status> processRequest(DataSegmentChangeRequest changeRequest)
+  private AtomicReference<DataSegmentChangeResponse.Status> processRequest(DataSegmentChangeRequest changeRequest)
   {
     synchronized (requestStatusesLock) {
-      AtomicReference<Status> status = requestStatuses.getIfPresent(changeRequest);
+      AtomicReference<DataSegmentChangeResponse.Status> status = requestStatuses.getIfPresent(changeRequest);
 
       // If last load/drop request status is failed, here can try that again
-      if (status == null || status.get().getState() == Status.STATE.FAILED) {
+      if (status == null || status.get().getState() == DataSegmentChangeResponse.State.FAILED) {
         changeRequest.go(
             new DataSegmentChangeHandler()
             {
               @Override
               public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(Status.PENDING));
+                requestStatuses.put(changeRequest, new AtomicReference<>(DataSegmentChangeResponse.Status.PENDING));
                 exec.submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
@@ -579,7 +600,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               @Override
               public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(Status.PENDING));
+                requestStatuses.put(changeRequest, new AtomicReference<>(DataSegmentChangeResponse.Status.PENDING));
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
@@ -589,7 +610,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             },
             this::resolveWaitingFutures
         );
-      } else if (status.get().getState() == Status.STATE.SUCCESS) {
+      } else if (status.get().getState() == DataSegmentChangeResponse.State.SUCCESS) {
         // SUCCESS case, we'll clear up the cached success while serving it to this client
         // Not doing this can lead to an incorrect response to upcoming clients for a reload
         requestStatuses.invalidate(changeRequest);
@@ -599,13 +620,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  private void updateRequestStatus(DataSegmentChangeRequest changeRequest, Status result)
+  private void updateRequestStatus(DataSegmentChangeRequest changeRequest, DataSegmentChangeResponse.Status result)
   {
     if (result == null) {
-      result = Status.failed("Unknown reason. Check server logs.");
+      result = DataSegmentChangeResponse.Status.failed("Unknown reason. Check server logs.");
     }
     synchronized (requestStatusesLock) {
-      AtomicReference<Status> statusRef = requestStatuses.getIfPresent(changeRequest);
+      AtomicReference<DataSegmentChangeResponse.Status> statusRef = requestStatuses.getIfPresent(changeRequest);
       if (statusRef != null) {
         statusRef.set(result);
       }
@@ -773,14 +794,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   // Future with cancel() implementation to remove it from "waitingFutures" list
-  private class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeRequestAndStatus>>
+  private class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeResponse>>
   {
     private final LinkedHashSet<CustomSettableFuture> waitingFutures;
-    private final Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs;
+    private final Map<DataSegmentChangeRequest, AtomicReference<DataSegmentChangeResponse.Status>> statusRefs;
 
     private CustomSettableFuture(
         LinkedHashSet<CustomSettableFuture> waitingFutures,
-        Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs
+        Map<DataSegmentChangeRequest, AtomicReference<DataSegmentChangeResponse.Status>> statusRefs
     )
     {
       this.waitingFutures = waitingFutures;
@@ -789,19 +810,21 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     public void resolve()
     {
+      // Synchronize here to ensure thread-safety of (a) resolving this future
+      // and (b) updating the requestStatuses cache
       synchronized (requestStatusesLock) {
         if (isDone()) {
           return;
         }
 
-        final List<DataSegmentChangeRequestAndStatus> result = new ArrayList<>(statusRefs.size());
+        final List<DataSegmentChangeResponse> result = new ArrayList<>(statusRefs.size());
         statusRefs.forEach((request, statusRef) -> {
           // Remove complete statuses from the cache
-          final Status status = statusRef.get();
-          if (status != null && status.getState() != Status.STATE.PENDING) {
+          final DataSegmentChangeResponse.Status status = statusRef.get();
+          if (status != null && status.getState() != DataSegmentChangeResponse.State.PENDING) {
             requestStatuses.invalidate(request);
           }
-          result.add(new DataSegmentChangeRequestAndStatus(request, status));
+          result.add(new DataSegmentChangeResponse(request, status));
         });
 
         set(result);
@@ -818,94 +841,5 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  public static class Status
-  {
-    public enum STATE
-    {
-      SUCCESS, FAILED, PENDING
-    }
-
-    private final STATE state;
-    @Nullable
-    private final String failureCause;
-
-    public static final Status SUCCESS = new Status(STATE.SUCCESS, null);
-    public static final Status PENDING = new Status(STATE.PENDING, null);
-
-    @JsonCreator
-    Status(
-        @JsonProperty("state") STATE state,
-        @JsonProperty("failureCause") @Nullable String failureCause
-    )
-    {
-      Preconditions.checkNotNull(state, "state must be non-null");
-      this.state = state;
-      this.failureCause = failureCause;
-    }
-
-    public static Status failed(String cause)
-    {
-      return new Status(STATE.FAILED, cause);
-    }
-
-    @JsonProperty
-    public STATE getState()
-    {
-      return state;
-    }
-
-    @Nullable
-    @JsonProperty
-    public String getFailureCause()
-    {
-      return failureCause;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "Status{" +
-             "state=" + state +
-             ", failureCause='" + failureCause + '\'' +
-             '}';
-    }
-  }
-
-  public static class DataSegmentChangeRequestAndStatus
-  {
-    private final DataSegmentChangeRequest request;
-    private final Status status;
-
-    @JsonCreator
-    public DataSegmentChangeRequestAndStatus(
-        @JsonProperty("request") DataSegmentChangeRequest request,
-        @JsonProperty("status") Status status
-    )
-    {
-      this.request = request;
-      this.status = status;
-    }
-
-    @JsonProperty
-    public DataSegmentChangeRequest getRequest()
-    {
-      return request;
-    }
-
-    @JsonProperty
-    public Status getStatus()
-    {
-      return status;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "DataSegmentChangeRequestAndStatus{" +
-             "request=" + request +
-             ", status=" + status +
-             '}';
-    }
-  }
 }
 

@@ -31,7 +31,7 @@ import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -321,12 +321,12 @@ public class HttpLoadQueuePeonTest
             }
         );
 
-        List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = new ArrayList<>(changeRequests.size());
+        List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
           cr.go(this, null);
-          statuses.add(new SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus(
+          statuses.add(new DataSegmentChangeResponse(
               cr,
-              SegmentLoadDropHandler.Status.SUCCESS
+              DataSegmentChangeResponse.Status.SUCCESS
           ));
         }
         return (ListenableFuture) Futures.immediateFuture(
