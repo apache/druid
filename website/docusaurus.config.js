@@ -55,7 +55,7 @@ module.exports={
         },
         "blog": {},
         "theme": {
-          "customCss": "../src/css/customTheme.css"
+          "customCss": "./src/css/customTheme.css"
         },
         "gtag": {
           "trackingID": "UA-131010415-1"
