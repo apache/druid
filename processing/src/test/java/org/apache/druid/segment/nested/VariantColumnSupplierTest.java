@@ -47,9 +47,11 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.semantic.ArrayElementIndexes;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -377,6 +379,15 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertNull(predicateIndex);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullValueIndex);
+    ValueIndexes valueIndexes = supplier.as(ValueIndexes.class);
+    ArrayElementIndexes arrayElementIndexes = supplier.as(ArrayElementIndexes.class);
+    if (expectedType.getSingleType() != null && expectedType.getSingleType().isArray()) {
+      Assert.assertNotNull(valueIndexes);
+      Assert.assertNotNull(arrayElementIndexes);
+    } else {
+      Assert.assertNull(valueIndexes);
+      Assert.assertNull(arrayElementIndexes);
+    }
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
     Assert.assertEquals(1, fields.size());
@@ -397,6 +408,10 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertArrayEquals(((List) row).toArray(), (Object[]) valueSelector.getObject());
           if (expectedType.getSingleType() != null) {
             Assert.assertArrayEquals(((List) row).toArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
+            Assert.assertTrue(valueIndexes.forValue(row, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
+            for (Object o : ((List) row)) {
+              Assert.assertTrue("Failed on row: " + row, arrayElementIndexes.containsValue(o, expectedType.getSingleType().getElementType()).computeBitmapResult(resultFactory).get(i));
+            }
           } else {
             // mixed type vector object selector coerces to the most common type
             Assert.assertArrayEquals(ExprEval.ofType(expressionType, row).asArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
@@ -440,6 +455,9 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           }
         }
         Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+        if (expectedType.getSingleType() != null) {
+          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
+        }
       }
 
       offset.increment();

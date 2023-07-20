@@ -64,6 +64,7 @@ import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -228,11 +229,13 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   {
     @Nullable
     @Override
-    public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+    public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
+
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                                        .castTo(ExpressionType.LONG);
       if (eval.isNumericNull()) {
+        // value wasn't null, but not a number
         return null;
       }
       final long longValue = eval.asLong();
