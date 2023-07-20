@@ -43,7 +43,7 @@ public class SqlStatementResultTest
                                            + "\"createdAt\":\"2023-05-31T12:00:00.000Z\","
                                            + "\"schema\":[{\"name\":\"_time\",\"type\":\"TIMESTAMP\",\"nativeType\":\"LONG\"},{\"name\":\"alias\",\"type\":\"VARCHAR\",\"nativeType\":\"STRING\"},{\"name\":\"market\",\"type\":\"VARCHAR\",\"nativeType\":\"STRING\"}],"
                                            + "\"durationMs\":100,"
-                                           + "\"result\":{\"numTotalRows\":1,\"totalSizeInBytes\":1,\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"pages\":[{\"id\":0,\"numRows\":1,\"sizeInBytes\":1}]},"
+                                           + "\"result\":{\"numTotalRows\":1,\"totalSizeInBytes\":1,\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"pages\":[{\"id\":0,\"sizeInBytes\":1}]},"
                                            + "\"errorDetails\":{\"error\":\"druidException\",\"errorCode\":\"QueryNotSupported\",\"persona\":\"USER\",\"category\":\"UNCATEGORIZED\",\"errorMessage\":\"QueryNotSupported\",\"context\":{}}}";
 
   public static final SqlStatementResult SQL_STATEMENT_RESULT = new SqlStatementResult(
@@ -59,8 +59,8 @@ public class SqlStatementResultTest
         protected DruidException makeException(DruidException.DruidExceptionBuilder bob)
         {
           return bob.forPersona(DruidException.Persona.USER)
-                                 .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                 .build(MSQ_EXCEPTION.getMessage());
+                    .ofCategory(DruidException.Category.UNCATEGORIZED)
+                    .build(MSQ_EXCEPTION.getMessage());
         }
       }).toErrorResponse()
   );
@@ -86,7 +86,7 @@ public class SqlStatementResultTest
         + " createdAt=2023-05-31T12:00:00.000Z,"
         + " sqlRowSignature=[ColumnNameAndTypes{colName='_time', sqlTypeName='TIMESTAMP', nativeTypeName='LONG'}, ColumnNameAndTypes{colName='alias', sqlTypeName='VARCHAR', nativeTypeName='STRING'}, ColumnNameAndTypes{colName='market', sqlTypeName='VARCHAR', nativeTypeName='STRING'}],"
         + " durationInMs=100,"
-        + " resultSetInformation=ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=1, sizeInBytes=1}]},"
+        + " resultSetInformation=ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=null, sizeInBytes=1}]},"
         + " errorResponse={error=druidException, errorCode=QueryNotSupported, persona=USER, category=UNCATEGORIZED, errorMessage=QueryNotSupported, context={}}}",
         SQL_STATEMENT_RESULT.toString()
     );

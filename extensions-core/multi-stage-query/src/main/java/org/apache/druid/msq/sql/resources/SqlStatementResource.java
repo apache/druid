@@ -705,7 +705,7 @@ public class SqlStatementResource
       } else {
         selectedPageId = null;
       }
-      checkForDurableStorageConnectorImpl(NodeRole.BROKER);
+      checkForDurableStorageConnectorImpl();
       final DurableStorageInputChannelFactory standardImplementation = DurableStorageInputChannelFactory.createStandardImplementation(
           msqControllerTask.getId(),
           storageConnector,
@@ -850,11 +850,11 @@ public class SqlStatementResource
 
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);
     if (MSQSelectDestination.DURABLESTORAGE.equals(selectDestination)) {
-      checkForDurableStorageConnectorImpl(NodeRole.BROKER);
+      checkForDurableStorageConnectorImpl();
     }
   }
 
-  private void checkForDurableStorageConnectorImpl(NodeRole nodeRole)
+  private void checkForDurableStorageConnectorImpl()
   {
     if (storageConnector instanceof NilStorageConnector) {
       throw DruidException.forPersona(DruidException.Persona.USER)
@@ -862,12 +862,12 @@ public class SqlStatementResource
                           .build(
                               StringUtils.format(
                                   "The sql statement api cannot read from the select destination [%s] provided "
-                                  + "in the query context [%s] since it is not configured on the [%s]. It is recommended to configure durable storage "
+                                  + "in the query context [%s] since it is not configured on the %s. It is recommended to configure durable storage "
                                   + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
                                   + "configure durable storage.",
                                   MSQSelectDestination.DURABLESTORAGE.getName(),
                                   MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                                  nodeRole.getJsonName()
+                                  NodeRole.BROKER.getJsonName()
                               )
                           );
     }

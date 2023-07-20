@@ -377,7 +377,11 @@ When you run a query, include the context parameter `durableShuffleStorage` and 
 
 For queries where you want to use fault tolerance for workers,  set `faultTolerance` to `true`, which automatically sets `durableShuffleStorage` to `true`.
 
-For select queries where you want to write the final result to `durableStorage`, set `selectDestination`:`durableStorage`. Which shuffle mesh the job uses can still be controlled by `durableShuffleStorage` flag. A combination of `selectDestination`:`durableStorage` and `durableShuffleStorage`:`false` for a select query is perfectly valid.
+Set `selectDestination`:`durableStorage` for select queries that want to write the final results to durable storage instead of the task reports. Saving the results in the durable
+storage allows users to fetch large result sets. The location where the workers write the intermediate results is different than the location where final results get stored. Therefore, `durableShuffleStorage`:`false` and
+`selectDestination`:`durableStorage` is a valid configuration to use in the query context, that instructs the controller to persist only the final result in the durable storage, and not the
+intermediate results.
+
 
 ## Durable storage configurations
 

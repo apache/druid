@@ -274,7 +274,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "
-                          + "the query context [selectDestination] since it is not configured on the [broker]. It is recommended to "
+                          + "the query context [selectDestination] since it is not configured on the broker. It is recommended to "
                           + "configure durable storage as it allows the user to fetch large result sets. "
                           + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();

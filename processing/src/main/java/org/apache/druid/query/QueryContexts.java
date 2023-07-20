@@ -457,7 +457,7 @@ public class QueryContexts
       throw badValueException(
           key,
           StringUtils.format(
-              "referring to one of the values[%s] of enum [%s]",
+              "referring to one of the values [%s] of enum [%s]",
               Arrays.stream(clazz.getEnumConstants()).map(E::name).collect(
                   Collectors.joining(",")),
               clazz.getSimpleName()
