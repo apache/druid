@@ -51,7 +51,7 @@ module.exports={
           "editUrl": "https://github.com/apache/druid/edit/master/docs/",
           "path": "../docs",
           "routeBasePath": "/docs/latest",
-          "sidebarPath": "../website/sidebars.json"
+          "sidebarPath": "sidebars.json"
         },
         "blog": {},
         "theme": {
