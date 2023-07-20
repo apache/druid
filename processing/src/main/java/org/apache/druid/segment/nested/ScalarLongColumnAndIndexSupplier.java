@@ -51,6 +51,7 @@ import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -230,9 +231,14 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
     {
+
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                                        .castTo(ExpressionType.LONG);
+      if (value == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
       if (eval.isNumericNull()) {
+        // value wasn't null, but not a number
         return null;
       }
       final long longValue = eval.asLong();

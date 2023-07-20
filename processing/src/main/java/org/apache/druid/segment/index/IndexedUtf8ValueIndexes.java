@@ -104,6 +104,9 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
   {
     if (valueType.isPrimitive()) {
+      if (value == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
       return forValue(
           ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                   .castTo(ExpressionType.STRING)

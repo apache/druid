@@ -48,6 +48,7 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -350,8 +351,8 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
                                        .castTo(ExpressionType.fromColumnTypeStrict(logicalType));
-      if (eval.value() == null) {
-        return null;
+      if (value == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
       }
       final Object[] arrayToMatch = eval.asArray();
       Indexed elements;
@@ -377,7 +378,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       }
 
       final int[] ids = new int[arrayToMatch.length];
-      boolean hasMissingElement = false;
       final int arrayOffset = stringDictionarySupplier.get().size() + longDictionarySupplier.get().size() + doubleDictionarySupplier.get().size();
       for (int i = 0; i < arrayToMatch.length; i++) {
         if (arrayToMatch[i] == null) {
@@ -388,21 +388,18 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           ids[i] = elements.indexOf(arrayToMatch[i]) + elementOffset;
         }
         if (ids[i] < 0) {
-          hasMissingElement = true;
-          break;
+          if (value == null) {
+            return new AllFalseBitmapColumnIndex(bitmapFactory);
+          }
         }
       }
 
-      final boolean noMatch = hasMissingElement;
       final FrontCodedIntArrayIndexed dictionary = arrayDictionarySupplier.get();
       return new SimpleBitmapColumnIndex()
       {
         @Override
         public double estimateSelectivity(int totalRows)
         {
-          if (noMatch) {
-            return 0.0;
-          }
           final int id = dictionary.indexOf(ids) + arrayOffset;
           if (id < 0) {
             return 0.0;
@@ -413,9 +410,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          if (noMatch) {
-            return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
-          }
           final int id = dictionary.indexOf(ids) + arrayOffset;
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
@@ -460,7 +454,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
       return new SimpleBitmapColumnIndex()
       {
-
         @Override
         public double estimateSelectivity(int totalRows)
         {

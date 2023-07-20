@@ -47,6 +47,7 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -248,6 +249,7 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
     VectorValueSelector vectorValueSelector = column.makeVectorValueSelector(vectorOffset);
 
+    ValueIndexes valueIndexes = supplier.as(ValueIndexes.class);
     StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
     DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
@@ -279,6 +281,7 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
         }
 
         Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(valueIndexes.forValue(row, ColumnType.DOUBLE).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(String.valueOf(row))))
                                        .computeBitmapResult(resultFactory)
                                        .get(i));
@@ -299,6 +302,7 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertNull(valueSelector.getObject());
           Assert.assertTrue(valueSelector.isNull());
           Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
+          Assert.assertFalse(valueIndexes.forValue(null, ColumnType.DOUBLE).computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
