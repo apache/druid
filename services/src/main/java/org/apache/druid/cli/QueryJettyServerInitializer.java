@@ -110,7 +110,9 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     if (querySchedulerConfig.getNumThreads() > 0
         && querySchedulerConfig.getNumThreads() < serverConfig.getNumThreads()
         && serverConfig.isEnableQueryRequestsQueuing()) {
-      // Add QoS filter for query requests so they don't take up more than querySchedulerConfig#numThreads
+      // Add QoS filter for query requests, so they don't take up more than querySchedulerConfig#numThreads.
+      // While this will also pick up some extra endpoints other than Query, the primary objective is to protect
+      // health check endpoints from being starved by query requests.
       log.info("Enabling QoS Filter on query requests with limit [%d].", querySchedulerConfig.getNumThreads());
       JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
           new String[]{"/druid/v2/*"},
