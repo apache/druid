@@ -23,9 +23,9 @@ sidebar_label: JSON querying
   ~ under the License.
   -->
 
-This document describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache Druid.
+This topic describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache Druid.
 
-In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
+In this topic, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
 
 ## Submit a query
@@ -35,9 +35,11 @@ Submits a JSON-based native query.
 Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`. For guidance on constructing the requests and choosing query types, see [available native queries](../querying/querying.md#available-queries).
 
 ### URL
-<code class="postAPI">POST</code> `/druid/v2/`
+
+<code class="postAPI">POST</code> <code>/druid/v2/</code>
 
 ### Query parameters
+
 * `pretty` (optional)
   * Druid returns the response in a pretty-printed format using indentation and line breaks.
 
@@ -46,10 +48,15 @@ Queries are composed of various JSON properties and Druid has different types of
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully submitted query* 
+
 <!--400 BAD REQUEST-->
+
 <br/>
+
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
@@ -61,6 +68,7 @@ Queries are composed of various JSON properties and Druid has different types of
 }
 ```
 For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -72,29 +80,31 @@ The following example submits a JSON query of the `topN` type to retrieve a rank
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2?pretty=null" \
---header "Content-Type: application/json" \
---data "{
-  \"queryType\": \"topN\",
-  \"dataSource\": \"social_media\",
-  \"dimension\": \"username\",
-  \"threshold\": 5,
-  \"metric\": \"views\",
-  \"granularity\": \"all\",
-  \"aggregations\": [
+--header 'Content-Type: application/json' \
+--data '{
+  "queryType": "topN",
+  "dataSource": "social_media",
+  "dimension": "username",
+  "threshold": 5,
+  "metric": "views",
+  "granularity": "all",
+  "aggregations": [
     {
-      \"type\": \"longSum\",
-      \"name\": \"views\",
-      \"fieldName\": \"views\"
+      "type": "longSum",
+      "name": "views",
+      "fieldName": "views"
     }
   ],
-  \"intervals\": [
-    \"2022-01-01T00:00:00.000/2024-01-01T00:00:00.000\"
+  "intervals": [
+    "2022-01-01T00:00:00.000/2024-01-01T00:00:00.000"
   ]
-}"
+}'
 ```
 <!--HTTP-->
+
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -120,6 +130,7 @@ Content-Length: 336
   ]
 }
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response: `topN` query
@@ -171,40 +182,43 @@ In this query:
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/v2?pretty=null" \
---header "Content-Type: application/json" \
---data "{
-  \"queryType\": \"groupBy\",
-  \"dataSource\": \"social_media\",
-  \"dimensions\": [\"username\"],
-  \"granularity\": \"all\",
-  \"aggregations\": [
-    { \"type\": \"doubleSum\", \"name\": \"upvoteSum\", \"fieldName\": \"upvotes\" },
-    { \"type\": \"count\", \"name\": \"postCount\", \"fieldName\": \"post_title\" }
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2" \
+--header 'Content-Type: application/json' \
+--data '{
+  "queryType": "groupBy",
+  "dataSource": "social_media",
+  "dimensions": ["username"],
+  "granularity": "all",
+  "aggregations": [
+    { "type": "doubleSum", "name": "upvoteSum", "fieldName": "upvotes" },
+    { "type": "count", "name": "postCount", "fieldName": "post_title" }
   ],
-  \"postAggregations\": [
+  "postAggregations": [
     {
-      \"type\": \"arithmetic\",
-      \"name\": \"upvoteToPostRatio\",
-      \"fn\": \"/\",
-      \"fields\": [
-        { \"type\": \"fieldAccess\", \"name\": \"upvoteSum\", \"fieldName\": \"upvoteSum\" },
-        { \"type\": \"fieldAccess\", \"name\": \"postCount\", \"fieldName\": \"postCount\" }
+      "type": "arithmetic",
+      "name": "upvoteToPostRatio",
+      "fn": "/",
+      "fields": [
+        { "type": "fieldAccess", "name": "upvoteSum", "fieldName": "upvoteSum" },
+        { "type": "fieldAccess", "name": "postCount", "fieldName": "postCount" }
       ]
     }
   ],
-  \"intervals\": [\"2022-01-01T00:00:00.000/2024-01-01T00:00:00.000\"],
-  \"limitSpec\": {
-    \"type\": \"default\",
-    \"limit\": 1,
-    \"columns\": [
-      { \"dimension\": \"upvoteToPostRatio\", \"direction\": \"descending\" }
+  "intervals": ["2022-01-01T00:00:00.000/2024-01-01T00:00:00.000"],
+  "limitSpec": {
+    "type": "default",
+    "limit": 1,
+    "columns": [
+      { "dimension": "upvoteToPostRatio", "direction": "descending" }
     ]
   }
-}"
+}'
 ```
+
 <!--HTTP-->
+
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -241,6 +255,7 @@ Content-Length: 817
   }
 }
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response: `groupBy` query
@@ -268,7 +283,8 @@ Content-Length: 817
 Retrieves an array that contains objects with segment information, including the server locations associated with the query provided in the request body. 
 
 ### URL
-<code class="postAPI">POST</code> `/druid/v2/candidates/`
+
+<code class="postAPI">POST</code> <code>/druid/v2/candidates/</code>
 
 ### Query parameters
 * `pretty` (optional)
@@ -279,10 +295,15 @@ Retrieves an array that contains objects with segment information, including the
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved segment information* 
+
 <!--400 BAD REQUEST-->
+
 <br/>
+
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
@@ -294,6 +315,7 @@ Retrieves an array that contains objects with segment information, including the
 }
 ```
 For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -303,30 +325,32 @@ For more information on possible error messages, see [query execution failures](
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/candidates" \
---header "Content-Type: application/json" \
---data "{
-  \"queryType\": \"topN\",
-  \"dataSource\": \"social_media\",
-  \"dimension\": \"username\",
-  \"threshold\": 5,
-  \"metric\": \"views\",
-  \"granularity\": \"all\",
-
-  \"aggregations\": [
+--header 'Content-Type: application/json' \
+--data '{
+  "queryType": "topN",
+  "dataSource": "social_media",
+  "dimension": "username",
+  "threshold": 5,
+  "metric": "views",
+  "granularity": "all",
+  "aggregations": [
     {
-      \"type\": \"longSum\",
-      \"name\": \"views\",
-      \"fieldName\": \"views\"
+      "type": "longSum",
+      "name": "views",
+      "fieldName": "views"
     }
   ],
-  \"intervals\": [
-    \"2020-01-01T00:00:00.000/2024-01-01T00:00:00.000\"
+  "intervals": [
+    "2022-01-01T00:00:00.000/2024-01-01T00:00:00.000"
   ]
-}"
+}'
 ```
+
 <!--HTTP-->
+
 ```HTTP
 POST /druid/v2/candidates HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -353,6 +377,7 @@ Content-Length: 336
   ]
 }
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response
