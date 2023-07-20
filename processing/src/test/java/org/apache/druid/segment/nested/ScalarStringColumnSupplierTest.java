@@ -49,6 +49,7 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -248,6 +249,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
     DimensionSelector dimSelector = column.makeDimensionSelector(offset, null);
 
+    ValueIndexes valueIndexes = supplier.as(ValueIndexes.class);
     StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
     DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
@@ -270,6 +272,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertEquals(dimSelector.idLookup().lookupId(dimSelectorLookupVal), dimSelector.getRow().get(0));
 
         Assert.assertTrue(valueSetIndex.forValue(row).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(valueIndexes.forValue(row, ColumnType.STRING).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(row)))
                                        .computeBitmapResult(resultFactory)
                                        .get(i));
