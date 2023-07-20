@@ -25,13 +25,13 @@ sidebar_label: Retention rules
 
 This document describes the API endpoints for managing retention rules in Apache Druid.
 
-Druid uses retention rules to determine what data should be retained in the cluster. Druid supports load, drop, and broadcast rules. See [using rules to drop and retain data](../operations/rule-configuration.md) for more information. 
+Druid uses retention rules to determine what data is retained in the cluster. Druid supports load, drop, and broadcast rules. See [using rules to drop and retain data](../operations/rule-configuration.md) for more information. 
 
 In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
 ## Update retention rules for a datasource
 
-Update one or more retention rules for a datasource. Retention rules can be submitted as an array of rule objects in the request body and overwrites any existing rules for the datasource. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
+Update one or more retention rules for a datasource. Retention rules can be submitted as an array of rule objects in the request body and overwrite any existing rules for the datasource. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
 Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` does not exist.
 
@@ -118,11 +118,11 @@ Content-Length: 192
 
 ### Sample response
 
-A successful request returns an HTTP `200 OK` and empty response body.
+A successful request returns an HTTP `200 OK` and an empty response body.
 
 ## Update default retention rules for all datasources
 
-Update one or more default retention rules for all datasources. Retention rules can be submitted as an array of rule objects in the request body and overwrites any existing rules for the datasource. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
+Update one or more default retention rules for all datasources. Retention rules can be submitted as an array of rule objects in the request body and overwrite any existing rules for the datasource. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
 ### URL
 
@@ -200,7 +200,7 @@ Content-Length: 207
 
 ### Sample response
 
-A successful request returns an HTTP `200 OK` and empty response body.
+A successful request returns an HTTP `200 OK` and an empty response body.
 
 
 ## Get an array of all retention rules
@@ -349,7 +349,7 @@ Note that the following query parameters cannot be chained.
 
 * `inverval` (optional)
   * Type: ISO 8601 delimited with `/`. For example, `2023-07-13/2023-07-19`.
-  * Limit the number of results to the specified time interval. Default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
+  * Limit the number of results to the specified time interval. The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
 * `count` (optional)
   * Type: Int
   * Limit the number of results to the last `n` entries.
@@ -363,7 +363,7 @@ Note that the following query parameters cannot be chained.
 *Successfully retrieved audit history* 
 <!--400 BAD REQUEST-->
 <br/>
-*Request in incorrect format* 
+*Request in the incorrect format* 
 <!--404 NOT FOUND-->
 <br/>
 *`count` query parameter too large* 
