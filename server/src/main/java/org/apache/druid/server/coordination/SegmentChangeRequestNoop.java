@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordination;
 
+import org.apache.druid.timeline.DataSegment;
+
 import javax.annotation.Nullable;
 
 /**
@@ -38,5 +40,11 @@ public class SegmentChangeRequestNoop implements DataSegmentChangeRequest
   public String asString()
   {
     return "NOOP";
+  }
+
+  @Override
+  public DataSegment getSegment()
+  {
+    return null;
   }
 }

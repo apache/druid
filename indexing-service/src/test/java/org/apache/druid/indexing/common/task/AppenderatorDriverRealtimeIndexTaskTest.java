@@ -72,7 +72,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
+import org.apache.druid.server.coordination.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.indexing.test.TestDataSegmentPusher;
 import org.apache.druid.jackson.DefaultObjectMapper;

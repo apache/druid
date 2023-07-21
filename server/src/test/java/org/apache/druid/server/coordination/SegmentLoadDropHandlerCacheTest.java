@@ -141,13 +141,13 @@ public class SegmentLoadDropHandlerCacheTest
     // make sure adding segments beyond allowed size fails
     Mockito.reset(segmentAnnouncer);
     DataSegment newSegment = makeSegment("test", "new-segment");
-    loadDropHandler.addSegment(newSegment, null);
+    loadDropHandler.loadAndAnnounceSegment(newSegment, null);
     Mockito.verify(segmentAnnouncer, Mockito.never()).announceSegment(any());
     Mockito.verify(segmentAnnouncer, Mockito.never()).announceSegments(any());
 
     // clearing some segment should allow for new segments
-    loadDropHandler.removeSegment(expectedSegments.get(0), null, false);
-    loadDropHandler.addSegment(newSegment, null);
+    loadDropHandler.unannounceAndDropSegment(expectedSegments.get(0), null);
+    loadDropHandler.loadAndAnnounceSegment(newSegment, null);
     Mockito.verify(segmentAnnouncer).announceSegment(newSegment);
   }
 

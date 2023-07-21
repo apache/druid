@@ -446,7 +446,7 @@ public class SegmentManagerTest
     }
 
     Assert.assertEquals(expectedDataSourceNames, segmentManager.getDataSourceNames());
-    Assert.assertEquals(expectedDataSourceCounts, segmentManager.getDataSourceCounts());
+    Assert.assertEquals(expectedDataSourceCounts, segmentManager.getDataSourceToNumSegments());
     Assert.assertEquals(expectedDataSourceSizes, segmentManager.getDataSourceSizes());
 
     final Map<String, DataSourceState> dataSources = segmentManager.getDataSources();
