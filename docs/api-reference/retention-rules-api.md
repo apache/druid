@@ -23,20 +23,21 @@ sidebar_label: Retention rules
   ~ under the License.
   -->
 
-This document describes the API endpoints for managing retention rules in Apache Druid.
+This topic describes the API endpoints for managing retention rules in Apache Druid. You can configure retention rules in the Druid web console or API.
 
 Druid uses retention rules to determine what data is retained in the cluster. Druid supports load, drop, and broadcast rules. See [using rules to drop and retain data](../operations/rule-configuration.md) for more information. 
 
-In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Update retention rules for a datasource
 
 Update one or more retention rules for a datasource. Retention rules can be submitted as an array of rule objects in the request body and overwrite any existing rules for the datasource. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
-Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` does not exist.
+Note that this endpoint returns an `HTTP 200 Success` code message even if the datasource does not exist.
 
 ### URL
-<code class="postAPI">POST</code> `/druid/coordinator/v1/rules/{datasource}`
+
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/:datasource</code>
 
 ### Header parameters
 
@@ -54,7 +55,9 @@ The endpoint supports a set of optional header parameters to populate the `autho
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully updated retention rules for specified datasource* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -63,33 +66,36 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 ### Sample request
 
-The following example updates the retention rules for a datasource with specified ID `kttm1`.
+The following example updates the retention rules for a datasource with the name `kttm1`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/kttm1" \
---header "X-Druid-Author: doc intern" \
---header "X-Druid-Comment: submitted via api" \
---header "Content-Type: application/json" \
---data "[
+--header 'X-Druid-Author: doc intern' \
+--header 'X-Druid-Comment: submitted via api' \
+--header 'Content-Type: application/json' \
+--data '[
   {
-    \"type\": \"broadcastForever\"
+    "type": "broadcastForever"
   },
   {
-    \"type\": \"loadForever\",
-    \"tieredReplicants\": {
-      \"_default_tier\": 2
+    "type": "loadForever",
+    "tieredReplicants": {
+      "_default_tier": 2
     }
   },
   {
-    \"type\": \"dropByPeriod\",
-    \"period\": \"P1M\"
+    "type": "dropByPeriod",
+    "period": "P1M"
   }
-]"
+]'
 ```
+
 <!--HTTP-->
+
 ```HTTP
 POST /druid/coordinator/v1/rules/kttm1 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -114,6 +120,7 @@ Content-Length: 192
   }
 ]
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response
@@ -126,7 +133,7 @@ Update one or more default retention rules for all datasources. Retention rules 
 
 ### URL
 
-<code class="postAPI">POST</code> `/druid/coordinator/v1/rules/_default`
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/_default</code>
 
 ### Header parameters
 
@@ -144,10 +151,15 @@ The endpoint supports a set of optional header parameters to populate the `autho
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully updated default retention rules* 
+
 <!--500 SERVER ERROR-->
+
 <br/>
+
 *Error with request body* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -155,28 +167,32 @@ The endpoint supports a set of optional header parameters to populate the `autho
 ---
 
 ### Sample request
+
 The following example updates the default retention rule for all datasources with two new rules, `dropByPeriod` and `broadcastByPeriod`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
---header "Content-Type: application/json" \
---data "[
+--header 'Content-Type: application/json' \
+--data '[
     {
-        \"type\": \"dropByPeriod\",
-        \"period\": \"P1M\",
-        \"includeFuture\": true
+        "type": "dropByPeriod",
+        "period": "P1M",
+        "includeFuture": true
     },
     {
-        \"type\": \"broadcastByPeriod\",
-        \"period\": \"P1M\",
-        \"includeFuture\": true
+        "type": "broadcastByPeriod",
+        "period": "P1M",
+        "includeFuture": true
     }
-]"
+]'
 ```
+
 <!--HTTP-->
+
 ```HTTP
 POST /druid/coordinator/v1/rules/_default HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
@@ -196,12 +212,12 @@ Content-Length: 207
     }
 ]
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response
 
 A successful request returns an HTTP `200 OK` and an empty response body.
-
 
 ## Get an array of all retention rules
 
@@ -209,14 +225,16 @@ Retrieves all current retention rules in the cluster including the default reten
 
 ### URL
 
-<code class="getAPI">GET</code> `/druid/coordinator/v1/rules`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules</code>
 
 ### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved retention rules* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -228,14 +246,18 @@ Retrieves all current retention rules in the cluster including the default reten
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules"
 ```
+
 <!--HTTP-->
+
 ```HTTP
 GET /druid/coordinator/v1/rules HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response
@@ -268,13 +290,14 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves an array of rule objects for a single datasource. If there are no retention rules, it returns an empty array. 
 
-Note that this endpoint returns an `HTTP 200 Success` code message even if the `datasource` does not exist.
+Note that this endpoint returns an `HTTP 200 Success` code message even if the datasource does not exist.
 
 ### URL
 
-<code class="getAPI">GET</code> `/druid/coordinator/v1/rules/{dataSource}`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/:datasource</code>
 
 ### Query parameters
+
 * `full` (optional)
   * Include the default retention rule for the datasource in the response.
 
@@ -283,7 +306,9 @@ Note that this endpoint returns an `HTTP 200 Success` code message even if the `
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved retention rules* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -292,19 +317,23 @@ Note that this endpoint returns an `HTTP 200 Success` code message even if the `
 
 ### Sample request
 
-The following example retrieves the custom retention rules and default retention rules for datasource with specified ID `social_media`.
+The following example retrieves the custom retention rules and default retention rules for datasource with the name `social_media`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/social_media?full=null"
 ```
+
 <!--HTTP-->
+
 ```HTTP
 GET /druid/coordinator/v1/rules/social_media?full=null HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response
@@ -333,15 +362,16 @@ Host: http://ROUTER_IP:ROUTER_PORT
     }
 ]
   ```
+
 </details>
 
 ## Get audit history for all datasources
 
-Retrieves the audit history of rules for all datasources over an interval of time. The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
+Retrieves the audit history of rules for all datasources over an interval of time. The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in the `runtime.properties` file for the Coordinator.
 
 ### URL
 
-<code class="getAPI">GET</code> `/druid/coordinator/v1/rules/history`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/history</code>
 
 ### Query parameters
 
@@ -359,13 +389,21 @@ Note that the following query parameters cannot be chained.
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved audit history* 
+
 <!--400 BAD REQUEST-->
+
 <br/>
+
 *Request in the incorrect format* 
+
 <!--404 NOT FOUND-->
+
 <br/>
+
 *`count` query parameter too large* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -373,19 +411,24 @@ Note that the following query parameters cannot be chained.
 ---
 
 ### Sample request
+
 The following example retrieves the audit history for all datasources from `2023-07-13` to `2023-07-19`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
+
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/history?interval=2023-07-13%2F2023-07-19"
 ```
+
 <!--HTTP-->
+
 ```HTTP
 GET /druid/coordinator/v1/rules/history?interval=2023-07-13/2023-07-19 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
+ 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Sample response
