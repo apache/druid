@@ -114,7 +114,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         catch (Exception e) {
           log.error(
               e,
-              "Exception while checking handoff for dataSource[%s] Segment[%s], Will try again after [%d]secs",
+              "Exception while checking handoff for dataSource[%s] Segment[%s], Will try again after [%d]ms",
               dataSource,
               descriptor,
               pollDurationMillis
@@ -128,7 +128,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
     catch (Throwable t) {
       log.error(
           t,
-          "Exception while checking handoff for dataSource[%s], Will try again after [%d]secs",
+          "Exception while checking handoff for dataSource[%s], Will try again after [%d]ms",
           dataSource,
           pollDurationMillis
       );
