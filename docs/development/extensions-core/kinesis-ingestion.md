@@ -25,34 +25,38 @@ sidebar_label: "Amazon Kinesis"
 
 When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis' own shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
 
-This document contains configuration reference information for the Kinesis indexing service supervisor for Apache Druid.
+This topic contains configuration reference information for the Kinesis indexing service supervisor for Apache Druid.
 
 ## Setup
 
 To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the Middle Manager. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
-
-Before you deploy the `druid-kinesis-indexing-service` extension to production, read the [Kinesis known issues](#kinesis-known-issues).
+We recommend that you review the [Kinesis known issues](#kinesis-known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
 ## Supervisor spec
 
-The following table outlines the high-level configuration options for the Kinesis supervisor:
+The following table outlines the high-level configuration options for the Kinesis supervisor object. 
+See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
 
-|Property|Description|Required|
-|--------|-----------|--------|
-|`type`|The supervisor type; this should always be `kinesis`.|Yes|
-|`spec`|The container object for the supervisor configuration.|Yes|
-|`ioConfig`|The [I/O configuration](#kinesis-supervisor-io-config) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|Yes|
-|`dataSchema`|The schema used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
-|`tuningConfig`|The [tuning configuration](#kinesis-supervisor-tuning-config) object for configuring performance-related settings for the supervisor and indexing tasks.|No|
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`type`|String|The supervisor type; this should always be `kinesis`.|Yes|
+|`spec`|Object|The container object for the supervisor configuration.|Yes|
+|`ioConfig`|Object|The [I/O configuration](#kinesis-supervisor-io-config) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|Yes|
+|`dataSchema`|Object|The schema used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
+|`tuningConfig`|Object|The [tuning configuration](#kinesis-supervisor-tuning-config) object for configuring performance-related settings for the supervisor and indexing tasks.|No|
 
-Druid starts a supervisor for a datasource when you submit a supervisor spec.
-To create a new supervisor, submit the supervisor spec to the following endpoint:
+Druid starts a new supervisor when you define a supervisor spec.
+To create a supervisor, send a `POST` request to the `/druid/indexer/v1/supervisor` endpoint.
+Once created, the supervisor persists in the configured metadata database. There can only be a single supervisor per datasource, and submitting a second spec for the same datasource overwrites the previous one.
 
-`http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor`
+When an Overlord gains leadership, either by being started or as a result of another Overlord failing, it spawns
+a supervisor for each supervisor spec in the metadata database. The supervisor then discovers running Kinesis indexing
+tasks and attempts to adopt them if they are compatible with the supervisor's configuration. If they are not
+compatible because they have a different ingestion spec or shard allocation, the tasks are killed and the
+supervisor creates a new set of tasks. In this way, the supervisors are persistent across Overlord restarts and failovers.
 
-where `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
-
-The following example shows how to submit a Kinesis supervisor spec:
+The following example shows how to submit a supervisor spec for a stream with the name `KinesisStream`.
+In this example, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -234,9 +238,9 @@ The following table outlines the configuration options for `ioConfig`:
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
 |`deaggregate`|Boolean|Whether to use the deaggregate function of the Kinesis Client Library (KCL).|No||
-|`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks auto scaler properties](#task-auto-scaler-properties) for more information.|No|null|
+|`autoScalerConfig`|Object|Defines autoscaling behavior for Kinesis ingest tasks. See [Tasks autoscaler properties](#task-autoscaler-properties) for more information.|No|null|
 
-### Task auto scaler properties
+### Task autoscaler properties
 
 The following table outlines the configuration options for `autoScalerConfig`:
 
@@ -246,11 +250,12 @@ The following table outlines the configuration options for `autoScalerConfig`:
 |`taskCountMax`|Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, Druid sets the maximum number of reading tasks to `{numKinesisShards}` and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of `taskCount` in `IOConfig` and uses `taskCountMin` for the initial number of tasks to launch.|Yes||
 |`minTriggerScaleActionFrequencyMillis`|Minimum time interval between two scale actions.| No|600000|
-|`autoScalerStrategy`|The algorithm of `autoScaler`. Druid only supports the `lagBased` strategy. See [Lag based auto scaler strategy related properties](#lag-based-auto-scaler-strategy-related-properties) for more information.|No|Defaults to `lagBased`.|
+|`autoScalerStrategy`|The algorithm of `autoScaler`. Druid only supports the `lagBased` strategy. See [Lag based autoscaler strategy related properties](#lag-based-autoscaler-strategy-related-properties) for more information.|No|Defaults to `lagBased`.|
 
-### Lag based auto scaler strategy related properties
+### Lag based autoscaler strategy related properties
 
-The Kinesis indexing service reports lag metrics measured in time milliseconds rather than message count, which is used by Kafka.
+Unlike the Kafka
+indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
 
 The following table outlines the configuration options for `autoScalerStrategy`:
 
@@ -374,7 +379,7 @@ The `tuningConfig` object is optional. If you don't specify the `tuningConfig` o
 The following table outlines the configuration options for `tuningConfig`:
 
 |Property|Type|Description|Required|Default|
-|-----|----|-----------|--------|-------|
+|--------|----|-----------|--------|-------|
 |`type`|String|The indexing task type. This should always be `kinesis`.|Yes||
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|100000|
 |`maxBytesInMemory`|Long| The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
@@ -413,7 +418,7 @@ The following table outlines the configuration options for `tuningConfig`:
 The following table outlines the configuration options for `indexSpec`:
 
 |Property|Type|Description|Required|Default|
-|-----|----|-----------|--------|-------|
+|--------|----|-----------|--------|-------|
 |`bitmap`|Object|Compression format for bitmap indexes. Druid supports roaring and concise bitmap types.|No|Roaring|
 |`dimensionCompression`|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|No|`LZ4`|
 |`metricCompression`|String|Compression format for primitive type metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|No|`LZ4`|
@@ -421,10 +426,9 @@ The following table outlines the configuration options for `indexSpec`:
 
 ## Operations
 
-This section describes how some supervisor APIs work in Kinesis indexing service.
-For all supervisor APIs, check [Supervisor API reference](../../api-reference/supervisor-api.md).
+This section describes how to use the [Supervisor API](../../api-reference/supervisor-api.md) with the Kinesis indexing service.
 
-### AWS authentication
+### AWA authentication
 
 To authenticate with AWS, you must provide your AWS access key and AWS secret key using `runtime.properties`, for example:
 
@@ -433,7 +437,7 @@ druid.kinesis.accessKey=AKIAWxxxxxxxxxx4NCKS
 druid.kinesis.secretKey=Jbytxxxxxxxxxxx2+555
 ```
 
-Druid uses the AWS access key ID and secret access key for Kinesis API requests. If not provided, the service looks for credentials set in environment variables via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+Druid uses the AWS access key and AWS secret key to authenticate Kinesis API requests. If not provided, the service looks for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance profile provider (in this order).
 
 To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
 The required permissions depend on the value of `useListShards`.
@@ -493,13 +497,11 @@ The following is an example policy:
 
 ### Get supervisor status report
 
-You can send a `GET` request to `/druid/indexer/v1/supervisor/<supervisorId>/status` to return a snapshot report of the current state of the tasks
-managed by the given supervisor. This includes the latest sequence numbers as reported by Kinesis. Unlike the Kafka
-indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
+To retrieve the current status report for a single supervisor, send a `GET` request to the `/druid/indexer/v1/supervisor/:supervisorId/status` endpoint.
 
-The status report also contains the supervisor's state and a list of recently thrown exceptions reported as
-`recentErrors`. You can control the maximum size of the exceptions using the `druid.supervisor.maxStoredExceptionEvents` configuration.
-The two fields related to the supervisor's state are `state` and `detailedState`. The `state` field contains a small number of generic states that apply to any type of supervisor, while the `detailedState` field contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities.
+The report contains the state of the supervisor tasks, the latest sequence numbers, and an array of recently thrown exceptions reported as `recentErrors`. You can control the maximum size of the exceptions using the `druid.supervisor.maxStoredExceptionEvents` configuration.
+
+The two properties related to the supervisor's state are `state` and `detailedState`. The `state` property contains a small number of generic states that apply to any type of supervisor, while the `detailedState` property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities.
 
 Possible `state` values are `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, and `UNHEALTHY_TASKS`.
 
@@ -529,7 +531,7 @@ On each iteration of the supervisor's run loop, the supervisor completes the fol
 6. Handle tasks that have failed and clean up the supervisor's internal state.
 7. Compare the list of healthy tasks to the requested `taskCount` and `replicas` configurations and create additional tasks if required.
 
-The `detailedState` field shows additional values (marked with "first iteration only" in the preceding table) the first time the
+The `detailedState` property shows additional values (marked with "first iteration only" in the preceding table) the first time the
 supervisor executes this run loop after startup or after resuming from a suspension. This is intended to surface
 initialization-type issues, where the supervisor is unable to reach a stable state. For example, if the supervisor cannot connect to
 Kinesis, if it's unable to read from the stream, or cannot communicate with existing tasks. Once the supervisor is stable;
@@ -538,58 +540,61 @@ state until it is stopped, suspended, or hits a failure threshold and transition
 
 ### Update existing supervisors
 
-To update an existing supervisor spec, send a `POST` request to `/druid/indexer/v1/supervisor`.
-Calling this endpoint when there is already an existing supervisor for the same datasource causes the running supervisor to signal its managed tasks to stop reading and begin publishing. Then, the running supervisor exits and a new supervisor is created using the configuration provided in the request body. The new supervisor retains the existing publishing tasks and creates new tasks starting at the sequence numbers the publishing tasks ended on.
+To update an existing supervisor spec, send a `POST` request to the `/druid/indexer/v1/supervisor` endpoint.
+
+When you call this endpoint on an existing supervisor for the same datasource, the running supervisor signals its tasks to stop reading and begin publishing their segments, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor with a new set of tasks that start reading from the sequence numbers, where the previous now-publishing tasks left off, but using the updated schema.
+In this way, configuration changes can be applied without requiring any pause in ingestion.
 
 You can achieve seamless schema migrations by submitting the new schema using the `/druid/indexer/v1/supervisor` endpoint.
 
-### Suspend and resume supervisors
+### Suspend and resume a supervisor
 
-To suspend a supervisor, send a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/suspend`.
-To resume a supervisor, send a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/resume`.
-
+To suspend a supervisor, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/suspend` endpoint.
 Suspending a supervisor does not prevent it from operating and emitting logs and metrics. It ensures that no indexing tasks are running until the supervisor resumes.
 
-### Reset supervisors
+To resume a supervisor, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/resume` endpoint.
 
-Sending a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/reset` clears stored
-sequence numbers, causing the supervisor to start reading from either the earliest or the
+### Reset a supervisor
+
+The supervisor must be running for this endpoint to be available
+
+To reset a supervisor, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/reset` endpoint. This endpoint clears stored
+sequence numbers, prompting the supervisor to start reading from either the earliest or the
 latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`).
 After clearing stored sequence numbers, the supervisor kills and recreates active tasks,
 so that tasks begin reading from valid sequence numbers.
 
-> Use care when using this operation. Resetting the supervisor may cause Kinesis messages
-to be skipped or read twice, resulting in missing or duplicate data.
+This endpoint is useful when you need to recover from a stopped state due to missing sequence numbers in Kinesis.
+Use this endpoint with caution as it may result in skipped messages, leading to data loss or duplicate data.
 
-The reason for using this operation is to recover from a state in which the supervisor
-ceases operating due to missing sequence numbers. The indexing service keeps track of the latest
+The indexing service keeps track of the latest
 persisted sequence number to provide exactly-once ingestion guarantees across
 tasks.
-
 Subsequent tasks must start reading from where the previous task completed
 for the generated segments to be accepted. If the messages at the expected starting sequence numbers are
 no longer available in Kinesis (typically because the message retention period has elapsed or the topic was
-removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation
-enables you to recover from this condition.
+removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This endpoint enables you to recover from this condition.
 
-The supervisor must be running for this endpoint to be available.
+### Terminate a supervisor
 
-### Terminate supervisors
+To terminate a supervisor and its associated indexing tasks, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/terminate` endpoint.
+This places a tombstone marker in the database to prevent the supervisor from being reloaded on a restart and then gracefully
+shuts down the currently running supervisor.
+The tasks stop reading and begin publishing their segments immediately.
+The call returns after all tasks have been signaled to stop but before the tasks finish publishing their segments.
 
-Sending a `POST` request to `/druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes
-all associated indexing tasks managed by this supervisor to immediately stop and begin
-publishing their segments. This supervisor will still exist in the metadata store and its history may be retrieved with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can its configuration or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor spec to the create API.
+The terminated supervisor continues exists in the metadata store and its history can be retrieved.
+The only way to restart a terminated supervisor is by submitting a functioning supervisor spec to `/druid/indexer/v1/supervisor`.
 
-### Capacity planning
+## Capacity planning
 
-Kinesis indexing tasks run on Middle Managers and are limited by the resources available in the Middle Manager cluster. In particular, you should make sure that you have sufficient worker capacity (configured using the
-`druid.worker.capacity` property) to handle the configuration in the supervisor spec. Note that worker capacity is
-shared across all types of indexing tasks, so you should plan your worker capacity to handle your total indexing load, such as batch processing, streaming tasks, and merging tasks. If your workers run out of capacity, Kinesis indexing tasks queue and wait for the next available worker. This may cause queries to return partial results but will not result in data loss (assuming the tasks run before Kinesis purges those sequence numbers).
+Kinesis indexing tasks run on Middle Managers and are limited by the resources available in the Middle Manager cluster. In particular, you should make sure that you have sufficient worker capacity, configured using the
+`druid.worker.capacity` property, to handle the configuration in the supervisor spec. Note that worker capacity is
+shared across all types of indexing tasks, so you should plan your worker capacity to handle your total indexing load, such as batch processing, streaming tasks, and merging tasks. If your workers run out of capacity, Kinesis indexing tasks queue and wait for the next available worker. This may cause queries to return partial results but will not result in data loss, assuming the tasks run before Kinesis purges those sequence numbers.
 
-A running task can be in one of two states: reading or publishing. A task remains in reading state for the period defined in `taskDuration`, at which point it transitions to publishing state. A task remains in publishing state for as long as it takes to generate segments, push segments to deep storage, and have them loaded and served by a Historical process
-(or until `completionTimeout` elapses).
+A running task can be in one of two states: reading or publishing. A task remains in reading state for the period defined in `taskDuration`, at which point it transitions to publishing state. A task remains in publishing state for as long as it takes to generate segments, push segments to deep storage, and have them loaded and served by a Historical process or until `completionTimeout` elapses.
 
-The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there are `replicas * taskCount` reading tasks. An exception occurs if `taskCount > {numKinesisShards}`, in which case `{numKinesisShards}` tasks are used instead. When `taskDuration` elapses, these tasks transition to publishing state and `replicas * taskCount` new reading tasks are created. To allow for reading tasks and publishing tasks to run concurrently, there should be a minimum capacity of:
+The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there are `replicas * taskCount` reading tasks. An exception occurs if `taskCount > {numKinesisShards}`, in which case Druid uses `{numKinesisShards}` tasks. When `taskDuration` elapses, these tasks transition to publishing state and `replicas * taskCount` new reading tasks are created. To allow for reading tasks and publishing tasks to run concurrently, there should be a minimum capacity of:
 
 ```text
 workerCapacity = 2 * replicas * taskCount
@@ -599,33 +604,7 @@ This value is for the ideal situation in which there is at most one set of tasks
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
 time-to-publish (generate segment, push to deep storage, load on Historical) is greater than `taskDuration`. This is a valid and correct scenario but requires additional worker capacity to support. In general, it is a good idea to have `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
-### Supervisor persistence
-
-When a supervisor spec is submitted via the `POST /druid/indexer/v1/supervisor` endpoint, it is persisted in the
-configured metadata database. There can only be a single supervisor per datasource, and submitting a second spec for
-the same datasource overwrites the previous one.
-
-When an Overlord gains leadership, either by being started or as a result of another Overlord failing, it spawns
-a supervisor for each supervisor spec in the metadata database. The supervisor then discovers running Kinesis indexing
-tasks and attempts to adopt them if they are compatible with the supervisor's configuration. If they are not
-compatible because they have a different ingestion spec or shard allocation, the tasks are killed and the
-supervisor creates a new set of tasks. In this way, the supervisors are persistent across Overlord restarts and failovers.
-
-You stop a supervisor by sending a `POST` request to the `/druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
-tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
-shuts down the currently running supervisor. When you shut a supervisor down in this way, it instructs its
-managed tasks to stop reading. The tasks begin publishing their segments immediately. The call to the shutdown
-endpoint returns after all tasks have been signalled to stop but before the tasks finish publishing their segments.
-
-### Schema and configuration changes
-
-Schema and configuration changes are handled by submitting the new supervisor spec via the same
-`POST /druid/indexer/v1/supervisor` endpoint used to initially create the supervisor. The Overlord initiates a
-graceful shutdown of the existing supervisor which causes the tasks being managed by that supervisor to stop reading
-and begin publishing their segments. A new supervisor is then started which creates a new set of tasks that start reading from the sequence numbers where the previous now-publishing tasks left off, but using the updated schema.
-In this way, configuration changes can be applied without requiring any pause in ingestion.
-
-### Deployment notes
+## Deployment notes
 
 Each Kinesis indexing task puts events consumed from Kinesis shards assigned to it in a single segment for each segment
 granular interval until `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod` limit is reached. At this point, a new shard
@@ -636,12 +615,12 @@ and a new set of segments is created for further events. This means that the tas
 without accumulating old segments locally on Middle Manager processes, and it is encouraged to do so.
 
 Kinesis indexing service may still produce some small segments. Let's say the task duration is 4 hours, segment granularity
-is set to an hour and the supervisor was started at 9:10. Then after 4 hours at 13:10, the new set of tasks is started and
+is set to an hour, and the supervisor was started at 9:10. Then after 4 hours at 13:10, the new set of tasks is started and
 events for the interval 13:00 - 14:00 may be split across the previous and the new set of tasks. If you see it becoming a problem then
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 See [Segment size optimization](../../operations/segment-optimization.md) for details on how to optimize the segment size.
 
-### Determine fetch settings
+## Determine fetch settings
 
 Kinesis indexing tasks fetch records using `fetchThreads` threads.
 If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
