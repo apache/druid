@@ -1417,12 +1417,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   @VisibleForTesting
   public void addTaskGroupToActivelyReadingTaskGroup(
+          int taskGroupId,
+          ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
+          Optional<DateTime> minMsgTime,
+          Optional<DateTime> maxMsgTime,
+          Set<String> tasks,
+          Set<PartitionIdType> exclusiveStartingSequencePartitions
+  )
+  {
+    addTaskGroupToActivelyReadingTaskGroup(
+            taskGroupId,
+            partitionOffsets,
+            minMsgTime,
+            maxMsgTime,
+            tasks,
+            exclusiveStartingSequencePartitions,
+            null
+    );
+  }
+
+  @VisibleForTesting
+  public void addTaskGroupToActivelyReadingTaskGroup(
       int taskGroupId,
       ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
       Optional<DateTime> minMsgTime,
       Optional<DateTime> maxMsgTime,
       Set<String> tasks,
-      Set<PartitionIdType> exclusiveStartingSequencePartitions
+      Set<PartitionIdType> exclusiveStartingSequencePartitions,
+      @Nullable DateTime taskStartTime
   )
   {
     TaskGroup group = new TaskGroup(
@@ -1434,6 +1456,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         exclusiveStartingSequencePartitions
     );
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskStartTime != null) {
+      int i =0;
+      for (TaskData td : group.tasks.values()) {
+        td.startTime = taskStartTime.minusSeconds(i);
+        i++;
+      }
+    }
     if (activelyReadingTaskGroups.putIfAbsent(taskGroupId, group) != null) {
       throw new ISE(
           "trying to add taskGroup with id [%s] to actively reading task groups, but group already exists.",
@@ -2947,33 +2976,35 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       stopTasksEarly = true;
     }
 
+    int stoppedTasks = 0;
     for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
       Integer groupId = entry.getKey();
       TaskGroup group = entry.getValue();
 
-      // find the longest running task from this group
-      DateTime earliestTaskStart = DateTimes.nowUtc();
-      for (TaskData taskData : group.tasks.values()) {
-        if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
-          earliestTaskStart = taskData.startTime;
-        }
-      }
-
       if (stopTasksEarly) {
-        log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
+        log.info("Stopping task group [%d] early. It has run for [%s]", groupId, ioConfig.getTaskDuration());
         futureGroupIds.add(groupId);
         futures.add(checkpointTaskGroup(group, true));
-      } else if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
-        // if this task has run longer than the configured duration
-        // as long as the pending task groups are less than the configured stop task count.
-        if (ioConfig.getStopTaskCount() == ioConfig.getTaskCount()
-            || pendingCompletionTaskGroups.values().stream().mapToInt(CopyOnWriteArrayList::size).sum()
-               < ioConfig.getStopTaskCount()) {
-          log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
-          futureGroupIds.add(groupId);
-          futures.add(checkpointTaskGroup(group, true));
+      } else {
+        // find the longest running task from this group
+        DateTime earliestTaskStart = DateTimes.nowUtc();
+        for (TaskData taskData : group.tasks.values()) {
+          if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
+            earliestTaskStart = taskData.startTime;
+          }
         }
-        break;
+
+        if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+          // if this task has run longer than the configured duration
+          // as long as the pending task groups are less than the configured stop task count.
+          if (pendingCompletionTaskGroups.values().stream().mapToInt(CopyOnWriteArrayList::size).sum() + stoppedTasks
+                 < ioConfig.getStopTaskCount()) {
+            log.info("Task group [%d] has run for [%s]. Stopping.", groupId, ioConfig.getTaskDuration());
+            futureGroupIds.add(groupId);
+            futures.add(checkpointTaskGroup(group, true));
+            stoppedTasks++;
+          }
+        }
       }
     }
 

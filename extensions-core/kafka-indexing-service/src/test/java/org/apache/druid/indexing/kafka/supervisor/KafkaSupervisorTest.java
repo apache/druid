@@ -310,7 +310,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             new IdleConfig(true, 1000L),
-            null
+            1
     );
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
