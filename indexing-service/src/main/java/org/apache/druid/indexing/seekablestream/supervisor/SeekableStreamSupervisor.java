@@ -3271,7 +3271,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             log.warn("All tasks in group [%d] failed to publish, killing all tasks for these partitions", groupId);
           } else {
             log.makeAlert(
-                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]!",
+                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]! "
+                + "Please check the total time taken for each segment's creation and publish to deep storage, "
+                + "as well as the total time taken for segment handoff to the historicals.",
                 group.taskIds(),
                 groupId,
                 ioConfig.getCompletionTimeout()
