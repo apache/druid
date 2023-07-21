@@ -3272,8 +3272,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           } else {
             log.makeAlert(
                 "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]! "
-                + "Please check the total time taken for each segment's creation and publish to deep storage, "
-                + "as well as the total time taken for segment handoff to the historicals.",
+                + "Check metrics and logs to see if the creation, publish or handoff of any segment is taking longer "
+                + "than usual.",
                 group.taskIds(),
                 groupId,
                 ioConfig.getCompletionTimeout()
