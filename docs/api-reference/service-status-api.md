@@ -35,7 +35,7 @@ All services support the following endpoints.
 You can use each endpoint with the ports for each type of service.  The following table contains port addresses for a local configuration:
 
 |Service|Port address|
-| ----------- | ----------- |
+| ------ | ------------ |
 | Coordinator|8081|
 | Overlord|8081|
 | Router|8888|
