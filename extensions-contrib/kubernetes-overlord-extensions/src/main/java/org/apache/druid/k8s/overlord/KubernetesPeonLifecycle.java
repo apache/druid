@@ -83,6 +83,9 @@ public class KubernetesPeonLifecycle
   @MonotonicNonNull
   private LogWatch logWatch;
 
+  private String podIP;
+  private Boolean tlsEnabled;
+
   protected KubernetesPeonLifecycle(
       Task task,
       KubernetesPeonClient kubernetesClient,
@@ -226,26 +229,30 @@ public class KubernetesPeonLifecycle
       return TaskLocation.unknown();
     }
 
-    Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
-    if (!maybePod.isPresent()) {
-      return TaskLocation.unknown();
-    }
 
-    Pod pod = maybePod.get();
-    PodStatus podStatus = pod.getStatus();
+    if (podIP == null || tlsEnabled == null) {
+      Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
+      if (!maybePod.isPresent()) {
+        return TaskLocation.unknown();
+      }
 
-    if (podStatus == null || podStatus.getPodIP() == null) {
-      return TaskLocation.unknown();
+      Pod pod = maybePod.get();
+      PodStatus podStatus = pod.getStatus();
+
+      if (podStatus == null || podStatus.getPodIP() == null) {
+        return TaskLocation.unknown();
+      }
+      podIP = podStatus.getPodIP();
+      tlsEnabled = Boolean.parseBoolean(pod.getMetadata()
+          .getAnnotations()
+          .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"));
     }
 
     return TaskLocation.create(
-        podStatus.getPodIP(),
+        podIP,
         DruidK8sConstants.PORT,
         DruidK8sConstants.TLS_PORT,
-        Boolean.parseBoolean(pod.getMetadata()
-            .getAnnotations()
-            .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")
-        )
+        tlsEnabled
     );
   }
 
