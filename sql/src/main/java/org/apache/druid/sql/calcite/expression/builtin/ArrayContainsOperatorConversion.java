@@ -41,9 +41,8 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
@@ -98,7 +97,9 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
 
     // if the input column is not actually an ARRAY type, but rather an MVD, we can optimize this into
     // selector/equality filters on the individual array elements
-    if (leftExpr.isSimpleExtraction() && !(leftExpr.isDirectColumnAccess() && leftExpr.getDruidType() != null && leftExpr.getDruidType().isArray())) {
+    if (leftExpr.isSimpleExtraction()
+        && !isArray(leftExpr)
+        && (plannerContext.isUseBoundsAndSelectors() || leftExpr.isDirectColumnAccess())) {
       Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
       // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
@@ -115,37 +116,34 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           // However, since both Calcite's SqlMultisetValueConstructor and Druid's ArrayConstructorFunction don't allow
           // to create an empty array with no argument, we just return null.
           return null;
-        } else if (arrayElements.length == 1) {
-          if (plannerContext.isUseBoundsAndSelectors()) {
-            return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
-          } else {
-            return new EqualityFilter(
-                leftExpr.getSimpleExtraction().getColumn(),
-                ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
-                arrayElements[0],
-                null
-            );
-          }
         } else {
-          final List<DimFilter> selectFilters = Arrays
-              .stream(arrayElements)
-              .map(val -> {
-                if (plannerContext.isUseBoundsAndSelectors()) {
-                  return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val));
-                } else {
-                  return new EqualityFilter(
+          final List<DimFilter> filters = new ArrayList<>(arrayElements.length);
+
+          for (final Object val : arrayElements) {
+            if (plannerContext.isUseBoundsAndSelectors()) {
+              filters.add(newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val)));
+            } else {
+              // Cannot handle extractionFn here. We won't get one due to the isDirectColumnAccess check above.
+              filters.add(
+                  new EqualityFilter(
                       leftExpr.getSimpleExtraction().getColumn(),
                       ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
                       val,
                       null
-                  );
-                }
-              })
-              .collect(Collectors.toList());
-          return new AndDimFilter(selectFilters);
+                  )
+              );
+            }
+          }
+
+          return filters.size() == 1 ? filters.get(0) : new AndDimFilter(filters);
         }
       }
     }
     return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
+  }
+
+  private static boolean isArray(final DruidExpression expr)
+  {
+    return expr.getDruidType() != null && expr.getDruidType().isArray();
   }
 }
