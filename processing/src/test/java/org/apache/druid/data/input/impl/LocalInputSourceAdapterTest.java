@@ -34,8 +34,8 @@ public class LocalInputSourceAdapterTest
   @Test
   public void testAdapterGet()
   {
-    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
-    Assert.assertTrue(localInputSourceAdapter.generateInputSource(Arrays.asList(
+    LocalInputSourceFactory localInputSourceAdapter = new LocalInputSourceFactory();
+    Assert.assertTrue(localInputSourceAdapter.create(Arrays.asList(
         "foo.parquet",
         "bar.parquet"
     )) instanceof LocalInputSource);

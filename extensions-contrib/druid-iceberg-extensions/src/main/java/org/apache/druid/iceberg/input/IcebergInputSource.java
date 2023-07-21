@@ -22,12 +22,12 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputSourceBuilder;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
@@ -66,7 +66,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   private IcebergFilter icebergFilter;
 
   @JsonProperty
-  private InputSourceBuilder warehouseSource;
+  private InputSourceFactory warehouseSource;
 
   private boolean isLoaded = false;
 
@@ -78,7 +78,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("namespace") String namespace,
       @JsonProperty("icebergFilter") @Nullable IcebergFilter icebergFilter,
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
-      @JsonProperty("warehouseSource") InputSourceBuilder warehouseSource
+      @JsonProperty("warehouseSource") InputSourceFactory warehouseSource
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -179,7 +179,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (snapshotDataFiles.isEmpty()) {
       delegateInputSource = new EmptyInputSource();
     } else {
-      delegateInputSource = warehouseSource.generateInputSource(snapshotDataFiles);
+      delegateInputSource = warehouseSource.create(snapshotDataFiles);
     }
     isLoaded = true;
   }

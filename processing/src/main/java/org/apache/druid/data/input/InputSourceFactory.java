@@ -21,7 +21,7 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.impl.LocalInputSourceBuilder;
+import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 
@@ -31,14 +31,14 @@ import java.util.List;
  * An interface to generate a {@link SplittableInputSource} objects on the fly.
  * For composing input sources such as IcebergInputSource, the delegate input source instantiation might fail upon deserialization since the input file paths
  * are not available yet and this might fail the input source precondition checks.
- * This adapter helps create the delegate input source once the input file paths are fully determined.
+ * This factory helps create the delegate input source once the input file paths are fully determined.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "local", value = LocalInputSourceBuilder.class)
+    @JsonSubTypes.Type(name = "local", value = LocalInputSourceFactory.class)
 })
 @UnstableApi
-public interface InputSourceBuilder
+public interface InputSourceFactory
 {
-  SplittableInputSource generateInputSource(List<String> inputFilePaths);
+  SplittableInputSource create(List<String> inputFilePaths);
 }

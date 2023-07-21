@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.LocalInputSourceBuilder;
+import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.iceberg.DataFile;
@@ -87,7 +87,7 @@ public class IcebergInputSourceTest
         NAMESPACE,
         null,
         testCatalog,
-        new LocalInputSourceBuilder()
+        new LocalInputSourceFactory()
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<File> localInputSourceList = splits.map(inputSource::withSplit)
@@ -128,7 +128,7 @@ public class IcebergInputSourceTest
         NAMESPACE,
         new IcebergEqualsFilter("id", "0000"),
         testCatalog,
-        new LocalInputSourceBuilder()
+        new LocalInputSourceFactory()
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     Assert.assertEquals(0, splits.count());
@@ -149,7 +149,7 @@ public class IcebergInputSourceTest
         NAMESPACE,
         new IcebergEqualsFilter("id", "123988"),
         testCatalog,
-        new LocalInputSourceBuilder()
+        new LocalInputSourceFactory()
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<File> localInputSourceList = splits.map(inputSource::withSplit)
