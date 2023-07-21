@@ -81,7 +81,7 @@ Additional Configuration
 |`druid.indexer.runner.javaOptsArray`|`JsonArray`|java opts for the task.|`-Xmx1g`|No|
 |`druid.indexer.runner.labels`|`JsonObject`|Additional labels you want to add to peon pod|`{}`|No|
 |`druid.indexer.runner.annotations`|`JsonObject`|Additional annotations you want to add to peon pod|`{}`|No|
-|`druid.indexer.runner.peonMonitors`|`JsonArray`|Overrides `druid.monitoring.monitors`. Use this property if you don't want to inherit monitors from the Overlord.|`[]`|No|
+|`druid.indexer.runner.peonMonitors`|`JsonArray`|Overrides peon pod's `druid_monitoring_monitors` environment variable. Use this property if you don't want to inherit monitors from the Overlord.|`[]`|No|
 |`druid.indexer.runner.graceTerminationPeriodSeconds`|`Long`|Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete.  Keep at a smaller value if you want tasks to hold locks for shorter periods.|`PT30S` (K8s default)|No|
 
 ### Gotchas
@@ -144,4 +144,9 @@ roleRef:
   kind: Role
   name: druid-cluster
   apiGroup: rbac.authorization.k8s.io
+```
+
+To use `druid.indexer.runner.peonMonitors` option properly define Overlord's monitors like below:
+```
+druid.monitoring.monitors=${env:druid_monitoring_monitors:-["org.apache.druid.java.util.metrics.JvmMonitor", "org.apache.druid.server.metrics.TaskCountStatsMonitor"]}
 ```
