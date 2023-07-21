@@ -141,7 +141,7 @@ public class KillDatasourceMetadataTest
         )
     );
     Assert.assertEquals(
-        "[druid.coordinator.kill.datasource.durationToRetain] must be positive",
+        "[druid.coordinator.kill.datasource.durationToRetain] must be 0 milliseconds or higher",
         exception.getMessage()
     );
   }

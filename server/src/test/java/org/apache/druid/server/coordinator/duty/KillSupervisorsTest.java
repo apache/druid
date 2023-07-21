@@ -121,7 +121,7 @@ public class KillSupervisorsTest
         () -> killSupervisors = new KillSupervisors(druidCoordinatorConfig, mockMetadataSupervisorManager)
     );
     Assert.assertEquals(
-        "[druid.coordinator.kill.supervisor.durationToRetain] must be positive",
+        "[druid.coordinator.kill.supervisor.durationToRetain] must be 0 milliseconds or higher",
         exception.getMessage()
     );
   }

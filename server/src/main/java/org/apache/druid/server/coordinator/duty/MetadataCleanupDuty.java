@@ -122,8 +122,8 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
   private void validateRetainDuration(Duration retainDuration)
   {
     Preconditions.checkArgument(
-        retainDuration != null && retainDuration.getMillis() > 0,
-        "[%s.durationToRetain] must be positive",
+        retainDuration != null && retainDuration.getMillis() >= 0,
+        "[%s.durationToRetain] must be 0 milliseconds or higher",
         propertyPrefix
     );
     Preconditions.checkArgument(

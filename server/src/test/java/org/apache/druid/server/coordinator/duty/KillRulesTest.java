@@ -120,7 +120,7 @@ public class KillRulesTest
         () -> killRules = new KillRules(druidCoordinatorConfig, mockRuleManager)
     );
     Assert.assertEquals(
-        "[druid.coordinator.kill.rule.durationToRetain] must be positive",
+        "[druid.coordinator.kill.rule.durationToRetain] must be 0 milliseconds or higher",
         exception.getMessage()
     );
   }

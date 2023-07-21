@@ -121,7 +121,7 @@ public class KillAuditLogTest
         () -> killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig)
     );
     Assert.assertEquals(
-        "[druid.coordinator.kill.audit.durationToRetain] must be positive",
+        "[druid.coordinator.kill.audit.durationToRetain] must be 0 milliseconds or higher",
         exception.getMessage()
     );
   }

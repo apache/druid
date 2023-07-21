@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -29,17 +31,22 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 /**
- * CoordinatorDuty for automatic deletion of terminated supervisors from the supervisor table in metadata storage.
- * This class has the same purpose as {@link KillSupervisors} but uses a different configuration style as
- * detailed in {@link CoordinatorCustomDuty}. This class primary purpose is as an example to demostrate the usuage
- * of the {@link CoordinatorCustomDuty} {@link org.apache.druid.guice.annotations.ExtensionPoint}
+ * Example {@link CoordinatorCustomDuty} for automatic deletion of terminated
+ * supervisors from the metadata storage. This duty has the same implementation
+ * as {@link KillSupervisors} but uses a different configuration style as
+ * detailed in {@link CoordinatorCustomDuty}.
  * <p>
- * Production use case should still use {@link KillSupervisors}. In the future, we might migrate all metadata
- * management coordinator duties to {@link CoordinatorCustomDuty} but until then this class will remains undocumented
- * and should not be use in production.
+ * This duty is only an example to demostrate the usage of coordinator custom
+ * duties. All production clusters should continue using {@link KillSupervisors}.
+ * <p>
+ * In the future, we might migrate all metadata management coordinator duties to
+ * {@link CoordinatorCustomDuty} but until then this class will remain undocumented.
  */
+@UnstableApi
 public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements CoordinatorCustomDuty
 {
+  private static final Logger log = new Logger(KillSupervisorsCustomDuty.class);
+
   private final MetadataSupervisorManager metadataSupervisorManager;
 
   @JsonCreator
@@ -51,7 +58,7 @@ public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements Co
   {
     super(
         "supervisors",
-        "Kill supervisor custom duty ",
+        "KillSupervisorsCustomDuty",
         // Use the same period as metadata store management so that validation passes
         // Actual period of custom duties is configured by the user
         coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod(),
@@ -60,6 +67,8 @@ public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements Co
         coordinatorConfig
     );
     this.metadataSupervisorManager = metadataSupervisorManager;
+    log.warn("This is only an example implementation of a custom duty and"
+             + " must not be used in production. Use KillSupervisors duty instead.");
   }
 
   @Override

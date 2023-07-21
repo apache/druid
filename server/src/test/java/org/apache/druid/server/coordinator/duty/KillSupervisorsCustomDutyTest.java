@@ -63,7 +63,7 @@ public class KillSupervisorsCustomDutyTest
         () -> killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager, coordinatorConfig)
     );
     Assert.assertEquals(
-        "[Kill supervisor custom duty .durationToRetain] must be positive",
+        "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
         exception.getMessage()
     );
   }
@@ -80,7 +80,7 @@ public class KillSupervisorsCustomDutyTest
         )
     );
     Assert.assertEquals(
-        "[Kill supervisor custom duty .durationToRetain] must be positive",
+        "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
         exception.getMessage()
     );
   }
