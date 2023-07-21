@@ -16,38 +16,25 @@
  * limitations under the License.
  */
 
-@import './variables';
+import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 
-.console-application {
-  .view-container {
-    position: absolute;
-    top: $header-bar-height;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: $standard-padding;
-    overflow-y: auto;
+export class DragHelper {
+  static dragColumn: ExpressionMeta | undefined;
 
-    &.narrow-pad {
-      padding: $standard-padding $thin-padding;
-    }
+  static createDragGhost(dataTransfer: DataTransfer, text: string): void {
+    const dragGhost = document.createElement('div');
+    dragGhost.className = 'drag-ghost';
 
-    &.thin {
-      padding: 10px;
-    }
+    const dragGhostInner = document.createElement('div');
+    dragGhostInner.className = 'drag-ghost-inner';
+    dragGhostInner.textContent = text;
+    dragGhost.appendChild(dragGhostInner);
 
-    &.thinner {
-      padding: 5px;
-    }
+    document.body.appendChild(dragGhost);
 
-    .app-view {
-      position: relative;
-    }
-  }
+    dataTransfer.setDragImage(dragGhost, 0, 0);
 
-  .control-separator {
-    width: 100%;
-    height: 22px;
-    border-top: 2px solid #6d8ea9;
+    // Remove the host after a ms because it is no longer needed
+    setTimeout(() => document.body.removeChild(dragGhost), 1);
   }
 }
