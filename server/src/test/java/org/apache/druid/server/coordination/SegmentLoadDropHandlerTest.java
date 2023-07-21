@@ -145,12 +145,13 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
-  public void testLoadCancelsPendingDrop() throws Exception
+  public void testLoadCancelsPendingDropOfMissingSegment() throws Exception
   {
     segmentLoadDropHandler.start();
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
+    // Schedule a drop even though the segment is not loaded yet
     segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
     Assert.assertFalse(announcer.isAnnounced(segment));
     Assert.assertTrue(loadingExecutor.hasPendingTasks());
@@ -167,7 +168,7 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
-  public void testLoadCancelsPendingDrop2() throws Exception
+  public void testLoadCancelsPendingDrop() throws Exception
   {
     segmentLoadDropHandler.start();
 
@@ -379,10 +380,9 @@ public class SegmentLoadDropHandlerTest
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
 
-    // check invocations after a load-drop sequence
+    // Verify that 1 load and 1 drop has happened
     verifyLoadCalled(segmentManager, 1);
-    Mockito.verify(segmentManager, Mockito.times(1))
-           .dropSegment(ArgumentMatchers.any());
+    verifyDropCalled(segmentManager, 1);
 
     // Request 3: Reload the segment
     batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
@@ -391,7 +391,7 @@ public class SegmentLoadDropHandlerTest
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
 
-    // check invocations - 1 more load has happened
+    // Verify that 1 more load has happened
     verifyLoadCalled(segmentManager, 2);
     verifyDropCalled(segmentManager, 1);
 
@@ -402,7 +402,7 @@ public class SegmentLoadDropHandlerTest
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
 
-    // check invocations - the load segment counter should bump up
+    // Verify that 1 more load has happened
     verifyLoadCalled(segmentManager, 3);
     verifyDropCalled(segmentManager, 1);
 
