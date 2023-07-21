@@ -913,13 +913,16 @@ keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
-<code class="postAPI">POST</code> `/druid/worker/v1/disable`
+<code class="postAPI">POST</code> <code>/druid/worker/v1/disable</code>
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully disabled MiddleManager*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -927,18 +930,24 @@ keyed by the combined `druid.host` and `druid.port`.
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/disable"
 ```
+
 <!--HTTP-->
+
 ```http
 POST /druid/worker/v1/disable HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
@@ -957,13 +966,16 @@ keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
-<code class="postAPI">POST</code> `/druid/worker/v1/enable`
+<code class="postAPI">POST</code> <code>/druid/worker/v1/enable</code>
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully enabled MiddleManager*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -971,18 +983,24 @@ keyed by the combined `druid.host` and `druid.port`.
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/enable"
 ```
+
 <!--HTTP-->
+
 ```http
 POST /druid/worker/v1/enable HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
@@ -1004,13 +1022,16 @@ Use this endpoint to know when a Broker service is ready to accept queries after
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/historical/v1/loadstatus`
+<code class="getAPI">GET</code> <code>/druid/historical/v1/loadstatus</code>
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Successfully retrieved status*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1018,18 +1039,24 @@ Use this endpoint to know when a Broker service is ready to accept queries after
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://HISTORICAL_IP:HISTORICAL_PORT/druid/historical/v1/loadstatus"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/historical/v1/loadstatus HTTP/1.1
 Host: http://HISTORICAL_IP:HISTORICAL_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
   
@@ -1038,6 +1065,7 @@ Host: http://HISTORICAL_IP:HISTORICAL_PORT
     "cacheInitialized": true
   }
   ```
+
 </details>
 
 ### Get segment readiness
@@ -1045,16 +1073,23 @@ Host: http://HISTORICAL_IP:HISTORICAL_PORT
 Retrieves a status code to indicate if all segments in the local cache have been loaded. Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, it returns status codes.
 
 #### URL
-<code class="getAPI">GET</code> `/druid/historical/v1/readiness`
+
+<code class="getAPI">GET</code> <code>/druid/historical/v1/readiness</code>
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Segments in local cache successfully loaded*  
+
 <!--503 SERVICE UNAVAILABLE-->
+
 <br/>
+
 *Segments in local cache have not been loaded*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1062,18 +1097,24 @@ Retrieves a status code to indicate if all segments in the local cache have been
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://HISTORICAL_IP:HISTORICAL_PORT/druid/historical/v1/readiness"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/historical/v1/readiness HTTP/1.1
 Host: http://HISTORICAL_IP:HISTORICAL_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 A successful response to this endpoint results in an empty response body.
 
 ## Load Status
@@ -1084,13 +1125,16 @@ Retrieves a flag indicating if the Broker knows about all segments in the cluste
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/broker/v1/loadstatus`
+<code class="getAPI">GET</code> <code>/druid/broker/v1/loadstatus</code>
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Segments successfully loaded*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1098,25 +1142,33 @@ Retrieves a flag indicating if the Broker knows about all segments in the cluste
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://BROKER_IP:BROKER_PORT/druid/broker/v1/loadstatus"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/broker/v1/loadstatus HTTP/1.1
 Host: http://<BROKER_IP>:<BROKER_PORT>
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
+
   ```json
   {
     "inventoryInitialized": true
   }
   ```
+
 </details>
 
 ### Get Broker query readiness
@@ -1125,17 +1177,22 @@ Retrieves a status code to indicate Broker readiness. Readiness signifies the Br
 
 #### URL
 
-<code class="getAPI">GET</code> `/druid/broker/v1/readiness`
+<code class="getAPI">GET</code> <code>/druid/broker/v1/readiness</code>
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
+
 <br/>
+
 *Segments successfully loaded*  
 
 <!--503 SERVICE UNAVAILABLE-->
+
 <br/>
+
 *Segments have not been loaded*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1143,18 +1200,24 @@ Retrieves a status code to indicate Broker readiness. Readiness signifies the Br
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
+
 <!--cURL-->
+
 ```shell
 curl "http://BROKER_IP:BROKER_PORT/druid/broker/v1/readiness"
 ```
+
 <!--HTTP-->
+
 ```http
 GET /druid/broker/v1/readiness HTTP/1.1
 Host: http://BROKER_IP:BROKER_PORT
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
+
 A successful response to this endpoint results in an empty response body.
 
 
