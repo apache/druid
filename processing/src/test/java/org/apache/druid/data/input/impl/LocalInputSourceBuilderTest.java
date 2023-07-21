@@ -19,22 +19,12 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class LocalInputSourceBuilderTest
 {
@@ -44,44 +34,10 @@ public class LocalInputSourceBuilderTest
   @Test
   public void testAdapterGet()
   {
-    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
-    Assert.assertTrue(localInputSourceAdapter.generateInputSource(Arrays.asList(
+    LocalInputSourceFactory localInputSourceAdapter = new LocalInputSourceFactory();
+    Assert.assertTrue(localInputSourceAdapter.create(Arrays.asList(
         "foo.parquet",
         "bar.parquet"
     )) instanceof LocalInputSource);
-  }
-
-  @Test
-  public void testAdapterSetup()
-  {
-    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
-    InputSource delegateInputSource = localInputSourceAdapter.setupInputSource(Arrays.asList(
-        "foo.parquet",
-        "bar.parquet"
-    ));
-    Assert.assertTrue(delegateInputSource instanceof LocalInputSource);
-  }
-
-  @Test
-  public void testEmptyInputSource() throws IOException
-  {
-    InputFormat mockFormat = EasyMock.createMock(InputFormat.class);
-    SplitHintSpec mockSplitHint = EasyMock.createMock(SplitHintSpec.class);
-    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
-    SplittableInputSource<Object> emptyInputSource =
-        (SplittableInputSource<Object>) localInputSourceAdapter.setupInputSource(Collections.emptyList());
-    List<InputSplit<Object>> splitList = emptyInputSource
-        .createSplits(mockFormat, mockSplitHint)
-        .collect(Collectors.toList());
-    Assert.assertTrue(splitList.isEmpty());
-    Assert.assertFalse(emptyInputSource.isSplittable());
-    Assert.assertFalse(emptyInputSource.needsFormat());
-    Assert.assertNull(emptyInputSource.withSplit(EasyMock.createMock(InputSplit.class)));
-    Assert.assertEquals(0, emptyInputSource.estimateNumSplits(mockFormat, mockSplitHint));
-    Assert.assertFalse(emptyInputSource.reader(
-        EasyMock.createMock(InputRowSchema.class),
-        mockFormat,
-        temporaryFolder.newFolder()
-    ).read().hasNext());
   }
 }
