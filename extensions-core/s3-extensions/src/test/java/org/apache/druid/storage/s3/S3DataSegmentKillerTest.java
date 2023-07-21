@@ -373,19 +373,18 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
-    ImmutableList.Builder builder = ImmutableList.builder();
+    ImmutableList.Builder<DataSegment> builder = ImmutableList.builder();
     // limit is 1000 per chunk, but we attempt to delete 2 objects per key so this will be 1002 keys so it will make 2
     // calls via the s3client to delete all these objects
     for (int ii = 0; ii < 501; ii++) {
       builder.add(DATA_SEGMENT_1);
     }
+    SegmentLoadingException thrown = Assert.assertThrows(
+        SegmentLoadingException.class,
+        () -> segmentKiller.kill(builder.build())
+    );
 
-    try {
-      segmentKiller.kill(builder.build());
-    }
-    catch (SegmentLoadingException exc) {
-      Assert.assertEquals("Couldn't delete segments from s3 see logs for more details", exc.getMessage());
-    }
+    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
 
   @Test

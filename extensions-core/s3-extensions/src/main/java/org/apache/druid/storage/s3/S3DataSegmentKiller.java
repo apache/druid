@@ -111,7 +111,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       // this was a shortcut to handle the many different ways there could potentially be failures and handle them
       // reasonably
       throw new SegmentLoadingException(
-          "Couldn't delete segments from s3 see logs for more details"
+          "Couldn't delete segments from S3. See the task logs for more details."
       );
     }
   }
@@ -167,11 +167,10 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       }
       catch (AmazonServiceException e) {
         hadException = true;
-        log.error(
-            "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
+        log.noStackTrace().warn(e,
+            "Unable to delete from bucket [%s], the following keys [%s]",
             s3Bucket,
-            chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", ")),
-            e.getMessage()
+            chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", "))
         );
       }
     }
