@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -114,10 +115,10 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         catch (Exception e) {
           log.error(
               e,
-              "Exception while checking handoff for dataSource[%s] Segment[%s], Will try again after [%d]ms",
+              "Exception while checking handoff for dataSource[%s] Segment[%s]; will try again after [%s]",
               dataSource,
               descriptor,
-              pollDurationMillis
+              Duration.ofMillis(pollDurationMillis).toString()
           );
         }
       }
@@ -128,9 +129,9 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
     catch (Throwable t) {
       log.error(
           t,
-          "Exception while checking handoff for dataSource[%s], Will try again after [%d]ms",
+          "Exception while checking handoff for dataSource[%s]; will try again after [%s]",
           dataSource,
-          pollDurationMillis
+          Duration.ofMillis(pollDurationMillis).toString()
       );
     }
   }
