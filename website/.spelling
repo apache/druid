@@ -2275,3 +2275,6 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+selfDiscovered
+isLeader
+loadstatus
