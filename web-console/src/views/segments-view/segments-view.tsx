@@ -199,7 +199,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       visibleColumns.shown('Datasource') && `"datasource"`,
       `"start"`,
       `"end"`,
-      visibleColumns.shown('Version') && `"version"`,
+      `"version"`,
       visibleColumns.shown('Time span') &&
         `CASE
   WHEN "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z' THEN 'All'
@@ -298,8 +298,16 @@ END AS "time_span"`,
                   return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
               }
             } else if (f.id.startsWith('is_')) {
-              if (f.value === 'all') return;
-              return C(f.id).equal(f.value === 'true' ? 1 : 0);
+              switch (f.value) {
+                case '=false':
+                  return C(f.id).equal(0);
+
+                case '=true':
+                  return C(f.id).equal(1);
+
+                default:
+                  return;
+              }
             } else {
               return sqlQueryCustomTableFilter(f);
             }

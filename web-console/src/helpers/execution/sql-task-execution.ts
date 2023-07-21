@@ -36,6 +36,15 @@ const USE_TASK_REPORTS = true;
 const WAIT_FOR_SEGMENT_METADATA_TIMEOUT = 180000; // 3 minutes to wait until segments appear in the metadata
 const WAIT_FOR_SEGMENT_LOAD_TIMEOUT = 540000; // 9 minutes to wait for segments to load at all
 
+// some executionMode has to be set on the /druid/v2/sql/statements API
+function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
+  if (typeof context?.executionMode === 'string') return context;
+  return {
+    ...context,
+    executionMode: 'async',
+  };
+}
+
 export interface SubmitTaskQueryOptions {
   query: string | Record<string, any>;
   context?: QueryContext;
@@ -65,26 +74,22 @@ export async function submitTaskQuery(
     sqlQuery = query;
     jsonQuery = {
       query: sqlQuery,
+      context: ensureExecutionModeIsSet(context),
       resultFormat: 'array',
       header: true,
       typesHeader: true,
       sqlTypesHeader: true,
-      context: context,
     };
   } else {
     sqlQuery = query.query;
 
-    if (context) {
-      jsonQuery = {
-        ...query,
-        context: {
-          ...(query.context || {}),
-          ...context,
-        },
-      };
-    } else {
-      jsonQuery = query;
-    }
+    jsonQuery = {
+      ...query,
+      context: ensureExecutionModeIsSet({
+        ...query.context,
+        ...context,
+      }),
+    };
   }
 
   let sqlAsyncResp: AxiosResponse<AsyncStatusResponse>;

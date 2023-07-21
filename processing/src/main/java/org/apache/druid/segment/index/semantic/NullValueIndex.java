@@ -17,19 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
-import java.nio.ByteBuffer;
-import java.util.SortedSet;
-
-public interface Utf8ValueSetIndex
+/**
+ * Provides index for all null rows in a column, to use with IS/IS NOT NULL filters
+ */
+public interface NullValueIndex
 {
-  /**
-   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
-   * contained in the underlying column). The set must be sorted using
-   * {@link org.apache.druid.java.util.common.ByteBufferUtils#utf8Comparator()}.
-   */
-  BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
+  BitmapColumnIndex get();
 }

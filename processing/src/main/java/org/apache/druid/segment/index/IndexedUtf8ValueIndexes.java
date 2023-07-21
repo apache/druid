@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -27,9 +27,17 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -37,8 +45,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
-public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuffer>>
-    implements StringValueSetIndex, Utf8ValueSetIndex
+public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffer>>
+    implements StringValueSetIndexes, Utf8ValueSetIndexes, ValueIndexes
 {
   // This determines the cut-off point to switch the merging algorithm from doing binary-search per element in the value
   // set to doing a sorted merge algorithm between value set and dictionary. The ratio here represents the ratio b/w
@@ -53,7 +61,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
   private final TDictionary dictionary;
   private final Indexed<ImmutableBitmap> bitmaps;
 
-  public IndexedUtf8ValueSetIndex(
+  public IndexedUtf8ValueIndexes(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
       Indexed<ImmutableBitmap> bitmaps
@@ -68,6 +76,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
   @Override
   public BitmapColumnIndex forValue(@Nullable String value)
   {
+    final ByteBuffer utf8 = StringUtils.toUtf8ByteBuffer(value);
     return new SimpleBitmapColumnIndex()
     {
       @Override
@@ -85,11 +94,24 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
 
       private ImmutableBitmap getBitmapForValue()
       {
-        final ByteBuffer valueUtf8 = value == null ? null : ByteBuffer.wrap(StringUtils.toUtf8(value));
-        final int idx = dictionary.indexOf(valueUtf8);
+        final int idx = dictionary.indexOf(utf8);
         return getBitmap(idx);
       }
     };
+  }
+
+  @Nullable
+  @Override
+  public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
+  {
+    if (valueType.isPrimitive()) {
+      return forValue(
+          ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
+                  .castTo(ExpressionType.STRING)
+                  .asString()
+      );
+    }
+    return null;
   }
 
   @Override
@@ -98,7 +120,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
     return getBitmapColumnIndexForSortedIterableUtf8(
         Iterables.transform(
             values,
-            input -> input != null ? ByteBuffer.wrap(StringUtils.toUtf8(input)) : null
+            StringUtils::toUtf8ByteBuffer
         ),
         values.size()
     );
@@ -196,6 +218,15 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
 
     // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
     // based lookup per value. The algorithm works well for smaller number of values.
+    return getSimpleImmutableBitmapIterableIndexFromIterator(valuesUtf8);
+  }
+
+  /**
+   * Iterates over the value set, using binary search to look up each element. The algorithm works well for smaller
+   * number of values, and must be used if the values are not sorted in the same manner as {@link #dictionary}
+   */
+  private SimpleImmutableBitmapIterableIndex getSimpleImmutableBitmapIterableIndexFromIterator(Iterable<ByteBuffer> valuesUtf8)
+  {
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override

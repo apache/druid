@@ -17,28 +17,43 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
-/**
- * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
- */
-public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
+public class AllFalseBitmapColumnIndex implements BitmapColumnIndex
 {
+  private final BitmapFactory bitmapFactory;
+
+  public AllFalseBitmapColumnIndex(ColumnIndexSelector indexSelector)
+  {
+    this(indexSelector.getBitmapFactory());
+  }
+
+  public AllFalseBitmapColumnIndex(BitmapFactory bitmapFactory)
+  {
+    this.bitmapFactory = bitmapFactory;
+  }
+
+  @Override
+  public ColumnIndexCapabilities getIndexCapabilities()
+  {
+    return SimpleColumnIndexCapabilities.getConstant();
+  }
+
   @Override
   public double estimateSelectivity(int totalRows)
   {
-    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
+    return 0;
   }
 
   @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
   {
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+    return bitmapResultFactory.wrapAllFalse(bitmapFactory.makeEmptyImmutableBitmap());
   }
-
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
 }

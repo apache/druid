@@ -17,18 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
+
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+
+import javax.annotation.Nullable;
 
 /**
- * {@link BitmapColumnIndex} with Druids "default" {@link ColumnIndexCapabilities}.
+ * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
  */
-public abstract class SimpleBitmapColumnIndex implements BitmapColumnIndex
+public interface DruidPredicateIndexes
 {
-  public static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
-
-  @Override
-  public ColumnIndexCapabilities getIndexCapabilities()
-  {
-    return CAPABILITIES;
-  }
+  /**
+   * Get a {@link BitmapColumnIndex} corresponding to all the rows that match the supplied {@link DruidPredicateFactory}
+   * <p>
+   * If this method returns null it indicates that there was no index that matched the respective values and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
+   */
+  @Nullable
+  BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
 }

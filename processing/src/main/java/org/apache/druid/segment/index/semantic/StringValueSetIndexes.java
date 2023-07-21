@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.util.SortedSet;
@@ -27,7 +28,7 @@ import java.util.SortedSet;
 /**
  * Index on individual values, and provides bitmaps for the rows which contain these values
  */
-public interface StringValueSetIndex
+public interface StringValueSetIndexes
 {
   /**
    * Get the {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when passed a

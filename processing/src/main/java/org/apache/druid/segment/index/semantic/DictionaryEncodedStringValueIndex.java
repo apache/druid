@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index.semantic;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
 
 import javax.annotation.Nullable;
 
@@ -28,8 +29,8 @@ import javax.annotation.Nullable;
  * to directly retrieve bitmaps via dictionary ids, as well as access to lower level details of such a column like
  * value lookup and value cardinality.
  *
- * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
- * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}
+ * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndexes},
+ * {@link LexicographicalRangeIndexes}, {@link NumericRangeIndexes}, or {@link DruidPredicateIndexes}
  */
 public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValueIndex
 {
