@@ -26,8 +26,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-
 import org.joda.time.Duration;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
