@@ -1774,31 +1774,30 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public void deleteSegments(final Set<DataSegment> segments)
   {
     if (segments.isEmpty()) {
-      log.info("Removed [0] segments from metadata storage for dataSource [\"\"]!");
+      log.info("No segments to delete.");
       return;
     }
 
-    final int segmentSize = segments.size();
     final String deleteSql = StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable());
     final String dataSource = segments.stream().findFirst().map(DataSegment::getDataSource).get();
 
     // generate the IDs outside the transaction block
     final List<String> ids = segments.stream().map(s -> s.getId().toString()).collect(Collectors.toList());
 
-    connector.getDBI().inTransaction((TransactionCallback<Void>) (handle, transactionStatus) -> {
+    int numDeletedSegments = connector.getDBI().inTransaction((handle, transactionStatus) -> {
           final PreparedBatch batch = handle.prepareBatch(deleteSql);
 
           for (final String id : ids) {
             batch.bind("id", id).add();
           }
 
-          batch.execute();
-          return null;
+          int[] deletedRows = batch.execute();
+          return Arrays.stream(deletedRows).sum();
         }
     );
 
     log.debugSegments(segments, "Delete the metadata of segments");
-    log.info("Removed [%d] segments from metadata storage for dataSource [%s]!", segmentSize, dataSource);
+    log.info("Deleted [%d] segments from metadata storage for dataSource [%s].", numDeletedSegments, dataSource);
   }
 
   private void updatePayload(final Handle handle, final DataSegment segment) throws IOException
@@ -1817,6 +1816,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       throw e;
     }
   }
+
   @Override
   public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata metadata)
   {
