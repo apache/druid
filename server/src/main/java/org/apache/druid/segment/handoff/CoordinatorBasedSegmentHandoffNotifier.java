@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
-import java.time.Duration;
+import org.joda.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +44,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   private final ConcurrentMap<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks = new ConcurrentHashMap<>();
   private final CoordinatorClient coordinatorClient;
   private volatile ScheduledExecutorService scheduledExecutor;
-  private final long pollDurationMillis;
+  private final Duration pollDuration;
   private final String dataSource;
 
   public CoordinatorBasedSegmentHandoffNotifier(
@@ -55,7 +55,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   {
     this.dataSource = dataSource;
     this.coordinatorClient = coordinatorClient;
-    this.pollDurationMillis = config.getPollDuration().getMillis();
+    this.pollDuration = config.getPollDuration();
   }
 
   @Override
@@ -81,7 +81,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           {
             checkForSegmentHandoffs();
           }
-        }, 0L, pollDurationMillis, TimeUnit.MILLISECONDS
+        }, 0L, pollDuration.getMillis(), TimeUnit.MILLISECONDS
     );
   }
 
@@ -118,7 +118,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
               "Exception while checking handoff for dataSource[%s] Segment[%s]; will try again after [%s]",
               dataSource,
               descriptor,
-              Duration.ofMillis(pollDurationMillis).toString()
+              pollDuration.toString()
           );
         }
       }
@@ -131,7 +131,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           t,
           "Exception while checking handoff for dataSource[%s]; will try again after [%s]",
           dataSource,
-          Duration.ofMillis(pollDurationMillis).toString()
+          pollDuration.toString()
       );
     }
   }
