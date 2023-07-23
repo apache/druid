@@ -148,8 +148,8 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
     final int numHistoricals = historicals.size();
     log.info(
-        "Tier [%s] is serving [%,d], loading [%,d] and dropping [%,d] segments"
-        + " across [%d] historicals with average usage [%d GBs], [%.1f%%].",
+        "Tier[%s] is serving [%,d], loading [%,d] and dropping [%,d] segments"
+        + " across [%d] historicals with average usage[%d GBs], [%.1f%%].",
         tier, servedCount.get(), loadingCount.get(), droppingCount.get(), numHistoricals,
         (currentBytesSum.get() >> 30) / numHistoricals, usageSum.get() / numHistoricals
     );

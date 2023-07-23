@@ -24,7 +24,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -86,12 +85,6 @@ public class TierSegmentBalancer
 
   public void run()
   {
-    log.info(
-        "Moving max [%,d] segments in tier [%s] with [%d] active and [%d] decommissioning servers."
-        + " There are already [%,d] segments in queue.",
-        maxSegmentsToMove, tier, activeServers.size(), decommissioningServers.size(), movingSegmentCount
-    );
-
     int numDecommSegmentsToMove = getNumDecommSegmentsToMove(maxSegmentsToMove);
     moveSegmentsFrom(decommissioningServers, numDecommSegmentsToMove, "decommissioning");
 
@@ -134,6 +127,8 @@ public class TierSegmentBalancer
           broadcastDatasources
       );
       movedCount += moveSegmentsTo(activeServers, pickedSegments, numLoadedSegmentsToMove);
+    } else {
+      log.info("There are already [%,d] segments moving in tier[%s].", movingSegmentCount, tier);
     }
 
     log.info(
@@ -228,35 +223,30 @@ public class TierSegmentBalancer
   {
     // If smartSegmentLoading is disabled, just use the configured value
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    if (!dynamicConfig.isSmartSegmentLoading()) {
+    if (activeServers.isEmpty()) {
+      return 0;
+    } else if (!dynamicConfig.isSmartSegmentLoading()) {
       return maxActiveSegmentsToMove;
     }
 
-    // Measure the skew in disk usage of active servers
-    double maxDiskUsage = 0.0f;
-    double minDiskUsage = 100.0f;
-    for (ServerHolder server : activeServers) {
-      double diskUsage = server.getPercentUsed();
-      if (diskUsage > maxDiskUsage) {
-        maxDiskUsage = diskUsage;
-      }
-      if (diskUsage < minDiskUsage) {
-        minDiskUsage = diskUsage;
-      }
-    }
+    final int totalSegments
+        = activeServers.stream()
+                       .mapToInt(server -> server.getProjectedSegments().getTotalSegmentCount())
+                       .sum();
 
-    // We assume that there is always a usage diff of at least 10%
-    // to ensure that some segments are always being balanced
-    double usageDiff = Math.max(10, maxDiskUsage - minDiskUsage);
-    final int activeSegmentsToMove = Math.max(
-        SegmentLoadingConfig.MIN_SEGMENTS_TO_MOVE,
-        (int) (maxActiveSegmentsToMove * usageDiff / 100)
+    // Move at least 1% segments to ensure that the cluster is always balancing itself
+    final int minSegmentsToMove = Math.max(
+        (int) (totalSegments * 0.01),
+        SegmentToMoveCalculator.MIN_SEGMENTS_TO_MOVE
     );
-
+    final int segmentsToMoveToFixDeviation
+        = SegmentToMoveCalculator.computeNumSegmentsToMove(tier, activeServers);
     log.info(
-        "Trying to move [%,d] active segments in tier [%s] with max usage[%.1f%%] and min usage[%.1f%%]",
-        activeSegmentsToMove, tier, maxDiskUsage, minDiskUsage
+        "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
+        segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxActiveSegmentsToMove
     );
+
+    final int activeSegmentsToMove = Math.max(minSegmentsToMove, segmentsToMoveToFixDeviation);
     return Math.min(activeSegmentsToMove, maxActiveSegmentsToMove);
   }
 

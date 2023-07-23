@@ -193,7 +193,5 @@ public class ServerHolderTest
     );
     Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0)));
     Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1)));
-    Assert.assertTrue(h1.hasSegmentLoaded(SEGMENTS.get(0).getId()));
-    Assert.assertFalse(h1.hasSegmentLoaded(SEGMENTS.get(1).getId()));
   }
 }

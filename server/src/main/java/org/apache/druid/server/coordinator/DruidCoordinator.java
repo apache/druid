@@ -769,7 +769,7 @@ public class DruidCoordinator
           );
 
           log.info(
-              "Emitted [%d] stats for group [%s]. All collected stats:%s\n",
+              "Emitted [%d] stats for group [%s]. All collected stats:%s",
               emittedCount.get(), dutyGroupName, allStats.buildStatsTable()
           );
         }
@@ -777,7 +777,7 @@ public class DruidCoordinator
         // Emit the runtime of the full DutiesRunnable
         final long runMillis = groupRunTime.stop().elapsed(TimeUnit.MILLISECONDS);
         emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
-        log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
+        log.info("Finished coordinator run for group [%s] in [%d] ms.%n", dutyGroupName, runMillis);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();

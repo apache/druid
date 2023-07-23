@@ -28,12 +28,6 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
  */
 public class SegmentLoadingConfig
 {
-  /**
-   * At least this number of segments must be picked for moving in every cycle
-   * to keep the cluster well balanced.
-   */
-  public static final int MIN_SEGMENTS_TO_MOVE = 100;
-
   private static final Logger log = new Logger(SegmentLoadingConfig.class);
 
   private final int maxSegmentsInLoadQueue;
@@ -145,6 +139,7 @@ public class SegmentLoadingConfig
    */
   public static int computeNumBalancerThreads(int numUsedSegments)
   {
+    // Add an extra thread when numUsedSegments increases by a step
     final int[] stepValues = {50, 50, 75, 75, 100, 100, 150, 150};
 
     int remainder = numUsedSegments / 1000;
@@ -156,55 +151,5 @@ public class SegmentLoadingConfig
     }
 
     return stepValues.length;
-  }
-
-  /**
-   * Calculates {@code maxSegmentsToMove} for the given number of segments in the
-   * cluster.
-   * <p>
-   * Each balancer thread can perform 2 billion computations in every coordinator
-   * cycle (see #14484). Therefore,
-   * <pre>
-   * numComputations = maxSegmentsToMove * totalSegments
-   *
-   * maxSegmentsToMove = numComputations / totalSegments
-   *                   = (nThreads * 2B) / totalSegments
-   * </pre>
-   *
-   * @param totalSegmentsOnHistoricals Total number of all replicas of all segments
-   *                                   loaded or queued across all historicals.
-   * @return {@code maxSegmentsToMove} per tier in the range [100, 12.5% of totalSegments].
-   * @see <a href="https://github.com/apache/druid/pull/14484">#14484</a>
-   */
-  public static int computeMaxSegmentsToMove(int totalSegmentsOnHistoricals, int numBalancerThreads)
-  {
-    // Each thread can do ~2B computations in one cycle = 2M * 1k = 2^21 * 1k
-    final int computationsPerThreadInThousands = 1 << 21;
-
-    // Integer overflows here only if numThreads > 1000, but handle it all the same
-    final int computationsInThousands = Math.max(
-        computationsPerThreadInThousands,
-        numBalancerThreads << 21
-    );
-
-    // maxSegmentsToMove(in k) = computations(in k) / totalSegments
-    int divisor = totalSegmentsOnHistoricals;
-    int quotient = computationsInThousands;
-    while (divisor > 1) {
-      divisor = divisor >> 1;
-      quotient = quotient >> 1;
-    }
-    final int maxSegmentsToMove = quotient * 1000;
-
-    // Define the bounds for maxSegmentsToMove
-    final int lowerBound = MIN_SEGMENTS_TO_MOVE;
-    final int upperBound = totalSegmentsOnHistoricals >> 3;
-
-    // Integer overflow is unlikely here but handle it all the same
-    if (maxSegmentsToMove < 0 || maxSegmentsToMove > upperBound) {
-      return Math.max(lowerBound, upperBound);
-    } else {
-      return Math.max(lowerBound, maxSegmentsToMove);
-    }
   }
 }

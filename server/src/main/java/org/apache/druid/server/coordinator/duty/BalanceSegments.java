@@ -23,6 +23,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -83,8 +84,10 @@ public class BalanceSegments implements CoordinatorDuty
       final int totalSegmentsInCluster = getTotalSegmentsOnHistoricals(params.getDruidCluster());
       final int numHistoricals = getNumHistoricals(params.getDruidCluster());
       final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
-      final int maxSegmentsToMove = SegmentLoadingConfig
-          .computeMaxSegmentsToMove(totalSegmentsInCluster, numBalancerThreads);
+      final int maxSegmentsToMove = SegmentToMoveCalculator.computeMaxSegmentsToMove(
+          totalSegmentsInCluster,
+          numBalancerThreads
+      );
       log.info(
           "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
           maxSegmentsToMove, totalSegmentsInCluster, numHistoricals
@@ -99,7 +102,7 @@ public class BalanceSegments implements CoordinatorDuty
   /**
    * Total number of all segments in the cluster that would participate in cost
    * computations. This includes all replicas of all loaded, loading, dropping
-   * and moving segments across all historicals.
+   * and moving segments across all historicals (active and decommissioning).
    * <p>
    * This is calculated here to ensure that all assignments done by the preceding
    * {@link RunRules} duty are accounted for.

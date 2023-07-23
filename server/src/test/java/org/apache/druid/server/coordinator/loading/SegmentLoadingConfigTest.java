@@ -43,48 +43,9 @@ public class SegmentLoadingConfigTest
     Assert.assertEquals(8, computeBalancerThreads(10_000_000));
   }
 
-  @Test
-  public void testComputeMaxSegmentsToMove()
-  {
-    Assert.assertEquals(100, computeMaxSegmentsToMove(0));
-    Assert.assertEquals(125, computeMaxSegmentsToMove(1_000));
-    Assert.assertEquals(1_250, computeMaxSegmentsToMove(10_000));
-
-    Assert.assertEquals(12_500, computeMaxSegmentsToMove(100_000));
-    Assert.assertEquals(12_625, computeMaxSegmentsToMove(101_000));
-
-    Assert.assertEquals(18_750, computeMaxSegmentsToMove(150_000));
-    Assert.assertEquals(25_000, computeMaxSegmentsToMove(200_000));
-    Assert.assertEquals(37_500, computeMaxSegmentsToMove(300_000));
-    Assert.assertEquals(48_000, computeMaxSegmentsToMove(400_000));
-
-    Assert.assertEquals(56_000, computeMaxSegmentsToMove(500_000));
-    Assert.assertEquals(56_000, computeMaxSegmentsToMove(520_000));
-
-    Assert.assertEquals(32_000, computeMaxSegmentsToMove(600_000));
-    Assert.assertEquals(32_000, computeMaxSegmentsToMove(750_000));
-    Assert.assertEquals(32_000, computeMaxSegmentsToMove(1_000_000));
-
-    Assert.assertEquals(16_000, computeMaxSegmentsToMove(1_500_000));
-    Assert.assertEquals(16_000, computeMaxSegmentsToMove(2_000_000));
-
-    Assert.assertEquals(8_000, computeMaxSegmentsToMove(3_000_000));
-    Assert.assertEquals(4_000, computeMaxSegmentsToMove(5_000_000));
-    Assert.assertEquals(2_000, computeMaxSegmentsToMove(10_000_000));
-    Assert.assertEquals(1_000, computeMaxSegmentsToMove(20_000_000));
-  }
-
   private int computeBalancerThreads(int numUsedSegments)
   {
     return SegmentLoadingConfig.computeNumBalancerThreads(numUsedSegments);
-  }
-
-  private int computeMaxSegmentsToMove(int totalSegments)
-  {
-    return SegmentLoadingConfig.computeMaxSegmentsToMove(
-        totalSegments,
-        SegmentLoadingConfig.computeNumBalancerThreads(totalSegments)
-    );
   }
 
 }
