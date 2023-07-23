@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -59,6 +60,10 @@ import java.util.stream.Collectors;
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
+
+  // We split this to try and keep each nuke operation relatively short, in the case that either
+  // the database or the storage layer is particularly slow.
+  private static final int SEGMENT_NUKE_BATCH_SIZE = 10_000;
 
   private final boolean markAsUnused;
 
@@ -114,22 +119,36 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     }
 
     // List unused segments
-    final List<DataSegment> unusedSegments = toolbox
+    final List<DataSegment> allUnusedSegments = toolbox
         .getTaskActionClient()
         .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval()));
 
-    if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
-      throw new ISE(
-          "Locks[%s] for task[%s] can't cover segments[%s]",
-          taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
-          getId(),
-          unusedSegments
-      );
-    }
+    final List<List<DataSegment>> unusedSegmentBatches = Lists.partition(allUnusedSegments, SEGMENT_NUKE_BATCH_SIZE);
 
-    // Kill segments
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-    toolbox.getDataSegmentKiller().kill(unusedSegments);
+    // The individual activities here on the toolbox have possibility to run for a longer period of time,
+    // since they involve calls to metadata storage and archival object storage. And, the tasks take hold of the
+    // task lockbox to run. By splitting the segment list into smaller batches, we have an opportunity to yield the
+    // lock to other activity that might need to happen using the overlord tasklockbox.
+
+    for (final List<DataSegment> unusedSegments : unusedSegmentBatches) {
+      if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
+        throw new ISE(
+                "Locks[%s] for task[%s] can't cover segments[%s]",
+                taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
+                getId(),
+                unusedSegments
+        );
+      }
+
+      // Kill segments:
+      // Order is important here: we want the nuke action to clean up the metadata records _before_ the
+      // segments are removed from storage, this helps maintain that we will always have a storage segment if
+      // the metadata segment is present. If the segment nuke throws an exception, then the segment cleanup is
+      // abandoned.
+
+      toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+      toolbox.getDataSegmentKiller().kill(unusedSegments);
+    }
 
     return TaskStatus.success(getId());
   }
