@@ -118,7 +118,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
               "Exception while checking handoff for dataSource[%s] Segment[%s]; will try again after [%s]",
               dataSource,
               descriptor,
-              pollDuration.toString()
+              pollDuration
           );
         }
       }
@@ -131,7 +131,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           t,
           "Exception while checking handoff for dataSource[%s]; will try again after [%s]",
           dataSource,
-          pollDuration.toString()
+          pollDuration
       );
     }
   }
