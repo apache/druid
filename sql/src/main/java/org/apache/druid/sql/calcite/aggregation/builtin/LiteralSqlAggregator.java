@@ -38,6 +38,15 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * Calcite 1.35 introduces an aggrgate function LITERAL_AGG that returns constant value regardless
+ * of how many rows are in the group. This also introduced a change to subquery
+ * remove rule as a part of https://issues.apache.org/jira/browse/CALCITE-4334
+ *
+ * In this case a useless literal dimension is replaced with a post agg which makes queries performant
+ * This class supports the use of LITERAL_AGG for Druid queries
+ *
+ */
 public class LiteralSqlAggregator implements SqlAggregator
 {
   @Override

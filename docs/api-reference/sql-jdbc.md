@@ -51,7 +51,7 @@ or if a Broker is restarted.
 
 Set `serialization` to `protobuf` if using the protobuf endpoint.
 
-Note that as of the time of this writing, Avatica 1.22.0, the latest version, does not support passing
+Note that as of the time of this writing, Avatica 1.23.0, the latest version, does not support passing
 [connection context parameters](sql-query-context.md) from the JDBC connection string to Druid. These context parameters
 must be passed using a `Properties` object instead. Refer to the Java code below for an example.
 

@@ -556,6 +556,9 @@ public class DruidSqlParserUtils
     Timestamp sqlTimestamp;
     ZonedDateTime zonedTimestamp;
 
+    // Upgrading from 1.21 to 1.35 introduced SqlUnknownLiteral.
+    // Calcite now has provision to create a literal which is unknown until validation time
+    // Parsing a timestamp needs to accomodate for that change
     if (sqlNode instanceof SqlUnknownLiteral) {
       try {
         SqlTimestampLiteral timestampLiteral = (SqlTimestampLiteral) ((SqlUnknownLiteral) sqlNode).resolve(SqlTypeName.TIMESTAMP);

@@ -37,14 +37,14 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
   private static final String NAME = "DS_HLL";
   private static final SqlAggFunction FUNCTION_INSTANCE =
       (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
-                         .operandNames("column", "lgK", "tgtHllType")
-                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
-                         .operandTypeInference(InferTypes.VARCHAR_1024)
-                         .requiredOperandCount(1)
-                         .literalOperands(1, 2)
-                         .returnTypeNonNull(SqlTypeName.OTHER)
-                         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-                         .build();
+                        .operandNames("column", "lgK", "tgtHllType")
+                        .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
+                        .operandTypeInference(InferTypes.VARCHAR_1024)
+                        .requiredOperandCount(1)
+                        .literalOperands(1, 2)
+                        .returnTypeNonNull(SqlTypeName.OTHER)
+                        .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+                        .build();
 
   public HllSketchObjectSqlAggregator()
   {

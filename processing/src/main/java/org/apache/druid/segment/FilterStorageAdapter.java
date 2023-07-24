@@ -103,14 +103,14 @@ public class FilterStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String column)
   {
-    return baseStorageAdapter.getMinValue(column);
+    return null;
   }
 
   @Nullable
   @Override
   public Comparable getMaxValue(String column)
   {
-    return baseStorageAdapter.getMaxValue(column);
+    return null;
   }
 
   @Nullable

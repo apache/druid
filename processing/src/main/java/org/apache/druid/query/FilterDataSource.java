@@ -35,6 +35,19 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+/**
+ * This class models a data source to be unnested which is present along with a filter.
+ * An example for this data source follows:
+ *
+ * Consider this query:
+ * SELECT d3 FROM (select * from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3))
+ *
+ * where the filter data source has numFoo as base and dim2='a' as the filter
+ *
+ * Without this data source, the planner was converting the inner query to a query data source
+ * putting more work to be done at the broker level. This pushes the operations down to the
+ * segments and is more performant.
+ */
 public class FilterDataSource implements DataSource
 {
 

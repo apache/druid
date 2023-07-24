@@ -83,10 +83,7 @@
         <avatica.version>1.23.0</avatica.version>
         <avro.version>1.11.1</avro.version>
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
-             * sql/src/main/codegen/config.fmpp
-               - original: core/src/main/codegen/config.fmpp
-             * sql/src/main/java/org/apache/druid/sql/calcite/planner/CalcitePlanner.java
-               - original: core/src/main/java/org/apache/calcite/prepare/PlannerImpl.java
+             default_config.fmpp
           -->
         <calcite.version>1.35.0-SNAPSHOT</calcite.version>
         <datasketches.version>4.1.0</datasketches.version>
