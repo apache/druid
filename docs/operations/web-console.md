@@ -144,7 +144,7 @@ The Segment ID is also conveniently broken down into Datasource, Start, End, Ver
 ## Supervisors
 
 From this view, you can check the status of existing supervisors as well as suspend, resume, and reset them.
-The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. Submit a supervisor manually by clicking the ellipsis icon and selecting **Submit JSON supervisor**.
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. Submit a supervisor spec manually by clicking the ellipsis icon and selecting **Submit JSON supervisor**.
 
 ![Supervisors](../assets/web-console-07-supervisors.png)
 
