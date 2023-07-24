@@ -65,6 +65,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -100,7 +101,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ListeningExecutorService exec;
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
-
+  /**
+   * The tasksLock is used to ensure thread safety when adding tasks to the tasks map and when subsequently
+   * retrieving them from a different thread. Its purpose is to prevent a race condition where a task might
+   * be retrieved from the tasks map before it has been fully added, which could lead to unexpected behavior.
+   */
+  private final ReentrantLock tasksLock = new ReentrantLock(true);
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -134,26 +140,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    return tasks.computeIfAbsent(
-        task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task)))
-    ).getResult();
+    return runOrJoinTask(task, true);
   }
 
-  protected ListenableFuture<TaskStatus> joinAsync(Task task)
+  protected ListenableFuture<TaskStatus> runOrJoinTask(Task task, boolean run)
   {
-    return tasks.computeIfAbsent(
-        task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task)))
-    ).getResult();
-  }
-
-  private TaskStatus runTask(Task task)
-  {
-    return doTask(task, true);
-  }
-
-  private TaskStatus joinTask(Task task)
-  {
-    return doTask(task, false);
+    tasksLock.lock();
+    try {
+      return tasks.computeIfAbsent(
+          task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> doTask(task, run)))
+      ).getResult();
+    }
+    finally {
+      tasksLock.unlock();
+    }
   }
 
   @VisibleForTesting
@@ -161,7 +161,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
 
-    KubernetesWorkItem workItem = tasks.get(task.getId());
+    KubernetesWorkItem workItem;
+    tasksLock.lock();
+    try {
+      workItem = tasks.get(task.getId());
+    }
+    finally {
+      tasksLock.unlock();
+    }
 
     if (workItem == null) {
       throw new ISE("Task [%s] disappeared", task.getId());
@@ -273,7 +280,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Job job : client.getPeonJobs()) {
       try {
         Task task = adapter.toTask(job);
-        tasks.add(Pair.of(task, joinAsync(task)));
+        tasks.add(Pair.of(task, runOrJoinTask(task, false)));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
