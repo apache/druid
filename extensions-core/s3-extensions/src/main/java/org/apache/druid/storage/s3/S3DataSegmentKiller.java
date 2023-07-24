@@ -154,8 +154,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
         hadException = true;
         Map<String, List<String>> errorToKeys = new HashMap<>();
         for (MultiObjectDeleteException.DeleteError error : e.getErrors()) {
-          error.getMessage();
-          error.getKey();
           errorToKeys.computeIfAbsent(error.getMessage(), k -> new ArrayList<>()).add(error.getKey());
         }
         errorToKeys.forEach((key, value) -> log.error(
