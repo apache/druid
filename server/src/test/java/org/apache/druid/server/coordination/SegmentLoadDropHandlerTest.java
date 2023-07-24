@@ -156,7 +156,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertFalse(announcer.isAnnounced(segment));
     Assert.assertTrue(loadingExecutor.hasPendingTasks());
 
-    segmentLoadDropHandler.loadAndAnnounceSegment(segment, DataSegmentChangeCallback.NOOP);
+    segmentLoadDropHandler.loadAndAnnounceSegment(segment);
 
     // Try to complete pending drop of segment
     loadingExecutor.finishAllPendingTasks();
@@ -175,7 +175,7 @@ public class SegmentLoadDropHandlerTest
     final String datasource = "test";
     final DataSegment segment = makeSegment(datasource, "1", Intervals.of("P1d/2011-04-01"));
 
-    segmentLoadDropHandler.loadAndAnnounceSegment(segment, DataSegmentChangeCallback.NOOP);
+    segmentLoadDropHandler.loadAndAnnounceSegment(segment);
     Assert.assertTrue(announcer.isAnnounced(segment));
     Assert.assertEquals(1, segmentManager.getDataSourceToNumSegments().get(datasource).intValue());
 
@@ -184,7 +184,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertFalse(announcer.isAnnounced(segment));
     Assert.assertTrue(loadingExecutor.hasPendingTasks());
 
-    segmentLoadDropHandler.loadAndAnnounceSegment(segment, DataSegmentChangeCallback.NOOP);
+    segmentLoadDropHandler.loadAndAnnounceSegment(segment);
 
     // Try to complete pending drop of segment
     loadingExecutor.finishAllPendingTasks();

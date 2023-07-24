@@ -248,7 +248,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   private void loadLocalCache() throws IOException
   {
-    final Stopwatch stopwatch = Stopwatch.createStarted();
     File baseDir = config.getInfoDir();
     FileUtils.mkdirp(baseDir);
 
@@ -288,27 +287,17 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
          .emit();
     }
 
-    addSegments(
-        cachedSegments,
-        () -> log.info("Finished cache load in [%,d] ms", stopwatch.millisElapsed())
-    );
-  }
-
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
-      throws SegmentLoadingException
-  {
-    loadSegment(segment, callback, lazy, null);
+    loadCachedSegments(cachedSegments);
   }
 
   /**
-   * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
-   * throw a SegmentLoadingException
+   * Downloads a single segment and creates a cache file for it in the info dir.
+   * If the load fails at any step, {@link #cleanupFailedLoad} is called.
    *
-   * @throws SegmentLoadingException if it fails to load the given segment
+   * @throws SegmentLoadingException if the load fails
    */
   private void loadSegment(
       DataSegment segment,
-      DataSegmentChangeCallback callback,
       boolean lazy,
       @Nullable ExecutorService loadSegmentIntoPageCacheExec
   ) throws SegmentLoadingException
@@ -318,12 +307,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       loaded = segmentManager.loadSegment(
           segment,
           lazy,
-          () -> unannounceAndDropSegment(segment, DataSegmentChangeCallback.NOOP),
+          () -> cleanupFailedLoad(segment),
           loadSegmentIntoPageCacheExec
       );
     }
     catch (Exception e) {
-      unannounceAndDropSegment(segment, callback);
+      cleanupFailedLoad(segment);
       throw new SegmentLoadingException(e, "Could not load segment: %s", e.getMessage());
     }
 
@@ -334,7 +323,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           jsonMapper.writeValue(segmentInfoCacheFile, segment);
         }
         catch (IOException e) {
-          unannounceAndDropSegment(segment, callback);
+          cleanupFailedLoad(segment);
           throw new SegmentLoadingException(
               e,
               "Failed to write to disk segment info cache file[%s]",
@@ -359,14 +348,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     // Load and announce the segment asynchronously
-    exec.submit(() -> loadAndAnnounceSegment(segment, callback));
+    exec.submit(() -> loadAndAnnounceSegment(segment));
   }
 
   /**
    * Loads the segment synchronously, announces it and updates the status of the
    * corresponding change request in the {@link #requestStatuses} cache.
    */
-  void loadAndAnnounceSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+  void loadAndAnnounceSegment(DataSegment segment)
   {
     DataSegmentChangeResponse.Status result = null;
     try {
@@ -388,7 +377,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           segmentsToDrop.remove(segment);
         }
       }
-      loadSegment(segment, DataSegmentChangeCallback.NOOP, false);
+      loadSegment(segment, false, null);
       // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
@@ -407,20 +396,17 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      if (null != callback) {
-        callback.execute();
-      }
+      resolveWaitingFutures();
     }
   }
 
   /**
    * Bulk adding segments during bootstrap
-   * @param segments A collection of segments to add
-   * @param callback Segment loading callback
    */
-  private void addSegments(Collection<DataSegment> segments, final DataSegmentChangeCallback callback)
+  private void loadCachedSegments(Collection<DataSegment> segments)
   {
     // Start a temporary thread pool to load segments into page cache during bootstrap
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     ExecutorService loadingExecutor = null;
     ExecutorService loadSegmentsIntoPageCacheOnBootstrapExec =
         config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() != 0 ?
@@ -443,11 +429,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               try {
                 log.info(
                     "Loading segment[%d/%d][%s]",
-                    counter.incrementAndGet(),
-                    numSegments,
-                    segment.getId()
+                    counter.incrementAndGet(), numSegments, segment.getId()
                 );
-                loadSegment(segment, callback, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
+                loadSegment(segment, config.isLazyLoadOnStart(), loadSegmentsIntoPageCacheOnBootstrapExec);
                 try {
                   backgroundSegmentAnnouncer.announceSegment(segment);
                 }
@@ -489,7 +473,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
          .emit();
     }
     finally {
-      callback.execute();
+      log.info("Finished cache load in [%,d]ms", stopwatch.millisElapsed());
       if (loadingExecutor != null) {
         loadingExecutor.shutdownNow();
       }
@@ -502,15 +486,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   /**
-   * Unannounces and drops the segment immediately.
+   * Cleans up a failed LOAD request by completely removing the partially
+   * downloaded segment files and unannouncing the segment for safe measure.
    */
   @VisibleForTesting
-  void unannounceAndDropSegment(
-      DataSegment segment,
-      DataSegmentChangeCallback callback
-  )
+  void cleanupFailedLoad(DataSegment segment)
   {
-    unannounceSegment(segment, callback);
+    unannounceSegment(segment);
     segmentsToDrop.add(segment);
     dropSegment(segment);
   }
@@ -518,7 +500,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @Override
   public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
-    unannounceSegment(segment, callback);
+    try {
+      unannounceSegment(segment);
+    }
+    finally {
+      resolveWaitingFutures();
+    }
 
     // Schedule drop of segment
     segmentsToDrop.add(segment);
@@ -538,10 +525,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * A DROP request is considered successful if the unannouncement has succeeded,
    * even if the segment files have not been deleted yet.
    */
-  private void unannounceSegment(
-      final DataSegment segment,
-      @Nullable final DataSegmentChangeCallback callback
-  )
+  private void unannounceSegment(final DataSegment segment)
   {
     DataSegmentChangeResponse.Status result = null;
     try {
@@ -556,9 +540,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
-      if (null != callback) {
-        callback.execute();
-      }
     }
   }
 
@@ -635,7 +616,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       if (cachedResponse == null) {
         // Start a fresh LOAD or DROP as there is no previous known request
         markRequestAsPending(changeRequest);
-        changeRequest.go(this, this::resolveWaitingFutures);
+        changeRequest.go(this, null);
         return requestStatuses.getIfPresent(segment);
       } else if (cachedResponse.get().getRequest().equals(changeRequest)) {
         // Serve the cached response and clear it if the request has completed,
@@ -650,7 +631,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         requestStatuses.invalidate(segment);
 
         markRequestAsPending(changeRequest);
-        changeRequest.go(this, this::resolveWaitingFutures);
+        changeRequest.go(this, null);
         return requestStatuses.getIfPresent(segment);
       }
     }
@@ -682,6 +663,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
+  /**
+   * Resolves waiting futures after a LOAD or DROP request has completed.
+   */
   private void resolveWaitingFutures()
   {
     LinkedHashSet<CustomSettableFuture> waitingFuturesCopy;
