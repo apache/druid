@@ -3,7 +3,8 @@ name: Apache Druid
 agent:
   machine:
     type: s1-prod-ubuntu20-04-amd64-1
-
+execution_time_limit:
+  hours: 3
 blocks:
   - name: "Install"
     task:
@@ -33,11 +34,16 @@ blocks:
       jobs:
         - name: "Install"
           commands:
-            - cache restore
+            # This is a change meant to validate semaphore public builds
+            # so thus removing configurations for Confluent's internal CodeArtifact
+            - rm ~/.m2/settings.xml
             - >
               MAVEN_OPTS="${MAVEN_OPTS} -Xmx3000m" ${MVN} clean install
               -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
-            - cache store
+            # downstream tests depend on artifacts installed by mvn install into .m2
+            # also cache target to avoid the cost of recompiling tests
+            - tar zcf cache-post-install.tgz .m2 target
+            - artifact push workflow cache-post-install.tgz
 
   - name: "Tests"
     task:
@@ -47,7 +53,11 @@ blocks:
           - echo $SEMAPHORE_WORKFLOW_ID
           - sem-version java 17
           - checkout
-          - cache restore
+          - artifact pull workflow cache-post-install.tgz
+          - tar zxf cache-post-install.tgz
+          # This is a change meant to validate semaphore public builds
+          # so thus removing configurations for Confluent's internal CodeArtifact
+          - rm ~/.m2/settings.xml
       jobs:
         - name: "animal sniffer checks"
           commands:
