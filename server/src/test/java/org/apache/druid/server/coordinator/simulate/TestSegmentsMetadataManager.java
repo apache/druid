@@ -127,6 +127,10 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
         ++numModifiedSegments;
       }
     }
+
+    if (numModifiedSegments > 0) {
+      snapshot = null;
+    }
     return numModifiedSegments;
   }
 

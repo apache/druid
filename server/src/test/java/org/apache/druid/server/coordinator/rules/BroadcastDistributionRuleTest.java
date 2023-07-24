@@ -22,15 +22,20 @@ package org.apache.druid.server.coordinator.rules;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -272,7 +277,7 @@ public class BroadcastDistributionRuleTest
   }
 
   @Test
-  public void testBroadcastToSingleDataSource()
+  public void testBroadcastSingleDataSource()
   {
     final ForeverBroadcastDistributionRule rule =
         new ForeverBroadcastDistributionRule();
@@ -335,7 +340,7 @@ public class BroadcastDistributionRuleTest
    * decommissionint2 | large segment
    */
   @Test
-  public void testBroadcastDecommissioning()
+  public void testBroadcastToDecommissioningServers()
   {
     final ForeverBroadcastDistributionRule rule =
         new ForeverBroadcastDistributionRule();
@@ -358,7 +363,7 @@ public class BroadcastDistributionRuleTest
   }
 
   @Test
-  public void testBroadcastToMultipleDataSources()
+  public void testBroadcastMultipleDataSources()
   {
     final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
 
@@ -419,6 +424,62 @@ public class BroadcastDistributionRuleTest
             holder -> holder.isLoadingSegment(smallSegment) || holder.isServingSegment(smallSegment)
         )
     );
+  }
+
+  @Test
+  public void testReasonForBroadcastFailure()
+  {
+    final ServerHolder serverWithNoDiskSpace = new ServerHolder(
+        new DruidServer("server10mb", "server10mb", null, 0L, ServerType.HISTORICAL, TIER_1, 0)
+            .toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+    final ServerHolder eligibleServer = new ServerHolder(
+        new DruidServer("server10gb", "server10gb", null, 10L << 30, ServerType.HISTORICAL, TIER_1, 0)
+            .toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+
+    // Create a server with full load queue
+    final int maxSegmentsInLoadQueue = 5;
+    final ServerHolder serverWithFullQueue = new ServerHolder(
+        new DruidServer("fullQueueServer", "fullQueueServer", null, 10L << 30, ServerType.HISTORICAL, TIER_1, 0)
+            .toImmutableDruidServer(),
+        new LoadQueuePeonTester(),
+        false,
+        maxSegmentsInLoadQueue,
+        100
+    );
+    List<DataSegment> segmentsInQueue
+        = CreateDataSegments.ofDatasource(DS_SMALL)
+                            .forIntervals(maxSegmentsInLoadQueue, Granularities.MONTH)
+                            .withNumPartitions(1)
+                            .eachOfSizeInMb(10);
+    segmentsInQueue.forEach(s -> serverWithFullQueue.startOperation(SegmentAction.LOAD, s));
+    Assert.assertTrue(serverWithFullQueue.isLoadQueueFull());
+
+    final DruidCluster cluster
+        = DruidCluster.builder()
+                      .addTier(TIER_1, eligibleServer, serverWithNoDiskSpace, serverWithFullQueue)
+                      .build();
+    final DataSegment segmentToBroadcast = CreateDataSegments.ofDatasource(DS_SMALL).eachOfSizeInMb(20).get(0);
+    final CoordinatorRunStats stats = runRuleAndGetStats(
+        new ForeverBroadcastDistributionRule(),
+        segmentToBroadcast,
+        makeCoordinartorRuntimeParams(cluster, segmentToBroadcast)
+    );
+    System.out.println(stats.buildStatsTable());
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+
+    RowKey metricKey = RowKey.with(Dimension.DATASOURCE, DS_SMALL)
+                             .with(Dimension.TIER, TIER_1)
+                             .and(Dimension.DESCRIPTION, "Not enough disk space");
+    Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
+
+    metricKey = RowKey.with(Dimension.DATASOURCE, DS_SMALL)
+                      .with(Dimension.TIER, TIER_1)
+                      .and(Dimension.DESCRIPTION, "Load queue is full");
+    Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
   }
 
   private CoordinatorRunStats runRuleAndGetStats(

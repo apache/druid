@@ -30,7 +30,9 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -96,6 +98,8 @@ public class MarkOvershadowedSegmentsAsUnusedTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build()
         )
+        .withBalancerStrategy(new RandomBalancerStrategy())
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
         .build();
 
     SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
