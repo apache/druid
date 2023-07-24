@@ -65,7 +65,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -101,12 +100,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ListeningExecutorService exec;
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
-  /**
-   * The tasksLock is used to ensure thread safety when adding tasks to the tasks map and when subsequently
-   * retrieving them from a different thread. Its purpose is to prevent a race condition where a task might
-   * be retrieved from the tasks map before it has been fully added, which could lead to unexpected behavior.
-   */
-  private final ReentrantLock tasksLock = new ReentrantLock(true);
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -145,15 +138,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected ListenableFuture<TaskStatus> runOrJoinTask(Task task, boolean run)
   {
-    tasksLock.lock();
-    try {
-      return tasks.computeIfAbsent(
-          task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> doTask(task, run)))
-      ).getResult();
-    }
-    finally {
-      tasksLock.unlock();
-    }
+    KubernetesWorkItem workItem = tasks.computeIfAbsent(
+        task.getId(), k -> new KubernetesWorkItem(task)
+    );
+    workItem.setResultIfRequired(exec.submit(() -> doTask(task, run)));
+    return workItem.getResult();
   }
 
   @VisibleForTesting
@@ -161,15 +150,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
 
-    KubernetesWorkItem workItem;
-    tasksLock.lock();
-    try {
-      workItem = tasks.get(task.getId());
-    }
-    finally {
-      tasksLock.unlock();
-    }
-
+    KubernetesWorkItem workItem = tasks.get(task.getId());
     if (workItem == null) {
       throw new ISE("Task [%s] disappeared", task.getId());
     }
