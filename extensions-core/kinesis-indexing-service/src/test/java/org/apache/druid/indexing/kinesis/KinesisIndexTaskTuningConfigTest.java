@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
@@ -39,6 +38,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 
 public class KinesisIndexTaskTuningConfigTest
 {
@@ -47,7 +47,7 @@ public class KinesisIndexTaskTuningConfigTest
   public KinesisIndexTaskTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KinesisIndexingServiceModule().getJacksonModules());
+    mapper.registerModules(new KinesisIndexingServiceModule().getJacksonModules());
   }
 
   @Rule
@@ -76,7 +76,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertFalse(config.isReportParseExceptions());
-    Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getRecordBufferSizeConfigured());
     Assert.assertEquals(10000, config.getRecordBufferSizeOrDefault(1_000_000_000, false));
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());

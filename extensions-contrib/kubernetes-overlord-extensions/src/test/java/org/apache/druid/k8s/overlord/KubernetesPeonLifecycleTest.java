@@ -576,7 +576,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.absent());
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.absent());
 
     replayAll();
 
@@ -598,7 +598,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.of(pod));
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
 
     replayAll();
 
@@ -623,7 +623,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.of(pod));
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
 
     replayAll();
 
@@ -653,7 +653,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.of(pod));
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
 
     replayAll();
 

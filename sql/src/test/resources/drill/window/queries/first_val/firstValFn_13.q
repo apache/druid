@@ -1,0 +1,1 @@
+SELECT col7 , col3 , FIRST_VALUE(col3) OVER(PARTITION BY col7 ORDER BY col3) FIRST_VALUE_col3 FROM "allTypsUniq.parquet"

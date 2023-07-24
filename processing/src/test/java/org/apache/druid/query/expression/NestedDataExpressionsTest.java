@@ -81,7 +81,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
   );
 
   Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
-      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
           .put("nest", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> NEST))
           .put("nestWrapped", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> new StructuredData(NEST)))
           .put("nester", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> NESTER))

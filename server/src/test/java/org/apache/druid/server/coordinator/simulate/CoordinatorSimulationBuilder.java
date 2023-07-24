@@ -151,11 +151,9 @@ public class CoordinatorSimulationBuilder
   /**
    * Specifies the CoordinatorDynamicConfig to be used in the simulation.
    * <p>
-   * Default values: {@code useBatchedSegmentSampler = true}, other params as
-   * specified in {@link CoordinatorDynamicConfig.Builder}.
+   * Default values: as specified in {@link CoordinatorDynamicConfig.Builder}.
    * <p>
-   * Tests that verify balancing behaviour must set
-   * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
+   * Tests that verify balancing behaviour use batched segment sampling.
    * Otherwise, the segment sampling is random and can produce repeated values
    * leading to flakiness in the tests. The simulation sets this field to true by
    * default.

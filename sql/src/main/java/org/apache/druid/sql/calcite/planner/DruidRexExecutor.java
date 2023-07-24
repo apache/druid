@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
@@ -145,7 +146,7 @@ public class DruidRexExecutor implements RexExecutor
           } else if (SqlTypeName.NUMERIC_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
             if (exprResult.type().getElementType().is(ExprType.LONG)) {
               List<BigDecimal> resultAsBigDecimalList = new ArrayList<>(array.length);
-              for (Object val : array) {
+              for (Object val : exprResult.castTo(ExpressionType.LONG_ARRAY).asArray()) {
                 final Number longVal = (Number) val;
                 if (longVal == null) {
                   resultAsBigDecimalList.add(null);
@@ -156,7 +157,7 @@ public class DruidRexExecutor implements RexExecutor
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);
             } else {
               List<BigDecimal> resultAsBigDecimalList = new ArrayList<>(array.length);
-              for (Object val : array) {
+              for (Object val : exprResult.castTo(ExpressionType.fromColumnType(druidExpression.getDruidType())).asArray()) {
                 final Number doubleVal = (Number) val;
                 if (doubleVal == null) {
                   resultAsBigDecimalList.add(null);

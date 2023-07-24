@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
@@ -681,6 +682,118 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     }
     Assert.assertTrue("File is not closed", isFileClosed.booleanValue());
     Assert.assertTrue("Sequence is not closed", isSequenceClosed.booleanValue());
+  }
+
+  @Test
+  public void testArrayColumns() throws IOException
+  {
+    // make our own stuff here so that we don't pollute the shared spec, rows, and segment defined in setup and
+    // break all the other tests
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(
+            StringDimensionSchema.create("strCol"),
+            new DoubleDimensionSchema("dblCol"),
+            new AutoTypeColumnSchema("arrayCol")
+        )
+    );
+    List<AggregatorFactory> metrics = ImmutableList.of(
+        new CountAggregatorFactory("cnt"),
+        new HyperUniquesAggregatorFactory("met_s", "strCol")
+    );
+    final List<InputRow> rows = ImmutableList.of(
+        new MapBasedInputRow(
+            DateTimes.of("2000"),
+            ImmutableList.of("strCol", "dblCol", "arrayCol"),
+            ImmutableMap.<String, Object>builder()
+                        .put("strCol", "foo")
+                        .put("dblCol", 1.23)
+                        .put("arrayCol", ImmutableList.of("a", "b", "c"))
+                        .build()
+        ),
+        new MapBasedInputRow(
+            DateTimes.of("2000T01"),
+            ImmutableList.of("strCol", "dblCol", "arrayCol"),
+            ImmutableMap.<String, Object>builder()
+                        .put("strCol", "bar")
+                        .put("dblCol", 4.56)
+                        .put("arrayCol", ImmutableList.of("x", "y", "z"))
+                        .build()
+        )
+    );
+
+    InputStats inputStats = new InputStatsImpl();
+    final IncrementalIndex incrementalIndex =
+        IndexBuilder.create()
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withDimensionsSpec(dimensionsSpec)
+                            .withMetrics(metrics.toArray(new AggregatorFactory[0]))
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(rows)
+                    .buildIncrementalIndex();
+
+    File segmentDirectory = temporaryFolder.newFolder();
+    long segmentSize;
+    try {
+      TestHelper.getTestIndexMergerV9(
+          OnHeapMemorySegmentWriteOutMediumFactory.instance()
+      ).persist(
+          incrementalIndex,
+          segmentDirectory,
+          IndexSpec.DEFAULT,
+          null
+      );
+      segmentSize = FileUtils.getFileSize(segmentDirectory);
+    }
+    finally {
+      incrementalIndex.close();
+    }
+    InputEntity entity = new BytesCountingInputEntity(
+        makeInputEntity(
+            Intervals.of("2000/P1D"),
+            segmentDirectory,
+            ImmutableList.of("strCol", "dblCol", "arrayCol"),
+            ImmutableList.of("cnt", "met_s")
+        ),
+        inputStats
+    );
+    final DruidSegmentReader reader = new DruidSegmentReader(
+        entity,
+        indexIO,
+        new TimestampSpec("__time", "millis", DateTimes.of("1971")),
+        new DimensionsSpec(
+            ImmutableList.of(
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol"),
+                new AutoTypeColumnSchema("arrayCol")
+            )
+        ),
+        ColumnsFilter.all(),
+        null,
+        temporaryFolder.newFolder()
+    );
+
+    List<InputRow> readRows = readRows(reader);
+
+    Assert.assertEquals(ImmutableList.of("strCol", "dblCol", "arrayCol"), readRows.get(0).getDimensions());
+    Assert.assertEquals(DateTimes.of("2000T").getMillis(), readRows.get(0).getTimestampFromEpoch());
+    Assert.assertEquals("foo", readRows.get(0).getRaw("strCol"));
+    Assert.assertEquals(1.23, readRows.get(0).getRaw("dblCol"));
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) readRows.get(0).getRaw("arrayCol"));
+    Assert.assertEquals(1L, readRows.get(0).getRaw("cnt"));
+    Assert.assertEquals(makeHLLC("foo"), readRows.get(0).getRaw("met_s"));
+
+    Assert.assertEquals(DateTimes.of("2000T1").getMillis(), readRows.get(1).getTimestampFromEpoch());
+    Assert.assertEquals("bar", readRows.get(1).getRaw("strCol"));
+    Assert.assertEquals(4.56, readRows.get(1).getRaw("dblCol"));
+    Assert.assertArrayEquals(new Object[]{"x", "y", "z"}, (Object[]) readRows.get(1).getRaw("arrayCol"));
+    Assert.assertEquals(1L, readRows.get(1).getRaw("cnt"));
+    Assert.assertEquals(makeHLLC("bar"), readRows.get(1).getRaw("met_s"));
+
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
+
   }
 
   private InputEntity makeInputEntity(final Interval interval)

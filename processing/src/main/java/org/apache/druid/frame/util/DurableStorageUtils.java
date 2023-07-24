@@ -43,7 +43,17 @@ public class DurableStorageUtils
     return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
   }
 
-  public static String getSuccessFilePath(
+  private static String getQueryResultsControllerDirectory(final String controllerTaskId)
+  {
+    return StringUtils.format(
+        "%s/controller_%s",
+        QUERY_RESULTS_DIR,
+        IdUtils.validateId("controller task ID", controllerTaskId)
+    );
+  }
+
+
+  public static String getWorkerOutputSuccessFilePath(
       final String controllerTaskId,
       final int stageNumber,
       final int workerNumber
@@ -57,10 +67,24 @@ public class DurableStorageUtils
     return StringUtils.format("%s/%s", folderName, SUCCESS_MARKER_FILENAME);
   }
 
+  public static String getQueryResultsSuccessFilePath(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber
+  )
+  {
+    String folderName = getQueryResultsWorkerOutputFolderName(
+        controllerTaskId,
+        stageNumber,
+        workerNumber
+    );
+    return StringUtils.format("%s/%s", folderName, SUCCESS_MARKER_FILENAME);
+  }
+
   /**
    * Fetches the directory location where workers will store the partition files corresponding to the stage number
    */
-  public static String getWorkerOutputFolderName(
+  private static String getWorkerOutputFolderName(
       final String controllerTaskId,
       final int stageNumber,
       final int workerNumber
@@ -69,6 +93,21 @@ public class DurableStorageUtils
     return StringUtils.format(
         "%s/stage_%d/worker_%d",
         getControllerDirectory(controllerTaskId),
+        stageNumber,
+        workerNumber
+    );
+  }
+
+
+  private static String getQueryResultsWorkerOutputFolderName(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber
+  )
+  {
+    return StringUtils.format(
+        "%s/stage_%d/worker_%d",
+        getQueryResultsControllerDirectory(controllerTaskId),
         stageNumber,
         workerNumber
     );
@@ -92,11 +131,25 @@ public class DurableStorageUtils
     );
   }
 
+
+  public static String getQueryResultsForTaskIdFolderName(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber,
+      final String taskId
+  )
+  {
+    return StringUtils.format(
+        "%s/taskId_%s",
+        getQueryResultsWorkerOutputFolderName(controllerTaskId, stageNumber, workerNumber),
+        taskId
+    );
+  }
   /**
    * Fetches the file location where a particular worker writes the data corresponding to a particular stage
    * and partition
    */
-  public static String getPartitionOutputsFileNameForPartition(
+  public static String getPartitionOutputsFileNameWithPathForPartition(
       final String controllerTaskId,
       final int stageNumber,
       final int workerNumber,
@@ -107,6 +160,21 @@ public class DurableStorageUtils
     return StringUtils.format(
         "%s/part_%d",
         getTaskIdOutputsFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
+        partitionNumber
+    );
+  }
+
+  public static String getQueryResultsFileNameWithPathForPartition(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber,
+      final String taskId,
+      final int partitionNumber
+  )
+  {
+    return StringUtils.format(
+        "%s/part_%d",
+        getQueryResultsForTaskIdFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
         partitionNumber
     );
   }

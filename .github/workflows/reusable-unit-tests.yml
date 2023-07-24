@@ -86,6 +86,11 @@ jobs:
             echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=true" >> $GITHUB_ENV
           fi
 
+      - name: test profiling
+        run: | 
+          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} ${{ github.run_id }} \
+          ${{ github.run_number }} ${{ github.run_attempt }} ${{ inputs.module }} >> $GITHUB_ENV
+
       - name: fetch base branch for test coverage
         if: ${{ github.base_ref != '' }}
         run: |

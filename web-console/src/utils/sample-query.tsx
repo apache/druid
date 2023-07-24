@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { Column, LiteralValue, QueryResult, SqlExpression } from 'druid-query-toolkit';
+import type { Column, LiteralValue, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -27,7 +27,7 @@ import {
   SqlQuery,
   SqlRecord,
   SqlValues,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 
 import { oneOf } from './general';
 
