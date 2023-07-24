@@ -90,10 +90,12 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     for (DataSegment segment : segments) {
       String s3Bucket = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.BUCKET);
       String path = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.KEY);
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete = bucketToKeysToDelete.computeIfAbsent(
+          s3Bucket,
+          k -> new ArrayList<>()
+      );
       keysToDelete.add(new DeleteObjectsRequest.KeyVersion(path));
       keysToDelete.add(new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path)));
-      bucketToKeysToDelete.computeIfAbsent(s3Bucket, k -> new ArrayList<>()).addAll(keysToDelete);
     }
 
     final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
