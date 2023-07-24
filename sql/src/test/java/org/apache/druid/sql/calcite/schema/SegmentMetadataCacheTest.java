@@ -1309,7 +1309,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         queryContext,
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null
     );
 
     QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);

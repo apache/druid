@@ -28,8 +28,11 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.Forbidden;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.guice.annotations.MSQ;
@@ -198,19 +201,15 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     // Calcite throws java.lang.AssertionError at various points in planning/validation.
     catch (AssertionError | Exception e) {
       stmt.reporter().failed(e);
       if (isDebug) {
-        log.warn(e, "Failed to handle query: %s", sqlQueryId);
+        log.warn(e, "Failed to handle query [%s]", sqlQueryId);
       } else {
-        log.noStackTrace().warn(e, "Failed to handle query: %s", sqlQueryId);
+        log.noStackTrace().warn(e, "Failed to handle query [%s]", sqlQueryId);
       }
       return buildNonOkResponse(
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
@@ -260,17 +259,13 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query [%s]", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                              .build(e, "Failed to handle query: [%s]", queryId));
+                                              .build(e, "Failed to handle query [%s]", queryId));
     }
   }
 
@@ -345,17 +340,13 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query [%s]", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                              .build(e, "Failed to handle query: [%s]", queryId));
+                                              .build(e, "Failed to handle query [%s]", queryId));
     }
   }
 
@@ -412,17 +403,13 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query [%s]", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                              .build(e, "Failed to handle query: [%s]", queryId));
+                                              .build(e, "Failed to handle query [%s]", queryId));
     }
   }
 
@@ -550,8 +537,8 @@ public class SqlStatementResource
         rows = 0L;
         size = 0L;
         for (PageInformation pageInformation : pageList.get()) {
-          rows += pageInformation.getNumRows();
-          size += pageInformation.getSizeInBytes();
+          rows += pageInformation.getNumRows() != null ? pageInformation.getNumRows() : 0L;
+          size += pageInformation.getSizeInBytes() != null ? pageInformation.getSizeInBytes() : 0L;
         }
       }
 
@@ -679,9 +666,9 @@ public class SqlStatementResource
     if (msqControllerTask.getQuerySpec().getDestination() instanceof TaskReportMSQDestination) {
       // Results from task report are only present as one page.
       if (page != null && page > 0) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build("Page number is out of range of the results.");
+        throw InvalidInput.exception(
+            "Page number [%d] is out of the range of results", page
+        );
       }
 
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
@@ -769,9 +756,7 @@ public class SqlStatementResource
         return pageInfo;
       }
     }
-    throw DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.INVALID_INPUT)
-                        .build("Invalid page id [%d] passed.", pageId);
+    throw InvalidInput.exception("Invalid page id [%d] passed.", pageId);
   }
 
   private void resultPusher(
@@ -832,7 +817,7 @@ public class SqlStatementResource
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
-                              "Query[%s] failed. Hit status api for more details.",
+                              "Query[%s] failed. Check the status api for more details.",
                               queryId
                           );
     } else {
@@ -842,26 +827,29 @@ public class SqlStatementResource
 
   private void contextChecks(QueryContext queryContext)
   {
-    ExecutionMode executionMode = queryContext.getEnum(
-        QueryContexts.CTX_EXECUTION_MODE,
-        ExecutionMode.class,
-        null
-    );
-    if (ExecutionMode.ASYNC != executionMode) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              StringUtils.format(
-                                  "The statement sql api only supports sync mode[%s]. Please set context parameter [%s=%s] in the context payload",
-                                  ExecutionMode.ASYNC,
-                                  QueryContexts.CTX_EXECUTION_MODE,
-                                  ExecutionMode.ASYNC
-                              )
-                          );
+    ExecutionMode executionMode = queryContext.getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, null);
+
+    if (executionMode == null) {
+      throw InvalidInput.exception(
+          "Execution mode is not provided to the sql statement api. "
+          + "Please set [%s] to [%s] in the query context",
+          QueryContexts.CTX_EXECUTION_MODE,
+          ExecutionMode.ASYNC
+      );
+    }
+
+    if (!ExecutionMode.ASYNC.equals(executionMode)) {
+      throw InvalidInput.exception(
+          "The sql statement api currently does not support the provided execution mode [%s]. "
+          + "Please set [%s] to [%s] in the query context",
+          executionMode,
+          QueryContexts.CTX_EXECUTION_MODE,
+          ExecutionMode.ASYNC
+      );
     }
 
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);
-    if (selectDestination == MSQSelectDestination.DURABLE_STORAGE) {
+    if (MSQSelectDestination.DURABLESTORAGE.equals(selectDestination)) {
       checkForDurableStorageConnectorImpl();
     }
   }
@@ -873,11 +861,13 @@ public class SqlStatementResource
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
-                                  "The statement sql api cannot read from select destination [%s=%s] since its not configured. "
-                                  + "Its recommended to configure durable storage as it allows the user to fetch big results. "
-                                  + "Please contact your cluster admin to configure durable storage.",
+                                  "The sql statement api cannot read from the select destination [%s] provided "
+                                  + "in the query context [%s] since it is not configured on the %s. It is recommended to configure durable storage "
+                                  + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
+                                  + "configure durable storage.",
+                                  MSQSelectDestination.DURABLESTORAGE.getName(),
                                   MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                                  MSQSelectDestination.DURABLE_STORAGE.name()
+                                  NodeRole.BROKER.getJsonName()
                               )
                           );
     }

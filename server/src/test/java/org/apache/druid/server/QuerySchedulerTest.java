@@ -349,6 +349,32 @@ public class QuerySchedulerTest
   }
 
   @Test
+  public void testTotalLimitWithQueryQueuing()
+  {
+    ServerConfig serverConfig = new ServerConfig();
+    QueryScheduler queryScheduler = new QueryScheduler(
+        serverConfig.getNumThreads() - 1,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new NoQueryLaningStrategy(),
+        serverConfig
+    );
+    Assert.assertEquals(serverConfig.getNumThreads() - 1, queryScheduler.getTotalAvailableCapacity());
+  }
+
+  @Test
+  public void testTotalLimitWithouQueryQueuing()
+  {
+    ServerConfig serverConfig = new ServerConfig(true);
+    QueryScheduler queryScheduler = new QueryScheduler(
+        serverConfig.getNumThreads() - 1,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new NoQueryLaningStrategy(),
+        serverConfig
+    );
+    Assert.assertEquals(-1, queryScheduler.getTotalAvailableCapacity());
+  }
+
+  @Test
   public void testExplodingWrapperDoesNotLeakLocks()
   {
     scheduler = new ObservableQueryScheduler(
