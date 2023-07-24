@@ -1243,7 +1243,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testTasksTableAuth() throws Exception
+  public void testTasksTableAuth()
   {
     SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(overlordClient, authMapper);
 
@@ -1361,7 +1361,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSupervisorTableAuth() throws Exception
+  public void testSupervisorTableAuth()
   {
     SystemSchema.SupervisorsTable supervisorTable =
         new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
