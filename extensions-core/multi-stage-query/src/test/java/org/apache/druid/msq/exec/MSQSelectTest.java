@@ -111,7 +111,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
                   )
                   .build();
 
@@ -121,7 +121,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
                   )
                   .build();
 

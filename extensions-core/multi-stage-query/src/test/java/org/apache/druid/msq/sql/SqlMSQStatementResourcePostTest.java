@@ -124,7 +124,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    results,
-                                   ImmutableList.of(new PageInformation(6L, 316L, 0))
+                                   ImmutableList.of(new PageInformation(0, 6L, 316L))
                                ),
                                null
         );
@@ -150,7 +150,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             ImmutableMap.of(),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
-        "Execution mode is not provided to the SQL statement API. "
+        "Execution mode is not provided to the sql statement api. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
@@ -165,7 +165,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name()),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
-        "The SQL statement API currently does not support the provided execution mode [SYNC]. "
+        "The sql statement api currently does not support the provided execution mode [SYNC]. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
@@ -273,12 +273,12 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         NilStorageConnector.getInstance()
     );
 
-    String errorMessage = "The SQL Statement API cannot read from the select destination [DURABLE_STORAGE] provided in "
-                          + "the query context [selectDestination] since it is not configured. It is recommended to "
-                          + "configure the durable storage as it allows the user to fetch large result sets. "
+    String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "
+                          + "the query context [selectDestination] since it is not configured on the broker. It is recommended to "
+                          + "configure durable storage as it allows the user to fetch large result sets. "
                           + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
                                                         new SqlQuery(
@@ -300,7 +300,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testWithDurableStorage() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(

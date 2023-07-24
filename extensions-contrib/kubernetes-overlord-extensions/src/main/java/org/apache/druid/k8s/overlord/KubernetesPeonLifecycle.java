@@ -229,7 +229,6 @@ public class KubernetesPeonLifecycle
       return TaskLocation.unknown();
     }
 
-
     if (podIP == null || tlsEnabled == null) {
       Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {

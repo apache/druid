@@ -25,7 +25,7 @@ import org.apache.druid.storage.StorageConnector;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Used for reading results when select destination is {@link org.apache.druid.msq.indexing.destination.MSQSelectDestination#DURABLE_STORAGE}
+ * Used for reading results when select destination is {@link org.apache.druid.msq.indexing.destination.MSQSelectDestination#DURABLESTORAGE}
  */
 public class DurableStorageQueryResultsInputChannelFactory extends DurableStorageInputChannelFactory
 {
