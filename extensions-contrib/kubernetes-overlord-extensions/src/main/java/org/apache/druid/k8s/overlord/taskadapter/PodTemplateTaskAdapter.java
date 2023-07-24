@@ -124,7 +124,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
     return new JobBuilder()
         .withNewMetadata()
-        .withName(new K8sTaskId(task).getK8sTaskId())
+        .withName(new K8sTaskId(task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .endMetadata()
