@@ -438,7 +438,7 @@ public class WorkerTaskManager
   {
     synchronized (lock) {
       runningTasks.remove(taskId);
-      completedTasks.put(taskId, taskAnnouncement);
+      addCompletedTask(taskId, taskAnnouncement);
 
       try {
         FileUtils.writeAtomically(
@@ -468,7 +468,7 @@ public class WorkerTaskManager
         String taskId = taskFile.getName();
         TaskAnnouncement taskAnnouncement = jsonMapper.readValue(taskFile, TaskAnnouncement.class);
         if (taskId.equals(taskAnnouncement.getTaskId())) {
-          completedTasks.put(taskId, taskAnnouncement);
+          addCompletedTask(taskId, taskAnnouncement);
         } else {
           throw new ISE("Corrupted completed task on disk[%s].", taskFile.getAbsoluteFile());
         }
@@ -495,78 +495,7 @@ public class WorkerTaskManager
     completedTasksCleanupExecutor.scheduleAtFixedRate(
         () -> {
           try {
-            if (completedTasks.isEmpty()) {
-              log.debug("Skipping completed tasks cleanup. Its empty.");
-              return;
-            }
-
-            ImmutableSet<String> taskIds = ImmutableSet.copyOf(completedTasks.keySet());
-            Either<Throwable, Map<String, TaskStatus>> apiCallResult = null;
-
-            try {
-              apiCallResult =
-                  Either.value(FutureUtils.get(overlordClient.taskStatuses(taskIds), true));
-              log.debug("Received completed task status response [%s].", apiCallResult);
-            }
-            catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-            }
-            catch (ExecutionException e) {
-              if (e.getCause() instanceof HttpResponseException) {
-                final HttpResponseStatus status = ((HttpResponseException) e.getCause()).getResponse().getStatus();
-                if (status.getCode() == 404) {
-                  // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
-                  // this if clause should be removed in a future release.
-                  log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
-                  apiCallResult = Either.value(ImmutableMap.of());
-                } else {
-                  log.info(
-                      "Got non-success code[%d] from Overlord while getting active tasks. "
-                      + "Will retry on next scheduled run.",
-                      status.getCode()
-                  );
-                }
-              } else {
-                apiCallResult = Either.error(e.getCause());
-              }
-            }
-            catch (Exception e) {
-              apiCallResult = Either.error(e);
-            }
-
-            if (apiCallResult == null) {
-              return;
-            } else if (apiCallResult.isError()) {
-              log.warn(
-                  apiCallResult.error(),
-                  "Exception while getting active tasks from Overlord. Will retry on next scheduled run."
-              );
-
-              return;
-            }
-
-            for (String taskId : taskIds) {
-              TaskStatus status = apiCallResult.valueOrThrow().get(taskId);
-              if (status == null || status.isComplete()) {
-
-                log.debug(
-                    "Deleting completed task[%s] information, overlord task status[%s].",
-                    taskId,
-                    status == null ? "unknown" : status.getStatusCode()
-                );
-
-                completedTasks.remove(taskId);
-                File taskFile = new File(getCompletedTaskDir(), taskId);
-                try {
-                  Files.deleteIfExists(taskFile.toPath());
-                  changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));
-                }
-                catch (IOException ex) {
-                  log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
-                }
-
-              }
-            }
+            this.doCompletedTasksCleanup();
           }
           catch (Throwable th) {
             log.error(th, "Got unknown exception while running the scheduled cleanup.");
@@ -600,6 +529,80 @@ public class WorkerTaskManager
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
     return !disabled.get();
+  }
+
+  /**
+   * Remove items from {@link #completedTasks} that the Overlord believes has completed. Scheduled by
+   * {@link #scheduleCompletedTasksCleanup()}.
+   */
+  void doCompletedTasksCleanup() throws InterruptedException
+  {
+    if (completedTasks.isEmpty()) {
+      log.debug("Skipping completed tasks cleanup, because there are no completed tasks.");
+      return;
+    }
+
+    ImmutableSet<String> taskIds = ImmutableSet.copyOf(completedTasks.keySet());
+    Either<Throwable, Map<String, TaskStatus>> apiCallResult;
+
+    try {
+      apiCallResult = Either.value(FutureUtils.get(overlordClient.taskStatuses(taskIds), true));
+      log.debug("Received completed task status response [%s].", apiCallResult);
+    }
+    catch (ExecutionException e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        final HttpResponseStatus status = ((HttpResponseException) e.getCause()).getResponse().getStatus();
+        if (status.getCode() == 404) {
+          // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
+          // this if clause should be removed in a future release.
+          log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
+          apiCallResult = Either.value(ImmutableMap.of());
+        } else {
+          apiCallResult = Either.error(e.getCause());
+        }
+      } else {
+        apiCallResult = Either.error(e.getCause());
+      }
+    }
+
+    if (apiCallResult.isError()) {
+      log.warn(
+          apiCallResult.error(),
+          "Exception while getting active tasks from Overlord. Will retry on next scheduled run."
+      );
+
+      return;
+    }
+
+    for (String taskId : taskIds) {
+      TaskStatus status = apiCallResult.valueOrThrow().get(taskId);
+      if (status == null || status.isComplete()) {
+        log.debug(
+            "Deleting completed task[%s] information, Overlord task status[%s].",
+            taskId,
+            status == null ? "unknown" : status.getStatusCode()
+        );
+
+        completedTasks.remove(taskId);
+        File taskFile = new File(getCompletedTaskDir(), taskId);
+        try {
+          Files.deleteIfExists(taskFile.toPath());
+          changeHistory.addChangeRequest(new WorkerHistoryItem.TaskRemoval(taskId));
+        }
+        catch (IOException ex) {
+          log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
+        }
+      }
+    }
+  }
+
+  /**
+   * Add a completed task to {@link #completedTasks}. It will eventually be removed by
+   * {@link #doCompletedTasksCleanup()}.
+   */
+  void addCompletedTask(final String taskId, final TaskAnnouncement taskAnnouncement)
+  {
+    completedTasks.put(taskId, taskAnnouncement);
   }
 
   private static class TaskDetails

@@ -65,11 +65,26 @@ public class TaskLookupTest
       final DateTime timestampBeforeLookupCreated = DateTimes.nowUtc().minus(duration);
       final CompleteTaskLookup lookup = CompleteTaskLookup
           .of(null, null)
-          .withDurationBeforeNow(duration);
+          .withMinTimestampIfAbsent(timestampBeforeLookupCreated);
       Assert.assertNull(lookup.getMaxTaskStatuses());
       Assert.assertTrue(
           timestampBeforeLookupCreated.isEqual(lookup.getTasksCreatedPriorTo())
           || timestampBeforeLookupCreated.isBefore(lookup.getTasksCreatedPriorTo())
+      );
+    }
+
+    @Test
+    public void testWithDurationBeforeNow2()
+    {
+      final Duration duration = new Period("P1D").toStandardDuration();
+      final DateTime timestampBeforeLookupCreated = DateTimes.nowUtc().minus(duration);
+      final CompleteTaskLookup lookup =
+          new CompleteTaskLookup(null, DateTimes.of("2000"))
+              .withMinTimestampIfAbsent(timestampBeforeLookupCreated);
+      Assert.assertNull(lookup.getMaxTaskStatuses());
+      Assert.assertEquals(
+          DateTimes.of("2000"),
+          lookup.getTasksCreatedPriorTo()
       );
     }
 
