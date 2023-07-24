@@ -96,7 +96,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get an array of active supervisor objects
 
-Retrieves an array of active supervisor objects. If there are no active supervisors, it returns an empty array. For reference on the supervisor object properties, see the following [table](#supervisor-information).
+Retrieves an array of active supervisor objects. If there are no active supervisors, it returns an empty array. For reference on the supervisor object properties, see the preceding [table](#supervisor-information).
 
 #### URL
 
@@ -764,7 +764,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get an array of supervisor states
 
-Retrieves an array of objects with the currently active supervisors and their current state. If there are no active supervisors, it returns an empty array. For reference on the supervisor object properties, see the following [table](#supervisor-information).
+Retrieves an array of objects representing active supervisors and their current state. If there are no active supervisors, it returns an empty array. For reference on the supervisor object properties, see the preceding [table](#supervisor-information).
 
 #### URL
 
@@ -778,7 +778,7 @@ Retrieves an array of objects with the currently active supervisors and their cu
 
 <br/>
 
-*Successfully retrieved supervisor state objects.*  
+*Successfully retrieved supervisor state objects*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1655,7 +1655,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
-### Get audit history for specific supervisor
+### Get audit history for a specific supervisor
 
 Retrieves an audit history of specs for a single supervisor.
 
@@ -2020,7 +2020,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
-## Managing supervisors
+## Manage supervisors
 
 ### Create or update a supervisor
 
@@ -3029,7 +3029,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Resets the specified supervisor. This endpoint clears stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). It kills and recreates active tasks to read from valid positions.
 
-Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages, resulting in data loss, or duplicate data. 
+Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.  
 
 #### URL
 
@@ -3204,7 +3204,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Shut down a supervisor
 
-Shuts down a supervisor. This endpoint is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
+Shuts down a supervisor. This endpoint is deprecated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
 
 #### URL
 
