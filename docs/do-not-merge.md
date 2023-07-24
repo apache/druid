@@ -55,7 +55,9 @@ GA + TBD
 
 [13197](https://github.com/apache/druid/pull/13197)
 
-## Hadoop 2 support dropped
+## Hadoop 2 deprecated
+
+Hadoop 2 is deprecated. It will be removed in a future release.
 
 # Additional features and improvements
 
@@ -221,8 +223,15 @@ The following metrics are now available for Brokers:
 |------|-----------|------------|
 |`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`|
 |`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`|
+| `segment/loadQueue/assigned` | |
+| `segment/loadQueue/success` | |
+| `segment/loadQueue/cancelled` | |
+| `segment/loadQueue/failed` | |
+| `segment/assigned/broadcast` | |
+| `segment/dropped/broadcast` | |
 
 [14453](https://github.com/apache/druid/pull/14453)
+[13197](https://github.com/apache/druid/pull/13197)
 
 ### New metrics for task completion updates
 
@@ -256,6 +265,8 @@ Coordinator now supports a `smartSegmentLoading` mode, which is enabled by defau
 These configs are now deprecated and will be removed in subsequent releases.
 
 Coordinator is now capable of prioritization and cancellation of items in segment load queues. This means that the coordinator now reacts faster to changes in the cluster and makes better segment assignment decisions.
+
+As part of this change, new metrics are available. For more information, see [New segment metrics](#new-segment-metrics).
 
 [13197](https://github.com/apache/druid/pull/13197)
 
