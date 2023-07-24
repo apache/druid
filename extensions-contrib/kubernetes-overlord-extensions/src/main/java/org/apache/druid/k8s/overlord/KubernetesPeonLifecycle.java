@@ -83,8 +83,7 @@ public class KubernetesPeonLifecycle
   @MonotonicNonNull
   private LogWatch logWatch;
 
-  private String podIP;
-  private Boolean tlsEnabled;
+  private TaskLocation taskLocation;
 
   protected KubernetesPeonLifecycle(
       Task task,
@@ -119,6 +118,7 @@ public class KubernetesPeonLifecycle
           State.PENDING
       );
 
+      taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           launchTimeout,
@@ -229,7 +229,11 @@ public class KubernetesPeonLifecycle
       return TaskLocation.unknown();
     }
 
-    if (podIP == null || tlsEnabled == null) {
+    /* It's okay to cache this because podIP only changes on pod restart, and we have to set restartPolicy to Never
+    since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
+    if we decide we need to change this later.
+    **/
+    if (taskLocation == null) {
       Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {
         return TaskLocation.unknown();
@@ -241,18 +245,15 @@ public class KubernetesPeonLifecycle
       if (podStatus == null || podStatus.getPodIP() == null) {
         return TaskLocation.unknown();
       }
-      podIP = podStatus.getPodIP();
-      tlsEnabled = Boolean.parseBoolean(pod.getMetadata()
-          .getAnnotations()
-          .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"));
+      taskLocation = TaskLocation.create(
+          podStatus.getPodIP(),
+          DruidK8sConstants.PORT,
+          DruidK8sConstants.TLS_PORT,
+          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"))
+      );
     }
 
-    return TaskLocation.create(
-        podIP,
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        tlsEnabled
-    );
+    return taskLocation;
   }
 
   private TaskStatus getTaskStatus(long duration)
