@@ -2051,26 +2051,32 @@ public class MSQSelectTest extends MSQTestBase
                 new QueryDataSource(
                     GroupByQuery.builder()
                                 .setDataSource("foo")
-                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                 .setDimensions(
-                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
-                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                                 )
                                 .setContext(queryContext)
                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                 .setGranularity(Granularities.ALL)
+                                .setPostAggregatorSpecs(
+                                    ImmutableList.of(new ExpressionPostAggregator(
+                                                         "a0",
+                                                         "1",
+                                                         null, ExprMacroTable.nil()
+                                                     )
+                                    )
+                                )
                                 .build()
 
                 ),
                 "j0.",
-                "(floor(100) == \"j0.d0\")",
+                "(CAST(floor(100), 'DOUBLE') == \"j0.d0\")",
                 JoinType.LEFT
             )
         )
         .setAggregatorSpecs(
             new FilteredAggregatorFactory(
                 new CountAggregatorFactory("a0"),
-                isNull("j0.d1"),
+                isNull("j0.a0"),
                 "a0"
             )
         )
