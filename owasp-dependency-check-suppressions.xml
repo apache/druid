@@ -392,6 +392,13 @@
     <cve>CVE-2022-33915</cve>
   </suppress>
   <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
+  </suppress>
+  <suppress>
     <!--
       - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
       -->
