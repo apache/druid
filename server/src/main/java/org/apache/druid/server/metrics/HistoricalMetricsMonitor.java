@@ -90,7 +90,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("segment/usedPercent", usedPercent));
     }
 
-    for (Map.Entry<String, Long> entry : segmentManager.getDataSourceToNumSegments().entrySet()) {
+    for (Map.Entry<String, Long> entry : segmentManager.getDataSourceCounts().entrySet()) {
       String dataSource = entry.getKey();
       long count = entry.getValue();
       final ServiceMetricEvent.Builder builder =

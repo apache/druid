@@ -32,7 +32,7 @@ public class SegmentChangeRequestNoopTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   @Test
-  public void testSerdeOfNoopRequest() throws Exception
+  public void testSerde() throws Exception
   {
     final SegmentChangeRequestNoop noopRequest = new SegmentChangeRequestNoop();
     final String json = MAPPER.writeValueAsString(noopRequest);

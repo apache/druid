@@ -177,7 +177,7 @@ public class SegmentLoadDropHandlerTest
 
     segmentLoadDropHandler.loadAndAnnounceSegment(segment);
     Assert.assertTrue(announcer.isAnnounced(segment));
-    Assert.assertEquals(1, segmentManager.getDataSourceToNumSegments().get(datasource).intValue());
+    Assert.assertEquals(1, segmentManager.getDataSourceCounts().get(datasource).intValue());
 
     // Unannounce segment and schedule a drop
     segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
@@ -221,12 +221,12 @@ public class SegmentLoadDropHandlerTest
     }
 
     testStorageLocation.checkInfoCache(segments);
-    Assert.assertTrue(segmentManager.getDataSourceToNumSegments().isEmpty());
+    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
     segmentLoadDropHandler.start();
-    Assert.assertFalse(segmentManager.getDataSourceToNumSegments().isEmpty());
+    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(11L, segmentManager.getDataSourceToNumSegments().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceToNumSegments().get("test_two" + i).longValue());
+      Assert.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
     Assert.assertEquals(13 * COUNT, announcer.getNumAnnouncedSegments());
     segmentLoadDropHandler.stop();
@@ -271,13 +271,13 @@ public class SegmentLoadDropHandlerTest
     }
 
     testStorageLocation.checkInfoCache(segments);
-    Assert.assertTrue(segmentManager.getDataSourceToNumSegments().isEmpty());
+    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     segmentLoadDropHandler.start();
-    Assert.assertFalse(segmentManager.getDataSourceToNumSegments().isEmpty());
+    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(3L, segmentManager.getDataSourceToNumSegments().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceToNumSegments().get("test_two" + i).longValue());
+      Assert.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
     Assert.assertEquals(5 * COUNT, announcer.getNumAnnouncedSegments());
     segmentLoadDropHandler.stop();

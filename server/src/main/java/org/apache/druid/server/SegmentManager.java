@@ -186,7 +186,7 @@ public class SegmentManager
    *
    * @return a map of dataSources and number of segments
    */
-  public Map<String, Long> getDataSourceToNumSegments()
+  public Map<String, Long> getDataSourceCounts()
   {
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
