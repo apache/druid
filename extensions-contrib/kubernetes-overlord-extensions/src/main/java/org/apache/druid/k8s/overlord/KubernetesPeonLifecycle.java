@@ -118,6 +118,7 @@ public class KubernetesPeonLifecycle
           State.PENDING
       );
 
+      // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
