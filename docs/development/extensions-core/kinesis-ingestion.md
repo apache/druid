@@ -383,8 +383,10 @@ The following table outlines the configuration options for `tuningConfig`:
 |`type`|String|The indexing task type. This should always be `kinesis`.|Yes||
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|100000|
 |`maxBytesInMemory`|Long| The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
+|`skipBytesInMemoryOverheadCheck`|Boolean|The calculation of `maxBytesInMemory` takes into account overhead objects created during ingestion and each intermediate persist. To exclude the bytes of these overhead objects from the `maxBytesInMemory` check, set `skipBytesInMemoryOverheadCheck` to `true`.|No|`false`|
 |`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number represents the post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|5000000|
 |`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number represents the post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|unlimited|
+|`intermediateHandoffPeriod`|ISO 8601 period|The period that determines how often tasks hand off segments. Handoff occurs if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|P2147483647D|
 |`intermediatePersistPeriod`|ISO 8601 period|The period that determines the rate at which intermediate persists occur.|No|PT10M|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If a new intermediate persist exceeds this limit, Druid blocks ingestion until the currently running persist finishes. One persist can be running concurrently with ingestion, and none can be queued up. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|0|
 |`indexSpec`|Object|Defines how Druid indexes the data. See [IndexSpec](#indexspec) for more information.|No||
@@ -404,7 +406,6 @@ The following table outlines the configuration options for `tuningConfig`:
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
 |`fetchThreads`|Integer|The size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|No| `procs * 2`, where `procs` is the number of processors available to the task.|
 |`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments See [Additional Peon configuration: SegmentWriteOutMediumFactory](../../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|No|If not specified, Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
-|`intermediateHandoffPeriod`|ISO 8601 period|Defines how often tasks hand off segments. Handoff occurs if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|P2147483647D|
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
@@ -604,21 +605,25 @@ This value is for the ideal situation in which there is at most one set of tasks
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
 time-to-publish (generate segment, push to deep storage, load on Historical) is greater than `taskDuration`. This is a valid and correct scenario but requires additional worker capacity to support. In general, it is a good idea to have `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
-## Deployment notes
+## Shards and segment handoff
 
-Each Kinesis indexing task puts events consumed from Kinesis shards assigned to it in a single segment for each segment
-granular interval until `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod` limit is reached. At this point, a new shard
-for this segment granularity is created for further events. Kinesis indexing task also does incremental hand-offs which
-means that the segments created by a task are not held up until the task duration is over. As soon as `maxRowsPerSegment`,
-`maxTotalRows`, or `intermediateHandoffPeriod` limit is reached, all the segments held by the task at that point in time are handed-off
-and a new set of segments is created for further events. This means that the task can run for longer durations of time
-without accumulating old segments locally on Middle Manager processes, and it is encouraged to do so.
+Each Kinesis indexing task writes the events it consumes from Kinesis shards into a single segment for the segment granularity interval until it reaches one of the following limits: `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`.
+At this point, the task creates a new shard for this segment granularity to contain subsequent events.
 
-Kinesis indexing service may still produce some small segments. Let's say the task duration is 4 hours, segment granularity
-is set to an hour, and the supervisor was started at 9:10. Then after 4 hours at 13:10, the new set of tasks is started and
-events for the interval 13:00 - 14:00 may be split across the previous and the new set of tasks. If you see it becoming a problem then
-one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
-See [Segment size optimization](../../operations/segment-optimization.md) for details on how to optimize the segment size.
+The Kinesis indexing task also performs incremental hand-offs so that the segments created by the task are not held up until the task duration is over.
+When the task reaches one of the `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod` limits, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations
+without accumulating old segments locally on Middle Manager processes.
+
+The Kinesis indexing service may still produce some small segments.
+For example, consider the following scenario:
+
+- Task duration is 4 hours
+- Segment granularity is set to an HOUR
+- The supervisor was started at 9:10
+
+After 4 hours at 13:10, Druid starts a new set of tasks. The events for the interval 13:00 - 14:00 may be split across existing tasks and the new set of tasks which could result in small segments. To merge them together into new segments of an ideal size (in the range of ~500-700 MB per segment), you can schedule re-indexing tasks, optionally with a different segment granularity.
+
+For more detail, see [Segment size optimization](../../operations/segment-optimization.md).
 
 ## Determine fetch settings
 
