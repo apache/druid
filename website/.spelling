@@ -18,6 +18,7 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+<code>[\s\S]*<\/code>
 1M
 100MiB
 32-bit
@@ -2290,3 +2291,8 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+completeTasks
+runningTasks
+waitingTasks
+pendingTasks
+shutdownAllTasks
