@@ -32,7 +32,12 @@ import { Execution, WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
-import { downloadQueryDetailArchive, formatDuration, queryDruidSql } from '../../../utils';
+import {
+  downloadQueryDetailArchive,
+  formatDuration,
+  prettyFormatIsoDate,
+  queryDruidSql,
+} from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
 import { workStateStore } from '../work-state-store';
 
@@ -231,7 +236,7 @@ LIMIT 100`,
                       style={{ color }}
                     />
                     <div className="timing">
-                      {w.createdTime.replace('T', ' ').replace(/\.\d\d\dZ$/, '') +
+                      {prettyFormatIsoDate(w.createdTime) +
                         (duration > 0 ? ` (${formatDuration(duration)})` : '')}
                     </div>
                   </div>
