@@ -26,6 +26,7 @@ import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -72,15 +73,21 @@ public interface OverlordClient
   /**
    * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
    *
+   * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
+   * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
+   * monitor its progress through the {@link #taskStatus(String)} API.
+   *
    * @param idPrefix   Descriptive prefix to include at the start of task IDs
    * @param dataSource Datasource to kill
    * @param interval   Interval to kill
+   *
+   * @return future with task ID
    */
-  default ListenableFuture<Void> runKillTask(String idPrefix, String dataSource, Interval interval)
+  default ListenableFuture<String> runKillTask(String idPrefix, String dataSource, Interval interval)
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
     final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
-    return runTask(taskId, taskQuery);
+    return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);
   }
 
   /**
@@ -93,9 +100,14 @@ public interface OverlordClient
   /**
    * Return {@link TaskStatusPlus} for all tasks matching a set of optional search parameters.
    *
+   * Complete tasks are returned in descending order by creation timestamp. Active tasks are returned in no
+   * particular order.
+   *
    * @param state             task state: may be "pending", "waiting", "running", or "complete"
    * @param dataSource        datasource
-   * @param maxCompletedTasks maximum number of completed tasks to return. Does not affect other kinds of tasks
+   * @param maxCompletedTasks maximum number of completed tasks to return. If zero, no complete tasks are returned.
+   *                          If null, all complete tasks within {@code druid.indexer.storage.recentlyFinishedThreshold}
+   *                          are returned. This parameter does not affect the number of active tasks returned.
    *
    * @return list of tasks that match the search parameters
    */
@@ -153,8 +165,9 @@ public interface OverlordClient
   ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority);
 
   /**
-   * Deletes pending segments for a particular datasource created within a particular interval. The {@code created_date}
-   * field of the pending segments table is checked to find segments to be deleted.
+   * Deletes pending segment records from the metadata store for a particular datasource. Records with
+   * {@code created_date} within the provided {@code interval} are deleted; other records are left alone.
+   * Deletion is done synchronously with the API call. When the future resolves, the deletion is complete.
    *
    * @param dataSource datasource name
    * @param interval   created time interval

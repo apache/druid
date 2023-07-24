@@ -521,7 +521,8 @@ public class WorkerTaskManager
                   apiCallResult = Either.value(ImmutableMap.of());
                 } else {
                   log.info(
-                      "Got non-success code[%s] from overlord while getting active tasks. will retry on next scheduled run.",
+                      "Got non-success code[%d] from Overlord while getting active tasks. "
+                      + "Will retry on next scheduled run.",
                       status.getCode()
                   );
                 }
@@ -538,7 +539,7 @@ public class WorkerTaskManager
             } else if (apiCallResult.isError()) {
               log.warn(
                   apiCallResult.error(),
-                  "Exception while getting active tasks from overlord. will retry on next scheduled run."
+                  "Exception while getting active tasks from Overlord. Will retry on next scheduled run."
               );
 
               return;
