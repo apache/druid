@@ -210,10 +210,12 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/events/thrownAway`|Number of events rejected because they are either null, or filtered by the transform spec, or outside the windowPeriod.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
+|`ingest/events/processed`|Number of events processed per emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Equal to the number of events per emission period.|
+|`ingest/events/processedWithError`|Number of events processed with some partial errors per emission period. Events processed with partial errors are counted towards both this metric and `ingest/events/processed`.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
+|`ingest/events/thrownAway`|Number of events rejected because they are null, or filtered by `transformSpec`, or outside one of `lateMessageRejectionPeriod`, `earlyMessageRejectionPeriod`, or `windowPeriod`.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
-|`ingest/events/processed`|Number of events successfully processed per emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Equal to the number of events per emission period.|
+|`ingest/input/bytes`|Number of bytes read from input sources, after decompression but prior to parsing. This covers all data read, including data that does not end up being fully processed and ingested. For example, this includes data that ends up being rejected for being unparseable or filtered out.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the amount of data read.|
 |`ingest/rows/output`|Number of Druid rows persisted.|`dataSource`, `taskId`, `taskType`, `groupId`|Your number of events with rollup.|
 |`ingest/persists/count`|Number of times persist occurred.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on configuration. Generally a few minutes at most.|
@@ -283,19 +285,21 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|`tier`|Varies|
-|`segment/moved/count`|Number of segments moved in the cluster.|`tier`|Varies|
-|`segment/unmoved/count`|Number of segments which were chosen for balancing but were found to be already optimally placed.|`tier`|Varies|
-|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`tier`|Varies|
-|`segment/deleted/count`|Number of segments marked as unused due to drop rules.| |Varies|
-|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|`tier`|Varies|
-|`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|`tier`|Varies|
-|`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|`tier`|Varies|
-|`segment/cost/normalized`|Used in cost balancing. The normalized cost of hosting segments.|`tier`|Varies|
+|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|`dataSource`, `tier`|Varies|
+|`segment/moved/count`|Number of segments moved in the cluster.|`dataSource`, `tier`|Varies|
+|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`dataSource`, `tier`|Varies|
+|`segment/deleted/count`|Number of segments marked as unused due to drop rules.|`dataSource`|Varies|
+|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|`dataSource`, `tier`|Varies|
+|`segment/assignSkipped/count`|Number of segments that could not be assigned to any server for loading. This can occur due to replication throttling, no available disk space, or a full load queue.|`dataSource`, `tier`, `description`|Varies|
+|`segment/moveSkipped/count`|Number of segments that were chosen for balancing but could not be moved. This can occur when segments are already optimally placed.|`dataSource`, `tier`, `description`|Varies|
+|`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `tier`, `description`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
-|`segment/loadQueue/failed`|Number of segments that failed to load.|`server`|0|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
 |`segment/dropQueue/count`|Number of segments to drop.|`server`|Varies|
+|`segment/loadQueue/assigned`|Number of segments assigned for load or drop to the load queue of a server.|`dataSource`, `server`|Varies|
+|`segment/loadQueue/success`|Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
+|`segment/loadQueue/failed`|Number of segment assignments that failed to complete.|`dataSource`, `server`|0|
+|`segment/loadQueue/cancelled`|Number of segment assignments that were canceled before completion.|`dataSource`, `server`|Varies|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|Varies|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|< max|
 |`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies|
@@ -350,7 +354,8 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 ### JVM
 
-These metrics are only available if the `JVMMonitor` module is included.
+These metrics are only available if the `JvmMonitor` module is included in `druid.monitoring.monitors`.
+For more information, see [Enabling Metrics](../configuration/index.md#enabling-metrics).
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -367,6 +372,15 @@ These metrics are only available if the `JVMMonitor` module is included.
 |`jvm/mem/committed`|Committed memory|`memKind`|Close to max memory|
 |`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young)|Varies|
 |`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
+
+### ZooKeeper
+
+These metrics are available unless `druid.zk.service.enabled = false`.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`zk/connected`|Indicator of connection status. `1` for connected, `0` for disconnected. Emitted once per monitor period.|None|1|
+|`zk/reconnect/time`|Amount of time, in milliseconds, that a server was disconnected from ZooKeeper before reconnecting. Emitted on reconnection. Not emitted if connection to ZooKeeper is permanently lost, because in this case, there is no reconnection.|None|Not present|
 
 ### EventReceiverFirehose
 

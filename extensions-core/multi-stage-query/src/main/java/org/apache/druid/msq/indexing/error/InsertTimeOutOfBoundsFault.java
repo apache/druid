@@ -20,11 +20,13 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Objects;
 
+@JsonTypeName(InsertTimeOutOfBoundsFault.CODE)
 public class InsertTimeOutOfBoundsFault extends BaseMSQFault
 {
   static final String CODE = "InsertTimeOutOfBounds";

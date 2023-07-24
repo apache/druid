@@ -37,36 +37,15 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ArrayStringGroupByColumnSelectorStrategyTest
 {
-
-  private final BiMap<String, Integer> DICTIONARY_INT = HashBiMap.create(new HashMap<String, Integer>()
-  {
-    {
-      put("a", 0);
-      put("b", 1);
-      put("bd", 2);
-      put("d", 3);
-      put("e", 4);
-    }
-  });
+  private final BiMap<String, Integer> dictionaryInt = HashBiMap.create();
 
   // The dictionary has been constructed such that the values are not sorted lexicographically
   // so we can tell when the comparator uses a lexicographic comparison and when it uses the indexes.
-  private final BiMap<ComparableIntArray, Integer> INDEXED_INTARRAYS = HashBiMap.create(
-      new HashMap<ComparableIntArray, Integer>()
-      {
-        {
-          put(ComparableIntArray.of(0, 1), 0);
-          put(ComparableIntArray.of(2, 4), 1);
-          put(ComparableIntArray.of(0, 2), 2);
-        }
-      }
-  );
-
+  private final BiMap<ComparableIntArray, Integer> indexedIntArrays = HashBiMap.create();
 
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
@@ -76,7 +55,17 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   @Before
   public void setup()
   {
-    strategy = new ArrayStringGroupByColumnSelectorStrategy(DICTIONARY_INT, INDEXED_INTARRAYS);
+    strategy = new ArrayStringGroupByColumnSelectorStrategy(dictionaryInt, indexedIntArrays);
+
+    dictionaryInt.put("a", 0);
+    dictionaryInt.put("b", 1);
+    dictionaryInt.put("bd", 2);
+    dictionaryInt.put("d", 3);
+    dictionaryInt.put("e", 4);
+
+    indexedIntArrays.put(ComparableIntArray.of(0, 1), 0);
+    indexedIntArrays.put(ComparableIntArray.of(2, 4), 1);
+    indexedIntArrays.put(ComparableIntArray.of(0, 2), 2);
   }
 
   @Test

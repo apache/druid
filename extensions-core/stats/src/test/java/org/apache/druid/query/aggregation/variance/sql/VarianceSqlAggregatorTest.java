@@ -518,7 +518,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
                       new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),
@@ -568,7 +568,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
@@ -576,35 +576,35 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                             aggregators(
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a2:agg", "d1", "sample", "double"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a3:agg", "d1", "sample", "double"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a4:agg", "l1", "population", "long"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a5:agg", "l1", "sample", "long"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a6:agg", "l1", "sample", "long"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new VarianceAggregatorFactory("a7:agg", "l1", "sample", "long"),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )

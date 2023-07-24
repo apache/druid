@@ -20,16 +20,20 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,6 +48,8 @@ public class ImmutableWorkerInfo
   private final ImmutableSet<String> availabilityGroups;
   private final ImmutableSet<String> runningTasks;
   private final DateTime lastCompletedTaskTime;
+
+  @Nullable
   private final DateTime blacklistedUntil;
 
   @JsonCreator
@@ -76,7 +82,8 @@ public class ImmutableWorkerInfo
   )
   {
     this(worker, currCapacityUsed, currParallelIndexCapacityUsed, availabilityGroups,
-         runningTasks, lastCompletedTaskTime, null);
+         runningTasks, lastCompletedTaskTime, null
+    );
   }
 
   public ImmutableWorkerInfo(
@@ -88,6 +95,51 @@ public class ImmutableWorkerInfo
   )
   {
     this(worker, currCapacityUsed, 0, availabilityGroups, runningTasks, lastCompletedTaskTime, null);
+  }
+
+  /**
+   * Helper used by {@link ZkWorker} and {@link org.apache.druid.indexing.overlord.hrtr.WorkerHolder}.
+   */
+  public static ImmutableWorkerInfo fromWorkerAnnouncements(
+      final Worker worker,
+      final Map<String, TaskAnnouncement> announcements,
+      final DateTime lastCompletedTaskTime,
+      @Nullable final DateTime blacklistedUntil
+  )
+  {
+    int currCapacityUsed = 0;
+    int currParallelIndexCapacityUsed = 0;
+    ImmutableSet.Builder<String> taskIds = ImmutableSet.builder();
+    ImmutableSet.Builder<String> availabilityGroups = ImmutableSet.builder();
+
+    for (final Map.Entry<String, TaskAnnouncement> entry : announcements.entrySet()) {
+      final TaskAnnouncement announcement = entry.getValue();
+
+      if (announcement.getStatus().isRunnable()) {
+        final String taskId = entry.getKey();
+        final TaskResource taskResource = announcement.getTaskResource();
+        final int requiredCapacity = taskResource.getRequiredCapacity();
+
+        currCapacityUsed += requiredCapacity;
+
+        if (ParallelIndexSupervisorTask.TYPE.equals(announcement.getTaskType())) {
+          currParallelIndexCapacityUsed += requiredCapacity;
+        }
+
+        taskIds.add(taskId);
+        availabilityGroups.add(taskResource.getAvailabilityGroup());
+      }
+    }
+
+    return new ImmutableWorkerInfo(
+        worker,
+        currCapacityUsed,
+        currParallelIndexCapacityUsed,
+        availabilityGroups.build(),
+        taskIds.build(),
+        lastCompletedTaskTime,
+        blacklistedUntil
+    );
   }
 
   @JsonProperty("worker")
@@ -132,6 +184,7 @@ public class ImmutableWorkerInfo
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DateTime getBlacklistedUntil()
   {
     return blacklistedUntil;

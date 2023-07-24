@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -28,10 +29,12 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -41,6 +44,7 @@ public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseab
 
   private final QueryableIndex index;
 
+  private final AtomicBoolean closed = new AtomicBoolean(false);
   private final Closer closer = Closer.create();
   private final AtomicInteger numRows = new AtomicInteger(-1);
 
@@ -72,6 +76,9 @@ public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseab
   @Override
   public Column findColumn(String name)
   {
+    if (closed.get()) {
+      throw DruidException.defensive("Cannot be accessed after being closed!?");
+    }
     final ColumnHolder columnHolder = index.getColumnHolder(name);
     if (columnHolder == null) {
       return null;
@@ -83,15 +90,18 @@ public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseab
   @SuppressWarnings("unchecked")
   @Nullable
   @Override
-  public <T> T as(Class<T> clazz)
+  public <T> T as(@Nonnull Class<T> clazz)
   {
+    //noinspection ReturnOfNull
     return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 
   @Override
   public void close() throws IOException
   {
-    closer.close();
+    if (closed.compareAndSet(false, true)) {
+      closer.close();
+    }
   }
 
   private static HashMap<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> makeAsMap()
