@@ -610,9 +610,6 @@ Host: http://COORDINATOR_IP:COORDINATOR_PORT
 
 </details>
 
-
-<a name="coordinator-segment-loading"></a>
-
 ## Overlord
 
 ### Get Overlord leader address
