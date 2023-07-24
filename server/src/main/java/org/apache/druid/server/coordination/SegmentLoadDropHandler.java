@@ -373,7 +373,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       log.info("Loading segment[%s]", segment.getId());
       /*
          The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
+         and if (segmentsToDrop.remove(segment)) returns true, in which case historical will start deleting segment
          files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
          the segment, which makes dropping segment and downloading segment happen at the same time.
        */
@@ -656,13 +656,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
+  @GuardedBy("requestStatusesLock")
   private void markRequestAsPending(DataSegmentChangeRequest changeRequest)
   {
-    synchronized (requestStatusesLock) {
-      DataSegmentChangeResponse pendingResponse
-          = new DataSegmentChangeResponse(changeRequest, DataSegmentChangeResponse.Status.PENDING);
-      requestStatuses.put(changeRequest.getSegment(), new AtomicReference<>(pendingResponse));
-    }
+    DataSegmentChangeResponse pendingResponse
+        = new DataSegmentChangeResponse(changeRequest, DataSegmentChangeResponse.Status.PENDING);
+    requestStatuses.put(changeRequest.getSegment(), new AtomicReference<>(pendingResponse));
   }
 
   /**
