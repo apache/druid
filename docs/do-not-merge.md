@@ -219,14 +219,14 @@ Added a new monitor `ServiceStatusMonitor` to monitor the service health of the 
 
 The following metrics are now available for Brokers:
 
-|Metric|Description|Normal value|
+|Metric|Description|Dimensions |Normal value|
 |------|-----------|------------|
-|`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`|
-|`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`|
-| `segment/loadQueue/assigned` | |
-| `segment/loadQueue/success` | |
-| `segment/loadQueue/cancelled` | |
-| `segment/loadQueue/failed` | |
+|`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`| | 
+|`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`| | 
+| `segment/loadQueue/assigned` | Number of segments assigned for load or drop to the load queue of a server. |`dataSource`,`server` | Varies |
+| `segment/loadQueue/success` |Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
+| `segment/loadQueue/cancelled` |Number of segment assignments that were canceled before completion. |`dataSource`,`server` | 0 |
+| `segment/loadQueue/failed` |Number of segment assignments that failed to complete.|`dataSource`, `server`|0|
 | `segment/assigned/broadcast` | |
 | `segment/dropped/broadcast` | |
 
