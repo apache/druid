@@ -145,7 +145,7 @@ Users can now add a guardrail to prevent subquery’s results from exceeding the
 
 ### HLL and Theta sketch estimates
 
-You can now use HLL_SKETCH_ESTIMATE and THETA_SKETCH_ESTIMATE as expressions. These estimates work on sketch columns and have the same behavior as `postAggs`.
+You can now use `HLL_SKETCH_ESTIMATE` and `THETA_SKETCH_ESTIMATE` as expressions. These estimates work on sketch columns and have the same behavior as `postAggs`.
 
 [14312](https://github.com/apache/druid/pull/14312)
 
@@ -323,7 +323,7 @@ Added a new virtual column `replication_factor` to the `sys.segments` table. Thi
 The Kafka emitter extension has been improved. You can now publish events related to segments and their metadata to Kafka.
 You can set the new properties such as in the following example:
 
-```
+```properties
 druid.emitter.kafka.event.types=["metrics", "alerts", "segment_metadata"]
 druid.emitter.kafka.segmentMetadata.topic=foo
 ```
