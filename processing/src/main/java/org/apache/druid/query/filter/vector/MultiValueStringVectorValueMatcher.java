@@ -103,9 +103,12 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
   @Override
   public VectorValueMatcher makeMatcher(Object value, ColumnType type)
   {
-    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
-    ExprEval<?> cast = eval.castTo(ExpressionType.STRING);
-    return makeMatcher(cast.asString());
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
+    final ExprEval<?> castForComparison = ExprEval.castForComparison(eval, ExpressionType.STRING);
+    if (castForComparison == null) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
+    return makeMatcher(castForComparison.asString());
   }
 
   @Override

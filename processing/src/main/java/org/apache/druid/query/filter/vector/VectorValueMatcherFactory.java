@@ -27,8 +27,14 @@ import javax.annotation.Nullable;
 
 public interface VectorValueMatcherFactory
 {
+  /**
+   * Specialized value matcher for string equality
+   */
   VectorValueMatcher makeMatcher(@Nullable String value);
 
+  /**
+   * Specialized value matcher for equality
+   */
   VectorValueMatcher makeMatcher(Object value, ColumnType type);
 
   VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory);

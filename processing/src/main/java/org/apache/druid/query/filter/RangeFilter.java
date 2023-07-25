@@ -514,16 +514,12 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (hasLowerBound()) {
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.LONG);
         if (lowerCast.isNumericNull()) {
+          // lower value is not null, but isn't convertible to a long, so is effectively null, we treat this as not
+          // having a lower bound to be consistent with the bound filter, but perhaps this is controversial...
           hasLowerBound = false;
           lowerBound = Long.MIN_VALUE;
         } else {
-          // take the ceiling of the match value if the DOUBLE value is not the same after casting to a LONG
-          // otherwise we end up with strange behavior such as matching 1 for x > 1.1
-          if (ExprEval.castTypeNarrowingLosesEquality(lowerEval, lowerCast)) {
-            lowerBound = lowerOpen ? (long) Math.floor(lowerEval.asDouble()) : (long) Math.ceil(lowerEval.asDouble());
-          } else {
-            lowerBound = lowerCast.asLong();
-          }
+          lowerBound = lowerOpen ? (long) Math.floor(lowerEval.asDouble()) : (long) Math.ceil(lowerEval.asDouble());
           hasLowerBound = true;
         }
       } else {
@@ -537,14 +533,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
-          // take the floor of the match value if the DOUBLE value is not the same after casting to a LONG
-          // technically we could probably just always cast here since this cast is equivalent to Math.floor, but this
-          // isnt a hot loop and so doesn't hurt to be explicit
-          if (ExprEval.castTypeNarrowingLosesEquality(upperEval, upperCast)) {
-            upperBound = upperOpen ? (long) Math.ceil(upperEval.asDouble()) : (long) Math.floor(upperEval.asDouble());
-          } else {
-            upperBound = upperCast.asLong();
-          }
+          // take the ceil if open or floor if not of the match value as a double so that we can
+          upperBound = upperOpen ? (long) Math.ceil(upperEval.asDouble()) : (long) Math.floor(upperEval.asDouble());
           hasUpperBound = true;
         }
       } else {

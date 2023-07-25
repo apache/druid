@@ -232,20 +232,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
-
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
-      final ExprEval<?> longEval = eval.castTo(ExpressionType.LONG);
-
-      if (eval.isNumericNull()) {
-        // value wasn't null, but not a number
-        return null;
-      }
-      // make sure the match value type as a DOUBLE is equivalent after being cast to a LONG
-      // this allows us to match 1 with 1.0, but not with 1.1
-      if (ExprEval.castTypeNarrowingLosesEquality(eval, longEval)) {
+      final ExprEval<?> castForComparison = ExprEval.castForComparison(eval, ExpressionType.LONG);
+      if (castForComparison == null) {
         return new AllFalseBitmapColumnIndex(bitmapFactory);
       }
-      final long longValue = longEval.asLong();
+      final long longValue = castForComparison.asLong();
 
       return new SimpleBitmapColumnIndex()
       {

@@ -351,11 +351,14 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
-      final ExprEval<?> evalCast = eval.castTo(ExpressionType.fromColumnTypeStrict(logicalType));
-      if (ExprEval.castTypeNarrowingLosesEquality(eval, evalCast)) {
+      final ExprEval<?> castForComparison = ExprEval.castForComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType)
+      );
+      if (castForComparison == null) {
         return new AllFalseBitmapColumnIndex(bitmapFactory);
       }
-      final Object[] arrayToMatch = evalCast.asArray();
+      final Object[] arrayToMatch = castForComparison.asArray();
       Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
@@ -429,11 +432,13 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
-      final ExprEval<?> evalCast = eval.castTo(ExpressionType.fromColumnTypeStrict(logicalType.getElementType()));
-      if (ExprEval.castTypeNarrowingLosesEquality(eval, evalCast)) {
+      final ExprEval<?> castForComparison = ExprEval.castForComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
+      );
+      if (castForComparison == null) {
         return new AllFalseBitmapColumnIndex(bitmapFactory);
       }
-
       Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
@@ -481,12 +486,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
         private int getElementId()
         {
-          if (evalCast.value() == null) {
+          if (castForComparison.value() == null) {
             return 0;
-          } else if (evalCast.type().is(ExprType.STRING)) {
-            return elements.indexOf(StringUtils.toUtf8ByteBuffer(evalCast.asString()));
+          } else if (castForComparison.type().is(ExprType.STRING)) {
+            return elements.indexOf(StringUtils.toUtf8ByteBuffer(castForComparison.asString()));
           } else {
-            return elements.indexOf(evalCast.value()) + elementOffset;
+            return elements.indexOf(castForComparison.value()) + elementOffset;
           }
         }
       };

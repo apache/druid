@@ -645,24 +645,34 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * Returns true if an {@link ExprEval} which has been cast to some other type is not equal to the original type.
-   * Effectively, this only happens with casts to {@link ExpressionType#LONG} and {@link ExpressionType#LONG_ARRAY}.
+   * Cast an {@link ExprEval} to some {@link ExpressionType} that the value will be compared with. If the value is not
+   * appropriate to use for comparison after casting, this method returns null. For example, the
+   * {@link ExpressionType#DOUBLE} value 1.1 when cast to {@link ExpressionType#LONG} becomes 1L, which is no longer
+   * appropriate to use for equality or range comparisons, while 1.0 is valid.
    */
-  public static boolean castTypeNarrowingLosesEquality(ExprEval<?> eval, ExprEval<?> evalCast)
+  @Nullable
+  public static ExprEval<?> castForComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
   {
-    if (ExpressionType.LONG.equals(evalCast.type())) {
-      // make sure the DOUBLE value when cast to LONG is the same before and after the cast
-      // this lets us match 1.0 to 1, but not 1.1
-      return eval.asDouble() != evalCast.asDouble();
-    } else if (ExpressionType.LONG_ARRAY.equals(evalCast.type())) {
+    ExprEval<?> cast = valueToCompare.castTo(typeToCompareWith);
+    // make sure the DOUBLE value when cast to LONG is the same before and after the cast
+    // this lets us match 1.0 to 1, but not 1.1
+    if (ExpressionType.LONG.equals(typeToCompareWith) && valueToCompare.asDouble() != cast.asDouble()) {
+      return null;
+    } else if (ExpressionType.LONG_ARRAY.equals(typeToCompareWith)) {
       // if comparison array is double typed, make sure the values are the same when cast to long
       // this lets us match [1.0, 2.0, 3.0] to [1, 2, 3], but not [1.1, 2.2, 3.3]
-      final ExprEval<?> doubleCast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
-      final ExprEval<?> castDoubleCast = evalCast.castTo(ExpressionType.DOUBLE_ARRAY);
-      return ExpressionType.DOUBLE_ARRAY.getStrategy().compare(doubleCast.value(), castDoubleCast.value()) != 0;
+      final ExprEval<?> doubleCast = valueToCompare.castTo(ExpressionType.DOUBLE_ARRAY);
+      final ExprEval<?> castDoubleCast = cast.castTo(ExpressionType.DOUBLE_ARRAY);
+      if (ExpressionType.DOUBLE_ARRAY.getStrategy().compare(doubleCast.value(), castDoubleCast.value()) != 0) {
+        return null;
+      }
     }
-    // if the value wasn't cast to a LONG then no loss of precision occurred, so we don't care
-    return false;
+
+    // did value become null during cast but was not initially null?
+    if (valueToCompare.value() != null && cast.value() == null) {
+      return null;
+    }
+    return cast;
   }
 
   // Cached String values

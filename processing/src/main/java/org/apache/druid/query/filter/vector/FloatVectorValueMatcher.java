@@ -59,12 +59,15 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(Object value, ColumnType type)
   {
-    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
-    ExprEval<?> cast = eval.castTo(ExpressionType.DOUBLE);
-    if (cast.isNumericNull()) {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
+    final ExprEval<?> castForComparison = ExprEval.castForComparison(eval, ExpressionType.DOUBLE);
+    if (castForComparison == null) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
+    if (castForComparison.isNumericNull()) {
       return makeNullValueMatcher(selector);
     }
-    return makeFloatMatcher((float) cast.asDouble());
+    return makeFloatMatcher((float) castForComparison.asDouble());
   }
 
   private BaseVectorValueMatcher makeFloatMatcher(float matchValFloat)
