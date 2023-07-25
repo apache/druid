@@ -74,10 +74,10 @@ public class SegmentLoadDropHandlerTest
   private SegmentLoadDropHandler segmentLoadDropHandler;
 
   private TestDataSegmentAnnouncer announcer;
+  private CacheTestSegmentLoader segmentLoader;
+
   private File infoDir;
   private TestStorageLocation testStorageLocation;
-  private SegmentCacheManager segmentCacheManager;
-  private Set<DataSegment> segmentsRemovedFromCache;
   private SegmentManager segmentManager;
   private SegmentLoaderConfig segmentLoaderConfig;
   private BlockingExecutorService loadingExecutor;
@@ -105,24 +105,8 @@ public class SegmentLoadDropHandlerTest
         testStorageLocation.toStorageLocationConfig()
     );
 
-    segmentsRemovedFromCache = new HashSet<>();
-    segmentCacheManager = new NoopSegmentCacheManager()
-    {
-      @Override
-      public boolean isSegmentCached(DataSegment segment)
-      {
-        Map<String, Object> loadSpec = segment.getLoadSpec();
-        return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
-      }
-
-      @Override
-      public void cleanup(DataSegment segment)
-      {
-        segmentsRemovedFromCache.add(segment);
-      }
-    };
-
-    segmentManager = new SegmentManager(new CacheTestSegmentLoader());
+    segmentLoader = new CacheTestSegmentLoader();
+    segmentManager = new SegmentManager(segmentLoader);
     announcer = new TestDataSegmentAnnouncer();
 
     segmentLoaderConfig = new SegmentLoaderConfig()
@@ -151,18 +135,23 @@ public class SegmentLoadDropHandlerTest
 
     final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
 
-    // Schedule a drop even though the segment is not loaded yet
-    segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
+    // Queue a drop even though the segment is not loaded yet
+    segmentLoadDropHandler.processBatch(dropRequest(segment));
     Assert.assertFalse(announcer.isAnnounced(segment));
-    Assert.assertTrue(loadingExecutor.hasPendingTasks());
+    Assert.assertEquals(1, loadingExecutor.numPendingTasks());
 
-    segmentLoadDropHandler.loadAndAnnounceSegment(segment);
+    // Queue a load of the segment
+    segmentLoadDropHandler.processBatch(loadRequest(segment));
+    Assert.assertFalse(announcer.isAnnounced(segment));
+    Assert.assertEquals(2, loadingExecutor.numPendingTasks());
 
-    // Try to complete pending drop of segment
+    // Try to complete both the pending drop and load
     loadingExecutor.finishAllPendingTasks();
 
+    // Verify that the segment is loaded and the drop never happens
     Assert.assertTrue(announcer.isAnnounced(segment));
-    Assert.assertFalse(segmentsRemovedFromCache.contains(segment));
+    Assert.assertTrue(segmentLoader.getLoadedSegments().contains(segment));
+    Assert.assertFalse(segmentLoader.getRemovedSegments().contains(segment));
 
     segmentLoadDropHandler.stop();
   }
@@ -175,23 +164,58 @@ public class SegmentLoadDropHandlerTest
     final String datasource = "test";
     final DataSegment segment = makeSegment(datasource, "1", Intervals.of("P1d/2011-04-01"));
 
-    segmentLoadDropHandler.loadAndAnnounceSegment(segment);
+    // Load the segment
+    segmentLoadDropHandler.processBatch(loadRequest(segment));
+    loadingExecutor.finishNextPendingTask();
     Assert.assertTrue(announcer.isAnnounced(segment));
     Assert.assertEquals(1, segmentManager.getDataSourceCounts().get(datasource).intValue());
 
-    // Unannounce segment and schedule a drop
-    segmentLoadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP);
+    // Queue a drop of the segment but do not process it
+    segmentLoadDropHandler.processBatch(dropRequest(segment));
     Assert.assertFalse(announcer.isAnnounced(segment));
-    Assert.assertTrue(loadingExecutor.hasPendingTasks());
+    Assert.assertEquals(1, loadingExecutor.numPendingTasks());
 
-    segmentLoadDropHandler.loadAndAnnounceSegment(segment);
+    // Queue a load of the segment
+    segmentLoadDropHandler.processBatch(loadRequest(segment));
+    Assert.assertFalse(announcer.isAnnounced(segment));
+    Assert.assertEquals(2, loadingExecutor.numPendingTasks());
 
-    // Try to complete pending drop of segment
+    // Try to complete both the pending drop and load
     loadingExecutor.finishAllPendingTasks();
 
-    // Verify that segment is still loaded
+    // Verify that the segment is loaded and the drop never happens
     Assert.assertTrue(announcer.isAnnounced(segment));
-    Assert.assertFalse(segmentsRemovedFromCache.contains(segment));
+    Assert.assertTrue(segmentLoader.getLoadedSegments().contains(segment));
+    Assert.assertFalse(segmentLoader.getRemovedSegments().contains(segment));
+
+    segmentLoadDropHandler.stop();
+  }
+
+  @Test
+  public void testDropCancelsPendingLoad() throws IOException
+  {
+    segmentLoadDropHandler.start();
+
+    final String datasource = "test";
+    final DataSegment segment = makeSegment(datasource, "1", Intervals.of("P1d/2011-04-01"));
+
+    // Queue a load of the segment but do not process it
+    segmentLoadDropHandler.processBatch(loadRequest(segment));
+    Assert.assertFalse(announcer.isAnnounced(segment));
+    Assert.assertEquals(1, loadingExecutor.numPendingTasks());
+
+    // Queue a drop of the segment
+    segmentLoadDropHandler.processBatch(dropRequest(segment));
+    Assert.assertFalse(announcer.isAnnounced(segment));
+    Assert.assertEquals(2, loadingExecutor.numPendingTasks());
+
+    // Try to complete the drop first and then the load
+    loadingExecutor.finishAllPendingTasks();
+
+    // Verify that the segment is unannounced and the load never happens
+    Assert.assertFalse(announcer.isAnnounced(segment));
+    Assert.assertFalse(segmentLoader.getLoadedSegments().contains(segment));
+    Assert.assertTrue(segmentLoader.getRemovedSegments().contains(segment));
 
     segmentLoadDropHandler.stop();
   }
@@ -303,21 +327,26 @@ public class SegmentLoadDropHandlerTest
         new SegmentChangeRequestDrop(segment2)
     );
 
-    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler
-        .processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future
+        = segmentLoadDropHandler.processBatch(batch);
 
     Map<DataSegmentChangeRequest, DataSegmentChangeResponse.Status> expectedStatusMap = new HashMap<>();
     expectedStatusMap.put(batch.get(0), DataSegmentChangeResponse.Status.PENDING);
     expectedStatusMap.put(batch.get(1), DataSegmentChangeResponse.Status.SUCCESS);
     List<DataSegmentChangeResponse> result = future.get();
-    for (DataSegmentChangeResponse requestAndStatus : result) {
-      Assert.assertEquals(expectedStatusMap.get(requestAndStatus.getRequest()), requestAndStatus.getStatus());
+    for (DataSegmentChangeResponse response : result) {
+      Assert.assertEquals(
+          expectedStatusMap.get(response.getRequest()),
+          response.getStatus()
+      );
     }
 
     loadingExecutor.finishAllPendingTasks();
 
-    result = segmentLoadDropHandler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
+    result = segmentLoadDropHandler.processBatch(loadRequest(segment1)).get();
     Assert.assertEquals(DataSegmentChangeResponse.Status.SUCCESS, result.get(0).getStatus());
+    Assert.assertTrue(segmentLoader.getLoadedSegments().contains(segment1));
+    Assert.assertTrue(segmentLoader.getRemovedSegments().contains(segment2));
 
     segmentLoadDropHandler.stop();
   }
@@ -335,16 +364,14 @@ public class SegmentLoadDropHandlerTest
 
     final DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
 
-    List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-
-    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler
-        .processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future
+        = segmentLoadDropHandler.processBatch(loadRequest(segment1));
 
     loadingExecutor.finishAllPendingTasks();
     List<DataSegmentChangeResponse> result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.FAILED, result.get(0).getStatus().getState());
 
-    future = segmentLoadDropHandler.processBatch(batch);
+    future = segmentLoadDropHandler.processBatch(loadRequest(segment1));
     loadingExecutor.finishAllPendingTasks();
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
@@ -364,18 +391,15 @@ public class SegmentLoadDropHandlerTest
 
     final DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
 
-    List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-
     // Request 1: Load the segment
-    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler
-        .processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future
+        = segmentLoadDropHandler.processBatch(loadRequest(segment1));
     loadingExecutor.finishAllPendingTasks();
     List<DataSegmentChangeResponse> result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
 
     // Request 2: Drop the segment
-    batch = ImmutableList.of(new SegmentChangeRequestDrop(segment1));
-    future = segmentLoadDropHandler.processBatch(batch);
+    future = segmentLoadDropHandler.processBatch(dropRequest(segment1));
     loadingExecutor.finishAllPendingTasks();
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
@@ -385,8 +409,7 @@ public class SegmentLoadDropHandlerTest
     verifyDropCalled(segmentManager, 1);
 
     // Request 3: Reload the segment
-    batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-    future = segmentLoadDropHandler.processBatch(batch);
+    future = segmentLoadDropHandler.processBatch(loadRequest(segment1));
     loadingExecutor.finishAllPendingTasks();
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
@@ -396,8 +419,7 @@ public class SegmentLoadDropHandlerTest
     verifyDropCalled(segmentManager, 1);
 
     // Request 4: Try to reload the segment - segment is loaded again
-    batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-    future = segmentLoadDropHandler.processBatch(batch);
+    future = segmentLoadDropHandler.processBatch(loadRequest(segment1));
     loadingExecutor.finishAllPendingTasks();
     result = future.get();
     Assert.assertEquals(DataSegmentChangeResponse.State.SUCCESS, result.get(0).getStatus().getState());
@@ -419,9 +441,8 @@ public class SegmentLoadDropHandlerTest
     segmentLoadDropHandler.start();
 
     // Send a load request to the handler
-    ListenableFuture<List<DataSegmentChangeResponse>> future = segmentLoadDropHandler.processBatch(
-        Collections.singletonList(new SegmentChangeRequestLoad(segment))
-    );
+    ListenableFuture<List<DataSegmentChangeResponse>> future
+        = segmentLoadDropHandler.processBatch(loadRequest(segment));
     Assert.assertFalse(future.isDone());
 
     // Cancel the future so that it is never resolved and the response remains cached
@@ -432,9 +453,7 @@ public class SegmentLoadDropHandlerTest
     loadingExecutor.finishNextPendingTask();
 
     // Verify that next load request completes immediately with a failed response
-    future = segmentLoadDropHandler.processBatch(
-        Collections.singletonList(new SegmentChangeRequestLoad(segment))
-    );
+    future = segmentLoadDropHandler.processBatch(loadRequest(segment));
     Assert.assertTrue(future.isDone());
 
     DataSegmentChangeResponse response = future.get().get(0);
@@ -447,6 +466,15 @@ public class SegmentLoadDropHandlerTest
 
   private SegmentLoadDropHandler initHandler(SegmentManager manager)
   {
+    SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
+    {
+      @Override
+      public boolean isSegmentCached(DataSegment segment)
+      {
+        Map<String, Object> loadSpec = segment.getLoadSpec();
+        return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
+      }
+    };
     return new SegmentLoadDropHandler(
         jsonMapper,
         segmentLoaderConfig,
@@ -486,4 +514,13 @@ public class SegmentLoadDropHandlerTest
     Mockito.verify(manager, Mockito.times(times)).dropSegment(ArgumentMatchers.any());
   }
 
+  private static List<DataSegmentChangeRequest> loadRequest(DataSegment segment)
+  {
+    return Collections.singletonList(new SegmentChangeRequestLoad(segment));
+  }
+
+  private static List<DataSegmentChangeRequest> dropRequest(DataSegment segment)
+  {
+    return Collections.singletonList(new SegmentChangeRequestDrop(segment));
+  }
 }

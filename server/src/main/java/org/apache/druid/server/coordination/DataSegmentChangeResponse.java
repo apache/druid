@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
@@ -54,6 +55,18 @@ public class DataSegmentChangeResponse
   public Status getStatus()
   {
     return status;
+  }
+
+  @JsonIgnore
+  public boolean isComplete()
+  {
+    return getStatus().getState() != State.PENDING;
+  }
+
+  @JsonIgnore
+  public boolean isLoadRequest()
+  {
+    return request instanceof SegmentChangeRequestLoad;
   }
 
   @Override

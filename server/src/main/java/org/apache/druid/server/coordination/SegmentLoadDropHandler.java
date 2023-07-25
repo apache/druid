@@ -77,7 +77,25 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
   /**
-   * Synchronizes removals from {@link #segmentsToDrop}.
+   * Synchronizes addition and removal from {@link #segmentsToDrop} to ensure that
+   * concurrent Load and Drop of the same segment do not result in an invalid state.
+   * <p>
+   * For a given segment, the latest request handled by {@link #processRequest}
+   * is the one which is honored.
+   * <p>
+   * Possible cases:
+   * <ol>
+   * <li>
+   * Load after Drop:
+   * <ul>
+   * <li>Drop started before Load is queued: Load must wait for Drop to finish.</li>
+   * <li>Drop started after Load is queued: There is nothing to do as Drop would not be
+   * processed anyway due to the segment not being present in {@link #segmentsToDrop}</li>
+   * </ul>
+   * </li>
+   * <li>Drop after Load: the Load must exit as soon as it realizes that the
+   * segment is now marked for Drop and should not be loaded or announced anymore.</li>
+   * </ol>
    */
   private final Object segmentDropLock = new Object();
 
@@ -110,13 +128,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * <li>Once the load/drop finishes, the entry is updated to either SUCCESS or FAILED.</li>
    * <li>A duplicate request received at this point is immediately answered with
    * SUCCESS or FAILED and the entry is removed from the cache.</li>
-   * <li>If the first request itself finishes after the load or drop has already
+   * <li>If the original request itself finishes after the load or drop has already
    * completed, it is answered with a SUCCESS or FAILED and the entry is removed
    * from the cache.</li>
+   * <li>If a request of a different type (e.g. load after drop) is received,
+   * the entry from the cache is removed and the previous request is abandoned.</li>
    * </ol>
    * <p>
    * Maximum size of this cache must be significantly greater than the number of
-   * pending load/drop requests. This is generally the case because the
+   * pending load/drop requests. This is generally already the case because the
    * Coordinator sends load/drop requests in small batches and does not send new
    * requests until the previously submitted ones have either succeeded or failed.
    * <p>
@@ -347,6 +367,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @Override
   public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
+    // Unmark the segment for drop
+    synchronized (segmentDropLock) {
+      segmentsToDrop.remove(segment);
+    }
+
     // Load and announce the segment asynchronously
     exec.submit(() -> loadAndAnnounceSegment(segment));
   }
@@ -355,35 +380,32 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * Loads the segment synchronously, announces it and updates the status of the
    * corresponding change request in the {@link #requestStatuses} cache.
    */
-  void loadAndAnnounceSegment(DataSegment segment)
+  private void loadAndAnnounceSegment(DataSegment segment)
   {
     DataSegmentChangeResponse.Status result = null;
     try {
       log.info("Loading segment[%s]", segment.getId());
-      /*
-         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if (segmentsToDrop.remove(segment)) returns true, in which case historical will start deleting segment
-         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
-         the segment, which makes dropping segment and downloading segment happen at the same time.
-       */
-      if (segmentsToDrop.contains(segment)) {
-        /*
-           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
-           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
-           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
-           cost of acquiring lock by doing the "contains" check outside the synchronized block.
-         */
-        synchronized (segmentDropLock) {
-          segmentsToDrop.remove(segment);
+
+      // Do not start with Load if there is a Drop in progress. This prevents a Drop
+      // that has come before Load of the same segment from causing partial success.
+      synchronized (segmentDropLock) {
+        if (!shouldLoadSegment(segment)) {
+          return;
         }
       }
-      loadSegment(segment, false, null);
-      // announce segment even if the segment file already exists.
-      try {
-        announcer.announceSegment(segment);
+
+      // Do not load segment if it has already been marked for drop
+      if (shouldLoadSegment(segment)) {
+        loadSegment(segment, false, null);
+      } else {
+        return;
       }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
+
+      // Do not announce segment if it has already been marked for drop
+      if (shouldLoadSegment(segment)) {
+        announceSegment(segment);
+      } else {
+        return;
       }
 
       result = DataSegmentChangeResponse.Status.SUCCESS;
@@ -397,6 +419,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
       resolveWaitingFutures();
+    }
+  }
+
+  /**
+   * Announces the given segment, regardless of whether the segment files already
+   * existed or have been freshly downloaded.
+   */
+  private void announceSegment(DataSegment segment) throws SegmentLoadingException
+  {
+    try {
+      announcer.announceSegment(segment);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
     }
   }
 
@@ -493,22 +529,24 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   void cleanupFailedLoad(DataSegment segment)
   {
     unannounceSegment(segment);
-    segmentsToDrop.add(segment);
+    synchronized (segmentDropLock) {
+      segmentsToDrop.add(segment);
+    }
     dropSegment(segment);
   }
 
   @Override
   public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
-    try {
-      unannounceSegment(segment);
-    }
-    finally {
-      resolveWaitingFutures();
+    // Mark the segment for drop
+    synchronized (segmentDropLock) {
+      segmentsToDrop.add(segment);
     }
 
+    unannounceSegment(segment);
+    resolveWaitingFutures();
+
     // Schedule drop of segment
-    segmentsToDrop.add(segment);
     log.info(
         "Completely removing segment[%s] in [%,d] millis.",
         segment.getId(), config.getDropSegmentDelayMillis()
@@ -573,7 +611,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   /**
+   * Processes a batch of segment load/drop requests.
    *
+   * @return Future of List of results of each change request in the batch.
+   * This future completes as soon as <i>any</i> pending request is completed by
+   * this {@code SegmentLoadDropHandler}.
    */
   public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(
       List<DataSegmentChangeRequest> changeRequests
@@ -586,13 +628,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     for (DataSegmentChangeRequest cr : changeRequests) {
       AtomicReference<DataSegmentChangeResponse> status = processRequest(cr);
-      if (status.get().getStatus().getState() != DataSegmentChangeResponse.State.PENDING) {
+      if (status.get().isComplete()) {
         isAnyRequestDone = true;
       }
       statuses.put(cr, status);
     }
 
-    final CustomSettableFuture future = new CustomSettableFuture(waitingFutures, statuses);
+    final CustomSettableFuture future = new CustomSettableFuture(statuses);
     if (isAnyRequestDone) {
       future.resolve();
     } else {
@@ -621,13 +663,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       } else if (cachedResponse.get().getRequest().equals(changeRequest)) {
         // Serve the cached response and clear it if the request has completed,
         // so that we don't keep serving a stale response indefinitely
-        if (cachedResponse.get().getStatus().getState() != DataSegmentChangeResponse.State.PENDING) {
+        if (cachedResponse.get().isComplete()) {
           requestStatuses.invalidate(segment);
         }
         return cachedResponse;
       } else {
         // Clear the cached response as this is a different request
-        // TODO: what if the previous one was pending??
         requestStatuses.invalidate(segment);
 
         markRequestAsPending(changeRequest);
@@ -643,6 +684,21 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     DataSegmentChangeResponse pendingResponse
         = new DataSegmentChangeResponse(changeRequest, DataSegmentChangeResponse.Status.PENDING);
     requestStatuses.put(changeRequest.getSegment(), new AtomicReference<>(pendingResponse));
+  }
+
+  /**
+   * Returns true only if there is a Load request in {@link #requestStatuses} for
+   * this segment, and the segment is not present in {@link #segmentsToDrop}.
+   */
+  private boolean shouldLoadSegment(DataSegment segment) {
+    if (segmentsToDrop.contains(segment)) {
+      return false;
+    }
+
+    synchronized (requestStatusesLock) {
+      AtomicReference<DataSegmentChangeResponse> response = requestStatuses.getIfPresent(segment);
+      return response != null && response.get().isLoadRequest();
+    }
   }
 
   /**
@@ -833,15 +889,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    */
   private class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeResponse>>
   {
-    private final LinkedHashSet<CustomSettableFuture> waitingFutures;
     private final Map<DataSegmentChangeRequest, AtomicReference<DataSegmentChangeResponse>> resultRefs;
 
     private CustomSettableFuture(
-        LinkedHashSet<CustomSettableFuture> waitingFutures,
         Map<DataSegmentChangeRequest, AtomicReference<DataSegmentChangeResponse>> resultRefs
     )
     {
-      this.waitingFutures = waitingFutures;
       this.resultRefs = resultRefs;
     }
 
@@ -860,7 +913,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           results.add(result);
 
           // Remove complete statuses from the cache
-          if (result != null && result.getStatus().getState() != DataSegmentChangeResponse.State.PENDING) {
+          if (result != null && result.isComplete()) {
             requestStatuses.invalidate(request.getSegment());
           }
         });
