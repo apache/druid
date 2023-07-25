@@ -30,7 +30,7 @@ This topic contains configuration reference information for the Kinesis indexing
 ## Setup
 
 To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the Middle Manager. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
-We recommend that you review the [Kinesis known issues](#kinesis-known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
+Review the [Kinesis known issues](#kinesis-known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
 ## Supervisor spec
 
@@ -254,8 +254,7 @@ The following table outlines the configuration options for `autoScalerConfig`:
 
 ### Lag based autoscaler strategy related properties
 
-Unlike the Kafka
-indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
+Unlike the Kafka indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
 
 The following table outlines the configuration options for `autoScalerStrategy`:
 
