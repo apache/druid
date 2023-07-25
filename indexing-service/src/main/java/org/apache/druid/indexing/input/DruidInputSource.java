@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFileAttribute;
@@ -499,9 +500,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     Collection<DataSegment> usedSegments;
     while (true) {
       try {
-        usedSegments = coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
-            dataSource,
-            Collections.singletonList(interval)
+        usedSegments = FutureUtils.getUnchecked(
+            coordinatorClient.fetchUsedSegments(dataSource, Collections.singletonList(interval)),
+            true
         );
         break;
       }
@@ -536,9 +537,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         Comparators.intervalsByStartThenEnd()
     );
     for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds, "segmentIds")) {
-      final DataSegment segment = coordinatorClient.fetchUsedSegment(
-          dataSource,
-          windowedSegmentId.getSegmentId()
+      final DataSegment segment = FutureUtils.getUnchecked(
+          coordinatorClient.fetchUsedSegment(dataSource, windowedSegmentId.getSegmentId()),
+          true
       );
       for (Interval interval : windowedSegmentId.getIntervals()) {
         final TimelineObjectHolder<String, DataSegment> existingHolder = timeline.get(interval);

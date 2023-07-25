@@ -36,7 +36,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -148,7 +151,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1888,23 +1890,22 @@ public class CompactionTaskTest
     }
   }
 
-  private static class TestCoordinatorClient extends CoordinatorClient
+  private static class TestCoordinatorClient extends NoopCoordinatorClient
   {
     private final Map<DataSegment, File> segmentMap;
 
     TestCoordinatorClient(Map<DataSegment, File> segmentMap)
     {
-      super(null, null);
       this.segmentMap = segmentMap;
     }
 
     @Override
-    public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+    public ListenableFuture<List<DataSegment>> fetchUsedSegments(
         String dataSource,
         List<Interval> intervals
     )
     {
-      return ImmutableSet.copyOf(segmentMap.keySet());
+      return Futures.immediateFuture(ImmutableList.copyOf(segmentMap.keySet()));
     }
   }
 

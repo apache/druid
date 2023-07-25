@@ -16,6 +16,5 @@
 org.apache.druid.msq.guice.MSQExternalDataSourceModule
 org.apache.druid.msq.guice.MSQIndexingModule
 org.apache.druid.msq.guice.MSQDurableStorageModule
-org.apache.druid.msq.guice.MSQServiceClientModule
 org.apache.druid.msq.guice.MSQSqlModule
 org.apache.druid.msq.guice.SqlTaskModule

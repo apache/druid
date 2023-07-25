@@ -90,8 +90,6 @@ public class CliCustomNodeRole extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(CliCustomNodeRole.PORT);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(CliCustomNodeRole.TLS_PORT);
 
-          binder.bind(CoordinatorClient.class).in(LazySingleton.class);
-
           binder.bind(JettyServerInitializer.class).to(CustomJettyServiceInitializer.class).in(LazySingleton.class);
           LifecycleModule.register(binder, Server.class);
 
