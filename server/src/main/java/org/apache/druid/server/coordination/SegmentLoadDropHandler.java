@@ -690,7 +690,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * Returns true only if there is a Load request in {@link #requestStatuses} for
    * this segment, and the segment is not present in {@link #segmentsToDrop}.
    */
-  private boolean shouldLoadSegment(DataSegment segment) {
+  private boolean shouldLoadSegment(DataSegment segment)
+  {
     if (segmentsToDrop.contains(segment)) {
       return false;
     }
