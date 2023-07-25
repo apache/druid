@@ -32,11 +32,11 @@ The following table outlines the high-level configuration options:
 |--------|----|-----------|--------|
 |`type`|String|The supervisor type. For Kafka streaming, set to `kafka`.|Yes|
 |`spec`|Object|The container object for the supervisor configuration.|Yes|
-|`ioConfig`|Object|The I/O configuration object to define the Kafka connection and I/O-related settings for the supervisor and indexing task. See [KafkaSupervisorIOConfig](#kafkasupervisorioconfig).|Yes|
+|`ioConfig`|Object|The I/O configuration object to define the Kafka connection and I/O-related settings for the supervisor and indexing task. See [Supervisor I/O configuration](#supervisor-io-configuration).|Yes|
 |`dataSchema`|Object|The schema for the Kafka indexing task to use during ingestion.|Yes|
-|`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks. See [KafkaSupervisorTuningConfig](#kafkasupervisortuningconfig).|No|
+|`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks. See [Supervisor tuning configuration](#supervisor-tuning-configuration).|No|
 
-## KafkaSupervisorIOConfig
+## Supervisor I/O configuration
 
 The following table outlines the configuration options for `ioConfig`:
 
@@ -44,7 +44,7 @@ The following table outlines the configuration options for `ioConfig`:
 |--------|----|-----------|--------|-------|
 |`topic`|String|The Kafka topic to read from. Must be a specific topic. Druid does not support topic patterns.|Yes||
 |`inputFormat`|Object|The input format to define input data parsing. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|Yes||
-|`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [More on consumer properties](#more-on-consumerproperties).|Yes||
+|`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties).|Yes||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
 |`replicas`|Integer|The number of replica sets, where 1 is a single set of tasks (no replication). Druid always assigns replicate tasks to different workers to provide resiliency against process failure.|No|1|
 |`taskCount`|Integer|The maximum number of reading tasks in a replica set. The maximum number of reading tasks equals `taskCount * replicas`. The total number of tasks, reading and publishing, is greater than this count. See [Capacity planning](./kafka-supervisor-operations.md#capacity-planning) for more details. When `taskCount > {numKafkaPartitions}`, the actual number of reading tasks is less than the `taskCount` value.|No|1|
@@ -56,10 +56,10 @@ The following table outlines the configuration options for `ioConfig`:
 |`lateMessageRejectionStartDateTime`|ISO 8601 date time|Configure tasks to reject messages with timestamps earlier than this date time. For example, if this property is set to `2016-01-01T11:00Z` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This can prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a realtime and a nightly batch ingestion pipeline.|No||
 |`lateMessageRejectionPeriod`|ISO 8601 period|Configure tasks to reject messages with timestamps earlier than this period before the task was created. For example, if this property is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a realtime and a nightly batch ingestion pipeline. Note that you can specify only one of the late message rejection properties.|No||
 |`earlyMessageRejectionPeriod`|ISO 8601 period|Configure tasks to reject messages with timestamps later than this period after the task reached its task duration. For example, if this property is set to `PT1H`, the task duration is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps later than `2016-01-01T14:00Z`. Tasks sometimes run past their task duration, such as in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause Druid to drop messages unexpectedly whenever a task runs past its originally configured task duration.|No||
-|`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks autoscaler properties](#task-autoscaler-properties).|No|null|
+|`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Task autoscaler properties](#task-autoscaler-properties).|No|null|
 |`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle supervisor configuration](#idle-supervisor-configuration) for more details.|No|null|
 
-## Task autoscaler properties
+### Task autoscaler properties
 
 The following table outlines the configuration options for `autoScalerConfig`:
 
@@ -71,7 +71,7 @@ The following table outlines the configuration options for `autoScalerConfig`:
 |`minTriggerScaleActionFrequencyMillis`|Minimum time interval between two scale actions.|No|600000|
 |`autoScalerStrategy`|The algorithm of `autoScaler`. Only supports `lagBased`. See [Lag based autoscaler strategy related properties](#lag-based-autoscaler-strategy-related-properties) for details.|No|`lagBased`|
 
-## Lag based autoscaler strategy related properties
+### Lag based autoscaler strategy related properties
 
 The following table outlines the configuration options for `autoScalerStrategy`:
 
@@ -95,11 +95,11 @@ The following table outlines the configuration options for `autoScalerStrategy`:
 |Property|Description|Required|
 |--------|-----------|--------|
 |`enabled`|If `true`, the supervisor becomes idle if there is no data on input stream/topic for some time.|No|`false`|
-|`inactiveAfterMillis`|The supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|No|`600_000`|
+|`inactiveAfterMillis`|The supervisor becomes idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|No|`600_000`|
 
 When the supervisor enters the idle state, no new tasks are launched subsequent to the completion of the currently executing tasks. This strategy may lead to reduced costs for cluster operators while using topics that get sporadic data.
 
-The following example demonstrates supervisor spec with `lagBased` autoscaler and idle config enabled:
+The following example demonstrates supervisor spec with `lagBased` autoscaler and idle configuration enabled:
 
 ```json
 {
@@ -148,12 +148,12 @@ The following example demonstrates supervisor spec with `lagBased` autoscaler an
 }
 ```
 
-## More on consumerProperties
+## Consumer properties
 
 Consumer properties must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
 By default, `isolation.level` is set to `read_committed`. If you use older versions of Kafka servers without transactions support or don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
 
-In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is Not kNown upfront, or is Not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore` and `key` secretly. You can provide configurations at runtime with a dynamic config provider implementation like the environment variable config provider that comes with Druid. For more information, see [DynamicConfigProvider](../../operations/dynamic-config-provider.md).
+In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is Not kNown upfront, or is Not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore` and `key` secretly. You can provide configurations at runtime with a dynamic config provider implementation like the environment variable config provider that comes with Druid. For more information, see [Dynamic config provider](../../operations/dynamic-config-provider.md).
 
 For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord and the Peon services:
 
@@ -177,9 +177,9 @@ export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
       }
 ```
 
-Verify that you've changed the values for all configurations to match your own environment.  You can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab** in the **Load Data** UI in the web console. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
+Verify that you've changed the values for all configurations to match your own environment. You can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab** in the **Load Data** UI in the web console. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
 
-Note: You can provide SSL connections with [Password Provider](../../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`, but this feature is deprecated.
+Note: You can provide SSL connections with [Password provider](../../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`, but this feature is deprecated.
 
 ## Specifying data format
 
@@ -198,9 +198,9 @@ Druid supports the following input formats:
 
 For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
-## KafkaSupervisorTuningConfig
+## Supervisor tuning configuration
 
-The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configurations.
+The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
