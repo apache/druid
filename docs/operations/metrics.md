@@ -175,7 +175,7 @@ task's `IOConfig` as follows:
 |--------------------|----------------|----|
 |`true`|`false`|`APPEND`|
 |`true`|`true `|Invalid combination, exception thrown.|
-|`false`|`false`|`REPLACE_LEGACY` (This is the default for native batch ingestion.)|
+|`false`|`false`|`REPLACE_LEGACY`. The default for JSON-based batch ingestion. |
 |`false`|`true`|`REPLACE`|
 
 The `tags` dimension is reported only for metrics emitted from ingestion tasks whose ingest spec specifies the `tags`
