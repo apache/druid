@@ -23,6 +23,7 @@ package org.apache.druid.msq.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -124,7 +125,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    results,
-                                   ImmutableList.of(new PageInformation(6L, 316L, 0))
+                                   ImmutableList.of(new PageInformation(0, 6L, 316L))
                                ),
                                null
         );
@@ -149,7 +150,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             new HashMap<>(),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
-        "Execution mode is not provided to the SQL statement API. "
+        "Execution mode is not provided to the sql statement api. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
@@ -167,7 +168,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             syncModeContext,
             null
         ), SqlStatementResourceTest.makeOkRequest()),
-        "The SQL statement API currently does not support the provided execution mode [SYNC]. "
+        "The sql statement api currently does not support the provided execution mode [SYNC]. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
@@ -275,12 +276,12 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         NilStorageConnector.getInstance()
     );
 
-    String errorMessage = "The SQL Statement API cannot read from the select destination [DURABLE_STORAGE] provided in "
-                          + "the query context [selectDestination] since it is not configured. It is recommended to "
-                          + "configure the durable storage as it allows the user to fetch large result sets. "
+    String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "
+                          + "the query context [selectDestination] since it is not configured on the broker. It is recommended to "
+                          + "configure durable storage as it allows the user to fetch large result sets. "
                           + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
                                                         new SqlQuery(
@@ -302,7 +303,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testWithDurableStorage() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -345,7 +346,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testResultFormat() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -388,7 +389,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testResultFormatWithParamInSelect() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -426,6 +427,92 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
   }
+
+  @Test
+  public void testInsert()
+  {
+    Response response = resource.doPost(new SqlQuery(
+        "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
+        false,
+        false,
+        false,
+        defaultAsyncContext(),
+        null
+    ), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    SqlStatementResult actual = (SqlStatementResult) response.getEntity();
+
+
+    SqlStatementResult expected = new SqlStatementResult(
+        actual.getQueryId(),
+        SqlStatementState.SUCCESS,
+        MSQTestOverlordServiceClient.CREATED_TIME,
+        null,
+        MSQTestOverlordServiceClient.DURATION,
+        new ResultSetInformation(NullHandling.sqlCompatible() ? 6L : 5L, 0L, null, "foo1", null, null),
+        null
+    );
+    Assert.assertEquals(expected, actual);
+
+    Response getResponse = resource.doGetStatus(actual.getQueryId(), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
+    Assert.assertEquals(expected, getResponse.getEntity());
+
+    Response resultsResponse = resource.doGetResults(
+        actual.getQueryId(),
+        0L,
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    );
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
+    Assert.assertNull(resultsResponse.getEntity());
+  }
+
+
+  @Test
+  public void testReplaceAll()
+  {
+    Response response = resource.doPost(new SqlQuery(
+        "replace into foo1 overwrite all select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
+        false,
+        false,
+        false,
+        defaultAsyncContext(),
+        null
+    ), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    SqlStatementResult actual = (SqlStatementResult) response.getEntity();
+
+
+    SqlStatementResult expected = new SqlStatementResult(
+        actual.getQueryId(),
+        SqlStatementState.SUCCESS,
+        MSQTestOverlordServiceClient.CREATED_TIME,
+        null,
+        MSQTestOverlordServiceClient.DURATION,
+        new ResultSetInformation(NullHandling.sqlCompatible() ? 6L : 5L, 0L, null, "foo1", null, null),
+        null
+    );
+    Assert.assertEquals(expected, actual);
+
+    Response getResponse = resource.doGetStatus(actual.getQueryId(), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
+    Assert.assertEquals(expected, getResponse.getEntity());
+
+    Response resultsResponse = resource.doGetResults(
+        actual.getQueryId(),
+        0L,
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    );
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
+    Assert.assertNull(resultsResponse.getEntity());
+  }
+
 
   private static Map<String, Object> defaultAsyncContext()
   {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlQuery } from 'druid-query-toolkit';
+import type { SqlQuery } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -28,7 +28,7 @@ import {
   SqlLiteral,
   SqlStar,
   SqlType,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
 import { nonEmptyArray } from '../../utils';

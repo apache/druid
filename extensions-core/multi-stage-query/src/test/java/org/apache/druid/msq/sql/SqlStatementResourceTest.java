@@ -732,7 +732,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
             RESULT_ROWS,
-            ImmutableList.of(new PageInformation(3L, 8L, 0L))
+            ImmutableList.of(new PageInformation(0, 3L, 8L))
         ),
         null
     )), objectMapper.writeValueAsString(response.getEntity()));

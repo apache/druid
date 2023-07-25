@@ -416,8 +416,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
 
-    try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier = task.newTaskRecordSupplier()) {
-
+    try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
+             task.newTaskRecordSupplier(toolbox)) {
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);

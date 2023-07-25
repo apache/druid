@@ -67,6 +67,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -235,29 +236,18 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
     } else {
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
-      if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
-        ResultFormat resultFormat = QueryContexts.getAsEnum(
-            RESULT_FORMAT,
-            druidQuery.getQuery().context().get(RESULT_FORMAT),
-            ResultFormat.class,
-            ResultFormat.DEFAULT_RESULT_FORMAT
-        );
-        destination = new TaskReportMSQDestination(resultFormat);
-      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
-        ResultFormat resultFormat = QueryContexts.getAsEnum(
-            RESULT_FORMAT,
-            druidQuery.getQuery().context().get(RESULT_FORMAT),
-            ResultFormat.class,
-            ResultFormat.DEFAULT_RESULT_FORMAT
-        );
-        destination = new DurableStorageMSQDestination(resultFormat);
+      if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {
+        destination = new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT);
+      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLESTORAGE)) {
+        destination = new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT);
       } else {
         throw InvalidInput.exception(
             "Unsupported select destination [%s] provided in the query context. MSQ can currently write the select results to "
-            + "[%s] and [%s]",
-            msqSelectDestination.name(),
-            MSQSelectDestination.TASK_REPORT.toString(),
-            MSQSelectDestination.DURABLE_STORAGE.toString()
+            + "[%s]",
+            msqSelectDestination.getName(),
+            Arrays.stream(MSQSelectDestination.values())
+                  .map(MSQSelectDestination::getName)
+                  .collect(Collectors.joining(","))
         );
       }
     }
