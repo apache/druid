@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
-import org.apache.druid.data.input.AbstractInputSourceBuilder;
+import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
@@ -39,7 +39,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class S3InputSourceBuilder extends AbstractInputSourceBuilder
+public class S3InputSourceFactory implements InputSourceFactory
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final ServerSideEncryptingAmazonS3.Builder s3ClientBuilder;
@@ -51,7 +51,7 @@ public class S3InputSourceBuilder extends AbstractInputSourceBuilder
   private final AWSEndpointConfig awsEndpointConfig;
 
   @JsonCreator
-  public S3InputSourceBuilder(
+  public S3InputSourceFactory(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JacksonInject ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       @JacksonInject S3InputDataConfig inputDataConfig,
@@ -73,7 +73,7 @@ public class S3InputSourceBuilder extends AbstractInputSourceBuilder
   }
 
   @Override
-  public SplittableInputSource generateInputSource(List<String> inputFilePaths)
+  public SplittableInputSource create(List<String> inputFilePaths)
   {
     return new S3InputSource(
         s3Client,
