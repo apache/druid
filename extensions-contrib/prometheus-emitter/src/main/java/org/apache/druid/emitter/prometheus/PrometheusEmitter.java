@@ -54,6 +54,7 @@ public class PrometheusEmitter implements Emitter
 
   private static final String TAG_HOSTNAME = "host_name";
   private static final String TAG_SERVICE = "druid_service";
+  private static final String TAG_CLUSTER = "cluster_name";
 
   private HTTPServer server;
   private PushGateway pushGateway;
@@ -69,7 +70,7 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel(), config.getClusterName());
   }
 
 
@@ -148,6 +149,8 @@ public class PrometheusEmitter implements Emitter
             labelValues[i] = host;
           } else if (config.isAddServiceAsLabel() && TAG_SERVICE.equals(labelName)) {
             labelValues[i] = service;
+          } else if (TAG_CLUSTER.equals(labelName)) {
+            labelValues[i] = config.getClusterName();
           } else {
             labelValues[i] = "unknown";
           }

@@ -63,6 +63,10 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final boolean addServiceAsLabel;
 
+  @JsonProperty
+  @Nullable
+  private final String clusterName;
+
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("strategy") @Nullable Strategy strategy,
@@ -72,7 +76,8 @@ public class PrometheusEmitterConfig
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
-      @JsonProperty("flushPeriod") Integer flushPeriod
+      @JsonProperty("flushPeriod") Integer flushPeriod,
+      @JsonProperty("clusterName") @Nullable String clusterName
   )
   {
     this.strategy = strategy != null ? strategy : Strategy.exporter;
@@ -94,6 +99,7 @@ public class PrometheusEmitterConfig
     this.flushPeriod = flushPeriod;
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
+    this.clusterName = clusterName;
   }
 
   public String getNamespace()
@@ -135,6 +141,11 @@ public class PrometheusEmitterConfig
   public boolean isAddServiceAsLabel()
   {
     return addServiceAsLabel;
+  }
+
+  public String getClusterName()
+  {
+    return clusterName;
   }
 
   public enum Strategy

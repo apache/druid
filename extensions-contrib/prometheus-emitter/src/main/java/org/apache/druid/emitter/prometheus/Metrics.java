@@ -52,6 +52,7 @@ public class Metrics
 
   private static final String TAG_HOSTNAME = "host_name";
   private static final String TAG_SERVICE = "druid_service";
+  private static final String TAG_CLUSTER = "cluster_name";
 
   public DimensionsAndCollector getByName(String name, String service)
   {
@@ -62,7 +63,7 @@ public class Metrics
     }
   }
 
-  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel)
+  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel, String clusterName)
   {
     Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
     Map<String, Metric> metrics = readConfig(path);
@@ -77,6 +78,10 @@ public class Metrics
 
       if (isAddServiceAsLabel) {
         metric.dimensions.add(TAG_SERVICE);
+      }
+
+      if (clusterName != null && !clusterName.isEmpty()) {
+        metric.dimensions.add(TAG_CLUSTER);
       }
 
       String[] dimensions = metric.dimensions.toArray(new String[0]);
