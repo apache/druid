@@ -212,8 +212,11 @@ public class KillUnusedSegments implements CoordinatorDuty
       totalWorkerCapacity = indexingServiceClient.getTotalWorkerCapacity();
     }
 
-    return killTaskSlotRatio == null
-        ? totalWorkerCapacity
-        : (int) (totalWorkerCapacity * killTaskSlotRatio);
+    return Math.min(
+        killTaskSlotRatio == null
+            ? totalWorkerCapacity
+            : (int) (totalWorkerCapacity * killTaskSlotRatio),
+        1
+    );
   }
 }
