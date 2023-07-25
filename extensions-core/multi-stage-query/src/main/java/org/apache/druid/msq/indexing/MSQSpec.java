@@ -134,7 +134,6 @@ public class MSQSpec
     private Query<?> query;
     private ColumnMappings columnMappings;
     private MSQDestination destination = TaskReportMSQDestination.instance();
-
     private WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
     private MSQTuningConfig tuningConfig;
 

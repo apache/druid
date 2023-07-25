@@ -66,6 +66,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -241,10 +242,11 @@ public class MSQTaskQueryMaker implements QueryMaker
       } else {
         throw InvalidInput.exception(
             "Unsupported select destination [%s] provided in the query context. MSQ can currently write the select results to "
-            + "[%s] and [%s]",
-            msqSelectDestination.name(),
-            MSQSelectDestination.TASKREPORT.toString(),
-            MSQSelectDestination.DURABLESTORAGE.toString()
+            + "[%s]",
+            msqSelectDestination.getName(),
+            Arrays.stream(MSQSelectDestination.values())
+                  .map(MSQSelectDestination::getName)
+                  .collect(Collectors.joining(","))
         );
       }
     }
