@@ -41,9 +41,9 @@ See [Supervisor API](../../api-reference/supervisor-api.md) for more information
 |--------|----|-----------|--------|
 |`type`|String|The supervisor type; this should always be `kinesis`.|Yes|
 |`spec`|Object|The container object for the supervisor configuration.|Yes|
-|`ioConfig`|Object|The [I/O configuration](#kinesis-supervisor-io-config) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|Yes|
+|`ioConfig`|Object|The [I/O configuration](#supervisor-io-configuration) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|Yes|
 |`dataSchema`|Object|The schema used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
-|`tuningConfig`|Object|The [tuning configuration](#kinesis-supervisor-tuning-config) object for configuring performance-related settings for the supervisor and indexing tasks.|No|
+|`tuningConfig`|Object|The [tuning configuration](#supervisor-tuning-configuration) object for configuring performance-related settings for the supervisor and indexing tasks.|No|
 
 Druid starts a new supervisor when you define a supervisor spec.
 To create a supervisor, send a `POST` request to the `/druid/indexer/v1/supervisor` endpoint.
@@ -53,7 +53,7 @@ When an Overlord gains leadership, either by being started or as a result of ano
 a supervisor for each supervisor spec in the metadata database. The supervisor then discovers running Kinesis indexing
 tasks and attempts to adopt them if they are compatible with the supervisor's configuration. If they are not
 compatible because they have a different ingestion spec or shard allocation, the tasks are killed and the
-supervisor creates a new set of tasks. In this way, the supervisors are persistent across Overlord restarts and failovers.
+supervisor creates a new set of tasks. In this way, the supervisors persist across Overlord restarts and failovers.
 
 The following example shows how to submit a supervisor spec for a stream with the name `KinesisStream`.
 In this example, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port.
@@ -215,7 +215,7 @@ Content-Type: application/json
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-## Kinesis supervisor I/O config
+## Supervisor I/O configuration
 
 The following table outlines the configuration options for `ioConfig`:
 
@@ -233,12 +233,12 @@ The following table outlines the configuration options for `ioConfig`:
 |`completionTimeout`|ISO 8601 period|The length of time to wait before Druid declares a publishing task has failed and terminates it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|No|PT6H|
 |`lateMessageRejectionPeriod`|ISO 8601 period|Configure tasks to reject messages with timestamps earlier than this period before the task is created. For example, if `lateMessageRejectionPeriod` is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, messages with timestamps earlier than `2016-01-01T11:00Z` are dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a streaming and a nightly batch ingestion pipeline.|No||
 |`earlyMessageRejectionPeriod`|ISO 8601 period|Configure tasks to reject messages with timestamps later than this period after the task reached its `taskDuration`. For example, if `earlyMessageRejectionPeriod` is set to `PT1H`, the `taskDuration` is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`. Messages with timestamps later than `2016-01-01T14:00Z` are dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|No||
-|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis.|No| See [Determining fetch settings](#determining-fetch-settings) for defaults.|
-|`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|No|0|
+|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
+|`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determine fetch settings](#determine-fetch-settings).|No|0|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
 |`deaggregate`|Boolean|Whether to use the deaggregate function of the Kinesis Client Library (KCL).|No||
-|`autoScalerConfig`|Object|Defines autoscaling behavior for Kinesis ingest tasks. See [Tasks autoscaler properties](#task-autoscaler-properties) for more information.|No|null|
+|`autoScalerConfig`|Object|Defines autoscaling behavior for Kinesis ingest tasks. See [Task autoscaler properties](#task-autoscaler-properties) for more information.|No|null|
 
 ### Task autoscaler properties
 
@@ -372,9 +372,9 @@ Supported values for `inputFormat` include:
 
 For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
-## Kinesis supervisor tuning config
+## Supervisor tuning configuration
 
-The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configurations.
+The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
 The following table outlines the configuration options for `tuningConfig`:
 
@@ -401,7 +401,7 @@ The following table outlines the configuration options for `tuningConfig`:
 |`chatRetries`|Integer|The number of times Druid retries HTTP requests to indexing tasks before considering tasks unresponsive.|No|8|
 |`httpTimeout`|ISO 8601 period|The period of time to wait for a HTTP response from an indexing task.|No|PT10S|
 |`shutdownTimeout`|ISO 8601 period|The period of time to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|No|PT80S|
-|`recordBufferSize`|Integer|The size of the buffer (number of events) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No|See [Determining fetch settings](#determining-fetch-settings) for defaults.|
+|`recordBufferSize`|Integer|The size of the buffer (number of events) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No|See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
 |`fetchThreads`|Integer|The size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|No| `procs * 2`, where `procs` is the number of processors available to the task.|
@@ -409,7 +409,7 @@ The following table outlines the configuration options for `tuningConfig`:
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
-|`maxRecordsPerPoll`|Integer|The maximum number of records to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`.|No| See [Determining fetch settings](#determining-fetch-settings) for defaults.|
+|`maxRecordsPerPoll`|Integer|The maximum number of records to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`repartitionTransitionDuration`|ISO 8601 period|When shards are split or merged, the supervisor recomputes shard to task group mappings. The supervisor also signals any running tasks created under the old mappings to stop early at current time + `repartitionTransitionDuration`. Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split or merge, which helps avoid issues with [empty shard handling](https://github.com/apache/druid/issues/7600).|No|PT2M|
 |`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of PT5S, the supervisor ignores the value and uses the minimum value instead.|No|PT30S|
 |`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. You must set the necessary `IAM` permissions.|No|`false`|
