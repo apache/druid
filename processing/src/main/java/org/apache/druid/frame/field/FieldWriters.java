@@ -32,7 +32,6 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * Helper used to write field values to row-based frames or {@link RowKey}.
