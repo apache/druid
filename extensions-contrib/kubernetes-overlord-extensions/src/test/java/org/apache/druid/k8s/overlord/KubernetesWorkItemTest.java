@@ -45,7 +45,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   public void setup()
   {
     task = NoopTask.create("id", 0);
-    workItem = new KubernetesWorkItem(task);
+    workItem = new KubernetesWorkItem(task, null);
   }
 
   @Test
@@ -95,7 +95,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isPending_withTaskStateWaiting_returnsFalse()
   {
-    workItem = new KubernetesWorkItem(task) {
+    workItem = new KubernetesWorkItem(task, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -108,7 +108,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isPending_withTaskStatePending_returnsTrue()
   {
-    workItem = new KubernetesWorkItem(task) {
+    workItem = new KubernetesWorkItem(task, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -121,7 +121,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isRunning_withTaskStateWaiting_returnsFalse()
   {
-    workItem = new KubernetesWorkItem(task) {
+    workItem = new KubernetesWorkItem(task, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -134,7 +134,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isRunning_withTaskStatePending_returnsTrue()
   {
-    workItem = new KubernetesWorkItem(task) {
+    workItem = new KubernetesWorkItem(task, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {

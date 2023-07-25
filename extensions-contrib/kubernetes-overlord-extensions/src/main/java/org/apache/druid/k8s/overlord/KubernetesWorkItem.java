@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -39,15 +38,10 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
-  private ListenableFuture<TaskStatus> statusFuture = null;
 
-  /**
-   * Constructs a new KubernetesWorkItem with the given task. The status future of the task are initially set to null.
-   * After constructing a new KubernetesWorkItem, the setResultIfRequired method should be called to set the status future.
-   */
-  public KubernetesWorkItem(Task task)
+  public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
   {
-    super(task.getId(), null);
+    super(task.getId(), statusFuture);
     this.task = task;
   }
 
@@ -107,18 +101,6 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
       return Optional.absent();
     }
     return kubernetesPeonLifecycle.streamLogs();
-  }
-
-  protected synchronized void setResultIfRequired(ListenableFuture<TaskStatus> statusFuture)
-  {
-    this.statusFuture = statusFuture;
-  }
-
-  @Override
-  @JsonIgnore
-  public ListenableFuture<TaskStatus> getResult()
-  {
-    return statusFuture;
   }
 
   @Override

@@ -101,6 +101,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
 
+
   public KubernetesTaskRunner(
       TaskAdapter adapter,
       KubernetesTaskRunnerConfig config,
@@ -138,11 +139,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected ListenableFuture<TaskStatus> runOrJoinTask(Task task, boolean run)
   {
-    KubernetesWorkItem workItem = tasks.computeIfAbsent(
-        task.getId(), k -> new KubernetesWorkItem(task)
-    );
-    workItem.setResultIfRequired(exec.submit(() -> doTask(task, run)));
-    return workItem.getResult();
+    synchronized (tasks) {
+      tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> doTask(task, run))));
+      return tasks.get(task.getId()).getResult();
+    }
   }
 
   @VisibleForTesting
@@ -150,16 +150,19 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
 
-    KubernetesWorkItem workItem = tasks.get(task.getId());
-    if (workItem == null) {
-      throw new ISE("Task [%s] disappeared", task.getId());
-    }
+    synchronized (tasks) {
+      KubernetesWorkItem workItem = tasks.get(task.getId());
 
-    if (workItem.isShutdownRequested()) {
-      throw new ISE("Task [%s] has been shut down", task.getId());
-    }
+      if (workItem == null) {
+        throw new ISE("Task [%s] disappeared", task.getId());
+      }
 
-    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+      if (workItem.isShutdownRequested()) {
+        throw new ISE("Task [%s] has been shut down", task.getId());
+      }
+
+      workItem.setKubernetesPeonLifecycle(peonLifecycle);
+    }
 
     try {
       TaskStatus taskStatus;
@@ -186,7 +189,9 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     finally {
-      tasks.remove(task.getId());
+      synchronized (tasks) {
+        tasks.remove(task.getId());
+      }
     }
   }
 
@@ -257,17 +262,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = new ArrayList<>();
+    List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
     for (Job job : client.getPeonJobs()) {
       try {
         Task task = adapter.toTask(job);
-        tasks.add(Pair.of(task, runOrJoinTask(task, false)));
+        restoredTasks.add(Pair.of(task, runOrJoinTask(task, false)));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
-    return tasks;
+    return restoredTasks;
   }
 
   @Override
@@ -306,7 +311,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     return Lists.newArrayList(tasks.values());
   }
-
 
   @Override
   public Optional<ScalingStats> getScalingStats()
@@ -374,18 +378,18 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     return tasks.values()
-        .stream()
-        .filter(KubernetesWorkItem::isRunning)
-        .collect(Collectors.toList());
+                .stream()
+                .filter(KubernetesWorkItem::isRunning)
+                .collect(Collectors.toList());
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
     return tasks.values()
-        .stream()
-        .filter(KubernetesWorkItem::isPending)
-        .collect(Collectors.toList());
+                .stream()
+                .filter(KubernetesWorkItem::isPending)
+                .collect(Collectors.toList());
   }
 
   @Nullable
