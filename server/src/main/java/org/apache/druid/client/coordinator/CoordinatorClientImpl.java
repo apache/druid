@@ -98,7 +98,8 @@ public class CoordinatorClientImpl implements CoordinatorClient
 
     return FutureUtils.transform(
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, intervals),
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSegment>>() {})

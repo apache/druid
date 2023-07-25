@@ -30,7 +30,6 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.cli.ServerRunnable;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
