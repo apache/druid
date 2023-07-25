@@ -342,7 +342,7 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval), true, null);
+      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null), true);
       return Response.ok().build();
     }
     catch (Exception e) {

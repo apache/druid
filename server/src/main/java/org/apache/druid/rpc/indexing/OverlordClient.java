@@ -85,8 +85,24 @@ public interface OverlordClient
    */
   default ListenableFuture<String> runKillTask(String idPrefix, String dataSource, Interval interval)
   {
+    return runKillTask(idPrefix, dataSource, interval, null);
+  }
+
+  default ListenableFuture<String> runKillTask(
+      String idPrefix,
+      String dataSource,
+      Interval interval,
+      @Nullable Integer maxSegmentsToKill
+  )
+  {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(
+        taskId,
+        dataSource,
+        interval,
+        false,
+        maxSegmentsToKill
+    );
     return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);
   }
 
