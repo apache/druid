@@ -230,7 +230,7 @@
     <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
-    <cve>CVE-2023-34462</cve>>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
