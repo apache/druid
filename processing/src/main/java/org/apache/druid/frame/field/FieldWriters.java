@@ -128,8 +128,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    //noinspection unchecked
-    final ColumnValueSelector<List<String>> selector = selectorFactory.makeColumnValueSelector(columnName);
+    //noinspection rawtypes
+    final ColumnValueSelector selector = selectorFactory.makeColumnValueSelector(columnName);
     return new StringArrayFieldWriter(selector);
   }
 

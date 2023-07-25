@@ -20,16 +20,17 @@
 package org.apache.druid.frame.field;
 
 import com.google.common.collect.ImmutableList;
+import junitparams.converters.Nullable;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -57,7 +58,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
-  public DimensionSelector writeSelector;
+  public BaseObjectColumnValueSelector<List<String>> writeSelector;
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
@@ -66,7 +67,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new StringFieldWriter(writeSelector);
+    fieldWriter = new StringArrayFieldWriter(writeSelector);
   }
 
   @After
@@ -76,9 +77,25 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_isNull_null()
+  public void test_isNull_nullValue()
   {
     writeToMemory(Collections.singletonList(null));
+    Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_twoNullValues()
+  {
+    writeToMemory(Arrays.asList(null, null));
+    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_nullRow()
+  {
+    writeToMemory(null);
     Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
     Assert.assertTrue(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
   }
@@ -91,10 +108,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         NullHandling.replaceWithDefault(),
         new StringFieldReader(false).isNull(memory, MEMORY_POSITION)
     );
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault(),
-        new StringFieldReader(true).isNull(memory, MEMORY_POSITION)
-    );
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -255,21 +269,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertFalse(readSelector.makeValueMatcher("bar"::equals).matches());
   }
 
-  private void writeToMemory(final List<String> values)
+  private void writeToMemory(@Nullable final List<String> values)
   {
-    final RangeIndexedInts row = new RangeIndexedInts();
-    row.setSize(values.size());
-
-    Mockito.when(writeSelector.getRow()).thenReturn(row);
-
-    if (values.size() > 0) {
-      Mockito.when(writeSelector.supportsLookupNameUtf8()).thenReturn(false);
-    }
-
-    for (int i = 0; i < values.size(); i++) {
-      final String value = values.get(i);
-      Mockito.when(writeSelector.lookupName(i)).thenReturn(value);
-    }
+    Mockito.when(writeSelector.getObject()).thenReturn(values);
 
     if (fieldWriter.writeTo(memory, MEMORY_POSITION, memory.getCapacity() - MEMORY_POSITION) < 0) {
       throw new ISE("Could not write");

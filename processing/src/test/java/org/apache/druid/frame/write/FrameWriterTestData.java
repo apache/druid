@@ -98,6 +98,7 @@ public class FrameWriterTestData
   public static final Dataset<Object> TEST_ARRAYS_STRING = new Dataset<>(
       ColumnType.STRING_ARRAY,
       Arrays.asList(
+          null,
           Collections.emptyList(),
           Collections.singletonList(null),
           Collections.singletonList(NullHandling.emptyToNullIfNeeded("")),
