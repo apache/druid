@@ -211,6 +211,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
+      // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
@@ -231,6 +233,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
+      // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
