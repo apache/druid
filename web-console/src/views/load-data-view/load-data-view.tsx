@@ -74,6 +74,7 @@ import {
   adjustForceGuaranteedRollup,
   adjustId,
   BATCH_INPUT_FORMAT_FIELDS,
+  chooseByBestTimestamp,
   cleanSpec,
   computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
@@ -114,7 +115,6 @@ import {
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
   normalizeSpec,
-  NUMERIC_TIME_FORMATS,
   possibleDruidFormatForValues,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
@@ -279,16 +279,7 @@ function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec 
     },
   );
 
-  return (
-    // Prefer a suggestion that has "time" in the name and is not a numeric format
-    timestampSpecs.find(
-      ts => /time/i.test(ts.column) && !NUMERIC_TIME_FORMATS.includes(ts.format),
-    ) ||
-    timestampSpecs.find(ts => /time/i.test(ts.column)) || // Otherwise anything that has "time" in the name
-    timestampSpecs.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
-    timestampSpecs[0] || // Fall back to the first one
-    CONSTANT_TIMESTAMP_SPEC // Ok, empty it is...
-  );
+  return chooseByBestTimestamp(timestampSpecs) || CONSTANT_TIMESTAMP_SPEC;
 }
 
 type Step =
