@@ -148,23 +148,23 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @VisibleForTesting
   protected TaskStatus doTask(Task task, boolean run)
   {
-    KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
-
-    synchronized (tasks) {
-      KubernetesWorkItem workItem = tasks.get(task.getId());
-
-      if (workItem == null) {
-        throw new ISE("Task [%s] disappeared", task.getId());
-      }
-
-      if (workItem.isShutdownRequested()) {
-        throw new ISE("Task [%s] has been shut down", task.getId());
-      }
-
-      workItem.setKubernetesPeonLifecycle(peonLifecycle);
-    }
-
     try {
+      KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
+
+      synchronized (tasks) {
+        KubernetesWorkItem workItem = tasks.get(task.getId());
+
+        if (workItem == null) {
+          throw new ISE("Task [%s] disappeared", task.getId());
+        }
+
+        if (workItem.isShutdownRequested()) {
+          throw new ISE("Task [%s] has been shut down", task.getId());
+        }
+
+        workItem.setKubernetesPeonLifecycle(peonLifecycle);
+      }
+
       TaskStatus taskStatus;
       if (run) {
         taskStatus = peonLifecycle.run(
@@ -182,12 +182,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
       return taskStatus;
     }
-
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
     }
-
     finally {
       synchronized (tasks) {
         tasks.remove(task.getId());
