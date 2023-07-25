@@ -3268,6 +3268,44 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     skipVectorize();
     testQuery(
         "SELECT d3 FROM\n"
+        + "  (select * from druid.numfoo where dim2='a') as t,\n"
+        + "  UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)\n"
+        + "WHERE t.dim1 <> 'foo'\n"
+        + "AND unnested.d3 <> 'b'",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      FilterDataSource.create(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          and(
+                              equality("dim2", "a", ColumnType.STRING),
+                              not(equality("dim1", "foo", ColumnType.STRING))
+                          )
+                      ),
+                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      //null
+                      not(equality("j0.unnest", "b", ColumnType.STRING))
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithFiltersInsideAndOutside1()
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT d3 FROM\n"
         + "  (select * from druid.numfoo where dim2='a'),\n"
         + "  UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)\n"
         + "WHERE dim1 <> 'foo'\n"

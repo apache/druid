@@ -115,6 +115,8 @@ public class QueryRunnerTestHelper
       null
   );
 
+
+
   public static final Granularity DAY_GRAN = Granularities.DAY;
   public static final Granularity ALL_GRAN = Granularities.ALL;
   public static final Granularity MONTH_GRAN = Granularities.MONTH;

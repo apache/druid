@@ -56,7 +56,11 @@ public class FilterStorageAdapter implements StorageAdapter
   {
     final Filter andFilter;
     if (filter == null) {
-      andFilter = filterOnDataSource.toFilter();
+      if (filterOnDataSource != null) {
+        andFilter = filterOnDataSource.toFilter();
+      } else {
+        andFilter = null;
+      }
     } else {
       andFilter = new AndFilter(ImmutableList.of(filter, filterOnDataSource.toFilter()));
     }
