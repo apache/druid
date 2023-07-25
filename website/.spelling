@@ -309,7 +309,8 @@ endpointConfig
 enum
 expectedType
 expr
-failovers?
+failover
+failovers
 featureSpec
 findColumnsFromHeader
 filenames
