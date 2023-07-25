@@ -16,7 +16,26 @@
  * limitations under the License.
  */
 
-export * from './number-menu-items/number-menu-items';
-export * from './string-menu-items/string-menu-items';
-export * from './time-menu-items/time-menu-items';
-export * from './complex-menu-items/complex-menu-items';
+import { SqlQuery } from '@druid-toolkit/query';
+import { render } from '@testing-library/react';
+import React from 'react';
+
+import { ComplexMenuItems } from './complex-menu-items';
+
+describe('ComplexMenuItems', () => {
+  it('matches snapshot when menu is opened for column not inside group by', () => {
+    const numberMenu = (
+      <ComplexMenuItems
+        schema="schema"
+        table="table"
+        columnName="user_unique"
+        columnType={'COMPLEX<hyperUnique>'}
+        parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        onQueryChange={() => {}}
+      />
+    );
+
+    const { container } = render(numberMenu);
+    expect(container).toMatchSnapshot();
+  });
+});
