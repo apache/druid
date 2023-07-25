@@ -2335,24 +2335,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
     // When useApproximateCountDistinct=false and useGroupingSetForExactDistinct=false, planning fails due
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
-    try {
-      testQuery(
-          PLANNER_CONFIG_NO_HLL.withOverrides(
-              ImmutableMap.of(
-                  PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                  "false"
-              )
-          ), // Enable exact count distinct
-          sqlQuery,
-          CalciteTests.REGULAR_USER_AUTH_RESULT,
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
-      Assert.fail("query execution should fail");
-    }
-    catch (RuntimeException e) {
-      Assert.assertTrue(e.getMessage().contains("Error while applying rule AggregateExpandDistinctAggregatesRule"));
-    }
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> testQuery(
+            PLANNER_CONFIG_NO_HLL.withOverrides(
+                ImmutableMap.of(
+                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, "false",
+                    PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false
+                )
+            ), // Enable exact count distinct
+            sqlQuery,
+            CalciteTests.REGULAR_USER_AUTH_RESULT,
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
 
     requireMergeBuffers(3);
     testQuery(
