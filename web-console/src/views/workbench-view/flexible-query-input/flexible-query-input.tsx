@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import type { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
 import { C, T } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
@@ -270,7 +269,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     }
   }
 
-  private readonly handleAceContainerResize = (entries: ResizeEntry[]) => {
+  private readonly handleAceContainerResize = (entries: ResizeObserverEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
