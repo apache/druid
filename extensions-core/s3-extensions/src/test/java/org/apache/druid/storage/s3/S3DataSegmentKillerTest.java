@@ -347,7 +347,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2));
     }
     catch (SegmentLoadingException exc) {
-      Assert.assertEquals("Couldn't delete segments from s3 see logs for more details", exc.getMessage());
+      Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", exc.getMessage());
     }
   }
 
