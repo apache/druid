@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
@@ -48,7 +47,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -101,7 +99,8 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> {
-          final Map<String, Object> map = deserialize(holder, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+          final Map<String, Object> map =
+              JacksonUtils.readValue(jsonMapper, holder.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
           final String returnedTaskId = (String) map.get("task");
 
           Preconditions.checkState(
@@ -169,7 +168,8 @@ public class OverlordClientImpl implements OverlordClient
                 .jsonContent(jsonMapper, taskIds),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<Map<String, TaskStatus>>() {})
+        holder ->
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Map<String, TaskStatus>>() {})
     );
   }
 
@@ -183,7 +183,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, TaskStatusResponse.class)
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskStatusResponse.class)
     );
   }
 
@@ -199,8 +199,9 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> {
-          final Map<String, List<Interval>> response = deserialize(
-              holder,
+          final Map<String, List<Interval>> response = JacksonUtils.readValue(
+              jsonMapper,
+              holder.getContent(),
               new TypeReference<Map<String, List<Interval>>>() {}
           );
 
@@ -219,7 +220,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
     );
   }
 
@@ -247,7 +248,8 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<List<IndexingWorkerInfo>>() {})
+        holder ->
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<IndexingWorkerInfo>>() {})
     );
   }
 
@@ -261,7 +263,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, IndexingTotalWorkerCapacityInfo.class)
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), IndexingTotalWorkerCapacityInfo.class)
     );
   }
 
@@ -280,8 +282,9 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> {
-          final Map<String, Object> resultMap = deserialize(
-              holder,
+          final Map<String, Object> resultMap = JacksonUtils.readValue(
+              jsonMapper,
+              holder.getContent(),
               JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
           );
 
@@ -301,7 +304,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, TaskPayloadResponse.class)
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskPayloadResponse.class)
     );
   }
 
@@ -309,26 +312,6 @@ public class OverlordClientImpl implements OverlordClient
   public OverlordClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     return new OverlordClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
-  }
-
-  private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final Class<T> clazz)
-  {
-    try {
-      return jsonMapper.readValue(bytesHolder.getContent(), clazz);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final TypeReference<T> typeReference)
-  {
-    try {
-      return jsonMapper.readValue(bytesHolder.getContent(), typeReference);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private <T> JsonParserIterator<T> asJsonParserIterator(final InputStream in, final Class<T> clazz)
