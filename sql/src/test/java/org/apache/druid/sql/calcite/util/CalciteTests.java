@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -33,6 +34,7 @@ import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -46,6 +48,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -77,6 +80,8 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -330,7 +335,6 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-
     final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
     FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
@@ -339,11 +343,6 @@ public class CalciteTests
     );
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
-    FakeDruidNodeDiscoveryProvider overlordProvider = new FakeDruidNodeDiscoveryProvider(
-        ImmutableMap.of(
-            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, coordinatorNode))
-        )
-    );
 
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         new FakeHttpClient(),
@@ -358,16 +357,16 @@ public class CalciteTests
       }
     };
 
-    final DruidLeaderClient overlordLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        overlordProvider,
-        NodeRole.OVERLORD,
-        "/simple/leader"
-    ) {
+    final OverlordClient overlordClient = new NoopOverlordClient() {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return overlordNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(overlordNode.getHostAndPortToUse()));
+        }
+        catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
       }
     };
 
@@ -383,7 +382,7 @@ public class CalciteTests
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
-        overlordLeaderClient,
+        overlordClient,
         provider,
         getJsonMapper()
     );

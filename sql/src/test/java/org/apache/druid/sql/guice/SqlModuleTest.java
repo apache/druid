@@ -32,6 +32,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -49,6 +50,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryScheduler;
@@ -206,6 +208,7 @@ public class SqlModuleTest
                     .in(LazySingleton.class);
               binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
               binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+              binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
             },
             sqlModule,
             new TestViewManagerModule()

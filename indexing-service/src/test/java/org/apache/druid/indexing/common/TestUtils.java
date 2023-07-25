@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
@@ -102,7 +101,7 @@ public class TestUtils
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, rowIngestionMetersFactory)
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
-            .addValue(IndexingServiceClient.class, OVERLORD_SERVICE_CLIENT)
+            .addValue(OverlordClient.class, OVERLORD_SERVICE_CLIENT)
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
             .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())

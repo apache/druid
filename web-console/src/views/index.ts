@@ -17,6 +17,7 @@
  */
 
 export * from './datasources-view/datasources-view';
+export * from './explore-view/explore-view';
 export * from './home-view/home-view';
 export * from './load-data-view/load-data-view';
 export * from './lookups-view/lookups-view';

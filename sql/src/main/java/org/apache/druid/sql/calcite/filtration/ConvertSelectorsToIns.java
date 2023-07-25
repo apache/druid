@@ -21,11 +21,15 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -57,6 +61,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
 
       // Group filters by dimension and extractionFn.
       final Map<BoundRefKey, List<SelectorDimFilter>> selectors = new HashMap<>();
+      final Map<RangeRefKey, List<EqualityFilter>> equality = new HashMap<>();
 
       for (DimFilter child : children) {
         if (child instanceof SelectorDimFilter) {
@@ -70,6 +75,16 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           );
           List<SelectorDimFilter> filterList = selectors.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
           filterList.add(selector);
+        } else if (child instanceof EqualityFilter) {
+          final EqualityFilter equals = (EqualityFilter) child;
+          if (!equals.getMatchValueType().is(ValueType.STRING)) {
+            // skip non-string equality filters since InDimFilter uses a sorted string set, which is a different sort
+            // than numbers or other types might use
+            continue;
+          }
+          final RangeRefKey rangeRefKey = RangeRefKey.from(equals);
+          List<EqualityFilter> filterList = equality.computeIfAbsent(rangeRefKey, k -> new ArrayList<>());
+          filterList.add(equals);
         }
       }
 
@@ -89,6 +104,33 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           }
 
           children.add(new InDimFilter(entry.getKey().getDimension(), values, entry.getKey().getExtractionFn(), null));
+        }
+      }
+
+      // Emit IN filters for each group of size > 1
+      // right now we only do this for string types, since the value set is sorted in string order
+      // someday we might want to either allow numbers after ensuring that all value set indexes can handle value
+      // sets which are not in the correct sorted order, or make a cooler in filter that retains the match value type
+      // and can sort the values in match value native order
+      for (Map.Entry<RangeRefKey, List<EqualityFilter>> entry : equality.entrySet()) {
+        final List<EqualityFilter> filterList = entry.getValue();
+        if (filterList.size() > 1) {
+          // We found a simplification. Remove the old filters and add new ones.
+          final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet();
+
+          for (final EqualityFilter equals : filterList) {
+            values.add(
+                ExprEval.ofType(ExpressionType.fromColumnType(equals.getMatchValueType()), equals.getMatchValue())
+                        .castTo(ExpressionType.STRING)
+                        .asString()
+            );
+            if (!children.remove(equals)) {
+              // Don't expect this to happen, but include it as a sanity check.
+              throw new ISE("Tried to remove equals but couldn't");
+            }
+          }
+
+          children.add(new InDimFilter(entry.getKey().getColumn(), values, null, null));
         }
       }
 

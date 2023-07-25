@@ -209,6 +209,12 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
           }
 
           @Override
+          public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+          {
+            return new NoopDoublesSketchBufferAggregator();
+          }
+
+          @Override
           public VectorAggregator makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
           {
             return new DoublesSketchMergeVectorAggregator(selector, k, getMaxIntermediateSizeWithNulls());

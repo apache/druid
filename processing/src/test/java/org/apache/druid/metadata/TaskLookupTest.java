@@ -56,6 +56,7 @@ public class TaskLookupTest
       Assert.assertNull(lookup.getMaxTaskStatuses());
       Assert.assertFalse(lookup.hasTaskCreatedTimeFilter());
       Assert.assertThrows(AssertionError.class, lookup::getTasksCreatedPriorTo);
+      Assert.assertFalse(lookup.isNil());
     }
 
     @Test
@@ -65,12 +66,29 @@ public class TaskLookupTest
       final DateTime timestampBeforeLookupCreated = DateTimes.nowUtc().minus(duration);
       final CompleteTaskLookup lookup = CompleteTaskLookup
           .of(null, null)
-          .withDurationBeforeNow(duration);
+          .withMinTimestampIfAbsent(timestampBeforeLookupCreated);
       Assert.assertNull(lookup.getMaxTaskStatuses());
       Assert.assertTrue(
           timestampBeforeLookupCreated.isEqual(lookup.getTasksCreatedPriorTo())
           || timestampBeforeLookupCreated.isBefore(lookup.getTasksCreatedPriorTo())
       );
+      Assert.assertFalse(lookup.isNil());
+    }
+
+    @Test
+    public void testWithDurationBeforeNow2()
+    {
+      final Duration duration = new Period("P1D").toStandardDuration();
+      final DateTime timestampBeforeLookupCreated = DateTimes.nowUtc().minus(duration);
+      final CompleteTaskLookup lookup =
+          new CompleteTaskLookup(null, DateTimes.of("2000"))
+              .withMinTimestampIfAbsent(timestampBeforeLookupCreated);
+      Assert.assertNull(lookup.getMaxTaskStatuses());
+      Assert.assertEquals(
+          DateTimes.of("2000"),
+          lookup.getTasksCreatedPriorTo()
+      );
+      Assert.assertFalse(lookup.isNil());
     }
 
     @Test
@@ -86,6 +104,16 @@ public class TaskLookupTest
           timestampBeforeLookupCreated.isEqual(lookup.getTasksCreatedPriorTo())
           || timestampBeforeLookupCreated.isBefore(lookup.getTasksCreatedPriorTo())
       );
+      Assert.assertFalse(lookup.isNil());
+    }
+
+    @Test
+    public void testZeroStatuses()
+    {
+      final CompleteTaskLookup lookup = CompleteTaskLookup.of(0, null);
+      Assert.assertNotNull(lookup.getMaxTaskStatuses());
+      Assert.assertEquals(0, lookup.getMaxTaskStatuses().intValue());
+      Assert.assertTrue(lookup.isNil());
     }
   }
 
@@ -98,6 +126,8 @@ public class TaskLookupTest
       final ActiveTaskLookup lookup2 = ActiveTaskLookup.getInstance();
       Assert.assertEquals(lookup1, lookup2);
       Assert.assertSame(lookup1, lookup2);
+      Assert.assertFalse(lookup1.isNil());
+      Assert.assertFalse(lookup2.isNil());
     }
 
     @Test

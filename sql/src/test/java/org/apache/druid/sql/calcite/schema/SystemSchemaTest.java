@@ -19,11 +19,13 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.Futures;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -50,12 +52,14 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
@@ -67,6 +71,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -103,10 +108,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -118,7 +120,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -153,7 +156,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private SpecificSegmentsQuerySegmentWalker walker;
   private DruidLeaderClient client;
   private DruidLeaderClient coordinatorClient;
-  private DruidLeaderClient overlordClient;
+  private OverlordClient overlordClient;
   private TimelineServerView serverView;
   private ObjectMapper mapper;
   private StringFullResponseHolder responseHolder;
@@ -189,7 +192,7 @@ public class SystemSchemaTest extends CalciteTestBase
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     client = EasyMock.createMockBuilder(DruidLeaderClient.class).addMockedMethod("getThingsFromLeaderNode", String.class).createMock();
     coordinatorClient = EasyMock.createMock(DruidLeaderClient.class);
-    overlordClient = EasyMock.createMock(DruidLeaderClient.class);
+    overlordClient = EasyMock.createMock(OverlordClient.class);
     mapper = TestHelper.makeJsonMapper();
     responseHolder = EasyMock.createMock(StringFullResponseHolder.class);
     responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
@@ -272,7 +275,7 @@ public class SystemSchemaTest extends CalciteTestBase
         serverInventoryView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
         client,
-        client,
+        overlordClient,
         druidNodeDiscoveryProvider,
         mapper
     );
@@ -754,7 +757,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testServersTable()
+  public void testServersTable() throws URISyntaxException
   {
 
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
@@ -810,7 +813,8 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
     EasyMock.expect(coordinatorClient.findCurrentLeader()).andReturn(coordinator.getDruidNode().getHostAndPortToUse()).once();
-    EasyMock.expect(overlordClient.findCurrentLeader()).andReturn(overlord.getDruidNode().getHostAndPortToUse()).once();
+    EasyMock.expect(overlordClient.findCurrentLeader())
+            .andReturn(Futures.immediateFuture(new URI(overlord.getDruidNode().getHostAndPortToUse()))).once();
 
     final List<DruidServer> servers = new ArrayList<>();
     servers.add(mockDataServer(historical1.getDruidNode().getHostAndPortToUse(), 200L, 1000L, "tier"));
@@ -1153,17 +1157,10 @@ public class SystemSchemaTest extends CalciteTestBase
   {
 
     SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
-                                                 .withConstructor(client, mapper, authMapper)
+                                                 .withConstructor(overlordClient, authMapper)
                                                  .createMock();
 
     EasyMock.replay(tasksTable);
-
-    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
-
-    EasyMock.expect(client.getThingsFromLeaderNode(EasyMock.eq("/druid/indexer/v1/tasks")))
-            .andReturn(Pair.of(request, responseHolder.getContent())).once();
-    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
@@ -1198,11 +1195,16 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"dataSource\": \"wikipedia\",\n"
                   + "\t\"errorMsg\": null\n"
                   + "}]";
-    byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
-    responseHolder.addChunk(bytesToWrite);
-    responseHolder.done();
 
-    EasyMock.replay(client, request, responseHandler);
+    EasyMock.expect(overlordClient.taskStatuses(null, null, null)).andReturn(
+        Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                mapper.readValue(json, new TypeReference<List<TaskStatusPlus>>() {}).iterator()
+            )
+        )
+    );
+
+    EasyMock.replay(overlordClient, request, responseHandler);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = tasksTable.scan(dataContext).toList();
 
@@ -1243,9 +1245,9 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testTasksTableAuth() throws Exception
+  public void testTasksTableAuth()
   {
-    SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(client, mapper, authMapper);
+    SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(overlordClient, authMapper);
 
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
@@ -1281,18 +1283,15 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"errorMsg\": null\n"
                   + "}]";
 
-    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    EasyMock.expect(overlordClient.taskStatuses(null, null, null)).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                mapper.readValue(json, new TypeReference<List<TaskStatusPlus>>() {}).iterator()
+            )
+        )
+    ).anyTimes();
 
-    EasyMock.expect(client.getThingsFromLeaderNode(EasyMock.eq("/druid/indexer/v1/tasks")))
-            .andReturn(Pair.of(request, createFullResponseHolder(httpResp, json).getContent()))
-            .andReturn(Pair.of(request, createFullResponseHolder(httpResp, json).getContent()))
-            .andReturn(Pair.of(request, createFullResponseHolder(httpResp, json).getContent()));
-
-    EasyMock.expect(request.getUrl())
-            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks"))
-            .anyTimes();
-
-    EasyMock.replay(client, request, responseHandler);
+    EasyMock.replay(overlordClient);
 
     // Verify that no row is returned for Datasource Write user
     List<Object[]> rows = tasksTable
@@ -1316,26 +1315,11 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSupervisorTable() throws Exception
   {
-
-    SystemSchema.SupervisorsTable supervisorTable = EasyMock.createMockBuilder(SystemSchema.SupervisorsTable.class)
-                                                            .withConstructor(
-                                                                client,
-                                                                mapper,
-                                                                authMapper
-                                                            )
-                                                            .createMock();
+    SystemSchema.SupervisorsTable supervisorTable =
+        EasyMock.createMockBuilder(SystemSchema.SupervisorsTable.class)
+                .withConstructor(overlordClient, authMapper)
+                .createMock();
     EasyMock.replay(supervisorTable);
-
-    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
-
-    EasyMock.expect(client.getThingsFromLeaderNode(EasyMock.eq("/druid/indexer/v1/supervisor?system")))
-            .andReturn(Pair.of(request, responseHolder.getContent())).once();
-
-    EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.getStatus().getCode()).anyTimes();
-    EasyMock.expect(request.getUrl())
-            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
-            .anyTimes();
 
     String json = "[{\n"
                   + "\t\"id\": \"wikipedia\",\n"
@@ -1349,11 +1333,15 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"suspended\": false\n"
                   + "}]";
 
-    byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
-    responseHolder.addChunk(bytesToWrite);
-    responseHolder.done();
+    EasyMock.expect(overlordClient.supervisorStatuses()).andReturn(
+        Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                mapper.readValue(json, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    );
 
-    EasyMock.replay(client, request, responseHandler);
+    EasyMock.replay(overlordClient);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
 
@@ -1375,10 +1363,10 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSupervisorTableAuth() throws Exception
+  public void testSupervisorTableAuth()
   {
     SystemSchema.SupervisorsTable supervisorTable =
-        new SystemSchema.SupervisorsTable(client, mapper, createAuthMapper());
+        new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
 
     final String json = "[{\n"
                   + "\t\"id\": \"wikipedia\",\n"
@@ -1392,21 +1380,15 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"suspended\": false\n"
                   + "}]";
 
-    HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
+        () -> Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(
+                mapper.readValue(json, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+            )
+        )
+    ).anyTimes();
 
-    EasyMock.expect(client.getThingsFromLeaderNode(EasyMock.eq("/druid/indexer/v1/supervisor?system")))
-            .andReturn(Pair.of(request, createFullResponseHolder(httpResponse, json).getContent()))
-            .andReturn(Pair.of(request, createFullResponseHolder(httpResponse, json).getContent()))
-            .andReturn(Pair.of(request, createFullResponseHolder(httpResponse, json).getContent()));
-
-    EasyMock.expect(responseHandler.getStatus())
-            .andReturn(httpResponse.getStatus().getCode())
-            .anyTimes();
-    EasyMock.expect(request.getUrl())
-            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
-            .anyTimes();
-
-    EasyMock.replay(client, request, responseHandler);
+    EasyMock.replay(overlordClient);
 
     // Verify that no row is returned for Datasource Write user
     List<Object[]> rows = supervisorTable
