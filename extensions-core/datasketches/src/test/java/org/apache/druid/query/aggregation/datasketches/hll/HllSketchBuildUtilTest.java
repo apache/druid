@@ -204,12 +204,12 @@ public class HllSketchBuildUtilTest extends InitializedNullHandlingTest
   {
     // first != null check mimics how updateSketch is called: it's always guarded by a null check on the outer value.
     if (first != null) {
-      HllSketchBuildUtil.updateSketch(sketch, stringEncoding, first);
+      HllSketchBuildUtil.updateSketch(sketch, stringEncoding, first, false);
     }
 
     for (final Object o : others) {
       if (o != null) {
-        HllSketchBuildUtil.updateSketch(sketch, stringEncoding, o);
+        HllSketchBuildUtil.updateSketch(sketch, stringEncoding, o, false);
       }
     }
   }

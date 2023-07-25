@@ -171,8 +171,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
               new CountAggregatorFactory("count"),
               // FloatSumAggregator combine method takes in two Float but return Double
               new FloatSumAggregatorFactory("sum_added", "added"),
-              new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null),
-              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), null, false, false),
+              new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null, false),
+              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), null, false, false, false),
               new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
           },
           false
@@ -265,13 +265,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new AggregatorFactory[]{
               new CountAggregatorFactory("count"),
               new LongSumAggregatorFactory("sum_added", "added"),
-              new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null),
+              new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null, false),
               new HllSketchBuildAggregatorFactory(
                   "HLLSketchBuild",
                   "user",
                   12,
                   TgtHllType.HLL_4.name(),
                   null,
+                  false,
                   false,
                   false
               ),

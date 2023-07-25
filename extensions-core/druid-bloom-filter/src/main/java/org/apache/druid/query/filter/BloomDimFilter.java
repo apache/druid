@@ -28,8 +28,12 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashCode;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
 import javax.annotation.Nullable;
@@ -164,6 +168,32 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
                 return bloomKFilter.testBytes(null, 0, 0);
               }
             };
+          }
+
+          @Override
+          public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+          {
+            final ExpressionType expressionType = arrayType == null
+                                                  ? null
+                                                  : ExpressionType.fromColumnTypeStrict(arrayType);
+            if (expressionType != null) {
+              return input -> {
+                if (input == null) {
+                  return bloomKFilter.testBytes(null, 0, 0);
+                }
+                final byte[] bytes = ExprEval.toBytes(expressionType, input);
+                return bloomKFilter.testBytes(bytes);
+              };
+            } else {
+              // fall back to per row detection
+              return input -> {
+                if (input == null) {
+                  return bloomKFilter.testBytes(null, 0, 0);
+                }
+                final byte[] bytes = ExprEval.toBytesBestEffort(input);
+                return bloomKFilter.testBytes(bytes);
+              };
+            }
           }
         },
         extractionFn,

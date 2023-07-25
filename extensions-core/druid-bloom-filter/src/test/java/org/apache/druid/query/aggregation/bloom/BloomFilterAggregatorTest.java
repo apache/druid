@@ -28,6 +28,8 @@ import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -91,6 +93,13 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
   private static final Float[] FLOAT_VALUES1 = new Float[]{0.4f, 0.8f, 23.2f};
   private static final Long[] LONG_VALUES1 = new Long[]{10241L, 12312355L, 0L, 81L};
 
+  private static final Object[] ARRAY_VALUES = new Object[]{
+      new Object[]{1L, 2L},
+      new Object[]{3L, 4L},
+      new Object[]{0L, 1000L},
+      new Object[]{null, 123L}
+  };
+
   private static final int MAX_NUM_VALUES = 15;
 
   private static BloomKFilter filter1;
@@ -102,6 +111,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
   private static String serializedLongFilter;
   private static String serializedDoubleFilter;
   private static String serializedFloatFilter;
+  private static String serializedArrayFilter;
 
   static {
     try {
@@ -134,6 +144,11 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
       }
       serializedDoubleFilter = filterToString(doubleFilter);
 
+      BloomKFilter arrayFilter = new BloomKFilter(MAX_NUM_VALUES);
+      for (Object o : ARRAY_VALUES) {
+        arrayFilter.addBytes(ExprEval.toBytes(ExpressionType.LONG_ARRAY, o));
+      }
+      serializedArrayFilter = filterToString(arrayFilter);
     }
     catch (Exception ex) {
       throw new RuntimeException(ex);
@@ -261,7 +276,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     TestLongColumnSelector selector = new TestLongColumnSelector(Arrays.asList(LONG_VALUES1));
     LongBloomFilterAggregator agg = new LongBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Long ignored : LONG_VALUES1) {
+    for (int i = 0; i < LONG_VALUES1.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
@@ -278,7 +293,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     TestFloatColumnSelector selector = new TestFloatColumnSelector(Arrays.asList(FLOAT_VALUES1));
     FloatBloomFilterAggregator agg = new FloatBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Float ignored : FLOAT_VALUES1) {
+    for (int i = 0; i < FLOAT_VALUES1.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
@@ -295,7 +310,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     TestDoubleColumnSelector selector = new TestDoubleColumnSelector(Arrays.asList(DOUBLE_VALUES1));
     DoubleBloomFilterAggregator agg = new DoubleBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Double ignored : DOUBLE_VALUES1) {
+    for (int i = 0; i < DOUBLE_VALUES1.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
@@ -393,6 +408,49 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedDoubleFilter, serialized);
+  }
+
+  @Test
+  public void testAggregateArrayValues() throws IOException
+  {
+    TestObjectColumnSelector selector = new TestObjectColumnSelector(
+        Arrays.asList(ARRAY_VALUES)
+    );
+    ObjectBloomFilterAggregator agg = new ObjectBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
+
+    for (int i = 0; i < ARRAY_VALUES.length; i++) {
+      aggregateColumn(Collections.singletonList(selector), agg);
+    }
+
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
+    );
+    String serialized = filterToString(bloomKFilter);
+    Assert.assertEquals(serializedArrayFilter, serialized);
+  }
+
+  @Test
+  public void testBufferAggregateArrayValues() throws IOException
+  {
+    TestObjectColumnSelector selector = new TestObjectColumnSelector(
+        Arrays.asList(ARRAY_VALUES)
+    );
+    ObjectBloomFilterAggregator agg = new ObjectBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
+
+    int maxSize = valueAggregatorFactory.getMaxIntermediateSizeWithNulls();
+    ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
+    int pos = 10;
+    buf.limit(pos + maxSize);
+
+    agg.init(buf, pos);
+
+    IntStream.range(0, ARRAY_VALUES.length)
+             .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
+    );
+    String serialized = filterToString(bloomKFilter);
+    Assert.assertEquals(serializedArrayFilter, serialized);
   }
 
   @Test
@@ -668,6 +726,20 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
 
     @Override
     public double getDouble()
+    {
+      return values.get(pos);
+    }
+  }
+
+  public static class TestObjectColumnSelector extends SteppableSelector<Object> implements ColumnValueSelector<Object>
+  {
+    public TestObjectColumnSelector(List<Object> values)
+    {
+      super(values);
+    }
+
+    @Override
+    public Object getObject()
     {
       return values.get(pos);
     }

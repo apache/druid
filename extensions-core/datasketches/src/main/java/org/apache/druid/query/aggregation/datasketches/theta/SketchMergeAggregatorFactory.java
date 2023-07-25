@@ -46,10 +46,11 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
       @JsonProperty("size") @Nullable Integer size,
       @JsonProperty("shouldFinalize") @Nullable Boolean shouldFinalize,
       @JsonProperty("isInputThetaSketch") @Nullable Boolean isInputThetaSketch,
-      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev
+      @JsonProperty("errorBoundsStdDev") @Nullable Integer errorBoundsStdDev,
+      @JsonProperty("processAsArray") boolean processAsArray
   )
   {
-    super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID);
+    super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID, processAsArray);
     this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize;
     this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch;
     this.errorBoundsStdDev = errorBoundsStdDev;
@@ -65,7 +66,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
             size,
             shouldFinalize,
             isInputThetaSketch,
-            errorBoundsStdDev
+            errorBoundsStdDev,
+            processAsArray
         )
     );
   }
@@ -73,7 +75,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false, errorBoundsStdDev);
+    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false, errorBoundsStdDev, processAsArray);
   }
 
   @Override
@@ -88,7 +90,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
           Math.max(size, castedOther.size),
           shouldFinalize,
           false,
-          errorBoundsStdDev
+          errorBoundsStdDev,
+          processAsArray
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
@@ -115,6 +118,13 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   public Integer getErrorBoundsStdDev()
   {
     return errorBoundsStdDev;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean isProcessAsArray()
+  {
+    return processAsArray;
   }
 
   /**
@@ -178,7 +188,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
         getSize(),
         getShouldFinalize(),
         getIsInputThetaSketch(),
-        getErrorBoundsStdDev()
+        getErrorBoundsStdDev(),
+        isProcessAsArray()
     );
   }
 
@@ -212,7 +223,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
       return false;
     }
 
-    return isInputThetaSketch == that.isInputThetaSketch;
+    return isInputThetaSketch == that.isInputThetaSketch && processAsArray == that.processAsArray;
   }
 
   @Override
@@ -222,6 +233,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     result = 31 * result + (shouldFinalize ? 1 : 0);
     result = 31 * result + (isInputThetaSketch ? 1 : 0);
     result = 31 * result + (errorBoundsStdDev != null ? errorBoundsStdDev.hashCode() : 0);
+    result = 31 * result + (processAsArray ? 1 : 0);
     return result;
   }
 
@@ -235,6 +247,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
            + ", shouldFinalize=" + shouldFinalize
            + ", isInputThetaSketch=" + isInputThetaSketch
            + ", errorBoundsStdDev=" + errorBoundsStdDev
+           + ", processAsArray=" + processAsArray
            + "}";
   }
 }
