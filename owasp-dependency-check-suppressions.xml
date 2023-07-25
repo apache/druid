@@ -281,6 +281,7 @@
     <!-- false positive -->
     <cve>CVE-2023-2251</cve>
     <cve>CVE-2022-3064</cve>
+    <cve>CVE-2021-4235</cve>	<!-- Suppressed as we don't parse user provided yamls -->
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -859,5 +860,12 @@
     <cve>CVE-2018-10237</cve>
     <cve>CVE-2020-8908</cve> <!-- We do not use com.google.common.io.Files.createTempDir() https://nvd.nist.gov/vuln/detail/CVE-2020-8908 -->
     <cve>CVE-2023-2976</cve> <!-- We do not use com.google.common.io.FileBackedOutputStream https://nvd.nist.gov/vuln/detail/CVE-2023-2976 -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: okio-1.15.0.jar
+    ]]></notes>
+    <cve>CVE-2023-3635</cve> <!-- We don't expect a DOS due to malformed gzip buffers because externally crafted gzip archives are not expected as input to Druid -->
   </suppress>
 </suppressions>
