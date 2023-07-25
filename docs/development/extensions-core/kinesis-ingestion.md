@@ -428,7 +428,7 @@ The following table outlines the configuration options for `indexSpec`:
 
 This section describes how to use the [Supervisor API](../../api-reference/supervisor-api.md) with the Kinesis indexing service.
 
-### AWA authentication
+### AWS authentication
 
 To authenticate with AWS, you must provide your AWS access key and AWS secret key using `runtime.properties`, for example:
 
