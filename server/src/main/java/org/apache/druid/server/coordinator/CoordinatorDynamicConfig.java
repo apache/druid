@@ -415,6 +415,7 @@ public class CoordinatorDynamicConfig
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", specificDataSourcesToKillUnusedSegmentsIn=" + specificDataSourcesToKillUnusedSegmentsIn +
+           ", killTaskSlotRatio=" + killTaskSlotRatio +
            ", dataSourcesToNotKillStalePendingSegmentsIn=" + dataSourcesToNotKillStalePendingSegmentsIn +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
@@ -454,6 +455,9 @@ public class CoordinatorDynamicConfig
                specificDataSourcesToKillUnusedSegmentsIn,
                that.specificDataSourcesToKillUnusedSegmentsIn)
            && Objects.equals(
+               killTaskSlotRatio,
+               that.killTaskSlotRatio)
+           && Objects.equals(
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
@@ -473,6 +477,7 @@ public class CoordinatorDynamicConfig
         balancerComputeThreads,
         maxSegmentsInNodeLoadingQueue,
         specificDataSourcesToKillUnusedSegmentsIn,
+        killTaskSlotRatio,
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
