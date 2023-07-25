@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
@@ -73,6 +74,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class CoordinatorSimulationBuilder
 {
+  private static final Logger log = new Logger(CoordinatorSimulationBuilder.class);
+
   private static final long DEFAULT_COORDINATOR_PERIOD = 100L;
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper()
       .setInjectableValues(
@@ -562,6 +565,7 @@ public class CoordinatorSimulationBuilder
     @Override
     public ScheduledExecutorService create(int corePoolSize, String nameFormat)
     {
+      log.trace("Dummy use of corePoolSize[%d] to avoid intellij inspection failures", corePoolSize);
       boolean isCoordinatorRunner = COORDINATOR_RUNNER.equals(nameFormat);
 
       // Coordinator running executor must always be blocked
