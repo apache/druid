@@ -24,18 +24,22 @@ import com.google.common.base.Supplier;
 import com.microsoft.azure.storage.ResultContinuation;
 import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlobDeleteBatchOperation;
 import com.microsoft.azure.storage.blob.BlobListingDetails;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import com.microsoft.azure.storage.blob.ListBlobItem;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -74,7 +78,7 @@ public class AzureStorage
     List<String> deletedFiles = new ArrayList<>();
     CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
 
-    for (ListBlobItem blobItem : container.listBlobs(virtualDirPath, true, null, null, null)) {
+    for (ListBlobItem blobItem : container.listBlobs(virtualDirPath, USE_FLAT_BLOB_LISTING, null, null, null)) {
       CloudBlob cloudBlob = (CloudBlob) blobItem;
       log.info("Removing file[%s] from Azure.", cloudBlob.getName());
       if (cloudBlob.deleteIfExists()) {
@@ -96,6 +100,27 @@ public class AzureStorage
     try (FileInputStream stream = new FileInputStream(file)) {
       container.getBlockBlobReference(blobPath).upload(stream, file.length());
     }
+  }
+
+  public OutputStream getBlockBlobOutputStream(
+      final String containerName,
+      final String blobPath,
+      @Nullable final Integer streamWriteSizeBytes
+  ) throws URISyntaxException, StorageException
+  {
+    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
+    CloudBlockBlob blockBlobReference = container.getBlockBlobReference(blobPath);
+
+    if (blockBlobReference.exists()) {
+      throw new RE("Reference already exists");
+    }
+
+    if (streamWriteSizeBytes != null) {
+      blockBlobReference.setStreamWriteSizeInBytes(streamWriteSizeBytes);
+    }
+
+    return blockBlobReference.openOutputStream();
+
   }
 
   public CloudBlob getBlobReferenceWithAttributes(final String containerName, final String blobPath)
@@ -121,9 +146,42 @@ public class AzureStorage
   public InputStream getBlobInputStream(long offset, final String containerName, final String blobPath)
       throws URISyntaxException, StorageException
   {
-    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
-    return container.getBlockBlobReference(blobPath).openInputStream(offset, null, null, null, null);
+    return getBlobInputStream(offset, null, containerName, blobPath);
   }
+
+  public InputStream getBlobInputStream(long offset, Long length, final String containerName, final String blobPath)
+      throws URISyntaxException, StorageException
+  {
+    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
+    return container.getBlockBlobReference(blobPath).openInputStream(offset, length, null, null, null);
+  }
+
+  public void batchDeleteFiles(String containerName, Iterable<String> paths)
+      throws URISyntaxException, StorageException
+  {
+    CloudBlobContainer cloudBlobContainer = getOrCreateCloudBlobContainer(containerName);
+    BlobDeleteBatchOperation blobDeleteBatchOperation = new BlobDeleteBatchOperation();
+    for (String path : paths) {
+      CloudBlob blobReference = getOrCreateCloudBlobContainer(containerName).getBlockBlobReference(path);
+      blobDeleteBatchOperation.addSubOperation(blobReference);
+    }
+    cloudBlobClient.get().executeBatch(blobDeleteBatchOperation);
+  }
+
+  public List<String> listDir(final String containerName, final String virtualDirPath)
+      throws StorageException, URISyntaxException
+  {
+    List<String> files = new ArrayList<>();
+    CloudBlobContainer container = getOrCreateCloudBlobContainer(containerName);
+
+    for (ListBlobItem blobItem : container.listBlobs(virtualDirPath, USE_FLAT_BLOB_LISTING, null, null, null)) {
+      CloudBlob cloudBlob = (CloudBlob) blobItem;
+      files.add(cloudBlob.getName());
+    }
+
+    return files;
+  }
+
 
   public boolean getBlobExists(String container, String blobPath) throws URISyntaxException, StorageException
   {
