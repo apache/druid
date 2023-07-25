@@ -32,6 +32,8 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -46,6 +48,7 @@ import java.util.List;
  */
 public class KillUnusedSegments implements CoordinatorDuty
 {
+  public static final String KILL_TASK_TYPE = "kill";
   private static final Logger log = new Logger(KillUnusedSegments.class);
 
   private final long period;
@@ -99,6 +102,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
+    final Double killTaskSlotRatio = params.getCoordinatorDynamicConfig().getKillTaskSlotRatio();
 
     // If no datasource has been specified, all are eligible for killing unused segments
     if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
@@ -113,15 +117,19 @@ public class KillUnusedSegments implements CoordinatorDuty
     } else {
       log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
       lastKillTime = currentTimeMillis;
-      killUnusedSegments(dataSourcesToKill);
+      killUnusedSegments(dataSourcesToKill, killTaskSlotRatio);
     }
 
     return params;
   }
 
-  private void killUnusedSegments(Collection<String> dataSourcesToKill)
+  private void killUnusedSegments(Collection<String> dataSourcesToKill, @Nullable Double killTaskSlotRatio)
   {
     int submittedTasks = 0;
+    int availableKillTaskSlots = getAvailableKillTaskSlots(killTaskSlotRatio);
+    if (0 == availableKillTaskSlots) {
+      log.warn("Not killing any unused segments because there are no available kill task slots at this time.");
+    }
     for (String dataSource : dataSourcesToKill) {
       final Interval intervalToKill = findIntervalForKill(dataSource);
       if (intervalToKill == null) {
@@ -139,6 +147,11 @@ public class KillUnusedSegments implements CoordinatorDuty
           break;
         }
       }
+
+      if (submittedTasks >= availableKillTaskSlots) {
+        log.info("Reached kill task slot limit with pending unused segments to kill. Will resume "
+                 + "on the next coordinator cycle.");
+      }
     }
 
     log.debug("Submitted kill tasks for [%d] datasources.", submittedTasks);
@@ -147,6 +160,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   /**
    * Calculates the interval for which segments are to be killed in a datasource.
    */
+  @Nullable
   private Interval findIntervalForKill(String dataSource)
   {
     final DateTime maxEndTime = ignoreRetainDuration
@@ -165,4 +179,41 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
   }
 
+  private int getAvailableKillTaskSlots(@Nullable Double killTaskSlotRatio)
+  {
+    return Math.min(0, getKillTaskCapacity(killTaskSlotRatio) - getNumActiveKillTaskSlots());
+  }
+
+  private int getNumActiveKillTaskSlots()
+  {
+    // Fetch currently running kill tasks
+    return (int) indexingServiceClient.getActiveTasks().stream()
+        .filter(status -> {
+          final String taskType = status.getType();
+          // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
+          // the tasks of the unknown taskType as the killTask. This is because it's important to not run
+          // killTasks more than the configured limit at any time which might impact to the ingestion
+          // performance.
+          return taskType == null || KILL_TASK_TYPE.equals(taskType);
+        }).count();
+  }
+
+  private int getKillTaskCapacity(@Nullable Double killTaskSlotRatio)
+  {
+    int totalWorkerCapacity;
+    try {
+      totalWorkerCapacity = indexingServiceClient.getTotalWorkerCapacityWithAutoScale();
+      if (totalWorkerCapacity < 0) {
+        totalWorkerCapacity = indexingServiceClient.getTotalWorkerCapacity();
+      }
+    }
+    catch (Exception e) {
+      log.warn("Failed to get total worker capacity with auto scale slots. Falling back to current capacity count");
+      totalWorkerCapacity = indexingServiceClient.getTotalWorkerCapacity();
+    }
+
+    return killTaskSlotRatio == null
+        ? totalWorkerCapacity
+        : (int) (totalWorkerCapacity * killTaskSlotRatio);
+  }
 }

@@ -69,6 +69,7 @@ public class CoordinatorDynamicConfig
    * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
+  @Nullable private final Double killTaskSlotRatio;
   private final Set<String> decommissioningNodes;
 
   private final Map<String, String> debugDimensions;
@@ -130,6 +131,7 @@ public class CoordinatorDynamicConfig
       // Keeping the legacy 'killDataSourceWhitelist' property name for backward compatibility. When the project is
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killDataSourceWhitelist") Object specificDataSourcesToKillUnusedSegmentsIn,
+      @JsonProperty("killTaskSlotRatio") @Nullable Double killTaskSlotRatio,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
       // strings in the update request, as well as for specificDataSourcesToKillUnusedSegmentsIn.
       // Keeping the legacy 'killPendingSegmentsSkipList' property name for backward compatibility. When the project is
@@ -158,6 +160,7 @@ public class CoordinatorDynamicConfig
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.specificDataSourcesToKillUnusedSegmentsIn
         = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
+    this.killTaskSlotRatio = killTaskSlotRatio;
     this.dataSourcesToNotKillStalePendingSegmentsIn
         = parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
     this.maxSegmentsInNodeLoadingQueue = Builder.valueOrDefault(
@@ -295,6 +298,12 @@ public class CoordinatorDynamicConfig
   public Set<String> getSpecificDataSourcesToKillUnusedSegmentsIn()
   {
     return specificDataSourcesToKillUnusedSegmentsIn;
+  }
+
+  @JsonProperty("killTaskSlotRatio")
+  public Double getKillTaskSlotRatio()
+  {
+    return killTaskSlotRatio;
   }
 
   @JsonIgnore
@@ -507,6 +516,7 @@ public class CoordinatorDynamicConfig
     private Integer replicationThrottleLimit;
     private Integer balancerComputeThreads;
     private Object specificDataSourcesToKillUnusedSegmentsIn;
+    private @Nullable Double killTaskSlotRatio;
     private Object dataSourcesToNotKillStalePendingSegmentsIn;
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
@@ -532,6 +542,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
         @JsonProperty("killDataSourceWhitelist") @Nullable Object specificDataSourcesToKillUnusedSegmentsIn,
+        @JsonProperty("killTaskSlotRatio") @Nullable Double killTaskSlotRatio,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object dataSourcesToNotKillStalePendingSegmentsIn,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
@@ -553,6 +564,7 @@ public class CoordinatorDynamicConfig
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.balancerComputeThreads = balancerComputeThreads;
       this.specificDataSourcesToKillUnusedSegmentsIn = specificDataSourcesToKillUnusedSegmentsIn;
+      this.killTaskSlotRatio = killTaskSlotRatio;
       this.dataSourcesToNotKillStalePendingSegmentsIn = dataSourcesToNotKillStalePendingSegmentsIn;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.decommissioningNodes = decommissioningNodes;
@@ -625,6 +637,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withKillTaskSlotRatio(Double killTaskSlotRatio)
+    {
+      this.killTaskSlotRatio = killTaskSlotRatio;
+      return this;
+    }
+
     public Builder withMaxSegmentsInNodeLoadingQueue(int maxSegmentsInNodeLoadingQueue)
     {
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
@@ -685,6 +703,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
           valueOrDefault(balancerComputeThreads, Defaults.BALANCER_COMPUTE_THREADS),
           specificDataSourcesToKillUnusedSegmentsIn,
+          killTaskSlotRatio,
           dataSourcesToNotKillStalePendingSegmentsIn,
           valueOrDefault(maxSegmentsInNodeLoadingQueue, Defaults.MAX_SEGMENTS_IN_NODE_LOADING_QUEUE),
           decommissioningNodes,
@@ -720,6 +739,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicationThrottleLimit, defaults.getReplicationThrottleLimit()),
           valueOrDefault(balancerComputeThreads, defaults.getBalancerComputeThreads()),
           valueOrDefault(specificDataSourcesToKillUnusedSegmentsIn, defaults.getSpecificDataSourcesToKillUnusedSegmentsIn()),
+          valueOrDefault(killTaskSlotRatio, defaults.getKillTaskSlotRatio()),
           valueOrDefault(dataSourcesToNotKillStalePendingSegmentsIn, defaults.getDataSourcesToNotKillStalePendingSegmentsIn()),
           valueOrDefault(maxSegmentsInNodeLoadingQueue, defaults.getMaxSegmentsInNodeLoadingQueue()),
           valueOrDefault(decommissioningNodes, defaults.getDecommissioningNodes()),

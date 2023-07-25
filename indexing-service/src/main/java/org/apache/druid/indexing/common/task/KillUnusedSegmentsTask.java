@@ -61,6 +61,7 @@ import java.util.stream.Collectors;
  */
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
+  public static final String TYPE = "kill";
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
 
   private final boolean markAsUnused;
