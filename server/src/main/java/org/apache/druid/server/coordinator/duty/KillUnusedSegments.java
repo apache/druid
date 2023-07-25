@@ -21,11 +21,12 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.utils.CollectionUtils;
@@ -58,12 +59,12 @@ public class KillUnusedSegments implements CoordinatorDuty
   private long lastKillTime = 0;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
 
   @Inject
   public KillUnusedSegments(
       SegmentsMetadataManager segmentsMetadataManager,
-      IndexingServiceClient indexingServiceClient,
+      OverlordClient overlordClient,
       DruidCoordinatorConfig config
   )
   {
@@ -94,7 +95,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     );
 
     this.segmentsMetadataManager = segmentsMetadataManager;
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
   }
 
   @Override
@@ -137,7 +138,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
 
       try {
-        indexingServiceClient.killUnusedSegments("coordinator-issued", dataSource, intervalToKill, maxSegmentsToKill);
+        FutureUtils.getUnchecked(overlordClient.runKillTask("coordinator-issued", dataSource, intervalToKill), true, maxSegmentsToKill);
         ++submittedTasks;
       }
       catch (Exception ex) {

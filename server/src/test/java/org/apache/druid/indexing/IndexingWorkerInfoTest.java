@@ -17,29 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.indexing;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
-public class K8sTaskIdTest
+public class IndexingWorkerInfoTest
 {
-  @Test
-  public void testModifyingTaskIDToBeK8sCompliant()
-  {
-    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
-    String result = new K8sTaskId(original).getK8sJobName();
-    assertEquals("coordinatorissuedcompactk8smet-2e2c1862cb7ad1d01f4794b27a4438b0", result);
-  }
-
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(K8sTaskId.class)
-                  .withNonnullFields("k8sJobName", "originalTaskId")
-                  .usingGetClass()
-                  .verify();
+    EqualsVerifier.forClass(IndexingWorkerInfo.class).usingGetClass().verify();
   }
 }
