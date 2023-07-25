@@ -25,6 +25,12 @@ import React from 'react';
 
 import { prettyPrintSql } from '../../../../../utils';
 
+const UNIQUE_FUNCTIONS: Record<string, string> = {
+  'COMPLEX<hyperUnique>': 'APPROX_COUNT_DISTINCT_BUILTIN',
+  'COMPLEX<thetaSketch>': 'APPROX_COUNT_DISTINCT_DS_THETA',
+  'COMPLEX<HLLSketch>': 'APPROX_COUNT_DISTINCT_DS_HLL',
+};
+
 export interface ComplexMenuItemsProps {
   table: string;
   schema: string;
@@ -35,7 +41,7 @@ export interface ComplexMenuItemsProps {
 }
 
 export const ComplexMenuItems = React.memo(function ComplexMenuItems(props: ComplexMenuItemsProps) {
-  const { columnName, parsedQuery, onQueryChange } = props;
+  const { columnName, columnType, parsedQuery, onQueryChange } = props;
   const column = C(columnName);
 
   function renderAggregateMenu(): JSX.Element | undefined {
@@ -52,7 +58,8 @@ export const ComplexMenuItems = React.memo(function ComplexMenuItems(props: Comp
       );
     }
 
-    // APPROX_COUNT_DISTINCT_DS_THETA
+    const uniqueFn = UNIQUE_FUNCTIONS[columnType];
+    if (!uniqueFn) return;
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
