@@ -199,11 +199,11 @@ and begin publishing their segments. A new supervisor will then be started which
 will start reading from the offsets where the previous now-publishing tasks left off, but using the updated schema.
 In this way, configuration changes can be applied without requiring any pause in ingestion.
 
-## Deployment Notes on Kafka partitions and Druid segments
+## Deployment notes on Kafka partitions and Druid segments
 
 Druid assigns each Kafka indexing task Kafka partitions. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following: `maxRowsPerSegment`, `maxTotalRows` or `intermediateHandoffPeriod` limit. At this point, the task creates a new partition for this segment granularity to contain subsequent events.
 
-The Kafka Indexing Task also does incremental hand-offs. Therefore segments become available as they are ready and you do not have to wait for all segments until the end of  the task duration.  When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new new set of segments will be created for further events. This allows the task to run for longer durations without accumulating old segments locally on Middle Manager processes.
+The Kafka Indexing Task also does incremental hand-offs. Therefore segments become available as they are ready and you do not have to wait for all segments until the end of  the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new new set of segments will be created for further events. This allows the task to run for longer durations without accumulating old segments locally on Middle Manager processes.
 
 The Kafka Indexing Service may still produce some small segments. For example, consider the following scenario:
 - Task duration is 4 hours
