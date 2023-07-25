@@ -42,7 +42,7 @@ public class StringLastVectorAggregator implements VectorAggregator
   protected long lastTime;
 
   public StringLastVectorAggregator(
-      final BaseLongVectorValueSelector timeSelector,
+      @Nullable final BaseLongVectorValueSelector timeSelector,
       final VectorObjectSelector valueSelector,
       final int maxStringBytes
   )
@@ -124,6 +124,9 @@ public class StringLastVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
+    if (timeSelector == null) {
+      return;
+    }
     long[] timeVector = timeSelector.getLongVector();
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
