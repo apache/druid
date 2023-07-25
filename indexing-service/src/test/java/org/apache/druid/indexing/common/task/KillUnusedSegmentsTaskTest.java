@@ -79,7 +79,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             DATA_SOURCE,
             Intervals.of("2019-03-01/2019-04-01"),
             null,
-            false
+            false,
+            null
         );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
@@ -124,7 +125,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             DATA_SOURCE,
             Intervals.of("2019-03-01/2019-04-01"),
             null,
-            true
+            true,
+            null
         );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
@@ -151,7 +153,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             DATA_SOURCE,
             Intervals.of("2019-03-01/2019-04-01"),
             null,
-            true
+            true,
+            null
         );
     Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
