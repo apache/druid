@@ -397,7 +397,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<Predicate<String>> makeStringPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.STRING);
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
         if (castForComparison == null) {
           return Predicates.alwaysFalse();
         }
@@ -408,7 +408,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.LONG);
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
         if (castForComparison == null) {
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
@@ -422,7 +422,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.DOUBLE);
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
         if (castForComparison == null) {
           return DruidFloatPredicate.ALWAYS_FALSE;
         } else {
@@ -436,7 +436,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.DOUBLE);
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
         if (castForComparison == null) {
           return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
@@ -462,7 +462,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return Suppliers.memoize(() -> input -> {
         final ExprEval<?> eval = ExprEval.bestEffortOf(input);
         final Comparator<Object[]> arrayComparator = eval.type().getNullableStrategy();
-        final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, eval.type());
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, eval.type());
         if (castForComparison == null) {
           return false;
         }
@@ -475,7 +475,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(arrayType);
       final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
 
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, expressionType);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, expressionType);
       if (castForComparison == null) {
         return Predicates.alwaysFalse();
       }
@@ -533,7 +533,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.STRING);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
       if (castForComparison == null) {
         return BooleanValueMatcher.of(false);
       }
@@ -543,7 +543,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeFloatProcessor(BaseFloatColumnValueSelector selector)
     {
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.DOUBLE);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
       if (castForComparison == null) {
         return BooleanValueMatcher.of(false);
       }
@@ -553,7 +553,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
     {
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.DOUBLE);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
       if (castForComparison == null) {
         return BooleanValueMatcher.of(false);
       }
@@ -563,7 +563,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(matchValue, ExpressionType.LONG);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
       if (castForComparison == null) {
         return BooleanValueMatcher.of(false);
       }

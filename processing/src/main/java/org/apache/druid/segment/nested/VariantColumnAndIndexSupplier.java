@@ -351,7 +351,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
           eval,
           ExpressionType.fromColumnTypeStrict(logicalType)
       );
@@ -432,7 +432,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
           eval,
           ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
       );

@@ -233,7 +233,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
-      final ExprEval<?> castForComparison = ExprEval.castForComparison(eval, ExpressionType.LONG);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
       if (castForComparison == null) {
         return new AllFalseBitmapColumnIndex(bitmapFactory);
       }

@@ -651,7 +651,7 @@ public abstract class ExprEval<T>
    * appropriate to use for equality or range comparisons, while 1.0 is valid.
    */
   @Nullable
-  public static ExprEval<?> castForComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
+  public static ExprEval<?> castForEqualityComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
   {
     ExprEval<?> cast = valueToCompare.castTo(typeToCompareWith);
     // make sure the DOUBLE value when cast to LONG is the same before and after the cast
