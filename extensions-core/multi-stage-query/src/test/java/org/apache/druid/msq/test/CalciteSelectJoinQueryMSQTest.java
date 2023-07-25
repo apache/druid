@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
@@ -142,7 +141,6 @@ public class CalciteSelectJoinQueryMSQTest
 
         @Override
         public QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext)
-            throws ValidationException
         {
           plannerContext.queryContextMap().put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString());
           return super.buildQueryMakerForSelect(relRoot, plannerContext);

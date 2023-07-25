@@ -27,10 +27,10 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.roaringbitmap.IntIterator;
 
 public final class FilteredOffset extends Offset

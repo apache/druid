@@ -132,7 +132,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                     .build()
                             )
                         )
-                        .setDimFilter(bound("a0", "0", null, true, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("a0", ColumnType.LONG, 0L, null, true, false))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
@@ -182,7 +182,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                             .setDataSource(CalciteTests.DATASOURCE1)
                                                             .setInterval(querySegmentSpec(Filtration.eternity()))
                                                             .setGranularity(Granularities.ALL)
-                                                            .setDimFilter(not(selector("dim1", "", null)))
+                                                            .setDimFilter(not(equality("dim1", "", ColumnType.STRING)))
                                                             .setDimensions(
                                                                 dimensions(
                                                                     new ExtractionDimensionSpec(
@@ -258,7 +258,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .setAggregatorSpecs(
                                     new FilteredAggregatorFactory(
                                         new CountAggregatorFactory("a0"),
-                                        not(selector("d0", null, null))
+                                        notNull("d0")
                                     )
                                 )
                                 .setContext(QUERY_CONTEXT_DEFAULT)
@@ -282,7 +282,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .setAggregatorSpecs(
                                     new FilteredAggregatorFactory(
                                         new CountAggregatorFactory("a0"),
-                                        not(selector("d0", null, null))
+                                        notNull("d0")
                                     )
                                 )
                                 .setContext(QUERY_CONTEXT_DEFAULT)
@@ -329,7 +329,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                               "j0.",
                               "(\"dim2\" == \"j0.dim2\")",
                               JoinType.INNER,
-                              bound("dim2", "a", "a", false, false, null, null)
+                              range("dim2", ColumnType.STRING, "a", "a", false, false)
                           ),
                           new QueryDataSource(
                               newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
@@ -344,14 +344,23 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
-                  .filters(not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1))))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
+                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
+                  )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(queryContextModified)
                   .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{8L}
+        )
+        // in sql compatible mode, expression filter correctly does not match null values...
+        : ImmutableList.of(
+            new Object[]{4L}
         )
     );
   }
@@ -481,7 +490,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         .setDataSource(CalciteTests.DATASOURCE1)
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
-                                        .setDimFilter(selector("dim2", "abc", null))
+                                        .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
                                         .setDimensions(dimensions(
                                             new DefaultDimensionSpec("dim1", "d0"),
                                             new DefaultDimensionSpec("dim2", "d1")
@@ -490,7 +499,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         .setPostAggregatorSpecs(
                                             ImmutableList.of(expressionPostAgg("p0", "'abc'"))
                                         )
-                                        .setHavingSpec(having(selector("a0", "1", null)))
+                                        .setHavingSpec(having(equality("a0", 1L, ColumnType.LONG)))
                                         .setContext(QUERY_CONTEXT_DEFAULT)
                                         .build()
                         ),
@@ -561,7 +570,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 new LongSumAggregatorFactory("_a2:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a2:count"),
-                                    not(selector("a0", null, null))
+                                    notNull("a0")
                                 ),
                                 new LongMaxAggregatorFactory("_a3", "d0"),
                                 new CountAggregatorFactory("_a4")
@@ -697,7 +706,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                       .build()
                               )
                           )
-                          .setDimFilter(bound("a0", "0", null, true, false, null, StringComparators.NUMERIC))
+                          .setDimFilter(range("a0", ColumnType.LONG, 0L, null, true, false))
                           .setInterval(querySegmentSpec(Filtration.eternity()))
                           .setGranularity(Granularities.ALL)
                           .setAggregatorSpecs(aggregators(

@@ -16,20 +16,19 @@
  * limitations under the License.
  */
 
+import { FAILED_ASYNC_STATUS, SUCCESS_ASYNC_STATUS } from '../async-query/async-query.mock';
+
 import { Execution } from './execution';
 import { EXECUTION_INGEST_COMPLETE } from './execution-ingest-complete.mock';
 
 describe('Execution', () => {
-  describe('.fromTaskDetail', () => {
+  describe('.fromTaskReport', () => {
     it('fails for bad status (error: null)', () => {
       expect(() =>
-        Execution.fromTaskPayloadAndReport(
-          {} as any,
-          {
-            asyncResultId: 'multi-stage-query-sql-1392d806-c17f-4937-94ee-8fa0a3ce1566',
-            error: null,
-          } as any,
-        ),
+        Execution.fromTaskReport({
+          asyncResultId: 'multi-stage-query-sql-1392d806-c17f-4937-94ee-8fa0a3ce1566',
+          error: null,
+        } as any),
       ).toThrowError('Invalid payload');
     });
 
@@ -43,10 +42,10 @@ describe('Execution', () => {
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm_simple",
-              "groupId": "query-b55f3432-7810-4529-80ed-780a926a6f03",
-              "id": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+              "groupId": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
+              "id": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
               "resource": Object {
-                "availabilityGroup": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+                "availabilityGroup": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -77,14 +76,16 @@ describe('Execution', () => {
                     "v0",
                   ],
                   "context": Object {
+                    "__user": "allowAll",
                     "finalize": false,
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
                     "maxNumTasks": 2,
-                    "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                    "maxParseExceptions": 0,
+                    "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                    "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                    "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
@@ -154,11 +155,15 @@ describe('Execution', () => {
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
-                "maxParseExceptions": 0,
-                "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                 "sqlReplaceTimeChunks": "all",
+              },
+              "sqlResultsContext": Object {
+                "serializeComplexValues": true,
+                "stringifyArrays": true,
+                "timeZone": "UTC",
               },
               "sqlTypeNames": Array [
                 "TIMESTAMP",
@@ -166,7 +171,7 @@ describe('Execution', () => {
               ],
               "type": "query_controller",
             },
-            "task": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+            "task": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
           },
           "capacityInfo": undefined,
           "destination": Object {
@@ -179,24 +184,26 @@ describe('Execution', () => {
             },
             "type": "dataSource",
           },
-          "duration": 28854,
+          "duration": 23170,
           "engine": "sql-msq-task",
           "error": undefined,
-          "id": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+          "id": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
               "v0",
             ],
             "context": Object {
+              "__user": "allowAll",
               "finalize": false,
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
-              "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+              "maxParseExceptions": 0,
+              "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-              "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+              "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
@@ -249,7 +256,6 @@ describe('Execution', () => {
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
-            "maxParseExceptions": 0,
           },
           "result": undefined,
           "sqlQuery": "REPLACE INTO \\"kttm_simple\\" OVERWRITE ALL
@@ -351,7 +357,7 @@ describe('Execution', () => {
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_0",
+                  "id": "8af42220-2724-4a76-b39f-c2f98df2de69_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
@@ -379,7 +385,6 @@ describe('Execution', () => {
                       "type": "external",
                     },
                   ],
-                  "maxInputBytesPerWorker": 10737418240,
                   "maxWorkerCount": 1,
                   "processor": Object {
                     "query": Object {
@@ -389,19 +394,42 @@ describe('Execution', () => {
                       ],
                       "context": Object {
                         "__timeColumn": "v0",
+                        "__user": "allowAll",
                         "finalize": false,
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
                         "maxNumTasks": 2,
-                        "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                        "maxParseExceptions": 0,
+                        "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                        "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                        "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
-                        "inputNumber": 0,
-                        "type": "inputNumber",
+                        "inputFormat": Object {
+                          "assumeNewlineDelimited": false,
+                          "keepNullColumns": false,
+                          "type": "json",
+                          "useJsonNodeReader": false,
+                        },
+                        "inputSource": Object {
+                          "type": "http",
+                          "uris": Array [
+                            "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
+                          ],
+                        },
+                        "signature": Array [
+                          Object {
+                            "name": "timestamp",
+                            "type": "STRING",
+                          },
+                          Object {
+                            "name": "agent_type",
+                            "type": "STRING",
+                          },
+                        ],
+                        "type": "external",
                       },
                       "granularity": Object {
                         "type": "all",
@@ -454,24 +482,23 @@ describe('Execution', () => {
                     },
                   ],
                 },
-                "duration": 24236,
+                "duration": 20483,
                 "partitionCount": 1,
                 "phase": "FINISHED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2023-03-27T22:17:02.792Z",
+                "startTime": "2023-06-19T05:39:26.711Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_1",
+                  "id": "8af42220-2724-4a76-b39f-c2f98df2de69_1",
                   "input": Array [
                     Object {
                       "stage": 0,
                       "type": "stage",
                     },
                   ],
-                  "maxInputBytesPerWorker": 10737418240,
                   "maxWorkerCount": 1,
                   "processor": Object {
                     "columnMappings": Array [
@@ -531,21 +558,112 @@ describe('Execution', () => {
                   },
                   "signature": Array [],
                 },
-                "duration": 4276,
+                "duration": 2381,
                 "partitionCount": 1,
                 "phase": "FINISHED",
                 "stageNumber": 1,
-                "startTime": "2023-03-27T22:17:26.978Z",
+                "startTime": "2023-06-19T05:39:47.166Z",
                 "workerCount": 1,
               },
             ],
           },
-          "startTime": 2023-03-27T22:17:02.401Z,
+          "startTime": 2023-06-19T05:39:26.377Z,
           "status": "SUCCESS",
           "usageInfo": Object {
             "pendingTasks": 0,
             "runningTasks": 2,
           },
+          "warnings": undefined,
+        }
+      `);
+    });
+  });
+
+  describe('.fromAsyncStatus', () => {
+    it('works on SUCCESS', () => {
+      expect(Execution.fromAsyncStatus(SUCCESS_ASYNC_STATUS)).toMatchInlineSnapshot(`
+        Execution {
+          "_payload": undefined,
+          "capacityInfo": undefined,
+          "destination": Object {
+            "type": "taskReport",
+          },
+          "duration": 29168,
+          "engine": "sql-msq-task",
+          "error": undefined,
+          "id": "query-ad84d20a-c331-4ee9-ac59-83024e369cf1",
+          "nativeQuery": undefined,
+          "queryContext": undefined,
+          "result": _QueryResult {
+            "header": Array [
+              Column {
+                "name": "channel",
+                "nativeType": "STRING",
+                "sqlType": "VARCHAR",
+              },
+              Column {
+                "name": "Count",
+                "nativeType": "LONG",
+                "sqlType": "BIGINT",
+              },
+            ],
+            "query": undefined,
+            "queryDuration": undefined,
+            "queryId": undefined,
+            "resultContext": undefined,
+            "rows": Array [
+              Array [
+                "#en.wikipedia",
+                6650,
+              ],
+              Array [
+                "#sh.wikipedia",
+                3969,
+              ],
+            ],
+            "sqlQuery": undefined,
+            "sqlQueryId": undefined,
+          },
+          "sqlQuery": undefined,
+          "stages": undefined,
+          "startTime": 2023-07-05T21:33:19.147Z,
+          "status": "SUCCESS",
+          "usageInfo": undefined,
+          "warnings": undefined,
+        }
+      `);
+    });
+
+    it('works on FAILED', () => {
+      expect(Execution.fromAsyncStatus(FAILED_ASYNC_STATUS)).toMatchInlineSnapshot(`
+        Execution {
+          "_payload": undefined,
+          "capacityInfo": undefined,
+          "destination": undefined,
+          "duration": 11217,
+          "engine": "sql-msq-task",
+          "error": Object {
+            "error": Object {
+              "category": "UNCATEGORIZED",
+              "context": Object {
+                "message": "java.io.UncheckedIOException: /",
+              },
+              "error": "druidException",
+              "errorCode": "UnknownError",
+              "errorMessage": "java.io.UncheckedIOException: /",
+              "persona": "USER",
+            },
+            "taskId": "query-36ea273a-bd6d-48de-b890-2d853d879bf8",
+          },
+          "id": "query-36ea273a-bd6d-48de-b890-2d853d879bf8",
+          "nativeQuery": undefined,
+          "queryContext": undefined,
+          "result": undefined,
+          "sqlQuery": undefined,
+          "stages": undefined,
+          "startTime": 2023-07-05T21:40:39.986Z,
+          "status": "FAILED",
+          "usageInfo": undefined,
           "warnings": undefined,
         }
       `);

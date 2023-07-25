@@ -62,6 +62,7 @@ export interface StageDefinition {
     };
     maxWorkerCount: number;
     shuffleCheckHasMultipleValues?: boolean;
+    maxInputBytesPerWorker?: number;
   };
   phase?: 'NEW' | 'READING_INPUT' | 'POST_READING' | 'RESULTS_READY' | 'FINISHED' | 'FAILED';
   workerCount?: number;
@@ -74,7 +75,7 @@ export interface StageDefinition {
 export interface ClusterBy {
   columns: {
     columnName: string;
-    descending?: boolean;
+    order?: 'ASCENDING' | 'DESCENDING';
   }[];
   bucketByCount?: number;
 }
@@ -94,7 +95,9 @@ export function formatClusterBy(
     }
   }
 
-  return columns.map(part => part.columnName + (part.descending ? ' DESC' : '')).join(', ');
+  return columns
+    .map(part => part.columnName + (part.order === 'DESCENDING' ? ' DESC' : ''))
+    .join(', ');
 }
 
 export interface StageWorkerCounter {

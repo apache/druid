@@ -524,7 +524,7 @@ public class FrameProcessorExecutor
       }
 
       // Wait for all running processors to stop running. Then clean them up outside the critical section.
-      while (processorsToCancel.stream().anyMatch(runningProcessors::containsKey)) {
+      while (anyIsRunning(processorsToCancel)) {
         lock.wait();
       }
     }
@@ -604,5 +604,17 @@ public class FrameProcessorExecutor
 
       log.debug(StringUtils.encodeForFormat(sb.toString()));
     }
+  }
+
+  @GuardedBy("lock")
+  private boolean anyIsRunning(Set<FrameProcessor<?>> processors)
+  {
+    for (final FrameProcessor<?> processor : processors) {
+      if (runningProcessors.containsKey(processor)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

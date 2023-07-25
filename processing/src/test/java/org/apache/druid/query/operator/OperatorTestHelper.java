@@ -20,12 +20,14 @@
 package org.apache.druid.query.operator;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.junit.Assert;
 
+import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -37,7 +39,7 @@ public class OperatorTestHelper
   public OperatorTestHelper expectRowsAndColumns(RowsAndColumnsHelper... helpers)
   {
     return withPushFn(
-        new JustPushMe()
+        () -> new JustPushMe()
         {
           int index = 0;
 
@@ -56,7 +58,7 @@ public class OperatorTestHelper
   public OperatorTestHelper expectAndStopAfter(RowsAndColumnsHelper... helpers)
   {
     return withPushFn(
-        new JustPushMe()
+        () -> new JustPushMe()
         {
           int index = 0;
 
@@ -95,12 +97,12 @@ public class OperatorTestHelper
     return this;
   }
 
-  public OperatorTestHelper withPushFn(JustPushMe fn)
+  public OperatorTestHelper withPushFn(Supplier<JustPushMe> fnSupplier)
   {
-    return withReceiver(() -> new TestReceiver(fn));
+    return withReceiver(() -> new TestReceiver(fnSupplier.get()));
   }
 
-  public OperatorTestHelper runToCompletion(Operator op)
+  public void runToCompletion(Operator op)
   {
     TestReceiver receiver = this.receiverSupply.get();
     Operator.go(op, receiver);
@@ -108,7 +110,36 @@ public class OperatorTestHelper
     if (finalValidation != null) {
       finalValidation.accept(receiver);
     }
-    return this;
+
+    for (int i = 1; i < receiver.getNumPushed(); ++i) {
+      long expectedNumPauses = receiver.getNumPushed() / i;
+      if (receiver.getNumPushed() % i > 0) {
+        ++expectedNumPauses;
+      }
+      runWhilePausing(op, expectedNumPauses, i);
+    }
+  }
+
+  private void runWhilePausing(Operator op, long expectedNumPauses, int pauseAfter)
+  {
+    // We are now going to do the same pushes and the same validation, but pausing after every possible point
+    // that we could pause.  It should still produce the same results as running through without any pauses.
+    TestReceiver pausingReceiver = this.receiverSupply.get();
+    pausingReceiver.setPauseAfter(pauseAfter);
+
+    int numPauses = 0;
+    Closeable continuation = null;
+    do {
+      continuation = op.goOrContinue(continuation, pausingReceiver);
+      ++numPauses;
+    } while (continuation != null);
+
+    final String msg = StringUtils.format("pauseAfter[%,d]", pauseAfter);
+    Assert.assertTrue(msg, pausingReceiver.isCompleted());
+    Assert.assertEquals(msg, expectedNumPauses, numPauses);
+    if (finalValidation != null) {
+      finalValidation.accept(pausingReceiver);
+    }
   }
 
   public interface JustPushMe
@@ -120,8 +151,9 @@ public class OperatorTestHelper
   {
     private final JustPushMe pushFn;
 
-    private AtomicLong numPushed = new AtomicLong();
+    private AtomicInteger numPushed = new AtomicInteger();
     private AtomicBoolean completed = new AtomicBoolean(false);
+    private long pauseAfter = -1;
 
     public TestReceiver(JustPushMe pushFn)
     {
@@ -132,7 +164,14 @@ public class OperatorTestHelper
     public Operator.Signal push(RowsAndColumns rac)
     {
       numPushed.incrementAndGet();
-      return pushFn.push(rac);
+
+      final Operator.Signal push = pushFn.push(rac);
+
+      if (push == Operator.Signal.GO && pauseAfter != -1 && numPushed.get() % pauseAfter == 0) {
+        return Operator.Signal.PAUSE;
+      }
+
+      return push;
     }
 
     public boolean isCompleted()
@@ -148,9 +187,14 @@ public class OperatorTestHelper
       }
     }
 
-    public long getNumPushed()
+    public int getNumPushed()
     {
       return numPushed.get();
+    }
+
+    public void setPauseAfter(long pauseAfter)
+    {
+      this.pauseAfter = pauseAfter;
     }
   }
 }

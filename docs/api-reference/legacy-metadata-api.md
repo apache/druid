@@ -23,7 +23,7 @@ sidebar_label: Legacy metadata
   ~ under the License.
   -->
 
-This document describes the legacy API endpoints to retrieve datasource metadata from Apache Druid. Use the [SQL metadata tables](/querying/sql-metadata-tables.md) to retrieve datasource metadata instead.
+This document describes the legacy API endpoints to retrieve datasource metadata from Apache Druid. Use the [SQL metadata tables](../querying/sql-metadata-tables.md) to retrieve datasource metadata instead.
 
 ## Segment loading
 

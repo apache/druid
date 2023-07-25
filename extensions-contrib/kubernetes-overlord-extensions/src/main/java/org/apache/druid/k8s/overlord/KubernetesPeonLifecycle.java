@@ -226,7 +226,7 @@ public class KubernetesPeonLifecycle
       return TaskLocation.unknown();
     }
 
-    Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId);
+    Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
     if (!maybePod.isPresent()) {
       return TaskLocation.unknown();
     }
