@@ -75,7 +75,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlResourceTest;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.joda.time.DateTime;
@@ -153,7 +152,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                                      ColumnType.STRING
                                  )
                                  .build()))
-             .destination(new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
+             .destination(TaskReportMSQDestination.instance())
              .tuningConfig(
                  MSQTuningConfig.defaultConfig())
              .build(),

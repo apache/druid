@@ -21,7 +21,6 @@ package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.sql.http.ResultFormat;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -31,5 +30,5 @@ import org.apache.druid.sql.http.ResultFormat;
 })
 public interface MSQDestination
 {
-  ResultFormat getResultFormat();
+  // No methods. Just a marker interface for deserialization.
 }

@@ -27,7 +27,6 @@ import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.http.ResultFormat;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -134,7 +133,7 @@ public class MSQSpec
   {
     private Query<?> query;
     private ColumnMappings columnMappings;
-    private MSQDestination destination = new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT);
+    private MSQDestination destination = TaskReportMSQDestination.instance();
 
     private WorkerAssignmentStrategy assignmentStrategy = WorkerAssignmentStrategy.MAX;
     private MSQTuningConfig tuningConfig;
@@ -172,7 +171,7 @@ public class MSQSpec
     public MSQSpec build()
     {
       if (destination == null) {
-        destination = new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT);
+        destination = TaskReportMSQDestination.instance();
       }
 
       return new MSQSpec(query, columnMappings, destination, assignmentStrategy, tuningConfig);

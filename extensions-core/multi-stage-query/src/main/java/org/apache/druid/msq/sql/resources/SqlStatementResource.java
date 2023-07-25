@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
@@ -327,7 +328,7 @@ public class SqlStatementResource
         return Response.ok().build();
       }
 
-      ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec().getDestination());
+      ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
       return Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
@@ -658,10 +659,15 @@ public class SqlStatementResource
     return msqControllerTask;
   }
 
-  private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQDestination destination)
+  private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQSpec msqSpec)
   {
     if (resultFormatParam == null) {
-      return destination.getResultFormat();
+      return QueryContexts.getAsEnum(
+          MSQTaskQueryMaker.RESULT_FORMAT,
+          msqSpec.getQuery().context().get(MSQTaskQueryMaker.RESULT_FORMAT),
+          ResultFormat.class,
+          ResultFormat.DEFAULT_RESULT_FORMAT
+      );
     }
 
     return QueryContexts.getAsEnum(
