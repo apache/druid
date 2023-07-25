@@ -73,7 +73,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("markAsUnused") Boolean markAsUnused,
-      @JsonProperty("maxSegmentsToKill") Integer maxSegmentsToKill
+      @JsonProperty("maxSegmentsToKill") @Nullable Integer maxSegmentsToKill
   )
   {
     super(
@@ -83,8 +83,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         context
     );
     this.markAsUnused = markAsUnused != null && markAsUnused;
+    Preconditions.checkArgument(maxSegmentsToKill > 0, "maxSegmentsToKill must be > 0");
     this.maxSegmentsToKill = maxSegmentsToKill;
-    Preconditions.checkArgument(this.maxSegmentsToKill > 0, "maxSegmentsToKill must be > 0");
 
   }
 

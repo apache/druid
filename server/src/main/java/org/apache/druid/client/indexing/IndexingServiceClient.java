@@ -37,7 +37,7 @@ import java.util.Map;
  */
 public interface IndexingServiceClient
 {
-  void killUnusedSegments(String idPrefix, String dataSource, Interval interval);
+  void killUnusedSegments(String idPrefix, String dataSource, Interval interval, @Nullable Integer maxSegmentsToKill);
 
   int killPendingSegments(String dataSource, DateTime end);
 

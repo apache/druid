@@ -71,10 +71,21 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
+  public void killUnusedSegments(
+      String idPrefix,
+      String dataSource,
+      Interval interval,
+      @Nullable Integer maxSegmentsToKill
+  )
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(
+        taskId,
+        dataSource,
+        interval,
+        false,
+        maxSegmentsToKill
+    );
     runTask(taskId, taskQuery);
   }
 

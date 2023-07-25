@@ -129,7 +129,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
 
       try {
-        indexingServiceClient.killUnusedSegments("coordinator-issued", dataSource, intervalToKill);
+        indexingServiceClient.killUnusedSegments("coordinator-issued", dataSource, intervalToKill, maxSegmentsToKill);
         ++submittedTasks;
       }
       catch (Exception ex) {

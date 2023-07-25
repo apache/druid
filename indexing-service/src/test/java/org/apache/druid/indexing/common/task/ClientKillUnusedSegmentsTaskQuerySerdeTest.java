@@ -51,7 +51,8 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "killTaskId",
         "datasource",
         Intervals.of("2020-01-01/P1D"),
-        true
+        true,
+        5
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
     final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
@@ -59,6 +60,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
+    Assert.assertEquals(taskQuery.getMaxSegmentsToKill(), fromJson.getMaxSegmentsToKill());
   }
 
   @Test

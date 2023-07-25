@@ -145,7 +145,7 @@ public class KillUnusedSegmentsTest
 
     target.run(params);
     Mockito.verify(indexingServiceClient, Mockito.never())
-           .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+           .killUnusedSegments(anyString(), anyString(), any(Interval.class), any(Integer.class));
   }
 
   @Test
@@ -158,7 +158,7 @@ public class KillUnusedSegmentsTest
     // No unused segment is older than the retention period
     target.run(params);
     Mockito.verify(indexingServiceClient, Mockito.never())
-           .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+           .killUnusedSegments(anyString(), anyString(), any(Interval.class), any(Integer.class));
   }
 
   @Test
@@ -220,7 +220,8 @@ public class KillUnusedSegmentsTest
     Mockito.verify(indexingServiceClient, Mockito.times(1)).killUnusedSegments(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("DS1"),
-        ArgumentMatchers.eq(expectedKillInterval)
+        ArgumentMatchers.eq(expectedKillInterval),
+        ArgumentMatchers.eq(config.getCoordinatorKillMaxSegments())
     );
   }
 

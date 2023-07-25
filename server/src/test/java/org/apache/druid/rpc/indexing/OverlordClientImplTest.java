@@ -45,7 +45,7 @@ public class OverlordClientImplTest
     MockServiceClient client = new MockServiceClient();
     final OverlordClientImpl overlordClient = new OverlordClientImpl(client, DefaultObjectMapper.INSTANCE);
 
-    ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(taskID, "test", null, null);
+    ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(taskID, "test", null, null, null);
 
     client.expect(new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/" + taskID),
                   HttpResponseStatus.OK,

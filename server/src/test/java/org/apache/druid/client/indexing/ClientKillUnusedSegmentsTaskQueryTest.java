@@ -40,7 +40,13 @@ public class ClientKillUnusedSegmentsTaskQueryTest
   @Before
   public void setUp()
   {
-    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery("killTaskId", DATA_SOURCE, INTERVAL, true);
+    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery(
+        "killTaskId",
+        DATA_SOURCE,
+        INTERVAL,
+        true,
+        null
+    );
   }
 
   @After
