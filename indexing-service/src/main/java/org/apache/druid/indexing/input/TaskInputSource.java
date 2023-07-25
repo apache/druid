@@ -23,9 +23,16 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 
 /**
- * An InputSource which may require a TaskToolbox to interact with the Overlord
+ * An InputSource that allows the addition of a task toolbox to use it internally.
  */
 public interface TaskInputSource extends InputSource
 {
+  /**
+   * This method would ideally reside in the InputSource interface, but the TaskToolbox isn't accessible in that module.
+   * This method provides a way for the DruidInputSource and perhaps others to set a provided TaskToolbox.
+   *
+   * @param toolbox to be added
+   * @return InputSource which utilizes the task toolbox
+   */
   InputSource withTaskToolbox(TaskToolbox toolbox);
 }
