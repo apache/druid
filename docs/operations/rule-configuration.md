@@ -167,7 +167,7 @@ Set the following properties:
   - the segment interval starts any time after the rule interval starts.
 
   You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. If you set the replicants for a period to 0 on all tiers, you can still [query the data from deep storage](../querying/query-from-deep-storage.md)
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. If you set the replicants for a period to 0 on all tiers, you can still [query the data from deep storage](../querying/query-from-deep-storage.md).
 - `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Interval load rule

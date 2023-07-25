@@ -26,7 +26,7 @@ title: "Query from deep storage"
 
 ## Segments in deep storage
 
-Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. To take advantage of the space savings that querying from deep storage provides though, you need to make sure not all your segments get loaded onto Historical processes.
+Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the space savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes.
 
 To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to load only the segments you do want on Historical processes. 
 
@@ -45,7 +45,7 @@ For example, the following interval load rule assigns 0 replicants for the speci
   }
 ```
 
-This means that any segments within that interval don't get loaded onto `_default_tier` . Then, create a corresponding drop rule so that Druid drops the segments from Historical tiers if they were previously loaded.
+This means that any segments within that interval don't get loaded onto `_default_tier`. Then, create a corresponding drop rule so that Druid drops the segments from Historical tiers if they were previously loaded.
 
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
@@ -53,7 +53,7 @@ You can verify that a segment is not loaded on any Historical tiers by querying 
 SELECT "segment_id", "replication_factor" FROM sys."segments" WHERE "replication_factor" = 0 AND "datasource" = YOUR_DATASOURCE
 ```
 
-Segments with a `replication_factor` of `0` are not assigned to any Historical tiers. Queries you run against these segments are run directly against the segment in deep storage. 
+Segments with a `replication_factor` of `0` are not assigned to any Historical tiers. Queries against these segments are run directly against the segment in deep storage. 
 
 You can also confirm this through the Druid console. On the **Segments** page, see the **Replication factor** column.
 

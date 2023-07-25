@@ -23,9 +23,9 @@ title: "Deep storage"
   -->
 
 
-Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data, as long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
+Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data. As long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
-In addition to being the backing store for segments, you can use  [query from deep storage](#querying-from-deep-storage) and run queries against segments stored primarily in deep storage. Whether segments exist primarily in deep storage or in deep storage and on Historical processes, is determined by the [load rules](../operations/rule-configuration.md#load-rules) you configure.
+In addition to being the backing store for segments, you can use [query from deep storage](#querying-from-deep-storage) and run queries against segments stored primarily in deep storage. The [load rules](../operations/rule-configuration.md#load-rules) you configure determine whether segments exist primarily in deep storage or in a combination of deep storage and Historical processes.
 
 ## Deep storage options
 
@@ -83,6 +83,6 @@ For additional deep storage options, please see our [extensions list](../configu
 
 ## Querying from deep storage
 
-Although not as performant as querying segments stored on disk for Historicals processes, you can query from deep storage to access segments that you may not need frequently or with the extreme low latency Druid queries traditionally provide. You trade some performance for a total lower storage cost because you can access more of your data without the need to increase the number or capacity of your Historical processes.
+Although not as performant as querying segments stored on disk for Historical processes, you can query from deep storage to access segments that you may not need frequently or with the extreme low latency Druid queries traditionally provide. You trade some performance for a total lower storage cost because you can access more of your data without the need to increase the number or capacity of your Historical processes.
 
-For information about how to run queries, see [Query from deep storage](../querying/query-from-deep-storage.md)
+For information about how to run queries, see [Query from deep storage](../querying/query-from-deep-storage.md).

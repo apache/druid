@@ -62,5 +62,5 @@ the storage connector to work upon the durable storage. The durable storage loca
 for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
 Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
-by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)
-If the configured limit is too low, `NotEnoughTemporaryStorageFault` may be thrown.
+by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes).
+If the configured limit is too low, Druid may throw the error, `NotEnoughTemporaryStorageFault`.

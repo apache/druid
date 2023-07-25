@@ -212,16 +212,16 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 {"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
 ```  
 
-Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. For general information about the available fields, see [submit a query to the `sql` endpoint](#submit-a-query).
+Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. For general information about the available fields, see [Submit a query to the `sql` endpoint](#submit-a-query).
 
 Keep the following in mind when submitting queries to the `sql/statements` endpoint:
 
 - There are additional context parameters  for `sql/statements`: 
 
-   - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
+   - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. 
    - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
-- The only supported results format is JSON.
+- The only supported value for `resultFormat` is JSON.
 - Only the user who submits a query can see the results.
 
 
@@ -231,7 +231,7 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 ```
 
-Returns the same response as the post API if the query is accepted or running. The response for a completed query includes the same information as an in-progress query with several additions:
+Returns information about the query associated with the given query ID. The response matches the response from the POST API if the query is accepted or running. The response for a completed query includes the same information as an in-progress query with several additions:
 
 - A `result` object that summarizes information about your results, such as the total number of rows and a sample record
 - A `pages` object that includes the following information for each page of results:
@@ -250,7 +250,7 @@ Results are separated into pages, so you can use the optional `page` parameter t
 
 When getting query results, keep the following in mind:
 
-- JSON is the only supported result format
+- JSON is the only supported result format.
 - If you attempt to get the results for an in-progress query, Druid returns an error. 
 
 ### Cancel a query
