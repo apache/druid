@@ -350,9 +350,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
-                                       .castTo(ExpressionType.fromColumnTypeStrict(logicalType));
-      final Object[] arrayToMatch = eval.asArray();
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> evalCast = eval.castTo(ExpressionType.fromColumnTypeStrict(logicalType));
+      if (ExprEval.castTypeNarrowingLosesEquality(eval, evalCast)) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
+      final Object[] arrayToMatch = evalCast.asArray();
       Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
@@ -425,8 +428,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value)
-                                       .castTo(ExpressionType.fromColumnTypeStrict(logicalType.getElementType()));
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
+      final ExprEval<?> evalCast = eval.castTo(ExpressionType.fromColumnTypeStrict(logicalType.getElementType()));
+      if (ExprEval.castTypeNarrowingLosesEquality(eval, evalCast)) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
 
       Indexed elements;
       final int elementOffset;
@@ -475,12 +481,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
         private int getElementId()
         {
-          if (eval.value() == null) {
+          if (evalCast.value() == null) {
             return 0;
-          } else if (eval.type().is(ExprType.STRING)) {
-            return elements.indexOf(StringUtils.toUtf8ByteBuffer(eval.asString()));
+          } else if (evalCast.type().is(ExprType.STRING)) {
+            return elements.indexOf(StringUtils.toUtf8ByteBuffer(evalCast.asString()));
           } else {
-            return elements.indexOf(eval.value()) + elementOffset;
+            return elements.indexOf(evalCast.value()) + elementOffset;
           }
         }
       };

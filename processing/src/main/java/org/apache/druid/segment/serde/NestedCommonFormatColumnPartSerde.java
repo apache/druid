@@ -211,9 +211,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
@@ -234,9 +231,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);

@@ -517,7 +517,13 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           hasLowerBound = false;
           lowerBound = Long.MIN_VALUE;
         } else {
-          lowerBound = lowerCast.asLong();
+          // take the ceiling of the match value if the DOUBLE value is not the same after casting to a LONG
+          // otherwise we end up with strange behavior such as matching 1 for x > 1.1
+          if (ExprEval.castTypeNarrowingLosesEquality(lowerEval, lowerCast)) {
+            lowerBound = lowerOpen ? (long) Math.floor(lowerEval.asDouble()) : (long) Math.ceil(lowerEval.asDouble());
+          } else {
+            lowerBound = lowerCast.asLong();
+          }
           hasLowerBound = true;
         }
       } else {
@@ -531,8 +537,15 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
+          // take the floor of the match value if the DOUBLE value is not the same after casting to a LONG
+          // technically we could probably just always cast here since this cast is equivalent to Math.floor, but this
+          // isnt a hot loop and so doesn't hurt to be explicit
+          if (ExprEval.castTypeNarrowingLosesEquality(upperEval, upperCast)) {
+            upperBound = upperOpen ? (long) Math.ceil(upperEval.asDouble()) : (long) Math.floor(upperEval.asDouble());
+          } else {
+            upperBound = upperCast.asLong();
+          }
           hasUpperBound = true;
-          upperBound = upperCast.asLong();
         }
       } else {
         hasUpperBound = false;
@@ -614,10 +627,20 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     final Comparator<Object[]> arrayComparator = inputType.getNullableStrategy();
     final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(inputType);
     final RangeType rangeType = RangeType.of(hasLowerBound(), lowerOpen, hasUpperBound(), upperOpen);
-    final Object[] lowerBound = hasLowerBound() ? lowerEval.castTo(expressionType).asArray() : null;
-    final Object[] upperBound = hasUpperBound() ? upperEval.castTo(expressionType).asArray() : null;
+    final Object[] lowerBound = hasLowerBound()
+                                ? lowerOpen
+                                  ? lowerEval.castTo(expressionType).asArray()
+                                  : castArrayToCeil(lowerEval, expressionType)
+                                : null;
+    final Object[] upperBound = hasUpperBound()
+                                ? upperOpen
+                                  ? castArrayToCeil(upperEval, expressionType)
+                                  : upperEval.castTo(expressionType).asArray()
+                                : null;
     return makeComparatorPredicate(rangeType, arrayComparator, lowerBound, upperBound);
   }
+
+
 
   private Supplier<Predicate<Object[]>> makeTypeDetectingArrayPredicate()
   {
@@ -631,7 +654,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
             final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
-            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Object[] upperBound = castArrayToCeil(upperEval, val.asArrayType());
             final Comparator<Object[]> comparator = val.type().getNullableStrategy();
             final int lowerComparing = comparator.compare(val.asArray(), lowerBound);
             final int upperComparing = comparator.compare(upperBound, val.asArray());
@@ -656,8 +679,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
-            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Object[] lowerBound = castArrayToCeil(lowerEval, val.asArrayType());
+            final Object[] upperBound = castArrayToCeil(upperEval, val.asArrayType());
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
@@ -669,7 +692,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] lowerBound = castArrayToCeil(lowerEval, val.asArrayType());
             final Object[] upperBound = upperEval.castTo(val.type()).asArray();
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
@@ -682,7 +705,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Object[] upperBound = castArrayToCeil(upperEval, val.asArrayType());
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return upperComparing > 0;
@@ -715,7 +738,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] lowerBound = castArrayToCeil(lowerEval, val.asArrayType());
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int lowerComparing = arrayComparator.compare(lowerBound, val.asArray());
             return lowerComparing >= 0;
@@ -725,6 +748,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           return Predicates.notNull();
       }
     });
+
   }
 
   private class RangePredicateFactory implements DruidPredicateFactory
@@ -809,6 +833,25 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       return "RangePredicateFactory{" +
              "rangeFilter=" + rangeFilter +
              '}';
+    }
+  }
+
+  /**
+   * if casting to a LONG typed ARRAY, first cast to a DOUBLE typed ARRAY and then {@link Math#ceil(double)} on the
+   * values to ensure a correct lower bound
+   */
+  private static Object[] castArrayToCeil(ExprEval<?> lowerEval, ExpressionType inputType)
+  {
+    if (ExpressionType.LONG_ARRAY.equals(inputType)) {
+      final ExprEval<?> doubleArray = lowerEval.castTo(ExpressionType.DOUBLE_ARRAY);
+      final Object[] o = doubleArray.asArray();
+      final Object[] ceilArray = new Object[o.length];
+      for (int i = 0; i < o.length; i++) {
+        ceilArray[i] = o[i] == null ? null : (long) Math.ceil((Double) o[i]);
+      }
+      return ceilArray;
+    } else {
+      return lowerEval.castTo(inputType).asArray();
     }
   }
 

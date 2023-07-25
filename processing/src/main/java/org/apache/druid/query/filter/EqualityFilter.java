@@ -53,6 +53,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
@@ -401,9 +402,10 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final Long valueAsLong = (Long) matchValue.castTo(ExpressionType.LONG).valueOrDefault();
-
-        if (valueAsLong == null) {
+        final ExprEval<?> longEval = matchValue.castTo(ExpressionType.LONG);
+        final Long valueAsLong = (Long) longEval.valueOrDefault();
+        // if match value is null, or if match value is a DOUBLE that doesn't exactly match after cast to LONG
+        if (valueAsLong == null || ExprEval.castTypeNarrowingLosesEquality(matchValue, longEval)) {
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
           // store the primitive, so we don't unbox for every comparison
@@ -458,7 +460,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return Suppliers.memoize(() -> input -> {
         final ExprEval<?> eval = ExprEval.bestEffortOf(input);
         final Comparator<Object[]> arrayComparator = eval.type().getNullableStrategy();
-        final Object[] matchArray = matchValue.castTo(eval.type()).asArray();
+        final ExprEval<?> cast = matchValue.castTo(eval.type());
+        if (ExprEval.castTypeNarrowingLosesEquality(matchValue, cast)) {
+          return false;
+        }
+        final Object[] matchArray = cast.asArray();
         return arrayComparator.compare(input, matchArray) == 0;
       });
     }
@@ -466,7 +472,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(arrayType);
       final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-      final Object[] matchArray = matchValue.castTo(expressionType).asArray();
+      final ExprEval<?> cast = matchValue.castTo(expressionType);
+      if (ExprEval.castTypeNarrowingLosesEquality(matchValue, cast)) {
+        return Predicates.alwaysFalse();
+      }
+      final Object[] matchArray = cast.asArray();
       return input -> arrayComparator.compare(input, matchArray) == 0;
     }
 
@@ -542,7 +552,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      return ValueMatchers.makeLongValueMatcher(selector, matchValue.castTo(ExpressionType.LONG).asLong());
+      final ExprEval<?> longEval = matchValue.castTo(ExpressionType.LONG);
+      if (ExprEval.castTypeNarrowingLosesEquality(matchValue, longEval)) {
+        return BooleanValueMatcher.of(false);
+      }
+      return ValueMatchers.makeLongValueMatcher(selector, longEval.asLong());
     }
 
     @Override

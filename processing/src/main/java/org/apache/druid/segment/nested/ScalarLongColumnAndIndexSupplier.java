@@ -51,6 +51,7 @@ import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -232,13 +233,20 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
 
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
-                                       .castTo(ExpressionType.LONG);
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> longEval = eval.castTo(ExpressionType.LONG);
+
       if (eval.isNumericNull()) {
         // value wasn't null, but not a number
         return null;
       }
-      final long longValue = eval.asLong();
+      // make sure the match value type as a DOUBLE is equivalent after being cast to a LONG
+      // this allows us to match 1 with 1.0, but not with 1.1
+      if (ExprEval.castTypeNarrowingLosesEquality(eval, longEval)) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
+      final long longValue = longEval.asLong();
+
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
@@ -417,9 +425,13 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     {
       final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
       IntIntPair range = dictionary.getRange(
-          startValue == null ? null : startValue.longValue(),
+          startValue == null
+          ? null
+          : startStrict ? (long) Math.floor(startValue.doubleValue()) : (long) Math.ceil(startValue.doubleValue()),
           startStrict,
-          endValue == null ? null : endValue.longValue(),
+          endValue == null
+          ? null
+          : endStrict ? (long) Math.ceil(endValue.doubleValue()) : (long) Math.floor(endValue.doubleValue()),
           endStrict
       );
 

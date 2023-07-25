@@ -61,6 +61,9 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   {
     ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
     ExprEval<?> cast = eval.castTo(ExpressionType.LONG);
+    if (ExprEval.castTypeNarrowingLosesEquality(eval, cast)) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
     if (cast.isNumericNull()) {
       return makeNullValueMatcher(selector);
     }

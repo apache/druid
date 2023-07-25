@@ -1320,6 +1320,52 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByRootSingleTypeLongJsonValueFilter()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(long, '$.') = '1' GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn(
+                                "long",
+                                "v0",
+                                ColumnType.STRING,
+                                Collections.emptyList(),
+                                false,
+                                null,
+                                false
+                            )
+                        )
+                        .setDimFilter(
+                            equality("v0", "1", ColumnType.STRING)
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testGroupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
   {
     if (NullHandling.replaceWithDefault()) {
@@ -2737,6 +2783,43 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             // as long typed, which makes a long processor which will convert the 1.1 to a 1L
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariant2Double()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.mixed2') = 1.1 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0")
+                            )
+                        )
+                        .setDimFilter(equality("v0", 1.1, ColumnType.DOUBLE))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", 1L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
