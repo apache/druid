@@ -42,11 +42,12 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -137,7 +138,13 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
 
       IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+          new IndexableAdapter.NestedColumnMergable(
+              indexer.getSortedValueLookups(),
+              indexer.getFieldTypeInfo(),
+              false,
+              false,
+              null
+          )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
@@ -242,8 +249,9 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
     VectorValueSelector vectorValueSelector = column.makeVectorValueSelector(vectorOffset);
 
-    StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
-    DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
+    ValueIndexes valueIndexes = supplier.as(ValueIndexes.class);
+    StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
+    DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
@@ -273,6 +281,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         }
 
         Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(valueIndexes.forValue(row, ColumnType.LONG).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(String.valueOf(row))))
                                        .computeBitmapResult(resultFactory)
                                        .get(i));
@@ -286,7 +295,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
                                          .computeBitmapResult(resultFactory)
                                          .get(i));
-        Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
 
       } else {
         if (NullHandling.sqlCompatible()) {
@@ -294,7 +303,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertTrue(valueSelector.isNull());
           Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
           Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-          Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+          Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
           Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
                                           .computeBitmapResult(resultFactory)
                                           .get(i));
@@ -303,7 +312,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertFalse(valueSelector.isNull());
           Assert.assertNull(vectorValueSelector.getNullVector());
           Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-          Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+          Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
           Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
                                            .computeBitmapResult(resultFactory)
                                            .get(i));

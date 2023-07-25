@@ -525,7 +525,7 @@ ORDER BY "start" DESC`;
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const { datasources, activeDataType, activeDatasource, startDate, endDate } = this.state;
 

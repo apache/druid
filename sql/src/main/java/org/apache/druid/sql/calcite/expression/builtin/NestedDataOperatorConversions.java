@@ -40,11 +40,12 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedPathFinder;
@@ -56,10 +57,10 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletFactory;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
@@ -189,23 +190,13 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
       // pre-normalize path so that the same expressions with different jq syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathPart> parts;
-      try {
-        parts = NestedPathFinder.parseJsonPath(path);
-      }
-      catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
-      }
+      final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "json_query(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
@@ -231,7 +222,6 @@ public class NestedDataOperatorConversions
       return DruidExpression.ofExpression(ColumnType.NESTED_DATA, builder, druidExpressions);
     }
   }
-
 
   /**
    * The {@link org.apache.calcite.sql2rel.StandardConvertletTable} converts json_value(.. RETURNING type) into
@@ -380,23 +370,15 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
       // pre-normalize path so that the same expressions with different jq syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathPart> parts;
-      try {
-        parts = NestedPathFinder.parseJsonPath(path);
-      }
-      catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
-      }
+
+      final List<NestedPathPart> parts = extractNestedPathParts(call, path);
+
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
@@ -510,7 +492,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -521,7 +503,7 @@ public class NestedDataOperatorConversions
         parts = NestedPathFinder.parseJsonPath(path);
       }
       catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
+        throw InvalidSqlInput.exception(
             "Cannot use [%s]: [%s]",
             call.getOperator().getName(),
             iae.getMessage()
@@ -678,23 +660,13 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
       // pre-normalize path so that the same expressions with different jq syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
-      final List<NestedPathPart> parts;
-      try {
-        parts = NestedPathFinder.parseJsonPath(path);
-      }
-      catch (IllegalArgumentException iae) {
-        throw new UnsupportedSQLQueryException(
-            "Cannot use [%s]: [%s]",
-            call.getOperator().getName(),
-            iae.getMessage()
-        );
-      }
+      final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
@@ -713,7 +685,7 @@ public class NestedDataOperatorConversions
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
                 name,
-                outputType,
+                null,
                 parts,
                 false,
                 null,
@@ -895,6 +867,21 @@ public class NestedDataOperatorConversions
               druidExpressions
           )
       );
+    }
+  }
+
+  @Nonnull
+  private static List<NestedPathPart> extractNestedPathParts(RexCall call, String path)
+  {
+    try {
+      return NestedPathFinder.parseJsonPath(path);
+    }
+    catch (IllegalArgumentException iae) {
+      final String name = call.getOperator().getName();
+      throw DruidException
+          .forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.INVALID_INPUT)
+          .build(iae, "Error when processing path [%s], operator [%s] is not useable", path, name);
     }
   }
 }

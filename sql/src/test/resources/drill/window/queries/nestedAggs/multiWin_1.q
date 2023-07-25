@@ -1,0 +1,1 @@
+SELECT MAX(COUNT(c2)) OVER ( PARTITION BY c2 ORDER BY c2 ) mx_count_c2, NTILE(3) OVER (PARTITION BY c2 ORDER BY c2) ntil, c2 FROM "tblWnulls.parquet" GROUP BY c2

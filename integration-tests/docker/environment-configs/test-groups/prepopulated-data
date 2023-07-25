@@ -19,6 +19,7 @@
 
 AWS_REGION=us-east-1
 
+# If you are making a change in load list below, make the necessary changes in github actions too
 druid_extensions_loadList=["mysql-metadata-storage","druid-s3-extensions","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-integration-tests"]
 
 # Setting s3 credentials and region to use pre-populated data for testing.

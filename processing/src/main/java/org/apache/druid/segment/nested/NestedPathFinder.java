@@ -19,7 +19,8 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -32,6 +33,45 @@ public class NestedPathFinder
 {
   public static final String JSON_PATH_ROOT = "$";
   public static final String JQ_PATH_ROOT = ".";
+
+  /**
+   * Dig through a thing to find stuff
+   */
+  @Nullable
+  public static Object find(@Nullable Object data, List<NestedPathPart> path)
+  {
+    Object currentObject = data;
+    for (NestedPathPart pathPart : path) {
+      Object objectAtPath = pathPart.find(currentObject);
+      if (objectAtPath == null) {
+        return null;
+      }
+      currentObject = objectAtPath;
+    }
+    return currentObject;
+  }
+
+  /**
+   * find the list of 'keys' at some path.
+   * - if the thing at a path is an object (map), return the fields
+   * - if the thing at a path is an array (list or array), return the 0 based element numbers
+   * - if the thing is a simple value, return null
+   */
+  @Nullable
+  public static Object[] findKeys(@Nullable Object data, List<NestedPathPart> path)
+  {
+    Object currentObject = find(data, path);
+    if (currentObject instanceof Map) {
+      return ((Map) currentObject).keySet().toArray();
+    }
+    if (currentObject instanceof List) {
+      return IntStream.range(0, ((List) currentObject).size()).mapToObj(Integer::toString).toArray();
+    }
+    if (currentObject instanceof Object[]) {
+      return IntStream.range(0, ((Object[]) currentObject).length).mapToObj(Integer::toString).toArray();
+    }
+    return null;
+  }
 
   public static String toNormalizedJsonPath(List<NestedPathPart> paths)
   {
@@ -74,7 +114,7 @@ public class NestedPathFinder
     List<NestedPathPart> parts = new ArrayList<>();
 
     if (!path.startsWith(JSON_PATH_ROOT)) {
-      badFormatJsonPath(path, "must start with '$'");
+      badFormatJsonPath(path, "it must start with '$'");
     }
 
     if (path.length() == 1) {
@@ -97,7 +137,7 @@ public class NestedPathFinder
         partMark = i + 1;
       } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark == (i - 1) && dotMark != 0) {
-          badFormatJsonPath(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '");
+          badFormatJsonPath(path, "found '[' at invalid position [%s], must not follow '.' or must be contained with '", i);
         }
         if (dotMark >= 0 && i > 1) {
           parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -115,13 +155,13 @@ public class NestedPathFinder
           partMark = i + 1;
         }
         catch (NumberFormatException ignored) {
-          badFormatJsonPath(path, "expected number for array specifier got " + maybeNumber + " instead. Use ' if this value was meant to be a field name");
+          badFormatJsonPath(path, "array specifier [%s] should be a number, it was not.  Use ' if this value was meant to be a field name", maybeNumber);
         }
       } else if (dotMark == -1 && arrayMark == -1) {
         badFormatJsonPath(path, "path parts must be separated with '.'");
       } else if (current == '\'' && quoteMark < 0) {
         if (arrayMark != i - 1) {
-          badFormatJsonPath(path, "' must be immediately after '['");
+          badFormatJsonPath(path, "single-quote (') must be immediately after '['");
         }
         quoteMark = i;
         partMark = i + 1;
@@ -130,7 +170,7 @@ public class NestedPathFinder
           if (arrayMark >= 0) {
             continue;
           }
-          badFormatJsonPath(path, "closing ' must immediately precede ']'");
+          badFormatJsonPath(path, "closing single-quote (') must immediately precede ']'");
         }
 
         parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -147,7 +187,7 @@ public class NestedPathFinder
     // add the last element, this should never be an array because they close themselves
     if (partMark < path.length()) {
       if (quoteMark != -1) {
-        badFormatJsonPath(path, "unterminated '");
+        badFormatJsonPath(path, "unterminated single-quote (')");
       }
       if (arrayMark != -1) {
         badFormatJsonPath(path, "unterminated '['");
@@ -195,7 +235,7 @@ public class NestedPathFinder
     List<NestedPathPart> parts = new ArrayList<>();
 
     if (path.charAt(0) != '.') {
-      badFormat(path, "must start with '.'");
+      badFormat(path, "it must start with '.'");
     }
 
     int partMark = -1;  // position to start the next substring to build the path part
@@ -217,13 +257,13 @@ public class NestedPathFinder
             parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
             dotMark = -1;
           } else {
-            badFormat(path, "invalid position " + i + " for '?'");
+            badFormat(path, "found '?' at invalid position [%s]", i);
           }
         }
         partMark = i + 1;
       } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark == (i - 1) && dotMark != 0) {
-          badFormat(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '\"'");
+          badFormat(path, "found '[' at invalid position [%s], must not follow '.' or must be contained with '\"'", i);
         }
         if (dotMark >= 0 && i > 1) {
           parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -241,16 +281,16 @@ public class NestedPathFinder
           partMark = i + 1;
         }
         catch (NumberFormatException ignored) {
-          badFormat(path, "expected number for array specifier got " + maybeNumber + " instead. Use \"\" if this value was meant to be a field name");
+          badFormat(path, "array specifier [%s] should be a number, it was not.  Use \"\" if this value was meant to be a field name", maybeNumber);
         }
       } else if (dotMark == -1 && arrayMark == -1) {
         badFormat(path, "path parts must be separated with '.'");
       } else if (current == '"' && quoteMark < 0) {
         if (partMark != i) {
-          badFormat(path, "invalid position " + i + " for '\"', must immediately follow '.' or '['");
+          badFormat(path, "found '\"' at invalid position [%s], it must immediately follow '.' or '['", i);
         }
         if (arrayMark > 0 && arrayMark != i - 1) {
-          badFormat(path, "'\"' within '[' must be immediately after");
+          badFormat(path, "'\"' within '[', must be immediately after");
         }
         quoteMark = i;
         partMark = i + 1;
@@ -295,80 +335,13 @@ public class NestedPathFinder
     return path.substring(start, end);
   }
 
-  private static void badFormat(String path, String message)
+  private static void badFormat(String path, String message, Object... args)
   {
-    throw new IAE("Bad format, '%s' is not a valid 'jq' path: %s", path, message);
+    throw InvalidInput.exception("jq path [%s] is invalid, %s", path, StringUtils.format(message, args));
   }
 
-  private static void badFormatJsonPath(String path, String message)
+  private static void badFormatJsonPath(String path, String message, Object... args)
   {
-    throw new IAE("Bad format, '%s' is not a valid JSONPath path: %s", path, message);
+    throw InvalidInput.exception("JSONPath [%s] is invalid, %s", path, StringUtils.format(message, args));
   }
-
-  /**
-   * Dig through a thing to find stuff, if that stuff is a not nested itself
-   */
-  @Nullable
-  public static String findStringLiteral(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = find(data, path);
-    if (currentObject instanceof Map || currentObject instanceof List || currentObject instanceof Object[]) {
-      return null;
-    } else {
-      // a literal of some sort, huzzah!
-      if (currentObject == null) {
-        return null;
-      }
-      return String.valueOf(currentObject);
-    }
-  }
-
-  @Nullable
-  public static Object findLiteral(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = find(data, path);
-    if (currentObject instanceof Map || currentObject instanceof List || currentObject instanceof Object[]) {
-      return null;
-    } else {
-      // a literal of some sort, huzzah!
-      if (currentObject == null) {
-        return null;
-      }
-      return currentObject;
-    }
-  }
-
-  @Nullable
-  public static Object[] findKeys(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = find(data, path);
-    if (currentObject instanceof Map) {
-      return ((Map) currentObject).keySet().toArray();
-    }
-    if (currentObject instanceof List) {
-      return IntStream.range(0, ((List) currentObject).size()).mapToObj(Integer::toString).toArray();
-    }
-    if (currentObject instanceof Object[]) {
-      return IntStream.range(0, ((Object[]) currentObject).length).mapToObj(Integer::toString).toArray();
-    }
-    return null;
-  }
-
-  /**
-   * Dig through a thing to find stuff
-   */
-  @Nullable
-  public static Object find(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = data;
-    for (NestedPathPart pathPart : path) {
-      Object objectAtPath = pathPart.find(currentObject);
-      if (objectAtPath == null) {
-        return null;
-      }
-      currentObject = objectAtPath;
-    }
-    return currentObject;
-  }
-
 }

@@ -26,7 +26,8 @@ import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.msq.sql.SqlTaskResource;
+import org.apache.druid.msq.sql.resources.SqlStatementResource;
+import org.apache.druid.msq.sql.resources.SqlTaskResource;
 
 import java.util.Collections;
 import java.util.List;
@@ -43,6 +44,8 @@ public class SqlTaskModule implements DruidModule
     // Force eager initialization.
     LifecycleModule.register(binder, SqlTaskResource.class);
     Jerseys.addResource(binder, SqlTaskResource.class);
+    LifecycleModule.register(binder, SqlStatementResource.class);
+    Jerseys.addResource(binder, SqlStatementResource.class);
   }
 
   @Override

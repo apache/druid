@@ -100,6 +100,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
@@ -200,6 +201,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new PositionOperatorConversion())
                    .add(new RegexpExtractOperatorConversion())
                    .add(new RegexpLikeOperatorConversion())
+                   .add(new RegexpReplaceOperatorConversion())
                    .add(new RTrimOperatorConversion())
                    .add(new ParseLongOperatorConversion())
                    .add(new StringFormatOperatorConversion())
@@ -528,10 +530,22 @@ public class DruidOperatorTable implements SqlOperatorTable
     return retVal;
   }
 
+  /**
+   * Checks if a given SqlSyntax value represents a valid function syntax. Treats anything other
+   * than prefix/suffix/binary syntax as function syntax.
+   *
+   * @param syntax The SqlSyntax value to be checked.
+   *
+   * @return {@code true} if the syntax is valid for a function, {@code false} otherwise.
+   */
+  public static boolean isFunctionSyntax(final SqlSyntax syntax)
+  {
+    return syntax != SqlSyntax.PREFIX && syntax != SqlSyntax.BINARY && syntax != SqlSyntax.POSTFIX;
+  }
+
   private static SqlSyntax normalizeSyntax(final SqlSyntax syntax)
   {
-    // Treat anything other than prefix/suffix/binary syntax as function syntax.
-    if (syntax == SqlSyntax.PREFIX || syntax == SqlSyntax.BINARY || syntax == SqlSyntax.POSTFIX) {
+    if (!DruidOperatorTable.isFunctionSyntax(syntax)) {
       return syntax;
     } else {
       return SqlSyntax.FUNCTION;

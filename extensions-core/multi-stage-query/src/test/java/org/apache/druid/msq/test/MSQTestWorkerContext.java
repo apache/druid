@@ -40,6 +40,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -114,10 +115,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
   {
-    IndexIO indexIO = new IndexIO(
-        mapper,
-        () -> 0
-    );
+    IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
     IndexMergerV9 indexMerger = new IndexMergerV9(
         mapper,
         indexIO,

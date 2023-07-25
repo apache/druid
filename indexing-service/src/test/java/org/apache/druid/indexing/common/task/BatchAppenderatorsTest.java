@@ -41,6 +41,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -184,10 +185,7 @@ public class BatchAppenderatorsTest
       );
       metrics = new FireDepartmentMetrics();
 
-      IndexIO indexIO = new IndexIO(
-          objectMapper,
-          () -> 0
-      );
+      IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
       IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
@@ -574,7 +572,7 @@ public class BatchAppenderatorsTest
           .config(config)
           .joinableFactory(NoopJoinableFactory.INSTANCE)
           .jsonMapper(mapper)
-          .indexIO(new IndexIO(new ObjectMapper(), () -> 0))
+          .indexIO(new IndexIO(new ObjectMapper(), ColumnConfig.DEFAULT))
           .indexMergerV9(indexMergerV9)
           .taskReportFileWriter(new NoopTestTaskReportFileWriter())
           .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
