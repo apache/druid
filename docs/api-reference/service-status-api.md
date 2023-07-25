@@ -47,7 +47,7 @@ You can use each endpoint with the ports for each type of service.  The followin
 
 Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the individual service. 
 
-To retrieve the service information of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+Modify the host and port for the endpoint to match the service to query. Refer to the [default service ports](#common) for the port numbers.
 
 #### URL
 
@@ -191,7 +191,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves the online status of the individual Druid service. It is a simple health check to determine if the service is running and accessible. If online, it will always return a boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
 
-To retrieve the service health of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+Modify the host and port for the endpoint to match the service to query. Refer to the [default service ports](#common) for the port numbers.
 
 Additional checks for readiness should use the [Historical segment readiness](#get-segment-readiness) and [Broker query readiness](#get-broker-query-readiness) endpoints. 
 
@@ -246,7 +246,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves the current configuration properties of the individual service queried. 
 
-To retrieve the service configuration property of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+Modify the host and port for the endpoint to match the service to query. Refer to the [default service ports](#common) for the port numbers.
 
 #### URL
 
