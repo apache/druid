@@ -14,28 +14,24 @@ Review the upgrade notes and incompatible changes before you upgrade to Druid 27
 
 <!-- HIGHLIGHTS H2. FOR EACH MAJOR FEATURE FOR THE RELEASE -->
 
-## Query from deep storage
+## Query from deep storage (experimental)
 
-TBD
+Druid now supports querying segments that are stored only in deep storage. When you query from deep storage, you increase the data available for queries without necessarily having to scale your Historical processes to accommodate more data. To take advantage of the potential savings, make sure you configure your load rules to not load all your data onto Historical processes. Then, configure a corresponding drop rule to drop those segments.
 
-### New statements API
+Note that at least one segment of a datasource must be loaded onto a Historical process so that Druid can plan the query. It can be any segment though.
 
-Added a new API /druid/v2/sql/statements/ which allows users to fetch results in an asynchronous manner.
+As part of this feature, there are new API endpoints available to interact with the query:
+
+- Submit queries using `POST /sql/statements`. The payload is the same as any other Druid SQL query with additional context parameter available. 
+  - The required `executionMode: ASYNC` configures Druid to return the results asynchronously. Results are only available after the query completes.
+  - The optional context parameter `selectDestination:DURABLE_STORAGE` configures Druid to write the query results to durable storage.
+
+- Get the status of a query with `GET /sq/statements/:queryID`.
+
+- Get query results with `/sql/statements/:queryID`
 
 [14416](https://github.com/apache/druid/pull/14416)
-
-### New and updated fields in API to get results
-
-The API response to get results now returns a `pages` field containing information on each page of the results status.
-The `numRows` and `sizeInBytes` fields are renamed to `numTotalRows` and `totalSizeInBytes`, respectively.
-
 [14512](https://github.com/apache/druid/pull/14512)
-
-
-### Durable storage for results
-
-MSQ can now write SELECT query results to durable storage. To do so, set the context flag `selectDestination:DURABLE_STORAGE` while issuing SELECT queries to MSQ.
-
 [14527](https://github.com/apache/druid/pull/14527)
 
 ## Java 17 support
@@ -45,19 +41,40 @@ Druid now fully supports Java 17.
 
 ## Array column types
 
-GA + TBD
+Array column types are now generally available.
+
+For more information about this feature, see the [26.0.0 release notes for array column types](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29).
 
 ## Schema auto-discovery
 
-GA + TBD
+Schema auto-discovery is now generally available.
+
+For more information about this feature, see the [26.0.0 release notes for Schema auto-discovery](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29-schema-auto-discovery-%28experimental%29).
 
 ## Smart segment loading
+
+Revamped Coordinator to make it more stable and user-friendly. This is accompanied by several bug fixes, logging and metric improvements, and a whole new range of capabilities.
+
+Coordinator now supports a `smartSegmentLoading` mode, which is enabled by default. When enabled, users don't need to specify any of the following dynamic configs as they would be ignored by the coordinator. Instead, the coordinator computes the optimal values of the following configs at run time to best utilize coordinator runs:
+
+* `maxSegmentsInNodeLoadingQueue`
+* `maxSegmentsToMove`
+* `replicationThrottleLimit`
+* `useRoundRobinSegmentAssignment`
+* `useBatchedSegmentSampler`
+* `emitBalancingStats`
+
+These configs are now deprecated and will be removed in subsequent releases.
+
+Coordinator is now capable of prioritization and cancellation of items in segment load queues. This means that the coordinator now reacts faster to changes in the cluster and makes better segment assignment decisions.
+
+As part of this change, new metrics are available. For more information, see [New segment metrics](#new-segment-metrics).
 
 [13197](https://github.com/apache/druid/pull/13197)
 
 ## Hadoop 2 deprecated
 
-Hadoop 2 is deprecated. It will be removed in a future release.
+Support for Hadoop 2 is now deprecated. It will be removed in a future release.
 
 # Additional features and improvements
 
@@ -249,27 +266,6 @@ Added `groupId` to task metrics emitted by the Overlord. This is helpful for gro
 
 ## Cluster management
 
-### Enabled cancellation and prioritization of load queue items
-
-Revamped Coordinator to make it more stable and user-friendly. This is accompanied by several bug fixes, logging and metric improvements, and a whole new range of capabilities.
-
-Coordinator now supports a `smartSegmentLoading` mode, which is enabled by default. When enabled, users don't need to specify any of the following dynamic configs as they would be ignored by the coordinator. Instead, the coordinator computes the optimal values of the following configs at run time to best utilize coordinator runs:
-
-* `maxSegmentsInNodeLoadingQueue`
-* `maxSegmentsToMove`
-* `replicationThrottleLimit`
-* `useRoundRobinSegmentAssignment`
-* `useBatchedSegmentSampler`
-* `emitBalancingStats`
-
-These configs are now deprecated and will be removed in subsequent releases.
-
-Coordinator is now capable of prioritization and cancellation of items in segment load queues. This means that the coordinator now reacts faster to changes in the cluster and makes better segment assignment decisions.
-
-As part of this change, new metrics are available. For more information, see [New segment metrics](#new-segment-metrics).
-
-[13197](https://github.com/apache/druid/pull/13197)
-
 ### Removed unused Coordinator dynamic configuration properties
 
 The following Coordinator dynamic configs have been removed:
@@ -360,6 +356,10 @@ The following dependencies have had their versions bumped:
 # Upgrade notes and incompatible changes
 
 ## Upgrade notes
+
+### Hadoop 2
+
+Support for Hadoop 2 has been deprecated. It will be removed in a future release.
 
 ## Incompatible changes
 
