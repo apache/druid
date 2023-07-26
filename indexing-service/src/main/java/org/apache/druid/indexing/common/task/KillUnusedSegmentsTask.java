@@ -98,6 +98,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     return markAsUnused;
   }
 
+  @Nullable
   @JsonProperty
   public Integer getMaxSegmentsToKill()
   {
