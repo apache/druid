@@ -302,3 +302,214 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ### Sample response
 
 A successful response results in an `HTTP 202` and an empty response body.
+
+## Submit a query for data in deep storage
+
+Submit a query for data stored in deep storage. Any data ingested into Druid is placed into deep storage. The query is contained in the "query" field in the JSON object within the request payload.
+
+Note that at least part of a datasource must be available on a Historical process so that Druid can plan your query and only the user who submits a query can see the results.
+
+### URL
+<code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
+
+### Request body
+
+Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. Refer to the [Submit a query](#request-body) endpoint for request body construction.
+
+There are additional context parameters for `sql/statements` specifically: 
+   - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
+   - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
+  
+Note that the only supported value for `resultFormat` is JSON.
+
+### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+<br/>
+
+*Successfully queried from deep storage* 
+
+<!--400 BAD REQUEST-->
+
+<br/>
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+
+```json
+{
+    "error": "Summary of the encountered error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred.",
+    "errorCode": "Well-defined error code.",
+    "persona": "Role or persona associated with the error.",
+    "category": "Classification of the error.", 
+    "errorMessage": "Summary of the encountered issue with expanded information.",
+    "context": "Additional context about the error."
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements" \
+--header 'Content-Type: application/json' \
+--data '{
+    "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
+    "context": {
+        "executionMode":"ASYNC"
+    }  
+}'
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/v2/sql/statements HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Content-Length: 134
+
+{
+    "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+    "context": {
+        "executionMode":"ASYNC"
+    }  
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "queryId": "query-b82a7049-b94f-41f2-a230-7fef94768745",
+    "state": "ACCEPTED",
+    "createdAt": "2023-07-26T21:16:25.324Z",
+    "schema": [
+        {
+            "name": "__time",
+            "type": "TIMESTAMP",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "channel",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "cityName",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "comment",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "countryIsoCode",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "countryName",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "isAnonymous",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isMinor",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isNew",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isRobot",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isUnpatrolled",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "metroCode",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "namespace",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "page",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "regionIsoCode",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "regionName",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "user",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "delta",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "added",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "deleted",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        }
+    ],
+    "durationMs": -1
+}
+  ```
+</details>
+
+## Get query status
+
+Retrieves information about the query associated with the given query ID.
+
+### URL
+<code name="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
