@@ -28,8 +28,8 @@ describe('ComplexMenuItems', () => {
       <ComplexMenuItems
         schema="schema"
         table="table"
-        columnName="user_unique"
-        columnType={'COMPLEX<hyperUnique>'}
+        columnName="user_theta"
+        columnType="COMPLEX<thetaSketch>"
         parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />

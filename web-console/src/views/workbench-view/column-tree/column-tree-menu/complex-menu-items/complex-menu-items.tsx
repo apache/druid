@@ -31,6 +31,10 @@ const UNIQUE_FUNCTIONS: Record<string, string> = {
   'COMPLEX<HLLSketch>': 'APPROX_COUNT_DISTINCT_DS_HLL',
 };
 
+const QUANTILE_FUNCTIONS: Record<string, string> = {
+  'COMPLEX<quantilesDoublesSketch>': 'APPROX_QUANTILE_DS',
+};
+
 export interface ComplexMenuItemsProps {
   table: string;
   schema: string;
@@ -59,11 +63,18 @@ export const ComplexMenuItems = React.memo(function ComplexMenuItems(props: Comp
     }
 
     const uniqueFn = UNIQUE_FUNCTIONS[columnType];
-    if (!uniqueFn) return;
+    const quantileFn = QUANTILE_FUNCTIONS[columnType];
+    if (!uniqueFn && !quantileFn) return;
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
-        {aggregateMenuItem(F('APPROX_COUNT_DISTINCT_BUILTIN', column), `unique_${columnName}`)}
+        {uniqueFn && aggregateMenuItem(F(uniqueFn, column), `unique_${columnName}`)}
+        {quantileFn && (
+          <>
+            {aggregateMenuItem(F(quantileFn, column, 0.5), `median_${columnName}`)}
+            {aggregateMenuItem(F(quantileFn, column, 0.98), `p98_${columnName}`)}
+          </>
+        )}
       </MenuItem>
     );
   }
