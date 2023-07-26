@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -160,7 +161,7 @@ public class WorkerTaskManagerTest
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
                 overlordClient,
-                null,
+                new NoopCoordinatorClient(),
                 null,
                 null,
                 null,

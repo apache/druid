@@ -941,9 +941,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1016,9 +1014,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1092,9 +1088,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1168,9 +1162,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1234,9 +1226,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
 
     ingestionSpecs.sort(
@@ -1280,9 +1270,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -1319,9 +1307,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1364,9 +1350,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
   }
 
@@ -1390,9 +1374,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
   }
 
@@ -1428,9 +1410,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1468,9 +1448,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1510,9 +1488,7 @@ public class CompactionTaskTest
             null
         ),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1550,9 +1526,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1589,9 +1563,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1628,9 +1600,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
 
     Assert.assertEquals(6, ingestionSpecs.size());
@@ -1654,9 +1624,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     Assert.assertEquals(6, ingestionSpecs.size());
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
