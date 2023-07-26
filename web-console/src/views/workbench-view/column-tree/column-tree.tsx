@@ -17,7 +17,7 @@
  */
 
 import type { TreeNodeInfo } from '@blueprintjs/core';
-import { HTMLSelect, Icon, Menu, MenuItem, Position, Tree, Classes } from '@blueprintjs/core';
+import { Classes, HTMLSelect, Icon, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlExpression } from '@druid-toolkit/query';
