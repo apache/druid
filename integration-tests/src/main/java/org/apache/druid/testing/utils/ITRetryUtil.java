@@ -20,8 +20,10 @@
 package org.apache.druid.testing.utils;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -44,6 +46,21 @@ public class ITRetryUtil
     retryUntil(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
   }
 
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      String taskMessageFormat,
+      Object... args
+  ) {
+    retryUntilEquals(
+        callable,
+        expectedValue,
+        DEFAULT_RETRY_SLEEP,
+        DEFAULT_RETRY_COUNT,
+        StringUtils.format(taskMessageFormat, args)
+    );
+  }
+
   public static void retryUntil(
       Callable<Boolean> callable,
       boolean expectedValue,
@@ -52,14 +69,40 @@ public class ITRetryUtil
       String taskMessage
   )
   {
+    retryUntilEquals(callable, expectedValue, delayInMillis, retryCount, taskMessage);
+  }
+
+  public static <T> void retryUntilEquals(
+      Callable<T> callable,
+      T expectedValue,
+      long delayInMillis,
+      int retryCount,
+      String taskMessageFormat,
+      Object... args
+  )
+  {
     int currentTry = 0;
     Exception lastException = null;
+    final String taskMessage = StringUtils.format(taskMessageFormat, args);
 
     while (true) {
       try {
-        LOG.info("Trying attempt[%d/%d]...", currentTry, retryCount);
-        if (currentTry > retryCount || callable.call() == expectedValue) {
+        if (currentTry > retryCount) {
           break;
+        }
+
+        LOG.info(
+            "Trying attempt[%d/%d] of task [%s] with expected value [%s].",
+            currentTry, retryCount, taskMessage, expectedValue
+        );
+        final T observedValue = callable.call();
+        if (Objects.equals(observedValue, expectedValue)) {
+          break;
+        } else {
+          LOG.info(
+              "Attempt[%d/%d] failed. Task[%s] returned value [%s] but expected [%s]. Next retry in [%d]ms.",
+              currentTry, retryCount, taskMessage, observedValue, expectedValue, delayInMillis
+          );
         }
       }
       catch (Exception e) {
@@ -67,10 +110,6 @@ public class ITRetryUtil
         lastException = e;
       }
 
-      LOG.info(
-          "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
-          currentTry, retryCount, taskMessage, delayInMillis
-      );
       try {
         Thread.sleep(delayInMillis);
       }
