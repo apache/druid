@@ -590,7 +590,7 @@ name: Apache Commons Net
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6
+version: 3.9.0
 libraries:
   - commons-net: commons-net
 
