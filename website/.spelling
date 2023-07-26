@@ -308,6 +308,7 @@ enum
 expectedType
 expr
 failover
+failovers
 featureSpec
 findColumnsFromHeader
 filenames
