@@ -273,7 +273,6 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 <!--404 NOT FOUND-->
 
-
 *Invalid `sqlQueryId` or query was completed before cancellation request* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -310,6 +309,7 @@ Submit a query for data stored in deep storage. Any data ingested into Druid is 
 Note that at least part of a datasource must be available on a Historical process so that Druid can plan your query and only the user who submits a query can see the results.
 
 ### URL
+
 <code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
 
 ### Request body
@@ -509,7 +509,267 @@ Content-Length: 134
 
 ## Get query status
 
-Retrieves information about the query associated with the given query ID.
+Retrieves information about the query associated with the given query ID. The response matches the response from the POST API if the query is accepted or running. The response for a completed query includes the same information as an in-progress query with several additions:
+
+- A `result` object that summarizes information about your results, such as the total number of rows and a sample record
+- A `pages` object that includes the following information for each page of results:
+  -  `numRows`: the number of rows in that page of results
+  - `sizeInBytes`: the size of the page
+  - `id`: the page number that you can use to reference a specific page when you get query results
 
 ### URL
+
 <code name="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
+
+### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+<br/>
+
+*Successfully retrieved query status* 
+
+<!--400 BAD REQUEST-->
+
+<br/>
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+
+```json
+{
+    "error": "Summary of the encountered error.",
+    "errorCode": "Well-defined error code.",
+    "persona": "Role or persona associated with the error.",
+    "category": "Classification of the error.", 
+    "errorMessage": "Summary of the encountered issue with expanded information.",
+    "context": "Additional context about the error."
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following example retrieves the status of a query with specified ID `query-9b93f6f7-ab0e-48f5-986a-3520f84f0804`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804"
+```
+
+<!--HTTP-->
+
+```HTTP
+GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "queryId": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804",
+    "state": "SUCCESS",
+    "createdAt": "2023-07-26T22:57:46.620Z",
+    "schema": [
+        {
+            "name": "__time",
+            "type": "TIMESTAMP",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "channel",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "cityName",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "comment",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "countryIsoCode",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "countryName",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "isAnonymous",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isMinor",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isNew",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isRobot",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "isUnpatrolled",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "metroCode",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "namespace",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "page",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "regionIsoCode",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "regionName",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "user",
+            "type": "VARCHAR",
+            "nativeType": "STRING"
+        },
+        {
+            "name": "delta",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "added",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        },
+        {
+            "name": "deleted",
+            "type": "BIGINT",
+            "nativeType": "LONG"
+        }
+    ],
+    "durationMs": 25591,
+    "result": {
+        "numTotalRows": 1,
+        "totalSizeInBytes": 375,
+        "dataSource": "__query_select",
+        "sampleRecords": [
+            [
+                1442018873259,
+                "#ja.wikipedia",
+                "",
+                "/* 対戦通算成績と得失点 */",
+                "",
+                "",
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                "Main",
+                "アルビレックス新潟の年度別成績一覧",
+                "",
+                "",
+                "BlueMoon2662",
+                14,
+                14,
+                0
+            ]
+        ],
+        "pages": [
+            {
+                "id": 0,
+                "numRows": 1,
+                "sizeInBytes": 375
+            }
+        ]
+    }
+}
+  ```
+</details>
+
+## Get query results
+
+Retrieves results for completed queries. Results are separated into pages. When you retrieve the status of a completed query, Druid returns information about the composition of each page and its page number (`id`). 
+
+When getting query results, keep the following in mind:
+
+- JSON is the only supported result format.
+- If you attempt to get the results for an in-progress query, Druid returns an error. 
+
+### URL
+
+<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
+
+### Query parameters
+* `page`
+    * int (optional)
+    * FILL OUT
+
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+<br/>
+
+*Successfully retrieved query results* 
+
+<!--400 BAD REQUEST-->
+
+<br/>
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+
+```json
+{
+    "error": "Summary of the encountered error.",
+    "errorCode": "Well-defined error code.",
+    "persona": "Role or persona associated with the error.",
+    "category": "Classification of the error.", 
+    "errorMessage": "Summary of the encountered issue with expanded information.",
+    "context": "Additional context about the error."
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
