@@ -385,7 +385,10 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         return typeDetectingArrayPredicateSupplier.get();
       }
 
-      return arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType));
+      return new FallbackPredicate<>(
+          arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType)),
+          ExpressionType.fromColumnTypeStrict(arrayType)
+      );
     }
 
     @Override

@@ -55,9 +55,9 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
-    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
     if (castForComparison == null) {
       return BooleanVectorValueMatcher.of(selector, false);

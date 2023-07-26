@@ -571,6 +571,73 @@ public class EqualityFilterTests
         );
       }
     }
+
+    @Test
+    public void testVariant()
+    {
+      /*
+      dim0 .. variant
+      "0", .. "abc"
+      "1", .. 100L
+      "2", .. "100"
+      "3", .. [1.1, 2.2, 3.3]
+      "4", .. 12.34
+      "5", .. [100, 200, 300]
+      
+       */
+      if (isAutoSchema()) {
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.STRING_ARRAY,
+                ImmutableList.of("a", "b", "c"),
+                null
+            ),
+            ImmutableList.of()
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.STRING,
+                "abc",
+                null
+            ),
+            ImmutableList.of("0")
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.LONG,
+                100L,
+                null
+            ),
+            ImmutableList.of("1", "2")
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.STRING,
+                "100",
+                null
+            ),
+            ImmutableList.of("1", "2")
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.LONG_ARRAY,
+                Arrays.asList(100, 200, 300),
+                null
+            ),
+            ImmutableList.of("5")
+        );
+      }
+    }
+
   }
 
   public static class EqualityFilterNonParameterizedTests extends InitializedNullHandlingTest

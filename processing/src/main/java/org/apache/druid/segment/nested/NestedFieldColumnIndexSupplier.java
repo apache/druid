@@ -729,14 +729,26 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         boolean endStrict
     )
     {
+      final Long startLong;
+      final Long endLong;
+      if (startValue == null) {
+        startLong = null;
+      } else if (startStrict) {
+        startLong = (long) Math.floor(startValue.doubleValue());
+      } else {
+        startLong = (long) Math.ceil(startValue.doubleValue());
+      }
+      if (endValue == null) {
+        endLong = null;
+      } else if (endStrict) {
+        endLong = (long) Math.ceil(endValue.doubleValue());
+      } else {
+        endLong = (long) Math.floor(endValue.doubleValue());
+      }
       return makeRangeIndex(
-          startValue == null
-          ? null
-          : startStrict ? (long) Math.floor(startValue.doubleValue()) : (long) Math.ceil(startValue.doubleValue()),
+          startLong,
           startStrict,
-          endValue == null
-          ? null
-          : endStrict ? (long) Math.ceil(endValue.doubleValue()) : (long) Math.floor(endValue.doubleValue()),
+          endLong,
           endStrict,
           localDictionarySupplier.get(),
           globalLongDictionarySupplier.get(),

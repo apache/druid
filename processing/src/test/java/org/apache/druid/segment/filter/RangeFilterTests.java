@@ -53,6 +53,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Enclosed.class)
@@ -1339,6 +1340,61 @@ public class RangeFilterTests
                 null
             ),
             ImmutableList.of("0", "2")
+        );
+      }
+    }
+
+    @Test
+    public void testVariant()
+    {
+      /*
+      dim0 .. variant
+      "0", .. "abc"
+      "1", .. 100L
+      "2", .. "100"
+      "3", .. [1.1, 2.2, 3.3]
+      "4", .. 12.34
+      "5", .. [100, 200, 300]
+      "6", .. null
+      "7", .. null
+       */
+      if (isAutoSchema()) {
+        assertFilterMatches(
+            new RangeFilter(
+                "variant",
+                ColumnType.LONG,
+                100L,
+                null,
+                false,
+                false,
+                null
+            ),
+            ImmutableList.of("1", "2", "5")
+        );
+        // lexicographical comparison
+        assertFilterMatches(
+            new RangeFilter(
+                "variant",
+                ColumnType.STRING,
+                "100",
+                null,
+                false,
+                false,
+                null
+            ),
+            ImmutableList.of("0", "1", "2", "4", "5")
+        );
+        assertFilterMatches(
+            new RangeFilter(
+                "variant",
+                ColumnType.LONG_ARRAY,
+                Collections.singletonList(100L),
+                Arrays.asList(100L, 200L, 300L),
+                false,
+                false,
+                null
+            ),
+            ImmutableList.of("1", "2", "5")
         );
       }
     }

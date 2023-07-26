@@ -33,13 +33,10 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -241,7 +238,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   {
     if (fieldName != null) {
       ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-      return Types.is(capabilities, ValueType.STRING);
+      return capabilities == null || !capabilities.isNumeric();
     }
     return false;
   }

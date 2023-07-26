@@ -416,16 +416,23 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     )
     {
       final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-      IntIntPair range = dictionary.getRange(
-          startValue == null
-          ? null
-          : startStrict ? (long) Math.floor(startValue.doubleValue()) : (long) Math.ceil(startValue.doubleValue()),
-          startStrict,
-          endValue == null
-          ? null
-          : endStrict ? (long) Math.ceil(endValue.doubleValue()) : (long) Math.floor(endValue.doubleValue()),
-          endStrict
-      );
+      final Long startLong;
+      final Long endLong;
+      if (startValue == null) {
+        startLong = null;
+      } else if (startStrict) {
+        startLong = (long) Math.floor(startValue.doubleValue());
+      } else {
+        startLong = (long) Math.ceil(startValue.doubleValue());
+      }
+      if (endValue == null) {
+        endLong = null;
+      } else if (endStrict) {
+        endLong = (long) Math.ceil(endValue.doubleValue());
+      } else {
+        endLong = (long) Math.floor(endValue.doubleValue());
+      }
+      final IntIntPair range = dictionary.getRange(startLong, startStrict, endLong, endStrict);
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
