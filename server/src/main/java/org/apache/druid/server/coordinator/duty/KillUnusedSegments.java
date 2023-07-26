@@ -138,6 +138,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     int availableKillTaskSlots = getAvailableKillTaskSlots(killTaskSlotRatio);
     if (0 == availableKillTaskSlots) {
       log.warn("Not killing any unused segments because there are no available kill task slots at this time.");
+      return;
     }
     for (String dataSource : dataSourcesToKill) {
       final Interval intervalToKill = findIntervalForKill(dataSource);
@@ -196,7 +197,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private int getAvailableKillTaskSlots(@Nullable Double killTaskSlotRatio)
   {
-    return Math.min(0, getKillTaskCapacity(killTaskSlotRatio) - getNumActiveKillTaskSlots());
+    return Math.max(0, getKillTaskCapacity(killTaskSlotRatio) - getNumActiveKillTaskSlots());
   }
 
   private int getNumActiveKillTaskSlots()
@@ -258,7 +259,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
 
 
-    return Math.min(
+    return Math.max(
         killTaskSlotRatio == null
             ? totalWorkerCapacity
             : (int) (totalWorkerCapacity * killTaskSlotRatio),
