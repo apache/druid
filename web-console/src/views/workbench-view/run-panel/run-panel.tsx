@@ -109,7 +109,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const finalizeAggregations = getFinalizeAggregations(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
-  const selectDestination = queryContext.selectDestination ?? 'TASK_REPORT';
+  const selectDestination = queryContext.selectDestination ?? 'taskReport';
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -327,7 +327,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="SELECT destination"
                       label={selectDestination}
                     >
-                      {['TASK_REPORT', 'DURABLE_STORAGE'].map(o => (
+                      {['taskReport', 'durableStorage'].map(o => (
                         <MenuItem
                           key={o}
                           icon={tickIcon(selectDestination === o)}
