@@ -60,13 +60,9 @@ This endpoint also supports querying metadata by querying [metadata tables](../q
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully submitted query* 
 
 <!--400 BAD REQUEST-->
-
-<br/>
 
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
 
@@ -79,8 +75,6 @@ This endpoint also supports querying metadata by querying [metadata tables](../q
 }
 ```
 <!--500 INTERNAL SERVER ERROR-->
-
-<br/>
 
 *Request not sent due to unexpected conditions. Returns a JSON object detailing the error with the following format:* 
 
@@ -271,19 +265,14 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 <!--202 SUCCESS-->
 
-<br/>
-
-*Successfully deleted query* 
+*Successfully deleted query*
 
 <!--403 FORBIDDEN-->
-
-<br/>
 
 *Authorization failure* 
 
 <!--404 NOT FOUND-->
 
-<br/>
 
 *Invalid `sqlQueryId` or query was completed before cancellation request* 
 
