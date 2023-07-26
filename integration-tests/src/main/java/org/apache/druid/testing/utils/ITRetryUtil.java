@@ -82,7 +82,7 @@ public class ITRetryUtil
   {
     int currentTry = 0;
     Exception lastException = null;
-    final String taskMessage = StringUtils.format(msgFormat, args);
+    final String taskMessage = StringUtils.nonStrictFormat(msgFormat, args);
 
     while (true) {
       try {
