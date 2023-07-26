@@ -161,14 +161,14 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public int markSegmentAsHandedOff(final SegmentId segmentId)
+  public int markSegmentAsLoaded(final SegmentId segmentId)
   {
     final String dataSource = segmentId.getDataSource();
 
     return handle
         .createStatement(
             StringUtils.format(
-                "UPDATE %s SET handed_off = true WHERE dataSource = :dataSource AND id = :id",
+                "UPDATE %s SET has_loaded = true WHERE dataSource = :dataSource AND id = :id",
                 dbTables.getSegmentsTable()
             ))
         .bind("dataSource", dataSource)

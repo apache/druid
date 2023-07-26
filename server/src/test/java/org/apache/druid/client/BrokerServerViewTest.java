@@ -652,7 +652,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             ImmutableList.of("2011-04-06/2011-04-09", "v3", Boolean.FALSE.toString(),
                              DataSegmentChange.ChangeType.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeType.SEGMENT_HANDED_OFF.toString()),
+                             DataSegmentChange.ChangeType.SEGMENT_HAS_LOADED.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
                              DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED.toString()),
             ImmutableList.of("2011-04-11/2011-04-13", "v3", Boolean.TRUE.toString(),

@@ -450,7 +450,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
-      List<SegmentId> unavailableSegmentsIds = new ArrayList<>();
+      final List<SegmentId> unavailableSegmentsIds = new ArrayList<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
@@ -467,6 +467,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           if (brokerSegmentWatcherConfig.isDetectUnavailableSegments() && !server.isQueryable()) {
+            // todo report metric
             log.debug("ServerSelector for segment id [%s] is not queryable", server.getSegment().getId());
             continue;
           }
@@ -484,17 +485,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       if (brokerSegmentWatcherConfig.isDetectUnavailableSegments() && unavailableSegmentsIds.size() > 0) {
         log.warn(
-            "Detected [%d] unavailable segments, segment ids: [%s]",
+            "Detected [%d] unavailable segments, trimmed segment ids: [%s]",
             unavailableSegmentsIds.size(),
-            unavailableSegmentsIds
+            unavailableSegmentsIds.subList(0, 100)
         );
         if (unavailableSegmentsAction == UnavailableSegmentsAction.FAIL) {
           throw new QueryException(
               QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
               StringUtils.format(
-                  "Detected [%d] unavailable segments, segment ids: [%s]",
+                  "Detected [%d] unavailable segments, trimmed segment ids: [%s]",
                   unavailableSegmentsIds.size(),
-                  unavailableSegmentsIds
+                  unavailableSegmentsIds.subList(0, 100)
               ),
               null,
               null

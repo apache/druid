@@ -311,7 +311,7 @@ public class SegmentMetadataCache
           {
             synchronized (lock) {
               isMetadataViewInitialized = true;
-              log.debug("Segment view is intialized");
+              log.debug("Segment view is initialized");
               lock.notifyAll();
             }
 

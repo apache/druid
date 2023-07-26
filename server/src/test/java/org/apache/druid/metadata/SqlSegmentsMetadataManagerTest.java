@@ -916,7 +916,7 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertEquals(1, counterP2.getCounter());
 
     DataSegment dataSegment4 = dataSegmentWithIntervalAndVersion("2023-04-07T01:00:00Z/P1D", "v1");
-    sqlSegmentsMetadataManager.markSegmentAsHandedOff(dataSegment2.getId());
+    sqlSegmentsMetadataManager.markSegmentAsLoaded(dataSegment2.getId());
     publisher.publishSegment(dataSegment4);
     sqlSegmentsMetadataManager.poll();
     ChangeRequestHistory.Counter counterP3 = changeRequestHistory.getLastCounter();
@@ -952,7 +952,7 @@ public class SqlSegmentsMetadataManagerTest
     for (DataSegmentChange change : changes) {
       if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_ADDED) {
         segmentAdded++;
-      } else if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_HANDED_OFF) {
+      } else if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_HAS_LOADED) {
         segmentHandedOff++;
       }
     }

@@ -170,7 +170,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
 
-  private final Set<SegmentId> handedOffSegments = Sets.newConcurrentHashSet();
+  private final Set<SegmentId> loadedSegments = Sets.newConcurrentHashSet();
 
   private final ChangeRequestHistory<List<DataSegmentChange>> dataSegmentChanges;
 
@@ -783,14 +783,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markSegmentAsHandedOff(SegmentId segmentId)
+  public int markSegmentAsLoaded(SegmentId segmentId)
   {
-    if (!handedOffSegments.contains(segmentId)) {
-      handedOffSegments.add(segmentId);
+    if (!loadedSegments.contains(segmentId)) {
+      loadedSegments.add(segmentId);
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentAsHandedOff(segmentId)
+                                      .markSegmentAsLoaded(segmentId)
       );
     }
     return 0;
@@ -909,14 +909,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     //
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
-    final Map<String, Set<SegmentId>> datasourceToHandedOffSegments = new HashMap<>();
+    final Map<String, Set<SegmentId>> datasourceToLoadedSegments = new HashMap<>();
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
           @Override
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
-            String sql = "SELECT handed_off, payload FROM %s WHERE used=true";
+            String sql = "SELECT has_loaded, payload FROM %s WHERE used=true";
             return handle
                 .createQuery(StringUtils.format(sql, getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
@@ -928,9 +928,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          boolean handedOff = r.getBoolean("handed_off");
-                          if (handedOff) {
-                            datasourceToHandedOffSegments.computeIfAbsent(
+                          boolean hasLoaded = r.getBoolean("has_loaded");
+                          if (hasLoaded) {
+                            datasourceToLoadedSegments.computeIfAbsent(
                                 segment.getDataSource(),
                                 value -> new HashSet<>()
                             ).add(segment.getId());
@@ -972,9 +972,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       log.info("Polled and found %,d segments in the database", segments.size());
     }
 
-    handedOffSegments.clear();
-    for (Set<SegmentId> segmentIdSet : datasourceToHandedOffSegments.values()) {
-      handedOffSegments.addAll(segmentIdSet);
+    loadedSegments.clear();
+    for (Set<SegmentId> segmentIdSet : datasourceToLoadedSegments.values()) {
+      loadedSegments.addAll(segmentIdSet);
     }
 
     if (null != dataSourcesSnapshot) {
@@ -987,7 +987,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          datasourceToHandedOffSegments
+          datasourceToLoadedSegments
       );
 
       Set<SegmentStatusInCluster> newSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
@@ -1010,7 +1010,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
           Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
           dataSourceProperties,
-          datasourceToHandedOffSegments
+          datasourceToLoadedSegments
       );
     }
   }
@@ -1163,9 +1163,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         final boolean overshadowStatusChanged = oldSegment.isOvershadowed() != newSegment.isOvershadowed();
         DataSegmentChange.ChangeType changeType = null;
         if (handoffStatusChanged && overshadowStatusChanged) {
-          changeType = DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED_AND_HANDED_OFF;
+          changeType = DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED_AND_HAS_LOADED;
         } else if (handoffStatusChanged) {
-          changeType = DataSegmentChange.ChangeType.SEGMENT_HANDED_OFF;
+          changeType = DataSegmentChange.ChangeType.SEGMENT_HAS_LOADED;
         } else if (overshadowStatusChanged) {
           changeType = DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED;
         }

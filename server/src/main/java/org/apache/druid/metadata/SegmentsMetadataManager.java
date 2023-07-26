@@ -78,9 +78,9 @@ public interface SegmentsMetadataManager
   int markSegmentsAsUnused(Set<SegmentId> segmentIds);
 
   /**
-   * Set handed_off field for the segment
+   * Set has_loaded field for the segment
    */
-  int markSegmentAsHandedOff(SegmentId segmentId);
+  int markSegmentAsLoaded(SegmentId segmentId);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the

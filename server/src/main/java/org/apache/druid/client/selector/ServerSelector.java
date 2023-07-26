@@ -225,12 +225,12 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     return segment.get().hasData();
   }
 
-  public boolean isQueryable()
+  public synchronized boolean isQueryable()
   {
     return isQueryable;
   }
 
-  public void setQueryable(boolean queryable)
+  public synchronized void setQueryable(boolean queryable)
   {
     isQueryable = queryable;
   }

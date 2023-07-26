@@ -25,6 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
 
+/**
+ * The class encapsulates segment change alongwith segment status
+ */
+
 public class DataSegmentChange
 {
   private final SegmentStatusInCluster segmentStatusInCluster;
@@ -53,9 +57,9 @@ public class DataSegmentChange
   }
 
   @JsonIgnore
-  public boolean isLoad()
+  public boolean isRemoved()
   {
-    return changeType != ChangeType.SEGMENT_REMOVED;
+    return changeType == ChangeType.SEGMENT_REMOVED;
   }
 
   @Override
@@ -67,13 +71,35 @@ public class DataSegmentChange
            '}';
   }
 
+  /**
+   * Enum to represent change of segment in the system
+   */
   public enum ChangeType
   {
+    /**
+     * segment has been added in the system
+     */
     SEGMENT_ADDED,
+
+    /**
+     * segment has been from the system
+     */
     SEGMENT_REMOVED,
+
+    /**
+     * segment has been overshadowed
+     */
     SEGMENT_OVERSHADOWED,
-    SEGMENT_HANDED_OFF,
-    SEGMENT_OVERSHADOWED_AND_HANDED_OFF;
+
+    /**
+     * segment has been loaded by historical
+     */
+    SEGMENT_HAS_LOADED,
+
+    /**
+     * segment is both loaded by historical and overshadowed
+     */
+    SEGMENT_OVERSHADOWED_AND_HAS_LOADED;
 
     @JsonValue
     @Override

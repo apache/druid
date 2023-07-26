@@ -133,7 +133,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markSegmentAsHandedOff(SegmentId segmentId)
+  public int markSegmentAsLoaded(SegmentId segmentId)
   {
     return 0;
   }

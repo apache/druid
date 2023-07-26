@@ -316,9 +316,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       retryWithHandle(
           (HandleCallback<Void>) handle -> {
             final Batch batch = handle.createBatch();
-            if (!tableContainsColumn(handle, tableName, "handed_off")) {
-              log.info("Adding column [handed_off] to table[%s]", tableName);
-              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN handed_off BOOLEAN NOT NULL DEFAULT FALSE", tableName));
+            if (!tableContainsColumn(handle, tableName, "has_loaded")) {
+              log.info("Adding column [has_loaded] to table[%s]", tableName);
+              batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN has_loaded BOOLEAN NOT NULL DEFAULT FALSE", tableName));
             }
             batch.execute();
             return null;

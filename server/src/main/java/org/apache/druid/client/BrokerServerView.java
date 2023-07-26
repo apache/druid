@@ -464,7 +464,7 @@ public class BrokerServerView implements TimelineServerView
         Map<SegmentId, VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>
             segmentIdPartitionChunkEntryMap =
             versionedIntervalTimeline
-                .getAllPartitionChunkEntries()
+                .iterateAllEntries()
                 .stream()
                 .collect(Collectors.toMap(
                     pce -> pce.getChunk().getObject().getSegment().getId(),
@@ -494,7 +494,7 @@ public class BrokerServerView implements TimelineServerView
     int segmentsAdded = 0, segmentsRemoved = 0, handedOffSegments = 0;
 
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
-      if (dataSegmentChange.isLoad()) {
+      if (!dataSegmentChange.isRemoved()) {
         segmentsAdded++;
         if (dataSegmentChange.getSegmentStatusInCluster().isHandedOff()) {
           handedOffSegments++;

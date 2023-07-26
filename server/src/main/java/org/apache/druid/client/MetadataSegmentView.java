@@ -244,7 +244,7 @@ public class MetadataSegmentView
         publishedSegments.stream().iterator().forEachRemaining(
             segment -> publishedSegmentsCopy.put(segment.getDataSegment().getId(), segment));
         dataSegmentChanges.forEach(dataSegmentChange -> {
-          if (dataSegmentChange.isLoad()) {
+          if (!dataSegmentChange.isRemoved()) {
             publishedSegmentsCopy.put(
                 dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
                 dataSegmentChange.getSegmentStatusInCluster()
