@@ -2296,3 +2296,6 @@ runningTasks
 waitingTasks
 pendingTasks
 shutdownAllTasks
+selfDiscovered
+isLeader
+loadstatus
