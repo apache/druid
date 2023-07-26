@@ -56,7 +56,9 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.dataSource = dataSource;
     this.interval = interval;
     this.markAsUnused = markAsUnused;
-    Preconditions.checkArgument(maxSegmentsToKill > 0, "maxSegmentsToKill must be > 0");
+    if (null != maxSegmentsToKill) {
+      Preconditions.checkArgument(maxSegmentsToKill > 0, "maxSegmentsToKill must be > 0");
+    }
     this.maxSegmentsToKill = maxSegmentsToKill;
   }
 
