@@ -38,7 +38,6 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -58,6 +57,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
@@ -140,7 +140,7 @@ public class DruidCoordinator
   private final MetadataRuleManager metadataRuleManager;
 
   private final ServiceEmitter emitter;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
   private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
@@ -187,7 +187,7 @@ public class DruidCoordinator
       MetadataRuleManager metadataRuleManager,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
-      IndexingServiceClient indexingServiceClient,
+      OverlordClient overlordClient,
       LoadQueueTaskMaster taskMaster,
       SegmentLoadQueueManager loadQueueManager,
       ServiceAnnouncer serviceAnnouncer,
@@ -208,7 +208,7 @@ public class DruidCoordinator
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
     this.emitter = emitter;
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
     this.taskMaster = taskMaster;
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
@@ -461,7 +461,7 @@ public class DruidCoordinator
               config.getCoordinatorPeriod()
           )
       );
-      if (indexingServiceClient != null) {
+      if (overlordClient != null) {
         dutiesRunnables.add(
             new DutiesRunnable(
                 makeIndexingServiceDuties(),
@@ -619,7 +619,7 @@ public class DruidCoordinator
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(config, compactionSegmentSearchPolicy, indexingServiceClient);
+      return new CompactSegments(config, compactionSegmentSearchPolicy, overlordClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(

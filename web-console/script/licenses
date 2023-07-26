@@ -187,6 +187,7 @@ checker.init(
           if (name === 'asap') publisher = 'Contributors';
           if (name === 'diff-match-patch') publisher = 'Google';
           if (name === 'esutils') publisher = 'Yusuke Suzuki'; // https://github.com/estools/esutils#license
+          if (name === 'echarts') publisher = 'Apache Software Foundation';
         }
 
         if (!publisher) {

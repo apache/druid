@@ -27,7 +27,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -116,7 +115,7 @@ public class NativeSqlEngine implements SqlEngine
       case SCAN_NEEDS_SIGNATURE:
         return false;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(NativeSqlEngine.class.getSimpleName(), feature);
     }
   }
 

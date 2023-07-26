@@ -169,7 +169,7 @@ public class SegmentToRowsAndColumnsOperatorTest
     boolean exceptionThrown = false;
     try {
       new OperatorTestHelper()
-          .withPushFn(rac -> {
+          .withPushFn(() -> rac -> {
             Assert.assertSame(expectedRac, rac);
             return Operator.Signal.GO;
           })
