@@ -1194,7 +1194,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Retrieves the current status report for a single supervisor. The report contains the state of the supervisor tasks and an array of recently thrown exceptions.
 
 For additional information about the status report, see the topic for each streaming ingestion methods:
-* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#getting-supervisor-status-report)
+* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#get-supervisor-status-report)
 * [Apache Kafka](../development/extensions-core/kafka-supervisor-operations.md#getting-supervisor-status-report)
 
 #### URL
@@ -2026,7 +2026,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Creates a new supervisor or updates an existing one for the same datasource with a new schema and configuration. 
 
-You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec) streaming ingestion methods. Once created, the supervisor persists in the metadata database.
+You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods. Once created, the supervisor persists in the metadata database.
 
 When you call this endpoint on an existing supervisor for the same datasource, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
 
