@@ -17,21 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.indexing;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.client.indexing.IndexingWorker;
+import org.junit.Test;
 
-/**
- */
-public class IndexingServiceSelectorConfig
+public class IndexingWorkerTest
 {
-  public static final String DEFAULT_SERVICE_NAME = "druid/overlord";
-
-  @JsonProperty
-  private String serviceName = DEFAULT_SERVICE_NAME;
-
-  public String getServiceName()
+  @Test
+  public void testEquals()
   {
-    return serviceName;
+    EqualsVerifier.forClass(IndexingWorker.class).usingGetClass().verify();
   }
 }

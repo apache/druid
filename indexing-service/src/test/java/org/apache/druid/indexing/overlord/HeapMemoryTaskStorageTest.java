@@ -19,14 +19,20 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.metadata.TaskLookup;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.List;
 
 public class HeapMemoryTaskStorageTest
 {
@@ -53,5 +59,40 @@ public class HeapMemoryTaskStorageTest
     storage.removeTasksOlderThan(DateTimes.of("3000").getMillis());
     Assert.assertNull(storage.getTaskInfo(task1.getId()));
     Assert.assertNotNull(storage.getTaskInfo(task2.getId()));
+  }
+
+  @Test
+  public void testGetTaskInfos()
+  {
+    final NoopTask task1 = NoopTask.create("foo");
+    final NoopTask task2 = NoopTask.create("bar");
+    storage.insert(task1, TaskStatus.success(task1.getId()));
+    storage.insert(task2, TaskStatus.running(task2.getId()));
+
+    // Active statuses
+    final List<TaskInfo<Task, TaskStatus>> taskInfosActive = storage.getTaskInfos(
+        ImmutableMap.of(
+            TaskLookup.TaskLookupType.ACTIVE,
+            TaskLookup.ActiveTaskLookup.getInstance(),
+            TaskLookup.TaskLookupType.COMPLETE,
+            new TaskLookup.CompleteTaskLookup(0, DateTimes.of("1970"))
+        ),
+        null
+    );
+
+    Assert.assertEquals(1, taskInfosActive.size());
+    Assert.assertEquals(task2.getId(), taskInfosActive.get(0).getTask().getId());
+
+    // Complete statuses
+    final List<TaskInfo<Task, TaskStatus>> taskInfosComplete = storage.getTaskInfos(
+        ImmutableMap.of(
+            TaskLookup.TaskLookupType.COMPLETE,
+            new TaskLookup.CompleteTaskLookup(null, DateTimes.of("1970"))
+        ),
+        null
+    );
+
+    Assert.assertEquals(1, taskInfosComplete.size());
+    Assert.assertEquals(task1.getId(), taskInfosComplete.get(0).getTask().getId());
   }
 }

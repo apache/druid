@@ -310,6 +310,7 @@ enum
 expectedType
 expr
 failover
+failovers
 featureSpec
 findColumnsFromHeader
 filenames
@@ -2289,3 +2290,6 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+selfDiscovered
+isLeader
+loadstatus
