@@ -260,7 +260,7 @@ public class DruidClusterAdminClient
 
   private void waitUntilInstanceReady(final String host)
   {
-    ITRetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilEquals(
         () -> {
           try {
             StatusResponseHolder response = httpClient.go(
@@ -269,7 +269,7 @@ public class DruidClusterAdminClient
             ).get();
 
             LOG.info("%s %s", response.getStatus(), response.getContent());
-            return response.getStatus().equals(HttpResponseStatus.OK);
+            return response.getStatus();
           }
           catch (Throwable e) {
             //
@@ -293,10 +293,12 @@ public class DruidClusterAdminClient
               LOG.error(e, "Error while waiting for [%s] to be ready", host);
             }
 
-            return false;
+            throw e;
           }
         },
-        "Waiting for instance to be ready: [" + host + "]"
+        HttpResponseStatus.OK,
+        "Health check of instance[%s]",
+        host
     );
   }
 
