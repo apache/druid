@@ -134,15 +134,28 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    return runOrJoinTask(task, true);
+    synchronized (tasks) {
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))))
+                  .getResult();
+    }
   }
 
-  protected ListenableFuture<TaskStatus> runOrJoinTask(Task task, boolean run)
+  protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
     synchronized (tasks) {
-      tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> doTask(task, run))));
-      return tasks.get(task.getId()).getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))))
+                  .getResult();
     }
+  }
+
+  private TaskStatus runTask(Task task)
+  {
+    return doTask(task, true);
+  }
+
+  private TaskStatus joinTask(Task task)
+  {
+    return doTask(task, false);
   }
 
   @VisibleForTesting
@@ -264,7 +277,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Job job : client.getPeonJobs()) {
       try {
         Task task = adapter.toTask(job);
-        restoredTasks.add(Pair.of(task, runOrJoinTask(task, false)));
+        restoredTasks.add(Pair.of(task, joinAsync(task)));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());

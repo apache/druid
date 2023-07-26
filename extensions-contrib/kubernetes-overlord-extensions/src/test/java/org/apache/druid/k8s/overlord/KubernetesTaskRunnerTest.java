@@ -199,7 +199,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     replayAll();
 
-    ListenableFuture<TaskStatus> future = runner.runOrJoinTask(task, false);
+    ListenableFuture<TaskStatus> future = runner.joinAsync(task);
     Assert.assertEquals(taskStatus, future.get());
 
     verifyAll();
@@ -225,7 +225,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     replayAll();
 
-    ListenableFuture<TaskStatus> future = runner.runOrJoinTask(task, false);
+    ListenableFuture<TaskStatus> future = runner.joinAsync(task);
 
     Exception e = Assert.assertThrows(ExecutionException.class, future::get);
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
@@ -292,7 +292,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle)
     ) {
       @Override
-      protected ListenableFuture<TaskStatus> runOrJoinTask(Task task, boolean run)
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
       {
         return new KubernetesWorkItem(task, null).getResult();
       }
@@ -328,7 +328,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle)
     ) {
       @Override
-      protected ListenableFuture<TaskStatus> runOrJoinTask(Task task, boolean run)
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
       {
         return new KubernetesWorkItem(task, null).getResult();
       }
