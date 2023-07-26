@@ -155,7 +155,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
 
       final AtomicReference<BytesFullResponseHolder> responseRef = new AtomicReference<>();
 
-      ITRetryUtil.retryUntil(() -> {
+      ITRetryUtil.retryUntilEquals(() -> {
         try {
           responseRef.set(httpClient.go(
               request,

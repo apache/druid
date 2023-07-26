@@ -110,19 +110,16 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       postEvents();
 
       // wait for a while to let the events be ingested
-      ITRetryUtil.retryUntil(
-          () -> {
-            final int countRows = queryHelper.countRows(
-                fullDatasourceName,
-                Intervals.ETERNITY,
-                name -> new LongSumAggregatorFactory(name, "count")
-            );
-            return countRows == getNumExpectedRowsIngested();
-          },
-          true,
+      ITRetryUtil.retryUntilEquals(
+          () -> queryHelper.countRows(
+              fullDatasourceName,
+              Intervals.ETERNITY,
+              name -> new LongSumAggregatorFactory(name, "count")
+          ),
+          getNumExpectedRowsIngested(),
           DELAY_FOR_RETRIES_MS,
           NUM_RETRIES,
-          "Waiting all events are ingested"
+          "Number of ingested events"
       );
 
       // put the timestamps into the query structure
@@ -160,7 +157,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       indexer.waitUntilTaskCompletes(taskID);
 
       // task should complete only after the segments are loaded by historical node
-      ITRetryUtil.retryUntil(
+      ITRetryUtil.retryUntilEquals(
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
           DELAY_FOR_RETRIES_MS,

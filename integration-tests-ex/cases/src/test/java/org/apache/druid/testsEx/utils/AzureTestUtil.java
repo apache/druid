@@ -95,15 +95,16 @@ public class AzureTestUtil
     // code 409 (Conflict). The service indicates that the container is being deleted.
     // All other operations, including operations on any blobs under the container,
     // fail with status code 404 (Not Found) while the container is being deleted.
-    ITRetryUtil.retryUntil(
-        () -> container.createIfNotExists(),
+    ITRetryUtil.retryUntilEquals(
+        container::createIfNotExists,
         true,
         10000,
         13,
-        "Create Azure container : " + AZURE_CONTAINER + " "
+        "Created Azure container[%s]",
+        AZURE_CONTAINER
     );
 
-    LOG.info("Azure container " + AZURE_CONTAINER + " created");
+    LOG.info("Azure container[%s] created", AZURE_CONTAINER);
   }
 
   public void deleteStorageContainer() throws URISyntaxException, StorageException

@@ -51,7 +51,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 public class OverlordResourceTestClient
 {
@@ -315,24 +314,19 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID, final long millisEach, final int numTimes)
   {
-    ITRetryUtil.retryUntil(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            TaskState status = getTaskStatus(taskID).getStatusCode();
-            if (status == TaskState.FAILED) {
-              LOG.error("Task failed: %s", taskID);
-              LOG.error("Message: %s", getTaskErrorMessage(taskID));
-              throw new ISE("Indexer task FAILED");
-            }
-            return status == TaskState.SUCCESS;
+    ITRetryUtil.retryUntilEquals(
+        () -> {
+          TaskState status = getTaskStatus(taskID).getStatusCode();
+          if (status == TaskState.FAILED) {
+            LOG.error("Task failed: %s", taskID);
+            LOG.error("Message: %s", getTaskErrorMessage(taskID));
           }
+          return status;
         },
-        true,
+        TaskState.SUCCESS,
         millisEach,
         numTimes,
+        "Status of task[%s]",
         taskID
     );
   }
@@ -345,22 +339,12 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskFails(final String taskID, final long millisEach, final int numTimes)
   {
-    ITRetryUtil.retryUntil(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            TaskState status = getTaskStatus(taskID).getStatusCode();
-            if (status == TaskState.SUCCESS) {
-              throw new ISE("Indexer task SUCCEED");
-            }
-            return status == TaskState.FAILED;
-          }
-        },
-        true,
+    ITRetryUtil.retryUntilEquals(
+        () -> getTaskStatus(taskID).getStatusCode(),
+        TaskState.FAILED,
         millisEach,
         numTimes,
+        "Status of task[%s]",
         taskID
     );
   }

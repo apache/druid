@@ -38,12 +38,12 @@ public class ITRetryUtil
 
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
   }
 
   public static void retryUntilFalse(Callable<Boolean> callable, String task)
   {
-    retryUntil(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
+    retryUntilEquals(callable, false, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);
   }
 
   public static <T> void retryUntilEquals(
@@ -51,7 +51,8 @@ public class ITRetryUtil
       T expectedValue,
       String taskMessageFormat,
       Object... args
-  ) {
+  )
+  {
     retryUntilEquals(
         callable,
         expectedValue,
@@ -61,29 +62,27 @@ public class ITRetryUtil
     );
   }
 
-  public static void retryUntil(
-      Callable<Boolean> callable,
-      boolean expectedValue,
-      long delayInMillis,
-      int retryCount,
-      String taskMessage
-  )
-  {
-    retryUntilEquals(callable, expectedValue, delayInMillis, retryCount, taskMessage);
-  }
-
+  /**
+   * Retries until the given {@code task} returns the {@code expectedValue} or
+   * the {@code retryCount} is exhausted.
+   *
+   * @param msgFormat Name of the value being verified, e.g. "Number of rows",
+   *                  "Number of tasks for datasource '%s'"
+   * @param args      Arguments to use in the {@code msgFormat}
+   * @param <T>       Type of value computed by the task
+   */
   public static <T> void retryUntilEquals(
-      Callable<T> callable,
+      Callable<T> task,
       T expectedValue,
       long delayInMillis,
       int retryCount,
-      String taskMessageFormat,
+      String msgFormat,
       Object... args
   )
   {
     int currentTry = 0;
     Exception lastException = null;
-    final String taskMessage = StringUtils.format(taskMessageFormat, args);
+    final String taskMessage = StringUtils.format(msgFormat, args);
 
     while (true) {
       try {
@@ -95,7 +94,7 @@ public class ITRetryUtil
             "Trying attempt[%d/%d] of task [%s] with expected value [%s].",
             currentTry, retryCount, taskMessage, expectedValue
         );
-        final T observedValue = callable.call();
+        final T observedValue = task.call();
         if (Objects.equals(observedValue, expectedValue)) {
           break;
         } else {
@@ -107,6 +106,10 @@ public class ITRetryUtil
       }
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
+        LOG.info(
+            "Attempt[%d/%d] failed. Task[%s] encountered error[%s]. Next retry in [%d]ms.",
+            currentTry, retryCount, taskMessage, e.getMessage(), delayInMillis
+        );
         lastException = e;
       }
 
