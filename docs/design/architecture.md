@@ -72,13 +72,13 @@ HDFS, or a network mounted filesystem. In a single-server deployment, this is ty
 
 Druid uses deep storage for the following purposes:
 
-- As a backup of your data, including those that get loaded onto Historical processes.
+- To store all the data you ingest. Segments that get loaded onto Historical processes for low latency queries are also kept in deep storage for backup purposes. Additionally, segments that are only in deep storage can be used for [queries from deep storage](../querying/query-from-deep-storage.md).
 - As a way to transfer data in the background between Druid processes. Druid stores data in files called _segments_.
-- As the source data for queries that run against segments stored only in deep storage and not in Historical processes as determined by your load rules.
 
 Historical processes cache data segments on local disk and serve queries from that cache as well as from an in-memory cache.
 Segments on disk for Historical processes provide the low latency querying performance Druid is known for.
-You can also query directly from deep storage. When you query segments that exist only in deep storage, you trade some performance in exchange for the ability to query more of your data without necessarily having to scale your Historical processes.
+
+You can also query directly from deep storage. When you query segments that exist only in deep storage, you trade some performance  for the ability to query more of your data without necessarily having to scale your Historical processes.
 
 When determining sizing for your storage, keep the following in mind:
 

@@ -29,6 +29,10 @@ You can use durable storage to improve querying from deep storage and SQL-based 
 
 Durable storage for queries from deep storage provides a location where you can write the results of deep storage queries to. Durable storage for SQL-based ingestion is used to temporarily house intermediate files, which can improve reliability.
 
+Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
+by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes).
+If the configured limit is too low, Druid may throw the error, `NotEnoughTemporaryStorageFault`.
+
 ## Enable durable storage
 
 To enable durable storage, you need to set the following common service properties:
@@ -52,15 +56,22 @@ For queries where you want to use fault tolerance for workers,  set `faultTolera
 
 ## Use durable storage for queries from deep storage
 
-When you run a query, include the context parameter `selectDestination` and set it to `DURABLE_STORAGE`. This context parameter configures queries from deep storage to write their results to durable storage.
+Saving the final results for queries from deep storage to durable storage instead of task reports allows you to fetch large result sets.
+
+When you run a query, include the context parameter `selectDestination` and set it to `DURABLE_STORAGE`.
+
+You can also write intermediate results to durable storage (`durableShuffleStorage`) for better reliability. The location where workers write intermediate results is different than the location where final results get stored. This means that durable storage for results can be enabled even if you don't write intermediate results to durable storage.
+
+If you write the results for queries from deep storage to durable storage, the results are cleaned up when the task is removed from the metadata store. 
 
 ## Durable storage clean up
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
 the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
-for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
+for the cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
-Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
-by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes).
-If the configured limit is too low, Druid may throw the error, `NotEnoughTemporaryStorageFault`.
+Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySEconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations)
+
+Note that the cleaner also removes query from deep storage results if the task is removed from the metadata store.
+

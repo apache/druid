@@ -194,7 +194,9 @@ Druid returns an HTTP 403 response for authorization failure.
 
 You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules. 
 
-Note that at least part of a datasource must be available on a Historical process so that Druid can plan your query.
+Note that at least one segment of a datasource must be available on a Historical process so that the Broker can plan your query. A quick way to check if this is true is whether or not a datasource is visible in the Druid console.
+
+
 
 For more information, see [Query from deep storage](../querying/query-from-deep-storage.md).
 
@@ -218,11 +220,13 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 
 - There are additional context parameters  for `sql/statements`: 
 
-   - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. 
+   - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. You must manually retrieve your results after the query completes.
    - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 - The only supported value for `resultFormat` is JSON.
 - Only the user who submits a query can see the results.
+
+
 
 
 ### Get query status
@@ -231,7 +235,7 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 ```
 
-Returns information about the query associated with the given query ID. The response matches the response from the POST API if the query is accepted or running. The response for a completed query includes the same information as an in-progress query with several additions:
+Returns information about the query associated with the given query ID. The response matches the response from the POST API if the query is accepted or running and the execution mode is  `ASYNC`. In addition to the fields that this endpoint shares with `POST /sql/statements`, a completed query's status includes the following:
 
 - A `result` object that summarizes information about your results, such as the total number of rows and a sample record
 - A `pages` object that includes the following information for each page of results:
@@ -246,12 +250,16 @@ Returns information about the query associated with the given query ID. The resp
 GET https://ROUTER:8888/druid/v2/sql/statements/{queryID}/results?page=PAGENUMBER
 ```
 
-Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. When you retrieve the status of a completed query, Druid returns information about the composition of each page and its page number (`id`). 
+Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. When you retrieve the status of a completed query, Druid returns information about the composition of each page and its page number (`id`). For information about pages, see [Get query status](#get-query-status).
+
+If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
 When getting query results, keep the following in mind:
 
 - JSON is the only supported result format.
 - If you attempt to get the results for an in-progress query, Druid returns an error. 
+- If you attempt to get the results of a failed or canceled query, Druid returns an HTTP 404 error.
+- Getting the query results for an ingestion query returns an empty response.
 
 ### Cancel a query
 
@@ -261,4 +269,8 @@ DELETE https://ROUTER:8888/druid/v2/sql/statements/{queryID}
 
 Cancels a running or accepted query. 
 
-Druid returns an HTTP 202 response for successful cancellation requests. If the query is already complete or can't be found, Druid returns an HTTP 500 error with an error message describing the issue.
+Druid returns an HTTP 202 response for successful cancellation requests. 
+
+If the query is already complete, Druid returns an HTTP 200 response.
+
+If the query can't be found based on the query ID, Druid returns an HTTP 500 error and a corresponding error message.

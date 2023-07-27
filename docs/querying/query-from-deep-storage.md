@@ -45,7 +45,7 @@ For example, the following interval load rule assigns 0 replicants for the speci
   }
 ```
 
-This means that any segments within that interval don't get loaded onto `_default_tier`. Then, create a corresponding drop rule so that Druid drops the segments from Historical tiers if they were previously loaded.
+This means that any segments within that interval don't get loaded onto `_default_tier`. 
 
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
@@ -59,7 +59,7 @@ You can also confirm this through the Druid console. On the **Segments** page, s
 
 Keep the following in mind when working with load rules to control what exists only in deep storage:
 
-- At least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. The segment on the Historical process can be any segment from the datasource. It does not need to be a specific segment. 
+- At least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. The segment on the Historical process can be any segment from the datasource. It does not need to be a specific segment. One way to verify that a datasource has at least one segment on a Historical process is if it's visible in the Druid console.
 - The actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
 
 ## Run a query from deep storage
