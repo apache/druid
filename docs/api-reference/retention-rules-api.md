@@ -56,8 +56,6 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully updated retention rules for specified datasource* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -152,13 +150,9 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully updated default retention rules* 
 
 <!--500 SERVER ERROR-->
-
-<br/>
 
 *Error with request body* 
 
@@ -233,8 +227,6 @@ Retrieves all current retention rules in the cluster including the default reten
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved retention rules* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -306,8 +298,6 @@ Note that this endpoint returns an `HTTP 200 Success` code message even if the d
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully retrieved retention rules* 
 
@@ -390,19 +380,13 @@ Note that the following query parameters cannot be chained.
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved audit history* 
 
 <!--400 BAD REQUEST-->
 
-<br/>
-
 *Request in the incorrect format* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *`count` query parameter too large* 
 
