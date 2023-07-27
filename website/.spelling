@@ -2300,5 +2300,5 @@ suspendAll
 resumeAll
 terminateAll
 selfDiscovered
-isLeader
 loadstatus
+isLeader
