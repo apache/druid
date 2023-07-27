@@ -40,7 +40,6 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
-import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
@@ -628,15 +627,13 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     });
   }
 
-
-
   private Predicate<Object[]> makeArrayPredicate(TypeSignature<ValueType> inputType)
   {
     final Comparator<Object[]> arrayComparator;
     if (inputType.getElementType().is(ValueType.STRING) &&
         (matchValueType.isNumeric() || (matchValueType.isArray() && matchValueType.getElementType().isNumeric()))
     ) {
-      arrayComparator = new NumericStringArrayComparator(StringComparators.NUMERIC);
+      arrayComparator = new NumericStringArrayComparator();
     } else {
       arrayComparator = inputType.getNullableStrategy();
     }
@@ -665,8 +662,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     }
     return makeComparatorPredicate(rangeType, arrayComparator, lowerBound, upperBound);
   }
-
-
 
   private Supplier<Predicate<Object[]>> makeTypeDetectingArrayPredicate()
   {
@@ -774,7 +769,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           return Predicates.notNull();
       }
     });
-
   }
 
   private class RangePredicateFactory implements DruidPredicateFactory
@@ -1112,13 +1106,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
 
   private static class NumericStringArrayComparator implements Comparator<Object[]>
   {
-    private final StringComparator elementComparator;
-
-    private NumericStringArrayComparator(StringComparator elementComparator)
-    {
-      this.elementComparator = elementComparator;
-    }
-
     @Override
     public int compare(Object[] o1, Object[] o2)
     {
@@ -1134,7 +1121,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
       final int iter = Math.min(o1.length, o2.length);
       for (int i = 0; i < iter; i++) {
-        final int cmp = elementComparator.compare((String) o1[i], (String) o2[i]);
+        final int cmp = StringComparators.NUMERIC.compare((String) o1[i], (String) o2[i]);
         if (cmp == 0) {
           continue;
         }
