@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
@@ -164,7 +165,7 @@ public class CoordinatorDynamicConfig
         = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
 
     if (null != killTaskSlotRatio && (killTaskSlotRatio < 0 || killTaskSlotRatio > 1)) {
-      throw InvalidInput.exception("killTaskSlotRatio [%.2f] is invalid. It must be >= 0 and <= 1.", killTaskSlotRatio)
+      throw InvalidInput.exception("killTaskSlotRatio [%.2f] is invalid. It must be >= 0 and <= 1.", killTaskSlotRatio);
     }
     this.killTaskSlotRatio = killTaskSlotRatio != null ? killTaskSlotRatio : DEFAULT_KILL_TASK_SLOT_RATIO;
     this.dataSourcesToNotKillStalePendingSegmentsIn

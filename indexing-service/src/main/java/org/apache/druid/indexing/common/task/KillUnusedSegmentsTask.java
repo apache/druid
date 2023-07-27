@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -84,7 +84,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         context
     );
     if (null != maxSegmentsToKill && maxSegmentsToKill <= 0) {
-       throw InvalidInput.exception("maxSegmentsToKill [%d] is invalid. It must be a positive integer.", maxSegmentsToKill);
+      throw InvalidInput.exception(
+          "maxSegmentsToKill [%d] is invalid. It must be a positive integer.",
+          maxSegmentsToKill
+      );
     }
     this.markAsUnused = markAsUnused != null && markAsUnused;
     this.maxSegmentsToKill = maxSegmentsToKill;
