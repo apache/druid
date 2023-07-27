@@ -17,24 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.msq.rpc;
+package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
-/**
- * Interface for {@link org.apache.druid.rpc.ServiceClient}-backed communication with the Coordinator.
- */
-public interface CoordinatorServiceClient
+import java.util.List;
+
+public class NoopCoordinatorClient implements CoordinatorClient
 {
-  /**
-   * Fetches segment metadata for the given dataSource and segmentId from the Coordinator
-   */
-  ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId);
+  @Override
+  public ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor)
+  {
+    throw new UnsupportedOperationException();
+  }
 
-  /**
-   * Returns a new CoordinatorServiceClient backed by a ServiceClient which follows the provided retryPolicy
-   */
-  CoordinatorServiceClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
+  @Override
+  public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public CoordinatorClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
+  {
+    // Ignore retryPolicy for the test client.
+    return this;
+  }
 }
