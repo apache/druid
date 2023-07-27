@@ -648,7 +648,7 @@ public abstract class ExprEval<T>
    * Cast an {@link ExprEval} to some {@link ExpressionType} that the value will be compared with. If the value is not
    * appropriate to use for comparison after casting, this method returns null. For example, the
    * {@link ExpressionType#DOUBLE} value 1.1 when cast to {@link ExpressionType#LONG} becomes 1L, which is no longer
-   * appropriate to use for equality or range comparisons, while 1.0 is valid.
+   * appropriate to use for value equality comparisons, while 1.0 is valid.
    */
   @Nullable
   public static ExprEval<?> castForEqualityComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
