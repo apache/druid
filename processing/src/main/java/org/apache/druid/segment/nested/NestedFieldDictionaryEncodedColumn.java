@@ -700,7 +700,17 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           if (nullMark == offsetMark) {
             return true;
           }
-          return DimensionHandlerUtils.isNumericNull(getObject());
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          // zero is always null
+          if (globalId == 0) {
+            return true;
+          } else if (globalId < adjustLongId) {
+            final String value = StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
+            return GuavaUtils.tryParseLong(value) == null && Doubles.tryParse(value) == null;
+          }
+          // if id is less than array ids, it is definitely a number and not null (since null is 0)
+          return globalId >= adjustArrayId;
         }
 
         @Override

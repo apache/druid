@@ -628,9 +628,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
           return f == null ? 0f : f;
         } else if (id < adjustDoubleId) {
           return longDictionary.get(id - adjustLongId).floatValue();
-        } else {
+        } else if (id < adjustArrayId) {
           return doubleDictionary.get(id - adjustDoubleId).floatValue();
         }
+        return 0L;
       }
 
       @Override
@@ -646,9 +647,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
           return d == null ? 0.0 : d;
         } else if (id < adjustDoubleId) {
           return longDictionary.get(id - adjustLongId).doubleValue();
-        } else {
+        } else if (id < adjustArrayId) {
           return doubleDictionary.get(id - adjustDoubleId);
         }
+        return 0.0;
       }
 
       @Override
@@ -690,7 +692,16 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
         if (nullMark == offsetMark) {
           return true;
         }
-        return DimensionHandlerUtils.isNumericNull(getObject());
+        final int id = encodedValueColumn.get(offset.getOffset());
+        // zero is always null
+        if (id == 0) {
+          return true;
+        } else if (id < adjustLongId) {
+          final String value = StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+          return GuavaUtils.tryParseLong(value) == null && Doubles.tryParse(value) == null;
+        }
+        // if id is less than array ids, its definitely a number and not null (since null is 0)
+        return id >= adjustArrayId;
       }
 
       @Override
