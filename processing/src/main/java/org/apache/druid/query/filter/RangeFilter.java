@@ -49,6 +49,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
@@ -630,9 +631,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private Predicate<Object[]> makeArrayPredicate(TypeSignature<ValueType> inputType)
   {
     final Comparator<Object[]> arrayComparator;
-    if (inputType.getElementType().is(ValueType.STRING) &&
-        (matchValueType.isNumeric() || (matchValueType.isArray() && matchValueType.getElementType().isNumeric()))
-    ) {
+    if (inputType.getElementType().is(ValueType.STRING) && Types.isNumericOrNumericArray(matchValueType)) {
       arrayComparator = new NumericStringArrayComparator();
     } else {
       arrayComparator = inputType.getNullableStrategy();

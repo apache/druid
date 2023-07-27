@@ -247,7 +247,7 @@ public class ExpressionTypeConversion
   {
     final ExpressionType functionType = ExpressionTypeConversion.function(type, other);
     // any number is long
-    return functionType != null && functionType.isNumeric() ? ExpressionType.LONG : functionType;
+    return Types.isNumeric(functionType) ? ExpressionType.LONG : functionType;
   }
 
   /**
