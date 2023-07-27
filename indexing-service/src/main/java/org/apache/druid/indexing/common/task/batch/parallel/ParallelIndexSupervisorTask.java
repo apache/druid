@@ -159,7 +159,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private final String baseSubtaskSpecName;
 
-  private final AtomicReference<InputSource> inputSourceRef = new AtomicReference<>();
+  private final AtomicReference<InputSource> baseInputSource = new AtomicReference<>();
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -248,7 +248,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.inputSourceRef.compareAndSet(null, ingestionSchema.getIOConfig().getInputSource());
+    this.baseInputSource.set(ingestionSchema.getIOConfig().getInputSource());
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
@@ -524,9 +524,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
-        if (getInputSource() instanceof TaskInputSource) {
-          inputSourceRef.set(((TaskInputSource) getInputSource()).withTaskToolbox(toolbox));
-        }
+        getInputSource();
 
         if (isGuaranteedRollup(
             getIngestionMode(),
@@ -1826,7 +1824,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private InputSource getInputSource()
   {
-    return inputSourceRef.get();
+    InputSource inputSource = baseInputSource.get();
+    if (inputSource instanceof TaskInputSource) {
+      TaskInputSource taskInputSource = (TaskInputSource) inputSource;
+      if (!taskInputSource.hasTaskToolbox() && toolbox != null) {
+        inputSource = taskInputSource.withTaskToolbox(toolbox);
+        baseInputSource.set(inputSource);
+      }
+    }
+    return inputSource;
   }
 
   /**

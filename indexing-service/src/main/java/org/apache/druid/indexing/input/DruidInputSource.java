@@ -86,7 +86,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /**
@@ -156,7 +155,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    */
   private final List<String> metrics;
 
-  private final AtomicReference<TaskToolbox> toolboxRef = new AtomicReference<>();
+  private final TaskToolbox toolbox;
 
   @JsonCreator
   public DruidInputSource(
@@ -175,6 +174,39 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       @JacksonInject TaskConfig taskConfig
   )
   {
+    this(
+        dataSource,
+        interval,
+        segmentIds,
+        dimFilter,
+        dimensions,
+        metrics,
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        retryPolicyFactory,
+        taskConfig,
+        null
+    );
+  }
+
+  private DruidInputSource(
+      final String dataSource,
+      @Nullable Interval interval,
+      // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
+      // not for direct end user use.
+      @Nullable List<WindowedSegmentId> segmentIds,
+      DimFilter dimFilter,
+      List<String> dimensions,
+      List<String> metrics,
+      IndexIO indexIO,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      RetryPolicyFactory retryPolicyFactory,
+      TaskConfig taskConfig,
+      TaskToolbox toolbox
+  )
+  {
     Preconditions.checkNotNull(dataSource, "dataSource");
     if ((interval == null && segmentIds == null) || (interval != null && segmentIds != null)) {
       throw new IAE("Specify exactly one of 'interval' and 'segments'");
@@ -190,6 +222,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
     this.taskConfig = Preconditions.checkNotNull(taskConfig, "null taskConfig");
+    this.toolbox = toolbox;
   }
 
   @JsonIgnore
@@ -247,15 +280,31 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   public InputSource withTaskToolbox(TaskToolbox toolbox)
   {
-    if (toolbox != null) {
-      toolboxRef.compareAndSet(null, toolbox);
-    }
-    return this;
+    return new DruidInputSource(
+        this.dataSource,
+        this.interval,
+        this.segmentIds,
+        this.dimFilter,
+        this.dimensions,
+        this.metrics,
+        this.indexIO,
+        this.coordinatorClient,
+        this.segmentCacheManagerFactory,
+        this.retryPolicyFactory,
+        this.taskConfig,
+        toolbox
+    );
+  }
+
+  @Override
+  public boolean hasTaskToolbox()
+  {
+    return this.toolbox != null;
   }
 
   private TaskToolbox getToolbox()
   {
-    return toolboxRef.get();
+    return this.toolbox;
   }
 
   @Override

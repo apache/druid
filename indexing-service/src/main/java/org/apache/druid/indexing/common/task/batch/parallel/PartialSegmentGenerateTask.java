@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
-import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -111,9 +110,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   public final TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
-    if (inputSource instanceof TaskInputSource) {
-      inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
-    }
 
     final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
         supervisorTaskId,
