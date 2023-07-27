@@ -163,11 +163,8 @@ public class CoordinatorDynamicConfig
     this.specificDataSourcesToKillUnusedSegmentsIn
         = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
 
-    if (null != killTaskSlotRatio) {
-      Preconditions.checkArgument(
-          killTaskSlotRatio >= 0 && killTaskSlotRatio <= 1,
-          "killTaskSlotRatio must be >= 0 and <= 1"
-      );
+    if (null != killTaskSlotRatio && (killTaskSlotRatio < 0 || killTaskSlotRatio > 1)) {
+      throw InvalidInput.exception("killTaskSlotRatio [%.2f] is invalid. It must be >= 0 and <= 1.", killTaskSlotRatio)
     }
     this.killTaskSlotRatio = killTaskSlotRatio != null ? killTaskSlotRatio : DEFAULT_KILL_TASK_SLOT_RATIO;
     this.dataSourcesToNotKillStalePendingSegmentsIn

@@ -164,13 +164,13 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
 
       if (submittedTasks >= availableKillTaskSlots) {
-        log.info("Reached kill task slot limit with pending unused segments to kill. Will resume "
+        log.info("Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
                  + "on the next coordinator cycle.");
         break;
       }
     }
 
-    log.debug("Submitted kill tasks for [%d] datasources.", submittedTasks);
+    log.debug("Submitted [%d] kill tasks for [%d] datasources.", submittedTasks, dataSourcesToKill.size());
   }
 
   /**

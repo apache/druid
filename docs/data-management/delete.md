@@ -96,7 +96,7 @@ The available grammar is:
     "dataSource": <task_datasource>,
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
     "context": <task context>,
-    "maxSegmentsToKill": <the maximum number of segents to delete>
+    "maxSegmentsToKill": <the maximum number of segments to delete>
 }
 ```
 

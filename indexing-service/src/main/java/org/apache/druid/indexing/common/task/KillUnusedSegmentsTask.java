@@ -83,8 +83,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         interval,
         context
     );
-    if (null != maxSegmentsToKill) {
-      Preconditions.checkArgument(maxSegmentsToKill > 0, "maxSegmentsToKill must be > 0");
+    if (null != maxSegmentsToKill && maxSegmentsToKill <= 0) {
+       throw InvalidInput.exception("maxSegmentsToKill [%d] is invalid. It must be a positive integer.", maxSegmentsToKill);
     }
     this.markAsUnused = markAsUnused != null && markAsUnused;
     this.maxSegmentsToKill = maxSegmentsToKill;
