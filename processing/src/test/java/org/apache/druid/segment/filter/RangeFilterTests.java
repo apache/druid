@@ -568,6 +568,23 @@ public class RangeFilterTests
     }
 
     @Test
+    public void testNumericMatchStringyBounds()
+    {
+      assertFilterMatches(
+          new RangeFilter("l0", ColumnType.STRING, "abc", null, true, true, null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new RangeFilter("l0", ColumnType.STRING, "abc", "def", true, true, null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new RangeFilter("l0", ColumnType.STRING, null, "abc", true, true, null),
+          ImmutableList.of("0", "1", "2", "4", "5", "6")
+      );
+    }
+
+    @Test
     public void testNumericMatchPrecisionLoss()
     {
       assertFilterMatches(

@@ -34,6 +34,7 @@ import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -575,8 +576,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (hasLowerBound()) {
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.DOUBLE);
         if (lowerCast.isNumericNull()) {
-          hasLowerBound = false;
-          lowerBound = Double.NEGATIVE_INFINITY;
+          // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           lowerBound = lowerCast.asDouble();
           hasLowerBound = true;
@@ -782,8 +783,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (matchValueType.isNumeric()) {
         return longPredicateSupplier.get();
       }
-      Predicate<String> stringPredicate = stringPredicateSupplier.get();
-      return input -> stringPredicate.apply(String.valueOf(input));
+      Predicate<String> stringPredicate = makeStringPredicate();
+      return input -> stringPredicate.apply(Evals.asString(input));
     }
 
     @Override
@@ -792,8 +793,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (matchValueType.isNumeric()) {
         return floatPredicateSupplier.get();
       }
-      Predicate<String> stringPredicate = stringPredicateSupplier.get();
-      return input -> stringPredicate.apply(String.valueOf(input));
+      Predicate<String> stringPredicate = makeStringPredicate();
+      return input -> stringPredicate.apply(Evals.asString(input));
     }
 
     @Override
@@ -802,8 +803,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (matchValueType.isNumeric()) {
         return doublePredicateSupplier.get();
       }
-      Predicate<String> stringPredicate = stringPredicateSupplier.get();
-      return input -> stringPredicate.apply(String.valueOf(input));
+      Predicate<String> stringPredicate = makeStringPredicate();
+      return input -> stringPredicate.apply(Evals.asString(input));
     }
 
     @Override

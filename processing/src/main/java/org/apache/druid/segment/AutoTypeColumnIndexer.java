@@ -545,7 +545,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
 
         return defaultValue;
       }
-      
+
       @Nullable
       private Number computeNumber(@Nullable Object o)
       {
