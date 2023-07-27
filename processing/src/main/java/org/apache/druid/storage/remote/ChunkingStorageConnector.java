@@ -39,6 +39,12 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * An abstract implementation of the storage connectors that download the file from the remote storage in chunks
+ * and presents the downloaded chunks as a single {@link InputStream} for the consumers of the connector.
+ * This implementation benefits over keeping the InputStream to the remote source open since we don't require the
+ * connection to be open for the entire duration
+ */
 public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
   private static final long DOWNLOAD_MAX_CHUNK_SIZE = 100_000_000;
