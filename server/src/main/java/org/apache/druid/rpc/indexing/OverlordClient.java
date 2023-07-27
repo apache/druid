@@ -88,6 +88,20 @@ public interface OverlordClient
     return runKillTask(idPrefix, dataSource, interval, null);
   }
 
+  /**
+   * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
+   *
+   * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
+   * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
+   * monitor its progress through the {@link #taskStatus(String)} API.
+   *
+   * @param idPrefix   Descriptive prefix to include at the start of task IDs
+   * @param dataSource Datasource to kill
+   * @param interval   Interval to kill
+   * @param maxSegmentsToKill  The maximum number of segments to kill
+   *
+   * @return future with task ID
+   */
   default ListenableFuture<String> runKillTask(
       String idPrefix,
       String dataSource,
