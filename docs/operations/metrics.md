@@ -219,7 +219,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/rows/output`|Number of Druid rows persisted.|`dataSource`, `taskId`, `taskType`, `groupId`|Your number of events with rollup.|
 |`ingest/persists/count`|Number of times persist occurred.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the configuration. Generally a few minutes at most.|
-|`ingest/persists/cpu`|CPU time in Nanoseconds spent on doing intermediate persist.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the configuration. Generally a few minutes at most.|
+|`ingest/persists/cpu`|CPU time in nanoseconds spent on doing intermediate persist.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the configuration. Generally a few minutes at most.|
 |`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0 or very low|
 |`ingest/persists/failed`|Number of persists that failed.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/handoff/failed`|Number of handoffs that failed.|`dataSource`, `taskId`, `taskType`, `groupId`,`tags`|0|
@@ -303,14 +303,14 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|Varies|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|< max|
 |`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies|
-|`segment/unavailable/count`|Number of segments, not including replicas, left to load until segments that should be loaded in the cluster are available for queries.|`dataSource`|0|
-|`segment/underReplicated/count`|Number of segments, including replicas, left to load until segments that should be loaded in the cluster are available for queries.|`tier`, `dataSource`|0|
+|`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
+|`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
 |`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
 |`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
 |`tier/total/capacity`|Total capacity in bytes available in each tier.|`tier`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
-|`compactTask/maxSlot/count`|Max number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
+|`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
 |`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. This is the max number of task slots minus any currently running compaction tasks.| |Varies|
 |`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
 |`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
@@ -321,10 +321,10 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/skipCompact/bytes`|Total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|`dataSource`|Varies|
 |`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|`dataSource`|Varies|
 |`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|`dataSource`|Varies|
-|`coordinator/time`|Approximate Coordinator duty runtime in milliseconds. The duty dimension is the string alias of the duty that is running.|`duty`|Varies|
+|`coordinator/time`|Approximate Coordinator duty runtime in milliseconds. |`duty`|Varies|
 |`coordinator/global/time`|Approximate runtime of a full coordination cycle in milliseconds. The `dutyGroup` dimension indicates what type of coordination this run was. For example: Historical Management or Indexing.|`dutyGroup`|Varies|
 |`metadata/kill/supervisor/count`|Total number of terminated supervisors that were automatically deleted from metadata store per each Coordinator kill supervisor duty run. This metric can help adjust `druid.coordinator.kill.supervisor.durationToRetain` configuration based on whether more or less terminated supervisors need to be deleted per cycle. This metric is only emitted when `druid.coordinator.kill.supervisor.on` is set to true.| |Varies|
-|`metadata/kill/audit/count`|Total number of audit logs that were automatically deleted from metadata store per each Coordinator kill audit duty run. This metric can help adjust `druid.coordinator.kill.audit.durationToRetain` configuration based on whether more or less audit logs need to be deleted per cycle. This metric is only emitted when `druid.coordinator.kill.audit.on` is set to true.| |Varies|
+|`metadata/kill/audit/count`|Total number of audit logs that were automatically deleted from metadata store per each Coordinator kill audit duty run. This metric can help adjust `druid.coordinator.kill.audit.durationToRetain` configuration based on whether more or less audit logs need to be deleted per cycle. This metric is emitted only when `druid.coordinator.kill.audit.on` is set to true.| |Varies|
 |`metadata/kill/compaction/count`|Total number of compaction configurations that were automatically deleted from metadata store per each Coordinator kill compaction configuration duty run. This metric is only emitted when `druid.coordinator.kill.compaction.on` is set to true.| |Varies|
 |`metadata/kill/rule/count`|Total number of rules that were automatically deleted from metadata store per each Coordinator kill rule duty run. This metric can help adjust `druid.coordinator.kill.rule.durationToRetain` configuration based on whether more or less rules need to be deleted per cycle. This metric is only emitted when `druid.coordinator.kill.rule.on` is set to true.| |Varies|
 |`metadata/kill/datasource/count`|Total number of datasource metadata that were automatically deleted from metadata store per each Coordinator kill datasource duty run. Note that datasource metadata only exists for datasource created from supervisor. This metric can help adjust `druid.coordinator.kill.datasource.durationToRetain` configuration based on whether more or less datasource metadata need to be deleted per cycle. This metric is only emitted when `druid.coordinator.kill.datasource.on` is set to true.| |Varies|
@@ -375,7 +375,7 @@ For more information, see [Enabling Metrics](../configuration/index.md#enabling-
 
 ### ZooKeeper
 
-These metrics are available when `druid.zk.service.enabled = true`.
+These metrics are available only when `druid.zk.service.enabled = true`.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
