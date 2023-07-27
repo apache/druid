@@ -19,7 +19,7 @@
 
 # Kubernetes Task Scheduling Extension
 The Kubernetes Task Scheduling extension allows a Druid cluster running on Kubernetes to schedule
-it's tasks as Kubernetes Jobs instead of sending them to workers (middle managers or indexers).
+its tasks as Kubernetes Jobs instead of sending them to workers (middle managers or indexers).
 
 ## How the Kubernetes Task Scheduler works.
 The Kubernetes Task Scheduler replaces the HTTP or Zookeeper based task runner (which both send tasks to workers) on the overlord.
@@ -71,12 +71,12 @@ the Druid peon process for that task and then exits. The overlord then watches t
     #### Option 1. Copy the overlord's pod template to use as the base job template
     This adapter takes the overlord's own pod specification and injects needed information (like the task id) on top of it.
 
-    Required runtime properties 
+    Required overlord runtime properties 
     ```
     druid.indexer.runner.k8s.adapter.type=overlordSingleContainer (defaults to this if not specified)
     druid.indexer.runner.k8s.adapter.type=overlordMultiContainer (same as overlordSingleContainer except sidecars are respected)
     ```
-    Additional runtime properties
+    Additional overlord runtime properties
     ```
     druid.indexer.runner.javaOptsArray=[] (JVM args for the peon running in the Job, If -Xmx is specified, the adapter will attempt to scale the Kubernetes requests of the pod to correspond with it)
     druid.indexer.runner.labels={} (Additional labels to add to the Job)
@@ -88,12 +88,14 @@ the Druid peon process for that task and then exits. The overlord then watches t
     This adapter expects a [PodTemplate](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) to be available on the overlord's file system.
     This pod template is used as the base of the job template (additional info like the task id is injected on top of it).
     You can override things like labels, environment variables, resources, annotation, or even the base image with this template.
+
+    Required overlord runtime properties
     ```
     druid.indexer.runner.k8s.adapter.type=customTemplateAdapter
     druid.indexer.runner.k8s.podTemplate.base=/opt/druid/conf/druid/cluster/pod-template.yaml` (location of pod template on overlord)
     ```
 
-    The following PodTemplate is an example that uses the public druid docker image.
+    The following PodTemplate is an example that uses the regular druid docker image.
     ```
     apiVersion: "v1"
     kind: "PodTemplate"
@@ -111,7 +113,6 @@ the Druid peon process for that task and then exits. The overlord then watches t
             - -c
             - |
               /peon.sh /druid/data 1
-              sleep 30
           env:
           - name: CUSTOM_ENV_VARIABLE
             value: "hello"
@@ -132,9 +133,6 @@ the Druid peon process for that task and then exits. The overlord then watches t
               cpu: "1"
               memory: 2400M
           volumeMounts:
-          - mountPath: /opt/druid/conf/druid/cluster/_common
-            name: common-config-volume
-            readOnly: true
           - mountPath: /opt/druid/conf/druid/cluster/master/coordinator-overlord # runtime props are still mounted in this location because that's where peon.sh looks for configs
             name: nodetype-config-volume
             readOnly: true
@@ -159,10 +157,6 @@ the Druid peon process for that task and then exits. The overlord then watches t
         volumes:
         - configMap:
             defaultMode: 420
-            name: tiny-cluster-druid-common-config
-          name: common-config-volume
-        - configMap:
-            defaultMode: 420
             name: druid-tiny-cluster-peons-config
           name: nodetype-config-volume
         - emptyDir: {}
@@ -182,7 +176,7 @@ the Druid peon process for that task and then exits. The overlord then watches t
     druid.indexer.task.encapsulatedTask=true
     ```
 
-    Any runtime property or jvm config used by the peon process can be passed here
+    Any runtime property or jvm config used by the peon process can also be passed here
 
     E.G. below is a example of a ConfigMap that can be used to generate the nodetype-config-volume mount in the above template.
     ```
