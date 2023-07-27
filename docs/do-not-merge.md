@@ -61,8 +61,9 @@ Coordinator now supports a `smartSegmentLoading` mode, which is enabled by defau
 * `maxSegmentsToMove`
 * `replicationThrottleLimit`
 * `useRoundRobinSegmentAssignment`
-* `useBatchedSegmentSampler`
-* `emitBalancingStats`
+* `replicantLifetime`
+* `maxNonPrimaryReplicantsToLoad`
+* `decommissioningMaxPercentOfMaxSegmentsToMove`
 
 These configs are now deprecated and will be removed in subsequent releases.
 
@@ -236,16 +237,14 @@ Added a new monitor `ServiceStatusMonitor` to monitor the service health of the 
 
 The following metrics are now available for Brokers:
 
-|Metric|Description|Dimensions |Normal value|
-|------|-----------|------------|
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
 |`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`| | 
 |`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`| | 
 | `segment/loadQueue/assigned` | Number of segments assigned for load or drop to the load queue of a server. |`dataSource`,`server` | Varies |
 | `segment/loadQueue/success` |Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
 | `segment/loadQueue/cancelled` |Number of segment assignments that were canceled before completion. |`dataSource`,`server` | 0 |
 | `segment/loadQueue/failed` |Number of segment assignments that failed to complete.|`dataSource`, `server`|0|
-| `segment/assigned/broadcast` | |
-| `segment/dropped/broadcast` | |
 
 [14453](https://github.com/apache/druid/pull/14453)
 [13197](https://github.com/apache/druid/pull/13197)
@@ -264,6 +263,12 @@ Added `groupId` to task metrics emitted by the Overlord. This is helpful for gro
 
 [14402](https://github.com/apache/druid/pull/14402)
 
+### New metrics for monitoring sync status of `HttpServerInventoryView`
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|-----------|----------|
+|`segment/serverview/sync/healthy`|Sync status of the Coordinator/Broker with a segment-loading server such as a Historical or Peon. Emitted by the Coordinator and Brokers only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `segment/serverview/sync/unstableTime` to debug slow startup of the Coordinator.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
+|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator/Broker has been failing to sync with a segment-loading server. Emitted by the Coordinator and Brokers only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|```
 ## Cluster management
 
 ### Removed unused Coordinator dynamic configuration properties
@@ -274,6 +279,12 @@ The following Coordinator dynamic configs have been removed:
 * `useBatchedSegmentSampler` and `percentOfSegmentsToConsiderPerMove`: Batched segment sampling is now the standard and will always be on.
 
 [14524](https://github.com/apache/druid/pull/14524)
+
+### Made Coordinator more resilient to leadership changes
+
+The Coordinator is more resilient to leadership changes now and does not get stuck even if re-election happens while a coordinator run is in progress.
+
+[14385](https://github.com/apache/druid/pull/14385)
 
 ### Improved segment balancing strategy
 
@@ -301,6 +312,13 @@ These new defaults can improve performance for most use cases.
 
 [14269](https://github.com/apache/druid/pull/14269)
 
+### Stabilized initialization of `HttpServerInventoryView`
+
+The initialization of `HttpServerInventoryView` maintained by Brokers and Coordinator is now resilient to Historicals and Peons crashing. The crashed servers are simply marked as stopped and not waited upon during the initialization.
+
+New metrics have been added to further monitor the sync status of `HttpServerInventoryView` with different servers.
+
+[14517](https://github.com/apache/druid/pull/14517)
 ### Improved error messages
 
 Introduced a new unified exception, `DruidException`, for surfacing errors. It is partially compatible with the old way of reporting error messages. Response codes remain the same, all fields that previously existed on the response will continue to exist and be populated, including `errorMessage`. Some error messages have changed to be more consumable by humans and some cases have the message restructured. There should be no impact to the response codes.
