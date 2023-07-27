@@ -1299,7 +1299,8 @@
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
 
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
-                  </excludes>
+                        <exclude>com/fasterxml/jackson/databind/*</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -1329,6 +1330,9 @@
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
+                    <excludes>
+                        *com/fasterxml/jackson/databind/*
+                    </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
