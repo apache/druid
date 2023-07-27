@@ -105,5 +105,5 @@ deep storage. This operation cannot be undone.
 
 Note: If `maxSegmentsToKill` is not specified, all matched segments are deleted. If `maxSegmentsToKill` is less than
 the number of matching segments found, then only that number of matching segments will be deleted, but all matching
-segments will still be marked unused, if specified to be. In this case, any remaining unusued segments can be deleted
+segments will still be marked unused, if specified to be. In this case, any remaining unused segments can be deleted
 with a subsequent kill task issued, or via [Automated unused segment deletion](../operations/clean-metadata-store.md#segment-records-and-segments-in-deep-storage-kill-task)

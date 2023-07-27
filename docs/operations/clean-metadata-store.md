@@ -85,7 +85,6 @@ If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitt
 - `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `P1D`. Must be greater than `druid.coordinator.period.indexingPeriod`. 
 - `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
-- `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
 
 ### Audit records
 
