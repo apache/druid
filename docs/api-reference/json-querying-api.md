@@ -49,13 +49,9 @@ Queries are composed of various JSON properties and Druid has different types of
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully submitted query* 
 
 <!--400 BAD REQUEST-->
-
-<br/>
 
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
@@ -296,13 +292,9 @@ Retrieves an array that contains objects with segment information, including the
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved segment information* 
 
 <!--400 BAD REQUEST-->
-
-<br/>
 
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
