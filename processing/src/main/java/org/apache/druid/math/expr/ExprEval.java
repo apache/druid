@@ -654,9 +654,9 @@ public abstract class ExprEval<T>
   public static ExprEval<?> castForEqualityComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
   {
     ExprEval<?> cast = valueToCompare.castTo(typeToCompareWith);
-    // make sure the DOUBLE value when cast to LONG is the same before and after the cast
-    // this lets us match 1.0 to 1, but not 1.1
     if (ExpressionType.LONG.equals(typeToCompareWith) && valueToCompare.asDouble() != cast.asDouble()) {
+      // make sure the DOUBLE value when cast to LONG is the same before and after the cast
+      // this lets us match 1.0 to 1, but not 1.1
       return null;
     } else if (ExpressionType.LONG_ARRAY.equals(typeToCompareWith)) {
       // if comparison array is double typed, make sure the values are the same when cast to long
