@@ -19,8 +19,9 @@
 import { Button, FormGroup, InputGroup, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import type { QueryResult } from 'druid-query-toolkit';
-import { SqlExpression, SqlFunction } from 'druid-query-toolkit';
+import type { QueryResult } from '@druid-toolkit/query';
+import { SqlExpression, SqlFunction } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import { AppToaster } from '../../../singletons';

@@ -159,7 +159,7 @@ public class DruidPeonClientIntegrationTest
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected
     Path downloadPath = Paths.get(tempDir.toAbsolutePath().toString(), "task.json");
-    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId);
+    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId.getK8sJobName());
     k8sClient.executeRequest(client -> {
       client.pods()
             .inNamespace("default")

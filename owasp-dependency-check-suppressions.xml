@@ -230,6 +230,7 @@
     <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
+    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -390,6 +391,13 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1$</packageUrl>
     <cve>CVE-2022-33915</cve>
+  </suppress>
+  <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
   </suppress>
   <suppress>
     <!--
@@ -681,6 +689,7 @@
    file name: okhttp-*.jar
    ]]></notes>
     <cve>CVE-2021-0341</cve>
+    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
   </suppress>
 
   <suppress>

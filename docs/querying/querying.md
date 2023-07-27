@@ -57,7 +57,7 @@ are designed to be lightweight and complete very quickly. This means that for mo
 more complex visualizations, multiple Druid queries may be required.
 
 Even though queries are typically made to Brokers or Routers, they can also be accepted by
-[Historical](../design/historical.md) processes and by [Peons (task JVMs)](../design/peons.md)) that are running
+[Historical](../design/historical.md) processes and by [Peons (task JVMs)](../design/peons.md) that are running
 stream ingestion tasks. This may be valuable if you want to query results for specific segments that are served by
 specific processes.
 

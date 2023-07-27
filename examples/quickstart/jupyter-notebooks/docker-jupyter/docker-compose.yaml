@@ -71,7 +71,7 @@ services:
       - KAFKA_ENABLE_KRAFT=false
 
   coordinator:
-    image: apache/druid:${DRUID_VERSION}
+    image: apache/druid:${DRUID_VERSION:-26.0.0}
     container_name: coordinator
     profiles: ["druid-jupyter", "all-services"]
     volumes:
@@ -88,7 +88,7 @@ services:
       - environment
 
   broker:
-    image: apache/druid:${DRUID_VERSION}
+    image: apache/druid:${DRUID_VERSION:-26.0.0}
     container_name: broker
     profiles: ["druid-jupyter", "all-services"]
     volumes:
@@ -105,7 +105,7 @@ services:
       - environment
 
   historical:
-    image: apache/druid:${DRUID_VERSION}
+    image: apache/druid:${DRUID_VERSION:-26.0.0}
     container_name: historical
     profiles: ["druid-jupyter", "all-services"]
     volumes:
@@ -123,7 +123,7 @@ services:
       - environment
 
   middlemanager:
-    image: apache/druid:${DRUID_VERSION}
+    image: apache/druid:${DRUID_VERSION:-26.0.0}
     container_name: middlemanager
     profiles: ["druid-jupyter", "all-services"]
     volumes:
@@ -142,7 +142,7 @@ services:
       - environment
 
   router:
-    image: apache/druid:${DRUID_VERSION}
+    image: apache/druid:${DRUID_VERSION:-26.0.0}
     container_name: router
     profiles: ["druid-jupyter", "all-services"]
     volumes:
@@ -167,6 +167,8 @@ services:
       JUPYTER_TOKEN: "docker"
       DOCKER_STACKS_JUPYTER_CMD: "lab"
       NOTEBOOK_ARGS: "--NotebookApp.token=''"
+      DRUID_HOST: "${DRUID_HOST:-router}"
+      KAFKA_HOST: "${KAFKA_HOST:-kafka}"
     ports:
       - "${JUPYTER_PORT:-8889}:8888"
     volumes:

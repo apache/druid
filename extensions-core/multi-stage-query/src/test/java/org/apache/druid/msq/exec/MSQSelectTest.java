@@ -60,8 +60,6 @@ import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -113,7 +111,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
                   )
                   .build();
 
@@ -123,7 +121,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
                   )
                   .build();
 
@@ -421,7 +419,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
-                           .filters(selector("dim2", "nonexistent", null))
+                           .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -455,7 +453,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
-                           .filters(selector("dim2", "nonexistent", null))
+                           .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
                            .build()
@@ -771,7 +769,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                                   .setDimFilter(not(selector("j0.v", "xa", null)))
+                                   .setDimFilter(not(equality("j0.v", "xa", ColumnType.STRING)))
                                    .setGranularity(Granularities.ALL)
                                    .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
                                    .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
@@ -958,7 +956,7 @@ public class MSQSelectTest extends MSQTestBase
                             new DoubleSumAggregatorFactory("a0:sum", "m2"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0:count"),
-                                not(selector("m2", null, null)),
+                                notNull("m2"),
 
                                 // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
                                 // May be due to JSON serialization: name is set on the serialized aggregator even
@@ -1540,14 +1538,13 @@ public class MSQSelectTest extends MSQTestBase
                                      )
                                      .setHavingSpec(
                                          having(
-                                             bound(
+                                             range(
                                                  "a0",
-                                                 "1",
+                                                 ColumnType.LONG,
+                                                 1L,
                                                  null,
                                                  true,
-                                                 false,
-                                                 null,
-                                                 StringComparators.NUMERIC
+                                                 false
                                              )
                                          )
                                      )
@@ -1859,7 +1856,7 @@ public class MSQSelectTest extends MSQTestBase
                         aggregators(
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
-                                new NotDimFilter(new SelectorDimFilter("dim3", null, null)),
+                                notNull("dim3"),
                                 "a0"
                             )
                         )
@@ -2073,7 +2070,7 @@ public class MSQSelectTest extends MSQTestBase
         .setAggregatorSpecs(
             new FilteredAggregatorFactory(
                 new CountAggregatorFactory("a0"),
-                new SelectorDimFilter("j0.d1", null, null),
+                isNull("j0.d1"),
                 "a0"
             )
         )

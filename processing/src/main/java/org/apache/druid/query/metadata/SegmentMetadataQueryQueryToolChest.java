@@ -277,6 +277,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     SegmentId mergedSegmentId = null;
 
+    // Union datasources can have multiple datasources. So we iterate through all the datasources to parse the segment id.
     for (String dataSource : dataSources) {
       final SegmentId id1 = SegmentId.tryParse(dataSource, arg1.getId());
       final SegmentId id2 = SegmentId.tryParse(dataSource, arg2.getId());
@@ -364,15 +365,23 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           aggregators.put(aggregator.getName(), aggregator);
         }
       }
+    } else if (AggregatorMergeStrategy.EARLIEST == aggregatorMergeStrategy) {
+      // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
+      // followed by arg2. So for earliest strategy, the iteration order should be arg2 and arg1.
+      for (SegmentAnalysis analysis : ImmutableList.of(arg2, arg1)) {
+        if (analysis.getAggregators() != null) {
+          for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
+            aggregators.putIfAbsent(entry.getKey(), entry.getValue());
+          }
+        }
+      }
     } else if (AggregatorMergeStrategy.LATEST == aggregatorMergeStrategy) {
       // The segment analyses are already ordered above, where arg1 is the analysis pertaining to the latest interval
-      // followed by arg2.
+      // followed by arg2. So for latest strategy, the iteration order should be arg1 and arg2.
       for (SegmentAnalysis analysis : ImmutableList.of(arg1, arg2)) {
         if (analysis.getAggregators() != null) {
           for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
-            final String aggregatorName = entry.getKey();
-            final AggregatorFactory aggregator = entry.getValue();
-            aggregators.putIfAbsent(aggregatorName, aggregator);
+            aggregators.putIfAbsent(entry.getKey(), entry.getValue());
           }
         }
       }

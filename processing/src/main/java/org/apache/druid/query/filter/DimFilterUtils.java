@@ -54,6 +54,10 @@ public class DimFilterUtils
   static final byte TRUE_CACHE_ID = 0xF;
   static final byte FALSE_CACHE_ID = 0x11;
   public static final byte BLOOM_DIM_FILTER_CACHE_ID = 0x10;
+  static final byte NULL_CACHE_ID = 0x12;
+  static final byte EQUALS_CACHE_ID = 0x13;
+  static final byte RANGE_CACHE_ID = 0x14;
+
 
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
 
