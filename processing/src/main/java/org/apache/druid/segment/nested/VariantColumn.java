@@ -23,6 +23,8 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -40,8 +42,8 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
@@ -295,19 +297,57 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     if (candidate >= 0) {
       return candidate;
     }
-    candidate = longDictionary.indexOf(GuavaUtils.tryParseLong(val));
-    if (candidate >= 0) {
-      candidate += adjustLongId;
-      return candidate;
+    final Long l = GuavaUtils.tryParseLong(val);
+    if (l != null) {
+      candidate = longDictionary.indexOf(l);
+      if (candidate >= 0) {
+        candidate += adjustLongId;
+        return candidate;
+      }
     }
-    candidate = doubleDictionary.indexOf(Doubles.tryParse(val));
-    if (candidate >= 0) {
-      candidate += adjustDoubleId;
-      return candidate;
+    final Double d = Doubles.tryParse(val);
+    if (d != null) {
+      candidate = doubleDictionary.indexOf(d);
+      if (candidate >= 0) {
+        candidate += adjustDoubleId;
+        return candidate;
+      }
     }
 
     // not in here, we can't really do anything cool here
     return -1;
+  }
+
+
+  public IntSet lookupIds(String val)
+  {
+    IntSet intList = new IntArraySet(3);
+    if (val == null) {
+      intList.add(0);
+      return intList;
+    }
+    int candidate = stringDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
+    if (candidate >= 0) {
+      intList.add(candidate);
+    }
+    Long l = GuavaUtils.tryParseLong(val);
+    if (l != null) {
+      candidate = longDictionary.indexOf(l);
+      if (candidate >= 0) {
+        candidate += adjustLongId;
+        intList.add(candidate);
+      }
+    }
+    Double d = Doubles.tryParse(val);
+    if (d != null) {
+      candidate = doubleDictionary.indexOf(d);
+      if (candidate >= 0) {
+        candidate += adjustDoubleId;
+        intList.add(candidate);
+      }
+    }
+
+    return intList;
   }
 
   @Override
@@ -428,14 +468,14 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       public ValueMatcher makeValueMatcher(final @Nullable String value)
       {
         if (extractionFn == null) {
-          final int valueId = lookupId(value);
-          if (valueId >= 0) {
+          final IntSet valueIds = VariantColumn.this.lookupIds(value);
+          if (valueIds.size() > 0) {
             return new ValueMatcher()
             {
               @Override
               public boolean matches()
               {
-                return getRowValue() == valueId;
+                return valueIds.contains(getRowValue());
               }
 
               @Override
@@ -668,7 +708,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends StringUtf8DictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {

@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class MSQFaultSerdeTest
 {
@@ -63,7 +64,10 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new InsertCannotBeEmptyFault("the datasource"));
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
-    assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
+    assertFaultSerde(new InsertTimeOutOfBoundsFault(
+        Intervals.of("2001/2002"),
+        Collections.singletonList(Intervals.of("2000/2001"))
+    ));
     assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
     assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);

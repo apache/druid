@@ -59,7 +59,7 @@ You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/
 Run the below command to install the `hadoop-aws.jar` file under `${DRUID_HOME}/extensions/druid-hdfs-storage` in all nodes.
 
 ```bash
-java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
+${DRUID_HOME}/bin/run-java -classpath "${DRUID_HOME}/lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
 cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar ${DRUID_HOME}/extensions/druid-hdfs-storage/
 ```
 

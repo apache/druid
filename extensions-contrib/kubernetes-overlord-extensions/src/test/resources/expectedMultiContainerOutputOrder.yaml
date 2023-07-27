@@ -6,7 +6,7 @@ metadata:
     tls.enabled: "false"
   labels:
     druid.k8s.peons: "true"
-  name: "id"
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
 spec:
   activeDeadlineSeconds: 14400
   backoffLimit: 0
@@ -18,7 +18,7 @@ spec:
       labels:
         druid.k8s.peons: "true"
     spec:
-      hostname: "id"
+      hostname: "id-3e70afe5cd823dfc7dd308eea616426b"
       containers:
         - args:
             - "/kubexit/kubexit /bin/sh -c \"/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1\""

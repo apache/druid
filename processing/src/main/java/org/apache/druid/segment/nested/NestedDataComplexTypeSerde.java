@@ -106,7 +106,6 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     }
     builder.setComplexColumnSupplier(supplier);
     builder.setColumnFormat(new NestedColumnFormatV4());
-    builder.setFilterable(true);
   }
 
   @Override
@@ -188,7 +187,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public ColumnCapabilities toColumnCapabilities()
     {
-      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true).setFilterable(true);
+      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true);
     }
   }
 }

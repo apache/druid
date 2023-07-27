@@ -19,9 +19,10 @@
 import { Button, ButtonGroup, InputGroup, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { QueryResult } from '@druid-toolkit/query';
+import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import type { QueryResult } from 'druid-query-toolkit';
-import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
@@ -313,8 +314,8 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     } catch {}
   }
 
-  const onUserCancel = () => {
-    queryManager.cancelCurrent();
+  const onUserCancel = (message?: string) => {
+    queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
   };
 

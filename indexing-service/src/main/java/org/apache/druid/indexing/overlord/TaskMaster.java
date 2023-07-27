@@ -43,6 +43,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
@@ -359,6 +360,17 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       return taskQueue.get().getWaitingTaskCount();
     } else {
       return null;
+    }
+  }
+
+  @Override
+  public CoordinatorRunStats getStats()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getQueueStats();
+    } else {
+      return CoordinatorRunStats.empty();
     }
   }
 

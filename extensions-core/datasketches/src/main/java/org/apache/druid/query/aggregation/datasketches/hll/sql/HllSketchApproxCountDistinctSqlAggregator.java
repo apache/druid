@@ -24,6 +24,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -48,7 +49,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
 
   public HllSketchApproxCountDistinctSqlAggregator()
   {
-    super(true);
+    super(true, StringEncoding.UTF16LE);
   }
 
   @Override
@@ -66,10 +67,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
   {
     return Aggregation.create(
         Collections.singletonList(aggregatorFactory),
-        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
-            name,
-            aggregatorFactory.getName()
-        ) : null
+        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorFactory.getName()) : null
     );
   }
 }

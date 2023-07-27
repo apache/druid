@@ -32,8 +32,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctUtf8SqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -405,26 +407,35 @@ public class SqlBenchmark
       "SELECT * FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100')",
       "SELECT * FROM foo WHERE dimSequential > '10' AND dimSequential < '8500'",
       "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100') GROUP BY 1, 2",
-      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential > '10' AND dimSequential < '8500' GROUP BY 1, 2"
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential > '10' AND dimSequential < '8500' GROUP BY 1, 2",
 
-
+      // 28, 29, 30, 31: Approximate count distinct of strings
+      "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dimZipf) FROM foo",
+      "SELECT APPROX_COUNT_DISTINCT_DS_HLL(dimZipf) FROM foo",
+      "SELECT APPROX_COUNT_DISTINCT_DS_HLL_UTF8(dimZipf) FROM foo",
+      "SELECT APPROX_COUNT_DISTINCT_DS_THETA(dimZipf) FROM foo"
   );
 
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"false", "force"})
+  // Can be "false", "true", or "force"
+  @Param({"force"})
   private String vectorize;
-  @Param({"none", "front-coded-4", "front-coded-16"})
+
+  // Can be "none" or "front-coded-N"
+  @Param({"none", "front-coded-4"})
   private String stringEncoding;
 
-  @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23", "26", "27"})
+  @Param({"28", "29", "30", "31"})
   private String query;
 
-  @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
+  // Can be STORAGE_MMAP, STORAGE_FRAME_ROW, or STORAGE_FRAME_COLUMNAR
+  @Param({STORAGE_MMAP})
   private String storageType;
 
   private SqlEngine engine;
+
   @Nullable
   private PlannerFactory plannerFactory;
   private final Closer closer = Closer.create();
@@ -520,13 +531,19 @@ public class SqlBenchmark
     try {
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
       extractionOperators.add(CalciteTests.INJECTOR.getInstance(QueryLookupOperatorConversion.class));
-      final Set<SqlAggregator> aggregators = new HashSet<>();
-      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchApproxQuantileSqlAggregator.class));
-      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchObjectSqlAggregator.class));
       final ApproxCountDistinctSqlAggregator countDistinctSqlAggregator =
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
-      aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
-      aggregators.add(countDistinctSqlAggregator);
+      final Set<SqlAggregator> aggregators = new HashSet<>(
+          ImmutableList.of(
+              new DoublesSketchApproxQuantileSqlAggregator(),
+              new DoublesSketchObjectSqlAggregator(),
+              new HllSketchApproxCountDistinctSqlAggregator(),
+              new HllSketchApproxCountDistinctUtf8SqlAggregator(),
+              new ThetaSketchApproxCountDistinctSqlAggregator(),
+              new CountSqlAggregator(countDistinctSqlAggregator),
+              countDistinctSqlAggregator
+          )
+      );
       return new DruidOperatorTable(aggregators, extractionOperators);
     }
     catch (Exception e) {

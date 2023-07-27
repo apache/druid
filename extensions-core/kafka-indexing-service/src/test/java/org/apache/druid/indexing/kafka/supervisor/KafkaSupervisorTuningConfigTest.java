@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -39,7 +38,7 @@ public class KafkaSupervisorTuningConfigTest
   public KafkaSupervisorTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
+    mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
   }
 
   @Test
@@ -66,7 +65,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(false, config.isReportParseExceptions());
-    Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertEquals(java.time.Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());
     Assert.assertNull(config.getChatThreads());
     Assert.assertEquals(8L, (long) config.getChatRetries());
