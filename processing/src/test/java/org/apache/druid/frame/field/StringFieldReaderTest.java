@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import junitparams.converters.Nullable;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
@@ -146,7 +147,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals("foo", readSelector.getObject());
-    Assert.assertEquals(Collections.singletonList("foo"), readSelectorAsArray.getObject());
+    Assert.assertArrayEquals(new Object[]{"foo"}, (Object[]) readSelectorAsArray.getObject());
   }
 
   @Test
@@ -160,7 +161,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(ImmutableList.of("foo", "bar"), readSelector.getObject());
-    Assert.assertEquals(ImmutableList.of("foo", "bar"), readSelectorAsArray.getObject());
+    Assert.assertArrayEquals(new Object[]{"foo", "bar"}, (Object[]) readSelectorAsArray.getObject());
   }
 
   @Test
@@ -174,7 +175,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
-    Assert.assertEquals(Collections.singletonList(null), readSelectorAsArray.getObject());
+    Assert.assertArrayEquals(new Object[]{null}, (Object[]) readSelectorAsArray.getObject());
   }
 
   @Test
@@ -188,7 +189,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
-    Assert.assertEquals(Collections.emptyList(), readSelectorAsArray.getObject());
+    Assert.assertArrayEquals(ObjectArrays.EMPTY_ARRAY, (Object[]) readSelectorAsArray.getObject());
   }
 
   @Test

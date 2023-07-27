@@ -22,6 +22,7 @@ package org.apache.druid.frame.write;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -99,19 +100,19 @@ public class FrameWriterTestData
       ColumnType.STRING_ARRAY,
       Arrays.asList(
           null,
-          Collections.emptyList(),
-          Collections.singletonList(null),
-          Collections.singletonList(NullHandling.emptyToNullIfNeeded("")),
-          Collections.singletonList("dog"),
-          Collections.singletonList("lazy"),
-          Arrays.asList("the", "quick", "brown"),
-          Arrays.asList("the", "quick", "brown", null),
-          Arrays.asList("the", "quick", "brown", NullHandling.emptyToNullIfNeeded("")),
-          Arrays.asList("the", "quick", "brown", "fox"),
-          Arrays.asList("the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"),
-          Arrays.asList("the", "quick", "brown", "null"),
-          Collections.singletonList("\uD83D\uDE42"),
-          Arrays.asList("\uD83D\uDE42", "\uD83E\uDEE5")
+          ObjectArrays.EMPTY_ARRAY,
+          new Object[]{null},
+          new Object[]{NullHandling.emptyToNullIfNeeded("")},
+          new Object[]{"dog"},
+          new Object[]{"lazy"},
+          new Object[]{"the", "quick", "brown"},
+          new Object[]{"the", "quick", "brown", null},
+          new Object[]{"the", "quick", "brown", NullHandling.emptyToNullIfNeeded("")},
+          new Object[]{"the", "quick", "brown", "fox"},
+          new Object[]{"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"},
+          new Object[]{"the", "quick", "brown", "null"},
+          new Object[]{"\uD83D\uDE42"},
+          new Object[]{"\uD83D\uDE42", "\uD83E\uDEE5"}
       )
   );
 

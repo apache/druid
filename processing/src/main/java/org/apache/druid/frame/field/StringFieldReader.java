@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.read.FrameReaderUtils;
@@ -41,7 +42,7 @@ import org.apache.druid.segment.data.RangeIndexedInts;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -175,15 +176,15 @@ public class StringFieldReader implements FieldReader
       final int size = currentStrings.size();
 
       if (size == 0) {
-        return asArray ? Collections.emptyList() : null;
+        return asArray ? ObjectArrays.EMPTY_ARRAY : null;
       } else if (size == 1) {
-        return asArray ? Collections.singletonList(lookupName(0)) : lookupName(0);
+        return asArray ? new Object[]{lookupName(0)} : lookupName(0);
       } else {
-        final List<String> strings = new ArrayList<>(size);
+        final Object[] strings = new Object[size];
         for (int i = 0; i < size; i++) {
-          strings.add(lookupName(i));
+          strings[i] = lookupName(i);
         }
-        return strings;
+        return asArray ? strings : Arrays.asList(strings);
       }
     }
 

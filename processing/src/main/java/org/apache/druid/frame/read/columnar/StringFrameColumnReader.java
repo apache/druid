@@ -22,6 +22,7 @@ package org.apache.druid.frame.read.columnar;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -60,7 +61,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -475,7 +476,11 @@ public class StringFrameColumnReader implements FrameColumnReader
     }
 
     /**
-     * Returns the value at the given physical row number.
+     * Returns the object at the given physical row number.
+     *
+     * When {@link #asArray}, the return value is always of type {@code Object[]}. Otherwise, the return value
+     * is either an empty list (if the row is empty), a single String (if the row has one value), or a List
+     * of Strings (if the row has more than one value).
      *
      * @param physicalRow physical row number
      * @param decode      if true, return java.lang.String. If false, return UTF-8 ByteBuffer.
@@ -496,24 +501,24 @@ public class StringFrameColumnReader implements FrameColumnReader
         }
 
         if (rowLength == 0) {
-          return Collections.emptyList();
+          return asArray ? ObjectArrays.EMPTY_ARRAY : Collections.emptyList();
         } else if (rowLength == 1) {
           final int index = cumulativeRowLength - 1;
           final Object o = decode ? getString(index) : getStringUtf8(index);
-          return asArray ? Collections.singletonList(o) : o;
+          return asArray ? new Object[]{o} : o;
         } else {
-          final List<Object> row = new ArrayList<>(rowLength);
+          final Object[] row = new Object[rowLength];
 
           for (int i = 0; i < rowLength; i++) {
             final int index = cumulativeRowLength - rowLength + i;
-            row.add(decode ? getString(index) : getStringUtf8(index));
+            row[i] = decode ? getString(index) : getStringUtf8(index);
           }
 
-          return row;
+          return asArray ? row : Arrays.asList(row);
         }
       } else {
         final Object o = decode ? getString(physicalRow) : getStringUtf8(physicalRow);
-        return asArray ? Collections.singletonList(o) : o;
+        return asArray ? new Object[]{o} : o;
       }
     }
 
@@ -525,14 +530,18 @@ public class StringFrameColumnReader implements FrameColumnReader
      */
     private List<ByteBuffer> getRowAsListUtf8(final int physicalRow)
     {
+      if (asArray) {
+        throw DruidException.defensive("Unexpected call for array column");
+      }
+
       final Object object = getRowAsObject(physicalRow, false);
 
-      if (object instanceof List) {
+      if (object == null) {
+        return Collections.singletonList(null);
+      } else if (object instanceof List) {
         //noinspection unchecked
         return (List<ByteBuffer>) object;
       } else {
-        // currentValues cannot be null when !asArray, because entirely-null rows only exist for STRING_ARRAY,
-        // not STRING. So it's safe to call .size() directly. (The current code only runs when !asArray.)
         return Collections.singletonList((ByteBuffer) object);
       }
     }
@@ -617,11 +626,7 @@ public class StringFrameColumnReader implements FrameColumnReader
           @Override
           public Object getObject()
           {
-            if (asArray) {
-              return getRowAsObject(frame.physicalRow(offset.getOffset()), true);
-            } else {
-              return defaultGetObject();
-            }
+            return getRowAsObject(frame.physicalRow(offset.getOffset()), true);
           }
 
           @Override

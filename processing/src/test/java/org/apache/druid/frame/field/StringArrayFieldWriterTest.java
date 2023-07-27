@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.field;
 
-import junitparams.converters.Nullable;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
@@ -38,6 +37,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -132,6 +132,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
     throw new ISE("Could not write in memory with capacity [%,d]", memory.getCapacity() - MEMORY_POSITION);
   }
 
+  @Nullable
   private List<String> readFromMemory(final long written)
   {
     final byte[] bytes = new byte[(int) written];
@@ -141,7 +142,8 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
-    //noinspection unchecked
-    return (List<String>) selector.getObject();
+    final Object o = selector.getObject();
+    //noinspection rawtypes,unchecked
+    return o == null ? null : (List) Arrays.asList((Object[]) o);
   }
 }
