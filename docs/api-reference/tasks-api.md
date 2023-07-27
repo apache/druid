@@ -55,19 +55,13 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved list of tasks* 
 
 <!--400 BAD REQUEST-->
 
-<br/>
-
 *Invalid `state` query parameter value* 
 
 <!--500 SERVER ERROR-->
-
-<br/>
 
 *Invalid query parameter* 
 
@@ -192,13 +186,9 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved list of complete tasks* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Request sent to incorrect service* 
 
@@ -298,8 +288,6 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved list of running tasks* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -380,8 +368,6 @@ The endpoint supports a set of optional query parameters to filter results.
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully retrieved list of waiting tasks* 
 
@@ -499,8 +485,6 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved list of pending tasks* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -588,13 +572,9 @@ Retrieves the payload of a task given the task ID. It returns a JSON object with
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved payload of task* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Cannot find task with ID* 
 
@@ -795,13 +775,9 @@ Retrieves the status of a task given the task ID. It returns a JSON object with 
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved task status* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Cannot find task with ID* 
 
@@ -876,8 +852,6 @@ In addition to enabling audit logs, configure a cleanup strategy to prevent over
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved task segments* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -930,8 +904,6 @@ Task logs are automatically retrieved from the Middle Manager/Indexer or in long
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully retrieved task log* 
 
@@ -1043,8 +1015,6 @@ Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a t
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved task report* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1129,25 +1099,17 @@ Note that for most batch ingestion use cases, you should use the [SQL-ingestion 
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully submitted task* 
 
 <!--400 BAD REQUEST-->
-
-<br/>
 
 *Missing information in query* 
 
 <!--415 UNSUPPORTED MEDIA TYPE-->
 
-<br/>
-
 *Incorrect request body media type* 
 
 <!--500 Server Error-->
-
-<br/>
 
 *Unexpected token or characters in request body* 
 
@@ -1287,13 +1249,9 @@ Shuts down a task if it not already complete. Returns a JSON object with the ID 
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully shut down task* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Cannot find task with ID or task is no longer running* 
 
@@ -1349,13 +1307,9 @@ Shuts down all tasks for a specified datasource. If successful, it returns a JSO
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully shut down tasks* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Error or datasource does not have a running task* 
 
@@ -1413,13 +1367,9 @@ Retrieves list of task status objects for list of task ID strings in request bod
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved status objects* 
 
 <!--415 UNSUPPORTED MEDIA TYPE-->
-
-<br/>
 
 *Missing request body or incorrect request body type* 
 
@@ -1505,8 +1455,6 @@ which automates this operation to perform periodically.
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully deleted pending segments* 
 
