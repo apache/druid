@@ -2296,6 +2296,10 @@ runningTasks
 waitingTasks
 pendingTasks
 shutdownAllTasks
+supervisorId
+suspendAll
+resumeAll
+terminateAll
 selfDiscovered
 isLeader
 loadstatus
