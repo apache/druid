@@ -159,7 +159,7 @@ If any part of a dimension value contains the value specified in this search que
 
 ### `fragment`
 
-If any part of a dimension value contains all of the values specified in this search query spec, regardless of case by default, a "match" occurs. The grammar is:
+If any part of a dimension value contains all the values specified in this search query spec, regardless of case by default, a "match" occurs. The grammar is:
 
 ```json
 {
