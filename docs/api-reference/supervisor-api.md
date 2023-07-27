@@ -25,7 +25,7 @@ sidebar_label: Supervisors
 
 This topic describes the API endpoints to manage and monitor supervisors for Apache Druid.
 
-In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Supervisor information
 
@@ -53,8 +53,6 @@ Returns an array of strings representing the names of active supervisors. If the
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully retrieved array of active supervisor IDs* 
 
@@ -107,8 +105,6 @@ Retrieves an array of active supervisor objects. If there are no active supervis
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully retrieved supervisor objects* 
 
@@ -776,8 +772,6 @@ Retrieves an array of objects representing active supervisors and their current 
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved supervisor state objects*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -843,13 +837,9 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved supervisor spec* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID* 
 
@@ -1207,13 +1197,9 @@ For additional information about the status report, see the topic for each strea
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved supervisor status* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID* 
 
@@ -1310,8 +1296,6 @@ Retrieve an audit history of specs for all supervisors.
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully retrieved audit history* 
 
@@ -1670,13 +1654,9 @@ Retrieves an audit history of specs for a single supervisor.
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully retrieved supervisor audit history* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID* 
 
@@ -2040,13 +2020,9 @@ When you call this endpoint on an existing supervisor for the same datasource, t
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully created a new supervisor or updated an existing supervisor* 
 
 <!--415 UNSUPPORTED MEDIA TYPE-->
-
-<br/>
 
 *Request body content type is not in JSON format* 
 
@@ -2204,19 +2180,13 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully shut down supervisor* 
 
 <!--400 BAD REQUEST-->
 
-<br/>
-
 *Supervisor already suspended* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID* 
 
@@ -2568,8 +2538,6 @@ Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` 
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully suspended all supervisors* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -2621,19 +2589,13 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully resumed supervisor* 
 
 <!--400 BAD REQUEST-->
 
-<br/>
-
 *Supervisor already running* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID* 
 
@@ -2986,8 +2948,6 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully resumed all supervisors* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -3041,13 +3001,9 @@ Use this endpoint to recover from a stopped state due to missing offsets in Kafk
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully reset supervisor* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID* 
 
@@ -3104,13 +3060,9 @@ The terminated supervisor still exists in the metadata store and its history can
 
 <!--200 SUCCESS-->
 
-<br/>
-
 *Successfully terminated a supervisor* 
 
 <!--404 NOT FOUND-->
-
-<br/>
 
 *Invalid supervisor ID or supervisor not running* 
 
@@ -3162,8 +3114,6 @@ Terminates all supervisors. Terminated supervisors still exist in the metadata s
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
-
-<br/>
 
 *Successfully terminated all supervisors* 
 
