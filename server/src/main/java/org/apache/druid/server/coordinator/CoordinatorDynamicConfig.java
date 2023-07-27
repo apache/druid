@@ -454,9 +454,7 @@ public class CoordinatorDynamicConfig
            && Objects.equals(
                specificDataSourcesToKillUnusedSegmentsIn,
                that.specificDataSourcesToKillUnusedSegmentsIn)
-           && Objects.equals(
-               killTaskSlotRatio,
-               that.killTaskSlotRatio)
+           && Objects.equals(killTaskSlotRatio, that.killTaskSlotRatio)
            && Objects.equals(
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)

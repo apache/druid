@@ -199,11 +199,6 @@ public class KillUnusedSegmentsTest
   @Test
   public void testNoAvailableTaskCapacityForKill()
   {
-    // Only segments more than a day old are killed
-    Interval expectedKillInterval = new Interval(
-        yearOldSegment.getInterval().getStart(),
-        dayOldSegment.getInterval().getEnd()
-    );
     mockNoAvailableTaskSlotsForKill();
     runAndVerifyNoKill();
   }
