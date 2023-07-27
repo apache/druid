@@ -159,7 +159,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private final String baseSubtaskSpecName;
 
-  private final AtomicReference<InputSource> baseInputSource = new AtomicReference<>();
+  private final InputSource baseInputSource;
+  // A reference to the baseInputSource or another input source craeted using the baseInputSource and a TaskToolbox
+  // This helps return the same object
+  private final AtomicReference<InputSource> inputSourceRef = new AtomicReference<>();
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -248,7 +251,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.baseInputSource.set(ingestionSchema.getIOConfig().getInputSource());
+    this.baseInputSource = ingestionSchema.getIOConfig().getInputSource();
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
@@ -524,7 +527,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
-        getInputSource();
 
         if (isGuaranteedRollup(
             getIngestionMode(),
@@ -598,7 +600,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private boolean isParallelMode()
   {
-    return isParallelMode(getInputSource(), ingestionSchema.getTuningConfig());
+    return isParallelMode(baseInputSource, ingestionSchema.getTuningConfig());
   }
 
   /**
@@ -1822,15 +1824,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
+  /**
+   * To be called only after the toolbox has been set in runTask
+   *
+   * @return the base input source with the toolbox
+   */
   private InputSource getInputSource()
   {
-    InputSource inputSource = baseInputSource.get();
-    if (inputSource instanceof TaskInputSource) {
-      TaskInputSource taskInputSource = (TaskInputSource) inputSource;
-      if (!taskInputSource.hasTaskToolbox() && toolbox != null) {
-        inputSource = taskInputSource.withTaskToolbox(toolbox);
-        baseInputSource.set(inputSource);
+    InputSource inputSource = inputSourceRef.get();
+    if (inputSource == null) {
+      inputSource = this.baseInputSource;
+      if (inputSource instanceof TaskInputSource) {
+        inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
       }
+      inputSourceRef.set(inputSource);
     }
     return inputSource;
   }

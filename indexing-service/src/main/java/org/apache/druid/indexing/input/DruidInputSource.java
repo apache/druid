@@ -73,7 +73,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -294,12 +293,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         this.taskConfig,
         toolbox
     );
-  }
-
-  @Override
-  public boolean hasTaskToolbox()
-  {
-    return this.toolbox != null;
   }
 
   private TaskToolbox getToolbox()
@@ -558,31 +551,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return segmentSizeMap;
   }
 
-  private static Collection<DataSegment> fetchUsedSegmentsForInterval(
-      TaskToolbox toolbox,
-      CoordinatorClient coordinatorClient,
-      String dataSource,
-      Interval interval
-  ) throws IOException
-  {
-    if (toolbox != null) {
-      return toolbox.getTaskActionClient()
-                    .submit(
-                        new RetrieveUsedSegmentsAction(
-                            dataSource,
-                            null,
-                            ImmutableList.of(interval),
-                            Segments.ONLY_VISIBLE
-                        )
-                    );
-    } else {
-      return coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
-          dataSource,
-          ImmutableList.of(interval)
-      );
-    }
-  }
-
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(
       TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
@@ -597,7 +565,22 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     Collection<DataSegment> usedSegments;
     while (true) {
       try {
-        usedSegments = fetchUsedSegmentsForInterval(toolbox, coordinatorClient, dataSource, interval);
+        if (toolbox != null) {
+          usedSegments = toolbox.getTaskActionClient()
+                        .submit(
+                            new RetrieveUsedSegmentsAction(
+                                dataSource,
+                                null,
+                                ImmutableList.of(interval),
+                                Segments.ONLY_VISIBLE
+                            )
+                        );
+        } else {
+          usedSegments = coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
+              dataSource,
+              ImmutableList.of(interval)
+          );
+        }
         break;
       }
       catch (Throwable e) {

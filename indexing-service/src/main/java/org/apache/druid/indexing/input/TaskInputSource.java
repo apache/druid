@@ -32,9 +32,4 @@ public interface TaskInputSource extends InputSource
    * Creates and returns a new {@code InputSource} which uses the given {@code TaskToolbox}.
    */
   InputSource withTaskToolbox(TaskToolbox toolbox);
-
-  /**
-   * Check if a toolbox is already available in the input source
-   */
-  boolean hasTaskToolbox();
 }
