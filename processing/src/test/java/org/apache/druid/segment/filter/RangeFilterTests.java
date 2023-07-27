@@ -580,7 +580,9 @@ public class RangeFilterTests
       );
       assertFilterMatches(
           new RangeFilter("l0", ColumnType.STRING, null, "abc", true, true, null),
-          ImmutableList.of("0", "1", "2", "4", "5", "6")
+          canTestNumericNullsAsDefaultValues
+          ? ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+          : ImmutableList.of("0", "1", "2", "4", "5", "6")
       );
     }
 
