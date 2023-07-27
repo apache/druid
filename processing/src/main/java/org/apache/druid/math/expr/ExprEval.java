@@ -644,6 +644,37 @@ public abstract class ExprEval<T>
     return rv;
   }
 
+  /**
+   * Cast an {@link ExprEval} to some {@link ExpressionType} that the value will be compared with. If the value is not
+   * appropriate to use for comparison after casting, this method returns null. For example, the
+   * {@link ExpressionType#DOUBLE} value 1.1 when cast to {@link ExpressionType#LONG} becomes 1L, which is no longer
+   * appropriate to use for value equality comparisons, while 1.0 is valid.
+   */
+  @Nullable
+  public static ExprEval<?> castForEqualityComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
+  {
+    ExprEval<?> cast = valueToCompare.castTo(typeToCompareWith);
+    if (ExpressionType.LONG.equals(typeToCompareWith) && valueToCompare.asDouble() != cast.asDouble()) {
+      // make sure the DOUBLE value when cast to LONG is the same before and after the cast
+      // this lets us match 1.0 to 1, but not 1.1
+      return null;
+    } else if (ExpressionType.LONG_ARRAY.equals(typeToCompareWith)) {
+      // if comparison array is double typed, make sure the values are the same when cast to long
+      // this lets us match [1.0, 2.0, 3.0] to [1, 2, 3], but not [1.1, 2.2, 3.3]
+      final ExprEval<?> doubleCast = valueToCompare.castTo(ExpressionType.DOUBLE_ARRAY);
+      final ExprEval<?> castDoubleCast = cast.castTo(ExpressionType.DOUBLE_ARRAY);
+      if (ExpressionType.DOUBLE_ARRAY.getStrategy().compare(doubleCast.value(), castDoubleCast.value()) != 0) {
+        return null;
+      }
+    }
+
+    // did value become null during cast but was not initially null?
+    if (valueToCompare.value() != null && cast.value() == null) {
+      return null;
+    }
+    return cast;
+  }
+
   // Cached String values
   private boolean stringValueCached = false;
   @Nullable
