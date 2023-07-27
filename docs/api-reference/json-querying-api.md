@@ -73,7 +73,7 @@ For more information on possible error messages, see [query execution failures](
 
 ---
 
-### Sample request: `topN` query
+### Sample request: `topN`
 
 The following example submits a JSON query of the `topN` type to retrieve a ranked list of users and their post views. 
 
@@ -133,7 +133,7 @@ Content-Length: 336
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response: `topN` query
+### Sample response: `topN`
 
 <details>
   <summary>Click to show sample response</summary>
@@ -169,7 +169,7 @@ Content-Length: 336
   ```
 </details>
 
-### Sample request: `groupBy` query
+### Sample request: `groupBy`
 
 The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest votes to posts ratio from the `social_media` datasource.
 
@@ -258,7 +258,7 @@ Content-Length: 817
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response: `groupBy` query
+### Sample response: `groupBy`
 
 <details>
   <summary>Click to show sample response</summary>
