@@ -233,6 +233,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   @Override
   public ClusterByPartitions generatePartitionsWithTargetWeight(final long targetWeight)
   {
+    logSketches();
+
     if (targetWeight < 1) {
       throw new IAE("Target weight must be positive");
     }
@@ -276,6 +278,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   @Override
   public ClusterByPartitions generatePartitionsWithMaxCount(final int maxNumPartitions)
   {
+    logSketches();
+
     if (maxNumPartitions < 1) {
       throw new IAE("Must have at least one partition");
     } else if (buckets.isEmpty()) {
@@ -315,6 +319,28 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     } while (ranges.size() > maxNumPartitions);
 
     return ranges;
+  }
+
+  private void logSketches()
+  {
+    if (log.isDebugEnabled()) {
+      // Log all sketches
+      List<KeyCollector<?>> keyCollectors = buckets.values()
+                                                   .stream()
+                                                   .map(bucketHolder -> bucketHolder.keyCollector)
+                                                   .sorted(Comparator.comparingInt(KeyCollector::sketchAccuracyFactor))
+                                                   .collect(Collectors.toList());
+      log.debug("KeyCollectors at partition generation: [%s]", keyCollectors);
+    } else {
+      // Log the 5 least accurate sketches
+      List<KeyCollector<?>> limitedKeyCollectors = buckets.values()
+                                                          .stream()
+                                                          .map(bucketHolder -> bucketHolder.keyCollector)
+                                                          .sorted(Comparator.comparingInt(KeyCollector::sketchAccuracyFactor))
+                                                          .limit(5)
+                                                          .collect(Collectors.toList());
+      log.info("Most downsampled keyCollectors: [%s]", limitedKeyCollectors);
+    }
   }
 
   @Override
