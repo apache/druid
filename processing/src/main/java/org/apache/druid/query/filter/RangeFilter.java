@@ -517,6 +517,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.LONG);
         if (lowerCast.isNumericNull()) {
           // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
           if (lowerOpen) {
@@ -537,6 +539,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         ExprEval<?> upperCast = upperEval.castTo(ExpressionType.LONG);
         if (upperCast.isNumericNull()) {
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
           if (upperOpen) {
@@ -577,6 +581,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.DOUBLE);
         if (lowerCast.isNumericNull()) {
           // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
           return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           lowerBound = lowerCast.asDouble();
@@ -591,6 +597,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         ExprEval<?> upperCast = upperEval.castTo(ExpressionType.DOUBLE);
         if (upperCast.isNumericNull()) {
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
           return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           hasUpperBound = true;
