@@ -1500,7 +1500,7 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"[\"a\",\"b\"]", ImmutableList.of("a", "b")},
             new Object[]{"[\"b\",\"c\"]", ImmutableList.of("b", "c")},
             new Object[]{"d", ImmutableList.of("d")},
-            new Object[]{"", null},
+            new Object[]{"", useDefault ? null : new Object[]{}},
             new Object[]{NullHandling.defaultStringValue(), null},
             new Object[]{NullHandling.defaultStringValue(), null}
         )).verifyResults();
