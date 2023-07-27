@@ -35,7 +35,7 @@ import java.util.function.Function;
  */
 public class FilePerSplitHintSpec implements SplitHintSpec
 {
-  public static FilePerSplitHintSpec INSTANCE = new FilePerSplitHintSpec();
+  public static final FilePerSplitHintSpec INSTANCE = new FilePerSplitHintSpec();
 
   private FilePerSplitHintSpec()
   {
