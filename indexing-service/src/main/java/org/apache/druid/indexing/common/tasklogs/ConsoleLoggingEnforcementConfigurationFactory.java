@@ -34,7 +34,7 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.xml.XmlConfiguration;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -91,15 +91,19 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
     {
       super.doConfigure();
 
-      Appender consoleAppender = findConsoleAppender();
-      if (consoleAppender == null) {
+      List<Appender> consoleAppenders = findConsoleAppenders();
+      if (consoleAppenders.isEmpty()) {
         // create a ConsoleAppender with default pattern if no console appender is configured in the configuration file
-        consoleAppender = ConsoleAppender.newBuilder()
-                                         .setName("_Injected_Console_Appender_")
-                                         .setLayout(PatternLayout.newBuilder()
-                                                                 .withPattern("%d{ISO8601} %p [%t] %c - %m%n")
-                                                                 .build())
-                                         .build();
+        Appender injectedConsoleAppender = ConsoleAppender.newBuilder()
+                                                          .setName("_Injected_Console_Appender_")
+                                                          .setLayout(
+                                                              PatternLayout.newBuilder()
+                                                                           .withPattern("%d{ISO8601} %p [%t] %c - %m%n")
+                                                                           .build()
+                                                          )
+                                                          .build();
+        injectedConsoleAppender.start();
+        consoleAppenders.add(injectedConsoleAppender);
       }
 
       List<LoggerConfig> loggerConfigList = new ArrayList<>();
@@ -112,36 +116,38 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       // If not, replace it's appender to ConsoleAppender.
       //
       for (LoggerConfig logger : loggerConfigList) {
-        applyConsoleAppender(logger, consoleAppender);
+        applyConsoleAppender(logger, consoleAppenders);
       }
     }
 
-    @Nullable
-    private Appender findConsoleAppender()
+    @Nonnull
+    private List<Appender> findConsoleAppenders()
     {
+      List<Appender> consoleAppenders = new ArrayList<>();
       for (Map.Entry<String, Appender> entry : this.getAppenders().entrySet()) {
         Appender appender = entry.getValue();
         if (appender instanceof ConsoleAppender) {
-          return appender;
+          consoleAppenders.add(appender);
         }
       }
-      return null;
+      return consoleAppenders;
     }
 
     /**
      * Ensure there is a console logger defined. Without a console logger peon logs wont be able to be stored in deep storage
      */
-    private void applyConsoleAppender(LoggerConfig logger, Appender consoleAppender)
+    private void applyConsoleAppender(LoggerConfig logger, List<Appender> consoleAppenders)
     {
+      List<String> consoleAppenderNames = consoleAppenders.stream().map(Appender::getName).collect(Collectors.toList());
       for (AppenderRef appenderRef : logger.getAppenderRefs()) {
-        if (consoleAppender.getName().equals(appenderRef.getRef())) {
+        if (consoleAppenderNames.contains(appenderRef.getRef())) {
           // we need a console logger no matter what, but we want to be able to define a different appender if necessary
           return;
         }
       }
       Level level = Level.INFO;
       Filter filter = null;
-
+      Appender consoleAppender = consoleAppenders.get(0);
       if (!logger.getAppenderRefs().isEmpty()) {
         AppenderRef appenderRef = logger.getAppenderRefs().get(0);
 
@@ -159,7 +165,6 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
                  logger.toString(),
                  consoleAppender.getName());
       }
-
 
       // add ConsoleAppender to this logger
       logger.addAppender(consoleAppender, level, filter);

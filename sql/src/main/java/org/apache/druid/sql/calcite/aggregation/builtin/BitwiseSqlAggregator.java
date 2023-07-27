@@ -32,11 +32,13 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -169,7 +171,11 @@ public class BitwiseSqlAggregator implements SqlAggregator
                 null,
                 macroTable
             ),
-            new NotDimFilter(new SelectorDimFilter(fieldName, null, null))
+            new NotDimFilter(
+                plannerContext.isUseBoundsAndSelectors()
+                ? new SelectorDimFilter(fieldName, NullHandling.defaultStringValue(), null)
+                : NullFilter.forColumn(fieldName)
+            )
         )
     );
   }

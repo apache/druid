@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 import { IconNames } from '@blueprintjs/icons';
-import { T } from 'druid-query-toolkit';
+import { T } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 

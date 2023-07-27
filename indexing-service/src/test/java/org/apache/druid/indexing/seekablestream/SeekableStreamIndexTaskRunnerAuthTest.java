@@ -367,7 +367,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     }
 
     @Override
-    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier()
+    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return null;
     }

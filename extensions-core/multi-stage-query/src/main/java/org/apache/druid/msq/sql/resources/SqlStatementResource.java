@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.Forbidden;
@@ -536,8 +537,8 @@ public class SqlStatementResource
         rows = 0L;
         size = 0L;
         for (PageInformation pageInformation : pageList.get()) {
-          rows += pageInformation.getNumRows();
-          size += pageInformation.getSizeInBytes();
+          rows += pageInformation.getNumRows() != null ? pageInformation.getNumRows() : 0L;
+          size += pageInformation.getSizeInBytes() != null ? pageInformation.getSizeInBytes() : 0L;
         }
       }
 
@@ -830,16 +831,16 @@ public class SqlStatementResource
 
     if (executionMode == null) {
       throw InvalidInput.exception(
-          "Execution mode is not provided to the SQL statement API. "
+          "Execution mode is not provided to the sql statement api. "
           + "Please set [%s] to [%s] in the query context",
           QueryContexts.CTX_EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
 
-    if (ExecutionMode.ASYNC != executionMode) {
+    if (!ExecutionMode.ASYNC.equals(executionMode)) {
       throw InvalidInput.exception(
-          "The SQL statement API currently does not support the provided execution mode [%s]. "
+          "The sql statement api currently does not support the provided execution mode [%s]. "
           + "Please set [%s] to [%s] in the query context",
           executionMode,
           QueryContexts.CTX_EXECUTION_MODE,
@@ -848,7 +849,7 @@ public class SqlStatementResource
     }
 
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);
-    if (selectDestination == MSQSelectDestination.DURABLE_STORAGE) {
+    if (MSQSelectDestination.DURABLESTORAGE.equals(selectDestination)) {
       checkForDurableStorageConnectorImpl();
     }
   }
@@ -860,12 +861,13 @@ public class SqlStatementResource
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
-                                  "The SQL Statement API cannot read from the select destination [%s] provided "
-                                  + "in the query context [%s] since it is not configured. It is recommended to configure the durable storage "
+                                  "The sql statement api cannot read from the select destination [%s] provided "
+                                  + "in the query context [%s] since it is not configured on the %s. It is recommended to configure durable storage "
                                   + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
                                   + "configure durable storage.",
-                                  MSQSelectDestination.DURABLE_STORAGE.name(),
-                                  MultiStageQueryContext.CTX_SELECT_DESTINATION
+                                  MSQSelectDestination.DURABLESTORAGE.getName(),
+                                  MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                                  NodeRole.BROKER.getJsonName()
                               )
                           );
     }
