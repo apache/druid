@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
@@ -173,7 +174,10 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(this::createEntity).iterator(),
+        createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
+            .flatMap(split -> split.get().stream())
+            .map(this::createEntity)
+            .iterator(),
         temporaryDirectory
     );
   }
@@ -311,7 +315,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
                   long size = splitWidget.getObjectSize(o.getLocation());
                   return new InputFileAttribute(
                       size,
-                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size);
+                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size
+                  );
                 } else {
                   return new InputFileAttribute(
                       o.getSize(),
