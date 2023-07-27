@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
@@ -47,19 +46,15 @@ import org.joda.time.DateTime;
 
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -134,42 +129,6 @@ public class WorkerHolder
     return worker;
   }
 
-  private Map<String, TaskAnnouncement> getRunningTasks()
-  {
-    return tasksSnapshotRef.get().entrySet().stream().filter(
-        e -> e.getValue().getTaskStatus().isRunnable()
-    ).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
-  }
-
-  private int getCurrCapacityUsed()
-  {
-    int currCapacity = 0;
-    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
-      currCapacity += taskAnnouncement.getTaskResource().getRequiredCapacity();
-    }
-    return currCapacity;
-  }
-
-  private int getCurrParallelIndexCapcityUsed()
-  {
-    int currParallelIndexCapacityUsed = 0;
-    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
-      if (taskAnnouncement.getTaskType().equals(ParallelIndexSupervisorTask.TYPE)) {
-        currParallelIndexCapacityUsed += taskAnnouncement.getTaskResource().getRequiredCapacity();
-      }
-    }
-    return currParallelIndexCapacityUsed;
-  }
-
-  private Set<String> getAvailabilityGroups()
-  {
-    Set<String> retVal = new HashSet<>();
-    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
-      retVal.add(taskAnnouncement.getTaskResource().getAvailabilityGroup());
-    }
-    return retVal;
-  }
-
   public DateTime getBlacklistedUntil()
   {
     return blacklistedUntil.get();
@@ -202,12 +161,9 @@ public class WorkerHolder
       w = disabledWorker;
     }
 
-    return new ImmutableWorkerInfo(
+    return ImmutableWorkerInfo.fromWorkerAnnouncements(
         w,
-        getCurrCapacityUsed(),
-        getCurrParallelIndexCapcityUsed(),
-        getAvailabilityGroups(),
-        getRunningTasks().keySet(),
+        tasksSnapshotRef.get(),
         lastCompletedTaskTime.get(),
         blacklistedUntil.get()
     );
@@ -340,20 +296,14 @@ public class WorkerHolder
 
   public void waitForInitialization() throws InterruptedException
   {
-    if (!syncer.awaitInitialization(3 * syncer.getServerHttpTimeout(), TimeUnit.MILLISECONDS)) {
+    if (!syncer.awaitInitialization()) {
       throw new RE("Failed to sync with worker[%s].", worker.getHost());
     }
   }
 
   public boolean isInitialized()
   {
-    try {
-      return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
-    }
-    catch (InterruptedException ignored) {
-      Thread.currentThread().interrupt();
-      return false;
-    }
+    return syncer.isInitialized();
   }
 
   public boolean isEnabled()

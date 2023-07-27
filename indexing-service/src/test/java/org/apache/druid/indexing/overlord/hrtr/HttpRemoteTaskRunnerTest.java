@@ -1106,6 +1106,17 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
     Assert.assertEquals(
+        Collections.emptyList(),
+        taskRunner.markWorkersLazy(Predicates.alwaysTrue(), 0)
+    );
+
+    Assert.assertEquals(
+        "host3:8080",
+        Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), 1))
+                 .getHost()
+    );
+
+    Assert.assertEquals(
         "host3:8080",
         Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
                  .getHost()
@@ -1789,7 +1800,7 @@ public class HttpRemoteTaskRunnerTest
   private WorkerHolder createNonSyncingWorkerHolder(Worker worker)
   {
     ChangeRequestHttpSyncer syncer = EasyMock.createMock(ChangeRequestHttpSyncer.class);
-    EasyMock.expect(syncer.isOK()).andReturn(false).anyTimes();
+    EasyMock.expect(syncer.needsReset()).andReturn(true).anyTimes();
     EasyMock.expect(syncer.getDebugInfo()).andReturn(Collections.emptyMap()).anyTimes();
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(workerHolder.getUnderlyingSyncer()).andReturn(syncer).anyTimes();

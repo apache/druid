@@ -20,28 +20,53 @@
 
 package org.apache.druid.msq.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.counters.CounterSnapshots;
+import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.counters.QueryCounterSnapshot;
+import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.report.MSQStagesReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
+import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
+import org.apache.druid.sql.calcite.run.SqlResults;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class SqlStatementResourceHelper
 {
@@ -50,7 +75,7 @@ public class SqlStatementResourceHelper
   )
   {
     // only populate signature for select q's
-    if (msqControllerTask.getQuerySpec().getDestination().getClass() == TaskReportMSQDestination.class) {
+    if (!MSQControllerTask.isIngestion(msqControllerTask.getQuerySpec())) {
       ColumnMappings columnMappings = msqControllerTask.getQuerySpec().getColumnMappings();
       List<SqlTypeName> sqlTypeNames = msqControllerTask.getSqlTypeNames();
       if (sqlTypeNames == null || sqlTypeNames.size() != columnMappings.size()) {
@@ -116,69 +141,83 @@ public class SqlStatementResourceHelper
     }
   }
 
-  @SuppressWarnings("unchecked")
-
-
-  public static long getLastIndex(Long numberOfRows, long start)
+  /**
+   * Populates pages list from the {@link CounterSnapshotsTree}.
+   * <br>
+   * The number of pages changes with respect to the destination
+   * <ol>
+   *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
+   *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker which has generated output rows. The list is sorted on page Id.
+   *   If the worker generated 0 rows, we do no populated a page for it. {@link PageInformation#id} is equal to the worker number</li>
+   * </ol>
+   */
+  public static Optional<List<PageInformation>> populatePageList(
+      MSQTaskReportPayload msqTaskReportPayload,
+      MSQDestination msqDestination
+  )
   {
-    final long last;
-    if (numberOfRows == null) {
-      last = Long.MAX_VALUE;
-    } else {
-      long finalIndex;
-      try {
-        finalIndex = Math.addExact(start, numberOfRows);
-      }
-      catch (ArithmeticException e) {
-        finalIndex = Long.MAX_VALUE;
-      }
-      last = finalIndex;
-    }
-    return last;
-  }
-
-  public static Optional<Pair<Long, Long>> getRowsAndSizeFromPayload(Map<String, Object> payload, boolean isSelectQuery)
-  {
-    List stages = getList(payload, "stages");
-    if (stages == null || stages.isEmpty()) {
+    if (msqTaskReportPayload.getStages() == null || msqTaskReportPayload.getCounters() == null) {
       return Optional.empty();
-    } else {
-      int maxStage = stages.size() - 1; // Last stage output is the total number of rows returned to the end user.
-      Map<String, Object> counterMap = getMap(getMap(payload, "counters"), String.valueOf(maxStage));
-      long rows = -1L;
-      long sizeInBytes = -1L;
-      if (counterMap == null) {
+    }
+    int finalStage = msqTaskReportPayload.getStages().getStages().size() - 1;
+    CounterSnapshotsTree counterSnapshotsTree = msqTaskReportPayload.getCounters();
+    Map<Integer, CounterSnapshots> workerCounters = counterSnapshotsTree.snapshotForStage(finalStage);
+    if (workerCounters == null || workerCounters.isEmpty()) {
+      return Optional.empty();
+    }
+
+    if (msqDestination instanceof DataSourceMSQDestination) {
+      long rows = 0L;
+      for (CounterSnapshots counterSnapshots : workerCounters.values()) {
+        QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getMap()
+                                                                    .getOrDefault("segmentGenerationProgress", null);
+        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof SegmentGenerationProgressCounter.Snapshot) {
+          rows += ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsPushed();
+        }
+      }
+      if (rows != 0L) {
+        return Optional.of(ImmutableList.of(new PageInformation(0, rows, null)));
+      } else {
         return Optional.empty();
       }
-      for (Map.Entry<String, Object> worker : counterMap.entrySet()) {
-        Object workerChannels = worker.getValue();
-        if (workerChannels == null || !(workerChannels instanceof Map)) {
-          return Optional.empty();
-        }
-        if (isSelectQuery) {
-          Object output = ((Map<?, ?>) workerChannels).get("output");
-          if (output != null && output instanceof Map) {
-            List<Integer> rowsPerChannel = (List<Integer>) ((Map<String, Object>) output).get("rows");
-            List<Integer> bytesPerChannel = (List<Integer>) ((Map<String, Object>) output).get("bytes");
-            for (Integer row : rowsPerChannel) {
-              rows = rows + row;
-            }
-            for (Integer bytes : bytesPerChannel) {
-              sizeInBytes = sizeInBytes + bytes;
-            }
-          }
-        } else {
-          Object output = ((Map<?, ?>) workerChannels).get("segmentGenerationProgress");
-          if (output != null && output instanceof Map) {
-            rows += (Integer) ((Map<String, Object>) output).get("rowsPushed");
-          }
+    } else if (msqDestination instanceof TaskReportMSQDestination) {
+      long rows = 0L;
+      long size = 0L;
+      for (CounterSnapshots counterSnapshots : workerCounters.values()) {
+        QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getMap().getOrDefault("output", null);
+        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
+          rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
+          size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
         }
       }
+      if (rows != 0L) {
+        return Optional.of(ImmutableList.of(new PageInformation(0, rows, size)));
+      } else {
+        return Optional.empty();
+      }
 
-      return Optional.of(new Pair<>(rows == -1L ? null : rows + 1, sizeInBytes == -1L ? null : sizeInBytes + 1));
+    } else if (msqDestination instanceof DurableStorageMSQDestination) {
+      List<PageInformation> pageList = new ArrayList<>();
+      for (Map.Entry<Integer, CounterSnapshots> counterSnapshots : workerCounters.entrySet()) {
+        long rows = 0L;
+        long size = 0L;
+        QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getValue().getMap().getOrDefault("output", null);
+        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
+          rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
+          size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
+        }
+        // do not populate a page if the worker generated 0 rows.
+        if (rows != 0L) {
+          pageList.add(new PageInformation(counterSnapshots.getKey(), rows, size));
+        }
+      }
+      pageList.sort(PageInformation.getIDComparator());
+      return Optional.of(pageList);
+    } else {
+      return Optional.empty();
     }
   }
-
 
   public static Optional<SqlStatementResult> getExceptionPayload(
       String queryId,
@@ -234,6 +273,74 @@ public class SqlStatementResourceHelper
     ));
   }
 
+  public static Sequence<Object[]> getResultSequence(
+      MSQControllerTask msqControllerTask,
+      StageDefinition finalStage,
+      Frame frame,
+      ObjectMapper jsonMapper
+  )
+  {
+    final Cursor cursor = FrameProcessors.makeCursor(frame, finalStage.getFrameReader());
+
+    final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+    final ColumnMappings columnMappings = msqControllerTask.getQuerySpec().getColumnMappings();
+    @SuppressWarnings("rawtypes")
+    final List<ColumnValueSelector> selectors = columnMappings.getMappings()
+                                                              .stream()
+                                                              .map(mapping -> columnSelectorFactory.makeColumnValueSelector(
+                                                                  mapping.getQueryColumn()))
+                                                              .collect(Collectors.toList());
+
+    final List<SqlTypeName> sqlTypeNames = msqControllerTask.getSqlTypeNames();
+    Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return !cursor.isDone();
+      }
+
+      @Override
+      public Object[] next()
+      {
+        final Object[] row = new Object[columnMappings.size()];
+        for (int i = 0; i < row.length; i++) {
+          final Object value = selectors.get(i).getObject();
+          if (sqlTypeNames == null || msqControllerTask.getSqlResultsContext() == null) {
+            // SQL type unknown, or no SQL results context: pass-through as is.
+            row[i] = value;
+          } else {
+            row[i] = SqlResults.coerce(
+                jsonMapper,
+                msqControllerTask.getSqlResultsContext(),
+                value,
+                sqlTypeNames.get(i),
+                columnMappings.getOutputColumnName(i)
+            );
+          }
+        }
+        cursor.advance();
+        return row;
+      }
+    };
+    return Sequences.simple(retVal);
+  }
+
+  @Nullable
+  public static MSQStagesReport.Stage getFinalStage(MSQTaskReportPayload msqTaskReportPayload)
+  {
+    if (msqTaskReportPayload == null || msqTaskReportPayload.getStages().getStages() == null) {
+      return null;
+    }
+    int finalStageNumber = msqTaskReportPayload.getStages().getStages().size() - 1;
+
+    for (MSQStagesReport.Stage stage : msqTaskReportPayload.getStages().getStages()) {
+      if (stage.getStageNumber() == finalStageNumber) {
+        return stage;
+      }
+    }
+    return null;
+  }
   public static Map<String, Object> getQueryExceptionDetails(Map<String, Object> payload)
   {
     return getMap(getMap(payload, "status"), "errorReport");
@@ -247,39 +354,9 @@ public class SqlStatementResourceHelper
     return (Map<String, Object>) map.get(key);
   }
 
-  @SuppressWarnings("rawtypes")
-  public static List getList(Map<String, Object> map, String key)
-  {
-    if (map == null) {
-      return null;
-    }
-    return (List) map.get(key);
-  }
-
-  /**
-   * Get results from report
-   */
-  @SuppressWarnings("unchecked")
-  public static Optional<List<Object>> getResults(Map<String, Object> payload)
-  {
-    Map<String, Object> resultsHolder = getMap(payload, "results");
-
-    if (resultsHolder == null) {
-      return Optional.empty();
-    }
-
-    List<Object> data = (List<Object>) resultsHolder.get("results");
-    List<Object> rows = new ArrayList<>();
-    if (data != null) {
-      rows.addAll(data);
-    }
-    return Optional.of(rows);
-  }
-
   public static Map<String, Object> getPayload(Map<String, Object> results)
   {
     Map<String, Object> msqReport = getMap(results, "multiStageQuery");
-    Map<String, Object> payload = getMap(msqReport, "payload");
-    return payload;
+    return getMap(msqReport, "payload");
   }
 }

@@ -79,7 +79,7 @@ In native queries, lookups can be queried with [dimension specs or extraction fu
 
 Query Execution
 ---------------
-When executing an aggregation query involving lookup functions (like the SQL [`LOOKUP` function](sql-scalar.md#string-functions),
+When executing an aggregation query involving lookup functions, like the SQL [`LOOKUP` function](sql-scalar.md#string-functions),
 Druid can decide to apply them while scanning and aggregating rows, or to apply them after aggregation is complete. It
 is more efficient to apply lookups after aggregation is complete, so Druid will do this if it can. Druid decides this
 by checking if the lookup is marked as "injective" or not. In general, you should set this property for any lookup that

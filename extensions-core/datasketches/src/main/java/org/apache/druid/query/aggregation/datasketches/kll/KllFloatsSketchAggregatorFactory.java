@@ -179,7 +179,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
               SingleValueDimensionVectorSelector selector
           )
           {
-            return new KllSketchNoOpBufferAggregator<KllFloatsSketch>(getEmptySketch());
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override
@@ -188,7 +188,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
               MultiValueDimensionVectorSelector selector
           )
           {
-            return new KllSketchNoOpBufferAggregator<KllFloatsSketch>(getEmptySketch());
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override
@@ -207,6 +207,12 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
           public VectorAggregator makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
           {
             return new KllFloatsSketchBuildVectorAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
+          }
+
+          @Override
+          public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+          {
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override

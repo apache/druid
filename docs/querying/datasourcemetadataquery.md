@@ -29,7 +29,7 @@ sidebar_label: "DatasourceMetadata"
 
 Data Source Metadata queries return metadata information for a dataSource.  These queries return information about:
 
-* The timestamp of latest ingested event for the dataSource. This is the ingested event without any consideration of rollup.
+* The timestamp of the latest ingested event for the dataSource. This is the ingested event without any consideration of rollup.
 
 The grammar for these queries is:
 

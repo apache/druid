@@ -57,11 +57,11 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.column.Utf8ValueSetIndex;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -292,20 +292,20 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
       if (indexSupplier == null) {
         // column doesn't exist, match against null
-        return Filters.makeNullIndex(
+        return Filters.makeMissingColumnNullIndex(
             predicateFactory.makeStringPredicate().apply(null),
             selector
         );
       }
 
-      final Utf8ValueSetIndex utf8ValueSetIndex = indexSupplier.as(Utf8ValueSetIndex.class);
-      if (utf8ValueSetIndex != null) {
-        return utf8ValueSetIndex.forSortedValuesUtf8(valuesUtf8);
+      final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);
+      if (utf8ValueSetIndexes != null) {
+        return utf8ValueSetIndexes.forSortedValuesUtf8(valuesUtf8);
       }
 
-      final StringValueSetIndex stringValueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (stringValueSetIndex != null) {
-        return stringValueSetIndex.forSortedValues(values);
+      final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (stringValueSetIndexes != null) {
+        return stringValueSetIndexes.forSortedValues(values);
       }
     }
     return Filters.makePredicateIndex(

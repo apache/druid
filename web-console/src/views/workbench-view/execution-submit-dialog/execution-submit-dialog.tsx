@@ -59,7 +59,9 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
     if (typeof detailArchiveVersion === 'number') {
       try {
         if (detailArchiveVersion === 2) {
-          execution = Execution.fromTaskPayloadAndReport(parsed.payload, parsed.reports);
+          execution = Execution.fromTaskReport(parsed.reports).updateWithTaskPayload(
+            parsed.payload,
+          );
         } else {
           AppToaster.show({
             intent: Intent.DANGER,
@@ -76,7 +78,7 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
       }
     } else if (typeof parsed.multiStageQuery === 'object') {
       try {
-        execution = Execution.fromTaskPayloadAndReport({} as any, parsed);
+        execution = Execution.fromTaskReport(parsed);
       } catch (e) {
         AppToaster.show({
           intent: Intent.DANGER,

@@ -19,35 +19,33 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
  * This aggregator builds sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
  */
+@SuppressWarnings("NullableProblems")
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
-  private final Consumer<Supplier<HllSketch>> processor;
+  private final HllSketchUpdater updater;
   private final HllSketchBuildBufferAggregatorHelper helper;
   private final StringEncoding stringEncoding;
 
   public HllSketchBuildBufferAggregator(
-      final Consumer<Supplier<HllSketch>> processor,
+      final HllSketchUpdater updater,
       final int lgK,
       final TgtHllType tgtHllType,
       final StringEncoding stringEncoding,
       final int size
   )
   {
-    this.processor = processor;
+    this.updater = updater;
     this.helper = new HllSketchBuildBufferAggregatorHelper(lgK, tgtHllType, size);
     this.stringEncoding = stringEncoding;
   }
@@ -61,7 +59,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
-    processor.accept(() -> helper.getSketchAtPosition(buf, position));
+    updater.update(() -> helper.getSketchAtPosition(buf, position));
   }
 
   @Override
@@ -101,7 +99,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("processor", processor);
+    inspector.visit("processor", updater);
     // lgK should be inspected because different execution paths exist in HllSketch.update() that is called from
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
     // See https://github.com/apache/druid/pull/6893#discussion_r250726028
