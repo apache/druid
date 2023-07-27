@@ -26,7 +26,6 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -123,7 +122,7 @@ public class ArrayQuantileExprMacro implements ExprMacroTable.ExprMacro
   @Nullable
   static DoubleList toDoubleArray(final ExprEval<?> eval)
   {
-    if (!Types.isNumericOrNumericArray(eval.type())) {
+    if (!eval.type().isArray() || !eval.type().getElementType().isNumeric()) {
       return null;
     }
 
