@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
@@ -36,7 +35,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -66,17 +64,14 @@ import java.util.stream.Collectors;
 public class NestedGroupByArrayQueryTest
 {
   private static final Logger LOG = new Logger(NestedDataGroupByQueryTest.class);
-  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private final Closer closer;
-  private final GroupByQueryConfig config;
   private final QueryContexts.Vectorize vectorize;
   private final AggregationTestHelper helper;
   private final BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator;
-  private final String segmentsName;
 
   public NestedGroupByArrayQueryTest(
       GroupByQueryConfig config,
@@ -85,7 +80,6 @@ public class NestedGroupByArrayQueryTest
   )
   {
     NestedDataModule.registerHandlersAndSerde();
-    this.config = config;
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         NestedDataModule.getJacksonModulesList(),
@@ -93,7 +87,6 @@ public class NestedGroupByArrayQueryTest
         tempFolder
     );
     this.segmentsGenerator = segmentGenerator;
-    this.segmentsName = segmentGenerator.toString();
     this.closer = Closer.create();
   }
 
