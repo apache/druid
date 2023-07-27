@@ -1199,6 +1199,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputSource;
     }
 
+    public InputSource getNonNullInputSource()
+    {
+      return Preconditions.checkNotNull(inputSource, "inputSource");
+    }
+
     public InputSource getNonNullInputSource(TaskToolbox toolbox)
     {
       Preconditions.checkNotNull(inputSource, "inputSource");

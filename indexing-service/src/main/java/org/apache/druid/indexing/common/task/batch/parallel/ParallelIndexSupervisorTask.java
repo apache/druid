@@ -162,7 +162,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private final InputSource baseInputSource;
   // A reference to the baseInputSource or another input source craeted using the baseInputSource and a TaskToolbox
   // This helps return the same object
-  private final AtomicReference<InputSource> inputSourceRef = new AtomicReference<>();
+  private final AtomicReference<InputSource> inputSource = new AtomicReference<>();
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -251,7 +251,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.baseInputSource = ingestionSchema.getIOConfig().getInputSource();
+    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
@@ -1831,15 +1831,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private InputSource getInputSource()
   {
-    InputSource inputSource = inputSourceRef.get();
-    if (inputSource == null) {
-      inputSource = this.baseInputSource;
-      if (inputSource instanceof TaskInputSource) {
-        inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
+    if (inputSource.get() == null) {
+      final InputSource theInputSource;
+      if (baseInputSource instanceof TaskInputSource) {
+        theInputSource = ((TaskInputSource) baseInputSource).withTaskToolbox(toolbox);
+      } else {
+        theInputSource = baseInputSource;
       }
-      inputSourceRef.set(inputSource);
+      this.inputSource.set(theInputSource);
     }
-    return inputSource;
+    return inputSource.get();
   }
 
   /**

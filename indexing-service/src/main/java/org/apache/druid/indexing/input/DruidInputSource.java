@@ -154,6 +154,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    */
   private final List<String> metrics;
 
+  @Nullable
   private final TaskToolbox toolbox;
 
   @JsonCreator
@@ -192,8 +193,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   private DruidInputSource(
       final String dataSource,
       @Nullable Interval interval,
-      // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
-      // not for direct end user use.
       @Nullable List<WindowedSegmentId> segmentIds,
       DimFilter dimFilter,
       List<String> dimensions,
@@ -203,7 +202,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       SegmentCacheManagerFactory segmentCacheManagerFactory,
       RetryPolicyFactory retryPolicyFactory,
       TaskConfig taskConfig,
-      TaskToolbox toolbox
+      @Nullable TaskToolbox toolbox
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -428,7 +427,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   public SplittableInputSource<List<WindowedSegmentId>> withSplit(InputSplit<List<WindowedSegmentId>> split)
   {
-    return (DruidInputSource) new DruidInputSource(
+    return new DruidInputSource(
         dataSource,
         null,
         split.get(),
@@ -439,8 +438,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         coordinatorClient,
         segmentCacheManagerFactory,
         retryPolicyFactory,
-        taskConfig
-    ).withTaskToolbox(getToolbox());
+        taskConfig,
+        getToolbox()
+    );
   }
 
   @Override
