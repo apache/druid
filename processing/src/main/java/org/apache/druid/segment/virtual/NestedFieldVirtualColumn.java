@@ -524,13 +524,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
           leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
         }
       }
+      final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
       if (leastRestrictiveType != null && leastRestrictiveType.isArray() && !expectedType.isArray()) {
-        final VectorObjectSelector delegate = column.makeVectorObjectSelector(offset);
         final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
         final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
-        return makeVectorArrayToScalarObjectSelector(offset, delegate, elementType, castTo);
+        return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
       }
-      return complexColumn.makeVectorObjectSelector(parts, offset);
+      return objectSelector;
     }
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
     if (parts.isEmpty()) {
