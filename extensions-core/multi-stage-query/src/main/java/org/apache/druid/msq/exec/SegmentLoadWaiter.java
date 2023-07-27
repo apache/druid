@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -35,6 +36,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -95,6 +97,7 @@ public class SegmentLoadWaiter
     this.status = new SegmentLoadWaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
     this.doWait = doWait;
   }
+
   /**
    * Uses broker client to check if all segments created by the ingestion have been loaded and updates the {@link #status)}
    * periodically.
@@ -141,7 +144,7 @@ public class SegmentLoadWaiter
 
         if (!versionsToAwait.isEmpty()) {
           // Update the status.
-          updateStatus(State.RUNNING, startTime);
+          updateStatus(State.WAITING, startTime);
 
           // Sleep for a while before retrying.
           waitIfNeeded(SLEEP_DURATION_MILLIS);
@@ -159,7 +162,8 @@ public class SegmentLoadWaiter
     updateStatus(State.SUCCESS, startTime);
   }
 
-  private void waitIfNeeded(long waitTimeMillis) throws Exception {
+  private void waitIfNeeded(long waitTimeMillis) throws Exception
+  {
     if (doWait) {
       Thread.sleep(waitTimeMillis);
     }
@@ -221,7 +225,7 @@ public class SegmentLoadWaiter
     @JsonCreator
     public SegmentLoadWaiterStatus(
         @JsonProperty("state") SegmentLoadWaiter.State state,
-        @JsonProperty("startTime") DateTime startTime,
+        @JsonProperty("startTime") @Nullable DateTime startTime,
         @JsonProperty("duration") long duration,
         @JsonProperty("totalSegments") int totalSegments,
         @JsonProperty("segmentsLeft") int segmentsLeft
@@ -240,7 +244,9 @@ public class SegmentLoadWaiter
       return state;
     }
 
+    @Nullable
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public DateTime getStartTime()
     {
       return startTime;
@@ -268,7 +274,7 @@ public class SegmentLoadWaiter
   public enum State
   {
     INIT,
-    RUNNING,
+    WAITING,
     SUCCESS,
     FAILED,
     TIMED_OUT

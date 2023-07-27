@@ -487,7 +487,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
     SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(1, 0);
-    doReturn(new String(objectMapper.writeValueAsBytes(loadStatus))).when(brokerClient).sendQuery(any());
+    doReturn(StringUtils.fromUtf8(objectMapper.writeValueAsBytes(loadStatus))).when(brokerClient).sendQuery(any());
 
     testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
     indexingServiceClient = new MSQTestOverlordServiceClient(

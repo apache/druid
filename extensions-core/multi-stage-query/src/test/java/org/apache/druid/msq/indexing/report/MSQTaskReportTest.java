@@ -93,7 +93,7 @@ public class MSQTaskReportTest
     );
 
     SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
-        SegmentLoadWaiter.State.RUNNING,
+        SegmentLoadWaiter.State.WAITING,
         DateTimes.nowUtc(),
         200L,
         50,
