@@ -16,9 +16,9 @@ Review the upgrade notes and incompatible changes before you upgrade to Druid 27
 
 ## Query from deep storage (experimental)
 
-Druid now supports querying segments that are stored only in deep storage. When you query from deep storage, you increase the data available for queries without necessarily having to scale your Historical processes to accommodate more data. To take advantage of the potential savings, make sure you configure your load rules to not load all your data onto Historical processes. Then, configure a corresponding drop rule to drop those segments.
+Druid now supports querying segments that are stored only in deep storage. When you query from deep storage, you increase the data available for queries without necessarily having to scale your Historical processes to accommodate more data. To take advantage of the potential storage savings, make sure you configure your load rules to not load all your segments onto Historical processes. 
 
-Note that at least one segment of a datasource must be loaded onto a Historical process so that Druid can plan the query. It can be any segment though.
+Note that at least one segment of a datasource must be loaded onto a Historical process so that the Broker can plan the query. It can be any segment though.
 
 As part of this feature, there are new API endpoints available to interact with the query:
 
@@ -28,7 +28,7 @@ As part of this feature, there are new API endpoints available to interact with 
 
 - Get the status of a query with `GET /sq/statements/:queryID`.
 
-- Get query results with `/sql/statements/:queryID`
+- Get query results with `GET /sql/statements/:queryID`
 
 [14416](https://github.com/apache/druid/pull/14416)
 [14512](https://github.com/apache/druid/pull/14512)
@@ -53,9 +53,9 @@ For more information about this feature, see the [26.0.0 release notes for Schem
 
 ## Smart segment loading
 
-Revamped Coordinator to make it more stable and user-friendly. This is accompanied by several bug fixes, logging and metric improvements, and a whole new range of capabilities.
+The Coordinator is now more stable and user-friendly. This is accompanied by several bug fixes, logging and metric improvements, and a whole new range of capabilities.
 
-Coordinator now supports a `smartSegmentLoading` mode, which is enabled by default. When enabled, users don't need to specify any of the following dynamic configs as they would be ignored by the coordinator. Instead, the coordinator computes the optimal values of the following configs at run time to best utilize coordinator runs:
+The Coordinator now supports a `smartSegmentLoading` mode, which is enabled by default. The Coordinator computes the optimal values for the following configs at run time automatically to best utilize Coordinator runs:
 
 * `maxSegmentsInNodeLoadingQueue`
 * `maxSegmentsToMove`
@@ -65,9 +65,9 @@ Coordinator now supports a `smartSegmentLoading` mode, which is enabled by defau
 * `maxNonPrimaryReplicantsToLoad`
 * `decommissioningMaxPercentOfMaxSegmentsToMove`
 
-These configs are now deprecated and will be removed in subsequent releases.
+With `smartSegmentLoading` is enabled, you don't to specify any of these dynamic configs. Any values you set are ignored. Additionally, these configs are now deprecated and will be removed in subsequent releases.
 
-Coordinator is now capable of prioritization and cancellation of items in segment load queues. This means that the coordinator now reacts faster to changes in the cluster and makes better segment assignment decisions.
+The Coordinator is now capable of prioritization and cancellation of items in segment load queues. This means that the Coordinator now reacts faster to changes in the cluster and makes better segment assignment decisions.
 
 As part of this change, new metrics are available. For more information, see [New segment metrics](#new-segment-metrics).
 
@@ -282,7 +282,7 @@ The following Coordinator dynamic configs have been removed:
 
 ### Made Coordinator more resilient to leadership changes
 
-The Coordinator is more resilient to leadership changes now and does not get stuck even if re-election happens while a coordinator run is in progress.
+The Coordinator is more resilient to leadership changes now and does not get stuck even if re-election happens while a Coordinator run is in progress.
 
 [14385](https://github.com/apache/druid/pull/14385)
 
@@ -314,11 +314,12 @@ These new defaults can improve performance for most use cases.
 
 ### Stabilized initialization of `HttpServerInventoryView`
 
-The initialization of `HttpServerInventoryView` maintained by Brokers and Coordinator is now resilient to Historicals and Peons crashing. The crashed servers are simply marked as stopped and not waited upon during the initialization.
+The initialization of `HttpServerInventoryView` maintained by Brokers and Coordinator is now resilient to Historicals and Peons crashing. The crashed servers are marked as stopped and not waited upon during the initialization.
 
-New metrics have been added to further monitor the sync status of `HttpServerInventoryView` with different servers.
+New metrics are available to monitor the sync status of `HttpServerInventoryView` with different servers.
 
 [14517](https://github.com/apache/druid/pull/14517)
+
 ### Improved error messages
 
 Introduced a new unified exception, `DruidException`, for surfacing errors. It is partially compatible with the old way of reporting error messages. Response codes remain the same, all fields that previously existed on the response will continue to exist and be populated, including `errorMessage`. Some error messages have changed to be more consumable by humans and some cases have the message restructured. There should be no impact to the response codes.
