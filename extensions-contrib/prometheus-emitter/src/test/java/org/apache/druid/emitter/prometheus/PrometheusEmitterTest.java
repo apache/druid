@@ -80,7 +80,8 @@ public class PrometheusEmitterTest
   }
   
   @Test
-  public void testEmitterWithClusterLabel() {
+  public void testEmitterWithClusterLabel() 
+  {
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(
         PrometheusEmitterConfig.Strategy.exporter,
         null,

@@ -28,7 +28,29 @@ public class MetricsTest
   @Test
   public void testMetricsConfiguration()
   {
-    Metrics metrics = new Metrics("test", null, true, true, "test_cluster");
+    Metrics metrics = new Metrics("test", null, true, true, null);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
+    Assert.assertNotNull(dimensionsAndCollector);
+    String[] dimensions = dimensionsAndCollector.getDimensions();
+    Assert.assertEquals("dataSource", dimensions[0]);
+    Assert.assertEquals("druid_service", dimensions[1]);
+    Assert.assertEquals("host_name", dimensions[2]);
+    Assert.assertEquals("type", dimensions[3]);
+    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+
+    DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
+    Assert.assertNotNull(d);
+    String[] dims = d.getDimensions();
+    Assert.assertEquals("druid_service", dims[0]);
+    Assert.assertEquals("host_name", dims[1]);
+    Assert.assertEquals("server", dims[2]);
+  }
+
+  @Test
+  public void testMetricsConfigurationWithClusterName()
+  {
+    Metrics metrics = new Metrics("test_2", null, true, true, "test_cluster");
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();

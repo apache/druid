@@ -143,6 +143,7 @@ public class PrometheusEmitterConfig
     return addServiceAsLabel;
   }
 
+  @Nullable
   public String getClusterName()
   {
     return clusterName;
