@@ -191,5 +191,5 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
   abstract void postEvents() throws Exception;
 
-  abstract int getNumExpectedRowsIngested();
+  abstract long getNumExpectedRowsIngested();
 }

@@ -120,7 +120,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       ITRetryUtil.retryUntilEquals(
           () -> {
             for (int i = 0; i < numTasks; i++) {
-              final int countRows = queryHelper.countRows(
+              final long countRows = queryHelper.countRows(
                   fullDatasourceName + i,
                   Intervals.of("2013-08-31/2013-09-01"),
                   name -> new LongSumAggregatorFactory(name, "count")

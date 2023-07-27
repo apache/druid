@@ -829,7 +829,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           true,
           10000,
           30,
-          "Wait for stream active"
+          "Stream is active"
       );
       fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
       streamIngestionPropsTransform = generateStreamIngestionPropsTransform(

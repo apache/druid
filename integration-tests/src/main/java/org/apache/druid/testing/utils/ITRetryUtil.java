@@ -91,7 +91,7 @@ public class ITRetryUtil
         }
 
         LOG.info(
-            "Trying attempt[%d/%d] of task [%s] with expected value [%s].",
+            "Starting attempt[%d/%d]. Verifying that [%s] is [%s].",
             currentTry, retryCount, taskMessage, expectedValue
         );
         final T observedValue = task.call();
@@ -99,7 +99,7 @@ public class ITRetryUtil
           break;
         } else {
           LOG.info(
-              "Attempt[%d/%d] failed. Task[%s] returned value [%s] but expected [%s]. Next retry in [%d]ms.",
+              "Failed attempt[%d/%d]. [%s] has value [%s] but expected [%s]. Next retry in [%d]ms.",
               currentTry, retryCount, taskMessage, observedValue, expectedValue, delayInMillis
           );
         }
@@ -107,7 +107,7 @@ public class ITRetryUtil
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
         LOG.info(
-            "Attempt[%d/%d] failed. Task[%s] encountered error[%s]. Next retry in [%d]ms.",
+            "Failed attempt[%d/%d]. Computing [%s] encountered error [%s]. Next retry in [%d]ms.",
             currentTry, retryCount, taskMessage, e.getMessage(), delayInMillis
         );
         lastException = e;

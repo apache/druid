@@ -142,7 +142,6 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   {
     LOG.info("Running queries, url [%s]", url);
 
-    boolean failed = false;
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
@@ -165,13 +164,13 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             resultsComparison.getErrorMessage()
         );
       } else {
-        LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
+        LOG.info("Results Verified for Query [%s]", queryWithResult.getQuery());
       }
     }
   }
 
   @SuppressWarnings("unchecked")
-  public int countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
+  public long countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
@@ -185,7 +184,6 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
       return 0;
     } else {
       Map<String, Object> map = (Map<String, Object>) results.get(0).get("result");
-
       return (Integer) map.get("rows");
     }
   }

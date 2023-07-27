@@ -76,7 +76,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
   }
 
   @Override
-  int getNumExpectedRowsIngested()
+  long getNumExpectedRowsIngested()
   {
     return EXPECTED_NUM_ROWS;
   }

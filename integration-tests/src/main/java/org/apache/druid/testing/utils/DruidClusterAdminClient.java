@@ -296,7 +296,7 @@ public class DruidClusterAdminClient
           }
         },
         HttpResponseStatus.OK,
-        "Health check of Instance[%s]",
+        "Healthcheck of instance[%s]",
         host
     );
   }

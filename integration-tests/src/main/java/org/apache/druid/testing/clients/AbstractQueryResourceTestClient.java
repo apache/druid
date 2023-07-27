@@ -155,26 +155,28 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
 
       final AtomicReference<BytesFullResponseHolder> responseRef = new AtomicReference<>();
 
-      ITRetryUtil.retryUntilEquals(() -> {
-        try {
-          responseRef.set(httpClient.go(
-              request,
-              new BytesFullResponseHandler()
-          ).get());
-        }
-        catch (Throwable t) {
-          ChannelException ce = Throwables.getCauseOfType(t, ChannelException.class);
-          if (ce != null) {
-            LOG.info(ce, "Encountered a channel exception. Retrying the query request");
-            return false;
-          }
-        }
-        return true;
-      },
+      ITRetryUtil.retryUntilEquals(
+          () -> {
+            try {
+              responseRef.set(httpClient.go(
+                  request,
+                  new BytesFullResponseHandler()
+              ).get());
+            }
+            catch (Throwable t) {
+              ChannelException ce = Throwables.getCauseOfType(t, ChannelException.class);
+              if (ce != null) {
+                LOG.info(ce, "Encountered a channel exception. Retrying the query request");
+                return false;
+              }
+            }
+            return true;
+          },
           true,
           1000,
           3,
-          "waiting for queries to complete");
+          "Queries are completed"
+      );
 
       BytesFullResponseHolder response = responseRef.get();
 
