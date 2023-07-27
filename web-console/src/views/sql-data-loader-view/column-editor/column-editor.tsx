@@ -164,7 +164,6 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
       </FormGroup>
       <FormGroup label="SQL expression">
         <FlexibleQueryInput
-          autoHeight={false}
           showGutter={false}
           placeholder="expression"
           queryString={effectiveExpressionString}
