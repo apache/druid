@@ -69,6 +69,8 @@ public class CoordinatorDynamicConfig
    * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
+
+  private static final double DEFAULT_KILL_TASK_SLOT_RATIO = 1.0;
   @Nullable private final Double killTaskSlotRatio;
   private final Set<String> decommissioningNodes;
 
@@ -160,7 +162,14 @@ public class CoordinatorDynamicConfig
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.specificDataSourcesToKillUnusedSegmentsIn
         = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
-    this.killTaskSlotRatio = killTaskSlotRatio;
+
+    if (null != killTaskSlotRatio) {
+      Preconditions.checkArgument(
+          killTaskSlotRatio >= 0 && killTaskSlotRatio <= 1,
+          "killTaskSlotRatio must be >= 0 and <= 1"
+      );
+    }
+    this.killTaskSlotRatio = killTaskSlotRatio != null ? killTaskSlotRatio : DEFAULT_KILL_TASK_SLOT_RATIO;
     this.dataSourcesToNotKillStalePendingSegmentsIn
         = parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
     this.maxSegmentsInNodeLoadingQueue = Builder.valueOrDefault(
