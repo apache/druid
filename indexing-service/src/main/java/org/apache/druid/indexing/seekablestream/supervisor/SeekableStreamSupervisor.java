@@ -2088,7 +2088,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // Ignore return value; just await.
       coalesceAndAwait(futures);
     }
-    catch (InterruptedException | ExecutionException | TimeoutException e) {
+    catch (InterruptedException | ExecutionException e) {
       throw new RuntimeException(e);
     }
   }
