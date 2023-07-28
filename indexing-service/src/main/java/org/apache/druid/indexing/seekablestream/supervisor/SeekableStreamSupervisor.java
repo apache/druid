@@ -45,7 +45,6 @@ import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -64,6 +63,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientAsyncImpl;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -875,7 +875,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.futureTimeoutInSeconds = Math.max(
         MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
-                                         + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
+                                         + SeekableStreamIndexTaskClientAsyncImpl.MAX_RETRY_WAIT_SECONDS)
     );
 
     this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, maxNumTasks, this.tuningConfig);
@@ -4138,25 +4138,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Call {@link FutureUtils#coalesce} on the provided list, and wait for it up to {@link #futureTimeoutInSeconds}.
+   * Call {@link FutureUtils#coalesce} on the provided list, and wait for the result.
    */
   private <T> List<Either<Throwable, T>> coalesceAndAwait(final List<ListenableFuture<T>> futures)
       throws ExecutionException, InterruptedException, TimeoutException
   {
-    final ListenableFuture<List<Either<Throwable, T>>> coalesced = FutureUtils.coalesce(futures);
-
-    try {
-      if (tuningConfig.getChatAsync()) {
-        // Let the async client handle timeouts.
-        return coalesced.get();
-      } else {
-        return coalesced.get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-      }
-    }
-    catch (InterruptedException | TimeoutException e) {
-      coalesced.cancel(true);
-      throw e;
-    }
+    return FutureUtils.get(FutureUtils.coalesce(futures), true);
   }
 
   protected void emitNoticeProcessTime(String noticeType, long timeInMillis)

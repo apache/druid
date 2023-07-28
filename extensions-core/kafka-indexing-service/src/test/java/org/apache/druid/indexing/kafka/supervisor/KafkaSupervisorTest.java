@@ -253,7 +253,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -328,8 +327,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false,
             null,
             numThreads,
-            null,
-            TEST_CHAT_THREADS,
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
@@ -3995,8 +3992,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false,
             null,
             numThreads,
-            null,
-            TEST_CHAT_THREADS,
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
@@ -4035,8 +4030,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -4528,7 +4521,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -4563,8 +4555,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         resetOffsetAutomatically,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -4642,7 +4632,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -4677,8 +4666,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -4759,7 +4746,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
-        null,
         null,
         null
     )
