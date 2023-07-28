@@ -30,9 +30,13 @@ In this topic, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server 
 
 ## Submit a query
 
-Submits a JSON-based native query. 
+Submits a JSON-based native query with the request body. 
 
-Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The possible types of queries are: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`. For guidance on constructing the requests and choosing query types, see [available native queries](../querying/querying.md#available-queries).
+Druid supports different types of queries for different use cases. All queries require the following properties:
+* `queryType`: A string representing type of query. Druid supports the following native query types: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`. 
+* `dataSource`: A string or object defining the source of data to query. The most common value is the name of the datasource to query. For more information, see [Datasources](../querying/datasources.md).
+
+For additional properties based on your query type or use case, see [available native queries](../querying/querying.md#available-queries).
 
 ### URL
 
@@ -69,9 +73,9 @@ For more information on possible error messages, see [query execution failures](
 
 ---
 
-### Sample request: `topN`
+### Example query: `topN`
 
-The following example submits a JSON query of the `topN` type to retrieve a ranked list of users and their post views. 
+The following example shows a `topN` query. The query analyzes the `social_media` datasource to return the top five users from the `username` dimension with the highest number of views from the `views` metric. 
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -129,7 +133,7 @@ Content-Length: 336
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response: `topN`
+#### Example response: `topN`
 
 <details>
   <summary>Click to show sample response</summary>
@@ -165,7 +169,7 @@ Content-Length: 336
   ```
 </details>
 
-### Sample request: `groupBy`
+### Example query: `groupBy`
 
 The following example submits a JSON query of the `groupBy` type to retrieve the `username` with the highest votes to posts ratio from the `social_media` datasource.
 
@@ -173,7 +177,7 @@ In this query:
 * The `upvoteSum` aggregation calculates the sum of the `upvotes` for each user.
 * The `postCount` aggregation calculates the sum of posts for each user.
 * The `upvoteToPostRatio` is a post-aggregation of the `upvoteSum` and the `postCount`, divided to calculate the ratio.
-* The result is sorted based on the `upvoteToPostRatio` and in descending order.
+* The result is sorted based on the `upvoteToPostRatio` in descending order.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -254,7 +258,7 @@ Content-Length: 817
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response: `groupBy`
+#### Example response: `groupBy`
 
 <details>
   <summary>Click to show sample response</summary>
