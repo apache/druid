@@ -55,7 +55,7 @@ For more information about this feature, see the [26.0.0 release notes for Schem
 
 The Coordinator is now more stable and user-friendly. This is accompanied by several bug fixes, logging and metric improvements, and a whole new range of capabilities.
 
-The Coordinator now supports a `smartSegmentLoading` mode, which is enabled by default. The Coordinator computes the optimal values for the following configs at run time automatically to best utilize Coordinator runs:
+The new `smartSegmentLoading` mode, which is enabled by default, configures the Coordinator to compute optimal values for the following configs at run:
 
 * `maxSegmentsInNodeLoadingQueue`
 * `maxSegmentsToMove`
@@ -65,9 +65,9 @@ The Coordinator now supports a `smartSegmentLoading` mode, which is enabled by d
 * `maxNonPrimaryReplicantsToLoad`
 * `decommissioningMaxPercentOfMaxSegmentsToMove`
 
-With `smartSegmentLoading` is enabled, you don't to specify any of these dynamic configs. Any values you set are ignored. Additionally, these configs are now deprecated and will be removed in subsequent releases.
+With `smartSegmentLoading` enabled, don't specify any of these configs because any values you set are ignored in favor of the computed optimal values. The configs are now deprecated and will be removed in subsequent releases.
 
-The Coordinator is now capable of prioritization and cancellation of items in segment load queues. This means that the Coordinator now reacts faster to changes in the cluster and makes better segment assignment decisions.
+Additionally, the Coordinator can now prioritize or cancel items in segment load queues, improving reaction time for changes in the cluster and segment assignment decisions.
 
 As part of this change, new metrics are available. For more information, see [New segment metrics](#new-segment-metrics).
 
