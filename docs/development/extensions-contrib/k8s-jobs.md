@@ -86,13 +86,13 @@ All other configurations you had for the middle manager tasks must be moved unde
 If you are running without a middle manager you need to also use `druid.processing.intermediaryData.storage.type=deepstore`
 
 ### Custom Template Pod Adapter
-The custom template pod adapter allows you to specify a pod template file per task type for more flexibility on how to define your pods. This adapter expects a [PodTemplate](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) to be available on the overlord's file system. This pod template is used as the base of the pod spec for the Kubernetes Job. You can override things like labels, environment variables, resources, annotation, or even the base image with this template. To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`
+The custom template pod adapter allows you to specify a pod template file per task type for more flexibility on how to define your pods. This adapter expects a [Pod Template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) to be available on the overlord's file system. This pod template is used as the base of the pod spec for the Kubernetes Job. You can override things like labels, environment variables, resources, annotation, or even the base image with this template. To enable this pod adapter you can specify the runtime property `druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`
 
 The base pod template must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.base: /path/to/basePodSpec.yaml`
 
 Task specific pod templates must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the task type i.e `index_parallel`
 
-The following is an example PodTemplate that uses the regular druid docker image.
+The following is an example Pod Template that uses the regular druid docker image.
 ```
 apiVersion: "v1"
 kind: "PodTemplate"
@@ -173,7 +173,7 @@ druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
 
-Any runtime property or jvm config used by the peon process can also be passed. E.G. below is a example of a ConfigMap that can be used to generate the nodetype-config-volume mount in the above template.
+Any runtime property or JVM config used by the peon process can also be passed. E.G. below is a example of a ConfigMap that can be used to generate the `nodetype-config-volume` mount in the above template.
 ```
 kind: ConfigMap
 metadata:
