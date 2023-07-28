@@ -1184,7 +1184,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Retrieves the current status report for a single supervisor. The report contains the state of the supervisor tasks and an array of recently thrown exceptions.
 
 For additional information about the status report, see the topic for each streaming ingestion methods:
-* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#getting-supervisor-status-report)
+* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#get-supervisor-status-report)
 * [Apache Kafka](../development/extensions-core/kafka-supervisor-operations.md#getting-supervisor-status-report)
 
 #### URL
