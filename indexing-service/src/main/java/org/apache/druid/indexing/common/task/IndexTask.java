@@ -1210,7 +1210,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     {
       Preconditions.checkNotNull(inputSource, "inputSource");
       if (inputSourceWithToolbox.get() == null) {
-        final InputSource theInputSource;
         if (inputSource instanceof TaskInputSource) {
           inputSourceWithToolbox.set(((TaskInputSource) inputSource).withTaskToolbox(toolbox));
         } else {
