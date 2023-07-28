@@ -120,6 +120,8 @@ All load rules can have these properties:
 
 Specific types of load rules discussed below may have other properties too.
 
+Load rules are also how you take advantage of the resource savings that [query the data from deep storage](../querying/query-from-deep-storage.md) provides. One way to configure data so that certain segments are not loaded onto Historical tiers but is available to query from deep storage is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false` for those segments, either by interval or by period.
+
 ### Forever load rule
 
 The forever load rule assigns all datasource segments to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`.
@@ -167,7 +169,7 @@ Set the following properties:
   - the segment interval starts any time after the rule interval starts.
 
   You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. If you set the replicants for a period to 0 on all tiers, you can still [query the data from deep storage](../querying/query-from-deep-storage.md).
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. 
 - `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Interval load rule
@@ -190,7 +192,7 @@ Interval load rules have type `loadByInterval`. The following example places one
 Set the following properties:
 
 - `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. If you set the replicants for an interval to 0 on all tiers, you can still [query the data from deep storage](../querying/query-from-deep-storage.md). 
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. 
 - `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ## Drop rules
