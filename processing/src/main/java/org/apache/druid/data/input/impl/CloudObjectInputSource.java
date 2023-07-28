@@ -174,12 +174,24 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
-            .flatMap(split -> split.get().stream())
-            .map(this::createEntity)
-            .iterator(),
+        getInputEntities(inputFormat),
         temporaryDirectory
     );
+  }
+
+  /**
+   * Return an iterator of {@link InputEntity} corresponding to the objects represented by this input source, as read
+   * by the provided {@link InputFormat}.
+   */
+  Iterator<InputEntity> getInputEntities(final InputFormat inputFormat)
+  {
+    // Use createSplits with FilePerSplitHintSpec.INSTANCE as a way of getting the list of objects to read
+    // out of either "prefixes", "objects", or "uris". The specific splits don't matter because we are going
+    // to flatten them anyway.
+    return createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
+        .flatMap(split -> split.get().stream())
+        .map(this::createEntity)
+        .iterator();
   }
 
   @Override
