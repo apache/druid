@@ -68,6 +68,7 @@ import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
@@ -84,6 +85,7 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -879,6 +881,16 @@ public class SqlStatementResource
       return FutureUtils.getUnchecked(future, true);
     }
     catch (RuntimeException e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        HttpResponseException httpResponseException = (HttpResponseException) e.getCause();
+        if (httpResponseException.getResponse() != null && httpResponseException.getResponse().getResponse().getStatus()
+                                                                                .equals(HttpResponseStatus.NOT_FOUND)) {
+          // since we get a 404, we mark the request as an invalid input. This code path is generally triggered when user passes a `queryId` which is not found on the overlord.
+          throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build("Unable to contact overlord " + e.getMessage());
+        }
+      }
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.UNCATEGORIZED)
                           .build("Unable to contact overlord " + e.getMessage());

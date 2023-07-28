@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
@@ -40,6 +41,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -65,6 +67,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -77,6 +80,9 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlResourceTest;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -87,6 +93,7 @@ import org.mockito.Mockito;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -926,6 +933,33 @@ public class SqlStatementResourceTest extends MSQTestBase
             RUNNING_SELECT_MSQ_QUERY,
             makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
         ).getStatus()
+    );
+  }
+
+  @Test
+  public void taskIdNotFoundTests()
+  {
+    String taskIdNotFound = "notFound";
+    final DefaultHttpResponse incorrectResponse =
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+    SettableFuture<TaskStatusResponse> settableFuture = SettableFuture.create();
+    settableFuture.setException(new HttpResponseException(new StringFullResponseHolder(
+        incorrectResponse,
+        StandardCharsets.UTF_8
+    )));
+    Mockito.when(overlordClient.taskStatus(taskIdNotFound)).thenReturn(settableFuture);
+
+    Assert.assertEquals(
+        Response.Status.BAD_REQUEST.getStatusCode(),
+        resource.doGetStatus(taskIdNotFound, makeOkRequest()).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.BAD_REQUEST.getStatusCode(),
+        resource.doGetResults(taskIdNotFound, null, makeOkRequest()).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.BAD_REQUEST.getStatusCode(),
+        resource.deleteQuery(taskIdNotFound, makeOkRequest()).getStatus()
     );
   }
 
