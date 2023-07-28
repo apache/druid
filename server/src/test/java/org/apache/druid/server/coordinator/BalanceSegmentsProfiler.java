@@ -31,7 +31,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -117,7 +117,7 @@ public class BalanceSegmentsProfiler
       EasyMock.expect(server.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
 
-      LoadQueuePeon peon = new LoadQueuePeonTester();
+      LoadQueuePeon peon = new TestLoadQueuePeon();
       serverHolderList.add(new ServerHolder(server, peon));
     }
 
@@ -154,8 +154,8 @@ public class BalanceSegmentsProfiler
   public void profileRun()
   {
     Stopwatch watch = Stopwatch.createUnstarted();
-    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-    LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
+    TestLoadQueuePeon fromPeon = new TestLoadQueuePeon();
+    TestLoadQueuePeon toPeon = new TestLoadQueuePeon();
 
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
