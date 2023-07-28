@@ -57,14 +57,17 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
-    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
-    ExprEval<?> cast = eval.castTo(ExpressionType.LONG);
-    if (cast.isNumericNull()) {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
+    if (castForComparison == null) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
+    if (castForComparison.isNumericNull()) {
       return makeNullValueMatcher(selector);
     }
-    return makeLongMatcher(cast.asLong());
+    return makeLongMatcher(castForComparison.asLong());
   }
 
   private BaseVectorValueMatcher makeLongMatcher(long matchValLong)
