@@ -23,26 +23,33 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  * This aggregator factory is for building sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
  */
+@SuppressWarnings("NullableProblems")
 public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.BUILD_TYPE_NAME);
@@ -53,11 +60,12 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("stringEncoding") @Nullable final StringEncoding stringEncoding,
       @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
+    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
   }
 
 
@@ -76,20 +84,21 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
-    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
-    return new HllSketchBuildAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
+    return new HllSketchBuildAggregator(
+        formulateSketchUpdater(columnSelectorFactory),
+        getLgK(),
+        TgtHllType.valueOf(getTgtHllType())
+    );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
-    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchBuildBufferAggregator(
-        selector,
+        formulateSketchUpdater(columnSelectorFactory),
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
+        getStringEncoding(),
         getMaxIntermediateSize()
     );
   }
@@ -104,11 +113,13 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     validateInputs(selectorFactory.getColumnCapabilities(getFieldName()));
-    return new HllSketchBuildVectorAggregator(
+
+    return HllSketchBuildVectorAggregator.create(
         selectorFactory,
         getFieldName(),
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
+        getStringEncoding(),
         getMaxIntermediateSize()
     );
   }
@@ -131,6 +142,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
         getFieldName(),
         getLgK(),
         getTgtHllType(),
+        getStringEncoding(),
         isShouldFinalize(),
         isRound()
     );
@@ -151,4 +163,76 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     }
   }
 
+  private HllSketchUpdater formulateSketchUpdater(ColumnSelectorFactory columnSelectorFactory)
+  {
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
+    validateInputs(capabilities);
+
+    HllSketchUpdater updater = null;
+    if (capabilities != null &&
+        StringEncoding.UTF8.equals(getStringEncoding()) && ValueType.STRING.equals(capabilities.getType())) {
+      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
+          DefaultDimensionSpec.of(getFieldName())
+      );
+
+      if (selector.supportsLookupNameUtf8()) {
+        updater = sketch -> {
+          final IndexedInts row = selector.getRow();
+          final int sz = row.size();
+
+          for (int i = 0; i < sz; i++) {
+            final ByteBuffer buf = selector.lookupNameUtf8(row.get(i));
+
+            if (buf != null) {
+              sketch.get().update(buf);
+            }
+          }
+        };
+      }
+    }
+
+    if (updater == null) {
+      @SuppressWarnings("unchecked")
+      final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+      final ValueType type;
+
+      if (capabilities == null) {
+        // When ingesting data, the columnSelectorFactory returns null for column capabilities, so this doesn't
+        // necessarily mean that the column doesn't exist.  We thus need to be prepared to accept anything in this
+        // case.  As such, we pretend like the input is COMPLEX to get the logic to use the object-based aggregation
+        type = ValueType.COMPLEX;
+      } else {
+        type = capabilities.getType();
+      }
+
+
+      switch (type) {
+        case LONG:
+          updater = sketch -> {
+            if (!selector.isNull()) {
+              sketch.get().update(selector.getLong());
+            }
+          };
+          break;
+        case FLOAT:
+        case DOUBLE:
+          updater = sketch -> {
+            if (!selector.isNull()) {
+              sketch.get().update(selector.getDouble());
+            }
+          };
+          break;
+        case ARRAY:
+          throw InvalidInput.exception("ARRAY types are not supported for hll sketch");
+        default:
+          updater = sketch -> {
+            Object obj = selector.getObject();
+            if (obj != null) {
+              HllSketchBuildUtil.updateSketch(sketch.get(), getStringEncoding(), obj);
+            }
+          };
+      }
+    }
+    return updater;
+  }
 }

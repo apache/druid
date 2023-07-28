@@ -134,6 +134,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -143,8 +144,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
+  public static final String TYPE = "index";
   private static final Logger log = new Logger(IndexTask.class);
-  private static final String TYPE = "index";
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema, IngestionMode ingestionMode)
   {
@@ -1149,6 +1150,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
+    private final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
     private final InputFormat inputFormat;
     private boolean appendToExisting;
     private boolean dropExisting;
@@ -1207,10 +1209,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public InputSource getNonNullInputSource(TaskToolbox toolbox)
     {
       Preconditions.checkNotNull(inputSource, "inputSource");
-      if (inputSource instanceof TaskInputSource && toolbox != null) {
-        return ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
+      if (inputSourceWithToolbox.get() == null) {
+        final InputSource theInputSource;
+        if (inputSource instanceof TaskInputSource) {
+          inputSourceWithToolbox.set(((TaskInputSource) inputSource).withTaskToolbox(toolbox));
+        } else {
+          inputSourceWithToolbox.set(inputSource);
+        }
       }
-      return inputSource;
+      return inputSourceWithToolbox.get();
     }
 
     /**

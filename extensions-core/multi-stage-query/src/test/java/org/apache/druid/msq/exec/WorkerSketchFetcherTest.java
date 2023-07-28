@@ -113,8 +113,7 @@ public class WorkerSketchFetcherTest
       latch.countDown();
     }, stageDefinition.getId(), ImmutableSet.copyOf(TASK_IDS), ((queryKernel, integer, msqFault) -> {}));
 
-    latch.await(5, TimeUnit.SECONDS);
-    Assert.assertEquals(0, latch.getCount());
+    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
 
   }
 
@@ -122,7 +121,7 @@ public class WorkerSketchFetcherTest
   public void test_submitFetcherTask_sequentialFetch() throws InterruptedException
   {
     doReturn(true).when(completeKeyStatisticsInformation).isComplete();
-    final CountDownLatch latch = new CountDownLatch(TASK_IDS.size() - 1);
+    final CountDownLatch latch = new CountDownLatch(TASK_IDS.size());
 
     target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
 
@@ -143,8 +142,8 @@ public class WorkerSketchFetcherTest
         ((queryKernel, integer, msqFault) -> {})
     );
 
-    latch.await(5, TimeUnit.SECONDS);
-    Assert.assertEquals(0, latch.getCount());
+    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
+
   }
 
   @Test
@@ -186,17 +185,15 @@ public class WorkerSketchFetcherTest
         })
     );
 
-    latch.await(5, TimeUnit.SECONDS);
-    retryLatch.await(5, TimeUnit.SECONDS);
-    Assert.assertEquals(0, latch.getCount());
-    Assert.assertEquals(0, retryLatch.getCount());
+    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
+    Assert.assertTrue(retryLatch.await(5, TimeUnit.SECONDS));
   }
 
   @Test
   public void test_SequentialRetryEnabled_retryInvoked() throws InterruptedException
   {
     doReturn(true).when(completeKeyStatisticsInformation).isComplete();
-    final CountDownLatch latch = new CountDownLatch(TASK_IDS.size() - 1);
+    final CountDownLatch latch = new CountDownLatch(TASK_IDS.size());
 
     target = spy(new WorkerSketchFetcher(workerClient, workerTaskLauncher, true));
 
@@ -217,10 +214,8 @@ public class WorkerSketchFetcherTest
         })
     );
 
-    latch.await(5, TimeUnit.SECONDS);
-    retryLatch.await(5, TimeUnit.SECONDS);
-    Assert.assertEquals(0, latch.getCount());
-    Assert.assertEquals(0, retryLatch.getCount());
+    Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
+    Assert.assertTrue(retryLatch.await(5, TimeUnit.SECONDS));
   }
 
   @Test

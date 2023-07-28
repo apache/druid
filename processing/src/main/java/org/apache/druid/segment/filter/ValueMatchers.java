@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Utility methods for creating {@link ValueMatcher} instances. Mainly used by {@link ConstantValueMatcherFactory}
+ * Utility methods for creating {@link ValueMatcher} instances. Mainly used by {@link StringConstantValueMatcherFactory}
  * and {@link PredicateValueMatcherFactory}.
  */
 public class ValueMatchers
@@ -114,8 +114,22 @@ public class ValueMatchers
       return makeNumericNullValueMatcher(selector);
     }
 
+    return makeFloatValueMatcher(selector, matchVal);
+  }
+
+  /**
+   * Creates a constant-based {@link ValueMatcher} for a float-typed selector.
+   *
+   * @param selector column selector
+   * @param value    value to match
+   */
+  public static ValueMatcher makeFloatValueMatcher(
+      final BaseFloatColumnValueSelector selector,
+      final float value
+  )
+  {
     // Use "floatToIntBits" to canonicalize NaN values.
-    final int matchValIntBits = Float.floatToIntBits(matchVal);
+    final int matchValIntBits = Float.floatToIntBits(value);
     return new ValueMatcher()
     {
       @Override
@@ -141,7 +155,11 @@ public class ValueMatchers
     if (matchVal == null) {
       return makeNumericNullValueMatcher(selector);
     }
-    final long matchValLong = matchVal;
+    return makeLongValueMatcher(selector, matchVal);
+  }
+
+  public static ValueMatcher makeLongValueMatcher(final BaseLongColumnValueSelector selector, long value)
+  {
     return new ValueMatcher()
     {
       @Override
@@ -150,7 +168,7 @@ public class ValueMatchers
         if (selector.isNull()) {
           return false;
         }
-        return selector.getLong() == matchValLong;
+        return selector.getLong() == value;
       }
 
       @Override
@@ -186,6 +204,7 @@ public class ValueMatchers
       }
     };
   }
+
 
   /**
    * Creates a predicate-based {@link ValueMatcher} for a float-typed selector.
@@ -235,8 +254,16 @@ public class ValueMatchers
       return makeNumericNullValueMatcher(selector);
     }
 
+    return makeDoubleValueMatcher(selector, matchVal);
+  }
+
+  public static ValueMatcher makeDoubleValueMatcher(
+      final BaseDoubleColumnValueSelector selector,
+      final double value
+  )
+  {
     // Use "doubleToLongBits" to canonicalize NaN values.
-    final long matchValLongBits = Double.doubleToLongBits(matchVal);
+    final long matchValLongBits = Double.doubleToLongBits(value);
     return new ValueMatcher()
     {
       @Override

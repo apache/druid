@@ -45,7 +45,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
       CompressionStrategy strategy
   )
   {
-    baseDoubleBuffers = GenericIndexed.read(fromBuffer, new DecompressingByteBufferObjectStrategy(byteOrder, strategy));
+    baseDoubleBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }
