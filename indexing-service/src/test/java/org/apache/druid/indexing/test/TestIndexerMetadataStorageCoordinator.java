@@ -110,6 +110,18 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer maxSegments
+  )
+  {
+    synchronized (unusedSegments) {
+      return unusedSegments.subList(0, maxSegments);
+    }
+  }
+
+  @Override
   public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
   {
     return 0;

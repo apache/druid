@@ -137,7 +137,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     // List unused segments
     List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval()));
+        .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), maxSegmentsToKill));
 
     if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
       throw new ISE(

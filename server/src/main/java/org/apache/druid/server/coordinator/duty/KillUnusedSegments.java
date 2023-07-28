@@ -26,6 +26,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -164,8 +165,9 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
 
       if (submittedTasks >= availableKillTaskSlots) {
-        log.info("Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
-                 + "on the next coordinator cycle.");
+        log.info(StringUtils.format(
+            "Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
+            + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
         break;
       }
     }
