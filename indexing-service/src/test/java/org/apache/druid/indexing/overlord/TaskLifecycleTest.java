@@ -948,7 +948,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             "test_kill_task",
             Intervals.of("2011-04-01/P4D"),
             null,
-            false
+            false,
+            null
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
@@ -956,6 +957,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 3, mdc.getNuked().size());
+    Assert.assertEquals("delete segment batch call count", 1, mdc.getDeleteSegmentsCount());
     Assert.assertTrue(
         "expected unused segments get killed",
         expectedUnusedSegments.containsAll(mdc.getNuked()) && mdc.getNuked().containsAll(

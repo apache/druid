@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
@@ -63,9 +65,12 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
   // We split this to try and keep each nuke operation relatively short, in the case that either
   // the database or the storage layer is particularly slow.
-  private static final int SEGMENT_NUKE_BATCH_SIZE = 10_000;
+  private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
 
   private final boolean markAsUnused;
+  private final int batchSize;
+
+  private int countBatchesIssued = 0;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -73,7 +78,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("markAsUnused") Boolean markAsUnused
+      @JsonProperty("markAsUnused") Boolean markAsUnused,
+      @JsonProperty("batchSize") Integer batchSize
   )
   {
     super(
@@ -83,6 +89,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         context
     );
     this.markAsUnused = markAsUnused != null && markAsUnused;
+    this.batchSize = (batchSize != null) ? batchSize : DEFAULT_SEGMENT_NUKE_BATCH_SIZE;
+    Preconditions.checkArgument(this.batchSize > 0, "batchSize should be greater than zero");
   }
 
   @JsonProperty
@@ -90,6 +98,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public boolean isMarkAsUnused()
   {
     return markAsUnused;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getBatchSize()
+  {
+    return batchSize;
   }
 
   @Override
@@ -104,6 +119,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public Set<ResourceAction> getInputSourceResources()
   {
     return ImmutableSet.of();
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  int getCountBatchesIssued()
+  {
+    return countBatchesIssued;
   }
 
   @Override
@@ -123,7 +145,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         .getTaskActionClient()
         .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval()));
 
-    final List<List<DataSegment>> unusedSegmentBatches = Lists.partition(allUnusedSegments, SEGMENT_NUKE_BATCH_SIZE);
+    final List<List<DataSegment>> unusedSegmentBatches = Lists.partition(allUnusedSegments, batchSize);
 
     // The individual activities here on the toolbox have possibility to run for a longer period of time,
     // since they involve calls to metadata storage and archival object storage. And, the tasks take hold of the
@@ -148,6 +170,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
       toolbox.getDataSegmentKiller().kill(unusedSegments);
+      countBatchesIssued++;
     }
 
     return TaskStatus.success(getId());

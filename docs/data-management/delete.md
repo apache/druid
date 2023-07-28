@@ -95,9 +95,11 @@ The available grammar is:
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
-    "context": <task context>
+    "context": <task context>,
+    "batchSize": <optional batch size, default is 100. Too large will affect overlord stability.>
 }
 ```
 
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
+

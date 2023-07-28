@@ -39,19 +39,22 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String dataSource;
   private final Interval interval;
   private final Boolean markAsUnused;
+  private final Integer batchSize;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("markAsUnused") Boolean markAsUnused
+      @JsonProperty("markAsUnused") Boolean markAsUnused,
+      @JsonProperty("batchSize") Integer batchSize
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
     this.interval = interval;
     this.markAsUnused = markAsUnused;
+    this.batchSize = batchSize;
   }
 
   @JsonProperty
@@ -87,6 +90,12 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return markAsUnused;
   }
 
+  @JsonProperty
+  public Integer getBatchSize()
+  {
+    return batchSize;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -100,12 +109,13 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return Objects.equals(id, that.id)
            && Objects.equals(dataSource, that.dataSource)
            && Objects.equals(interval, that.interval)
-           && Objects.equals(markAsUnused, that.markAsUnused);
+           && Objects.equals(markAsUnused, that.markAsUnused)
+           && Objects.equals(batchSize, that.batchSize);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, markAsUnused);
+    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize);
   }
 }

@@ -51,7 +51,8 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "killTaskId",
         "datasource",
         Intervals.of("2020-01-01/P1D"),
-        true
+        true,
+        99
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
     final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
@@ -59,6 +60,26 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
+    Assert.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
+  }
+
+  @Test
+  public void testClientKillUnusedSegmentsTaskQueryToKillUnusedSegmentsTaskDefaultBatchSize() throws IOException
+  {
+    final ClientKillUnusedSegmentsTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(
+            "killTaskId",
+            "datasource",
+            Intervals.of("2020-01-01/P1D"),
+            true,
+            null
+    );
+    final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
+    final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
+    Assert.assertEquals(taskQuery.getId(), fromJson.getId());
+    Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
+    Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
+    Assert.assertEquals(100, fromJson.getBatchSize());
   }
 
   @Test
@@ -69,7 +90,8 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "datasource",
         Intervals.of("2020-01-01/P1D"),
         null,
-        true
+        true,
+        99
     );
     final byte[] json = objectMapper.writeValueAsBytes(task);
     final ClientKillUnusedSegmentsTaskQuery taskQuery = (ClientKillUnusedSegmentsTaskQuery) objectMapper.readValue(
@@ -80,5 +102,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
     Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
     Assert.assertEquals(task.isMarkAsUnused(), taskQuery.getMarkAsUnused());
+    Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
   }
 }
