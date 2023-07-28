@@ -59,24 +59,15 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <TabItem value="1" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved list of tasks*
 
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
 
-
-<br/>
-
 *Invalid `state` query parameter value*
 
 </TabItem>
 <TabItem value="3" label="500 SERVER ERROR">
-
-
-<br/>
 
 *Invalid query parameter*
 
@@ -206,16 +197,10 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <TabItem value="6" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved list of complete tasks*
 
 </TabItem>
 <TabItem value="7" label="404 NOT FOUND">
-
-
-<br/>
 
 *Request sent to incorrect service*
 
@@ -320,9 +305,6 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <TabItem value="10" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved list of running tasks*
 
 </TabItem>
@@ -408,9 +390,6 @@ The endpoint supports a set of optional query parameters to filter results.
 <Tabs>
 
 <TabItem value="13" label="200 SUCCESS">
-
-
-<br/>
 
 *Successfully retrieved list of waiting tasks*
 
@@ -533,9 +512,6 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <TabItem value="16" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved list of pending tasks*
 
 </TabItem>
@@ -628,16 +604,10 @@ Retrieves the payload of a task given the task ID. It returns a JSON object with
 
 <TabItem value="19" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved payload of task*
 
 </TabItem>
 <TabItem value="20" label="404 NOT FOUND">
-
-
-<br/>
 
 *Cannot find task with ID*
 
@@ -843,16 +813,10 @@ Retrieves the status of a task given the task ID. It returns a JSON object with 
 
 <TabItem value="23" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved task status*
 
 </TabItem>
 <TabItem value="24" label="404 NOT FOUND">
-
-
-<br/>
 
 *Cannot find task with ID*
 
@@ -932,9 +896,6 @@ In addition to enabling audit logs, configure a cleanup strategy to prevent over
 
 <TabItem value="27" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved task segments*
 
 </TabItem>
@@ -992,9 +953,6 @@ Task logs are automatically retrieved from the Middle Manager/Indexer or in long
 <Tabs>
 
 <TabItem value="30" label="200 SUCCESS">
-
-
-<br/>
 
 *Successfully retrieved task log*
 
@@ -1111,9 +1069,6 @@ Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a t
 
 <TabItem value="33" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved task report*
 
 </TabItem>
@@ -1203,32 +1158,20 @@ Note that for most batch ingestion use cases, you should use the [SQL-ingestion 
 
 <TabItem value="36" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully submitted task*
 
 </TabItem>
 <TabItem value="37" label="400 BAD REQUEST">
-
-
-<br/>
 
 *Missing information in query*
 
 </TabItem>
 <TabItem value="38" label="415 UNSUPPORTED MEDIA TYPE">
 
-
-<br/>
-
 *Incorrect request body media type*
 
 </TabItem>
 <TabItem value="39" label="500 Server Error">
-
-
-<br/>
 
 *Unexpected token or characters in request body*
 
@@ -1373,16 +1316,10 @@ Shuts down a task if it not already complete. Returns a JSON object with the ID 
 
 <TabItem value="42" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully shut down task*
 
 </TabItem>
 <TabItem value="43" label="404 NOT FOUND">
-
-
-<br/>
 
 *Cannot find task with ID or task is no longer running*
 
@@ -1443,16 +1380,10 @@ Shuts down all tasks for a specified datasource. If successful, it returns a JSO
 
 <TabItem value="46" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully shut down tasks*
 
 </TabItem>
 <TabItem value="47" label="404 NOT FOUND">
-
-
-<br/>
 
 *Error or datasource does not have a running task*
 
@@ -1515,16 +1446,10 @@ Retrieves list of task status objects for list of task ID strings in request bod
 
 <TabItem value="50" label="200 SUCCESS">
 
-
-<br/>
-
 *Successfully retrieved status objects*
 
 </TabItem>
 <TabItem value="51" label="415 UNSUPPORTED MEDIA TYPE">
-
-
-<br/>
 
 *Missing request body or incorrect request body type*
 
@@ -1615,9 +1540,6 @@ which automates this operation to perform periodically.
 <Tabs>
 
 <TabItem value="54" label="200 SUCCESS">
-
-
-<br/>
 
 *Successfully deleted pending segments*
 
