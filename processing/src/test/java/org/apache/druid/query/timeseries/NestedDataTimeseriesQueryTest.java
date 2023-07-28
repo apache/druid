@@ -21,6 +21,7 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -142,13 +143,13 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   public void testSums()
   {
     /*
-      "long":1,     "double":1.0,     "obj":{"a": 100, "b": {"x": "a", "y": 1.1, "z": [1, 2, 3, 4]}},
-      "long":2,                       "obj":{"a": 200, "b": {"x": "b", "y": 1.1, "z": [2, 4, 6]}},
-      "long":3,     "double":2.0,     "obj":{"a": 300},
-      "long":4,     "double":3.3,     "obj":{"a": 400, "b": {"x": "d", "y": 1.1, "z": [3, 4]}},
-      "long": null, "double":4.4,     "obj":{"a": 500, "b": {"x": "e", "z": [1, 2, 3, 4]}},
-      "long":5,     "double":5.9,     "obj":{"a": 600, "b": {"x": "f", "y": 1.1, "z": [6, 7, 8, 9]}},
-                    "double":null,    "obj":{"a": 700, "b": {"x": "g", "y": 1.1, "z": [9, null, 9, 9]}},
+      "long":1,     "double":1.0,  "variantNumeric": 1,     "obj":{"a": 100, "b": {"x": "a", "y": 1.1, "z": [1, 2, 3, 4]}},     "complexObj":{"x": 1234, ...}
+      "long":2,                    "variantNumeric": 1.1,   "obj":{"a": 200, "b": {"x": "b", "y": 1.1, "z": [2, 4, 6]}},        "complexObj":{"x": 10,  ... }
+      "long":3,     "double":2.0,  "variantNumeric": 1.0,   "obj":{"a": 300},                                                   "complexObj":{"x": 4.4, ... }
+      "long":4,     "double":3.3,                           "obj":{"a": 400, "b": {"x": "d", "y": 1.1, "z": [3, 4]}},           "complexObj":{"x": 1234,... }
+      "long": null, "double":4.4,  "variantNumeric": -1000, "obj":{"a": 500, "b": {"x": "e", "z": [1, 2, 3, 4]}},               "complexObj":{"x": 11,  ... }
+      "long":5,     "double":5.9,  "variantNumeric": 3.33,  "obj":{"a": 600, "b": {"x": "f", "y": 1.1, "z": [6, 7, 8, 9]}},
+                    "double":null, "variantNumeric": -0.13, "obj":{"a": 700, "b": {"x": "g", "y": 1.1, "z": [9, null, 9, 9]}},  "complexObj":{"x": 400, ... }
      */
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
@@ -159,12 +160,15 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                       new DoubleSumAggregatorFactory("sumDouble", "double"),
                                       new LongSumAggregatorFactory("sumNestedLong", "v0"),
                                       new DoubleSumAggregatorFactory("sumNestedDouble", "v1"),
-                                      new DoubleSumAggregatorFactory("sumNestedLongFromArray", "v2")
+                                      new DoubleSumAggregatorFactory("sumNestedLongFromArray", "v2"),
+                                      new DoubleSumAggregatorFactory("sumVariantNumeric", "variantNumeric"),
+                                      new DoubleSumAggregatorFactory("sumNestedVariantNumeric", "v3")
                                   )
                                   .virtualColumns(
                                       new NestedFieldVirtualColumn("obj", "$.a", "v0", ColumnType.LONG),
                                       new NestedFieldVirtualColumn("obj", "$.b.y", "v1", ColumnType.DOUBLE),
-                                      new NestedFieldVirtualColumn("obj", "$.b.z[0]", "v2", ColumnType.LONG)
+                                      new NestedFieldVirtualColumn("obj", "$.b.z[0]", "v2", ColumnType.LONG),
+                                      new NestedFieldVirtualColumn("complexObj", "$.x", "v3", ColumnType.DOUBLE)
                                   )
                                   .context(getContext())
                                   .build();
@@ -181,6 +185,8 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                 .put("sumNestedLong", 5600L)
                                 .put("sumNestedDouble", 11.0)
                                 .put("sumNestedLongFromArray", 44.0)
+                                .put("sumVariantNumeric", -1987.3999999999999)
+                                .put("sumNestedVariantNumeric", 5786.8)
                                 .build()
                 )
             )
@@ -274,7 +280,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
             new Result<>(
                 DateTimes.of("2023-01-01T00:00:00.000Z"),
                 new TimeseriesResultValue(
-                    ImmutableMap.of("count", 8L)
+                    ImmutableMap.of("count", NullHandling.replaceWithDefault() ? 6L : 8L)
                 )
             )
         )

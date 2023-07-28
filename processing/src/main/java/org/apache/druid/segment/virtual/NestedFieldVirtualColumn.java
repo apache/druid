@@ -531,7 +531,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             columnName,
             complexColumn.makeVectorValueSelector(parts, offset),
             leastRestrictiveType,
-            expectedType
+            expectedType == null ? ColumnType.STRING : expectedType
         );
       }
       final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
