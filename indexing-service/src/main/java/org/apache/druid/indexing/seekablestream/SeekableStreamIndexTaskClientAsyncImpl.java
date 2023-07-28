@@ -117,7 +117,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   )
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/checkpoints"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/checkpoints").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           final TypeFactory factory = jsonMapper.getTypeFactory();
@@ -140,7 +140,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<Boolean> stopAsync(final String id, final boolean publish)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.POST, "/stop" + (publish ? "?publish=true" : "")))
+        .forRequest(new RequestBuilder(HttpMethod.POST, "/stop" + (publish ? "?publish=true" : ""))
+                        .timeout(httpTimeout))
         .onSuccess(r -> true)
         .onHttpError(e -> {
           log.warn("Task [%s] coundln't be stopped because of http request failure [%s].", id, e.getMessage());
@@ -161,7 +162,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<Boolean> resumeAsync(final String id)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.POST, "/resume"))
+        .forRequest(new RequestBuilder(HttpMethod.POST, "/resume").timeout(httpTimeout))
         .onSuccess(r -> true)
         .onException(e -> Either.value(false))
         .go(makeClient(id, true));
@@ -171,7 +172,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getCurrentOffsetsAsync(String id, boolean retry)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/offsets/current"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/offsets/current").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> deserializeOffsetsMap(r.getContent()))
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
@@ -182,7 +183,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getEndOffsetsAsync(String id)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/offsets/end"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/offsets/end").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> deserializeOffsetsMap(r.getContent()))
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
@@ -199,7 +200,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     final RequestBuilder requestBuilder = new RequestBuilder(
         HttpMethod.POST,
         StringUtils.format("/offsets/end?finish=%s", finalize)
-    ).jsonContent(jsonMapper, endOffsets);
+    ).jsonContent(jsonMapper, endOffsets).timeout(httpTimeout);
 
     return ServiceCallBuilder
         .forRequest(requestBuilder)
@@ -212,7 +213,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(final String id)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/status"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(
             r ->
@@ -226,7 +227,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<DateTime> getStartTimeAsync(String id)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/time/start"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/time/start").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           if (isNullOrEmpty(r.getContent())) {
@@ -244,7 +245,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   {
     final ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseFuture =
         ServiceCallBuilder
-            .forRequest(new RequestBuilder(HttpMethod.POST, "/pause"))
+            .forRequest(new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout))
             .handler(new BytesFullResponseHandler())
             .onSuccess(r -> {
               if (r.getStatus().equals(HttpResponseStatus.OK)) {
@@ -280,7 +281,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(String id)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/rowStats"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/rowStats").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           if (isNullOrEmpty(r.getContent())) {
@@ -298,7 +299,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   public ListenableFuture<List<ParseExceptionReport>> getParseErrorsAsync(String id)
   {
     return ServiceCallBuilder
-        .forRequest(new RequestBuilder(HttpMethod.GET, "/unparseableEvents"))
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/unparseableEvents").timeout(httpTimeout))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           if (isNullOrEmpty(r.getContent())) {
