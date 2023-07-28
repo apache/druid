@@ -38,6 +38,7 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -254,7 +255,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
     } else {
       VectorValueSelector selector = null;
       VectorObjectSelector objectSelector = null;
-      if (outputType != null && outputType.isNumeric()) {
+      if (Types.isNumeric(outputType)) {
         selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
       } else {
         objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector("v");
