@@ -70,7 +70,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   private final boolean markAsUnused;
   private final int batchSize;
 
-  private int countBatchesIssued = 0;
+  private long countBatchesIssued = 0;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -123,7 +123,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
   @JsonIgnore
   @VisibleForTesting
-  int getCountBatchesIssued()
+  long getCountBatchesIssued()
   {
     return countBatchesIssued;
   }
