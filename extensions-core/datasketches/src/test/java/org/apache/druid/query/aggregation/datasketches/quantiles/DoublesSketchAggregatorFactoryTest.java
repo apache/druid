@@ -25,8 +25,11 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregateCombiner;
+import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -171,5 +174,25 @@ public class DoublesSketchAggregatorFactoryTest
     );
     Assert.assertEquals(factory, factory.withName("myFactory"));
     Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+  @Test
+  public void testNullSketches()
+  {
+    final DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        1024,
+        1000L,
+        null
+    );
+    final double[] values = new double[]{1, 2, 3, 4, 5, 6};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+    final Aggregator agg1 = new DoublesSketchBuildAggregator(selector, 8);
+    Assert.assertNotNull(factory.combine(null, agg1.get()));
+    Assert.assertNotNull(factory.combine(agg1.get(), null));
+    AggregateCombiner ac = factory.makeAggregateCombiner();
+    ac.fold(new TestDoublesSketchColumnValueSelector());
+    Assert.assertNotNull(ac.getObject());
   }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { dedupe } from 'druid-query-toolkit';
+import { dedupe } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -312,7 +312,7 @@ export async function sampleForConnect(
       dataSource,
       intervals,
       merge: true,
-      lenientAggregatorMerge: true,
+      aggregatorMergeStrategy: 'lenient',
       analysisTypes: ['aggregators', 'rollup'],
     });
 

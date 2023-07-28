@@ -35,7 +35,7 @@ import java.util.Objects;
  */
 public class ClientCompactionTaskQuery implements ClientTaskQuery
 {
-  static final String TYPE = "compact";
+  public static final String TYPE = "compact";
 
   private final String id;
   private final String dataSource;

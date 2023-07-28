@@ -38,7 +38,7 @@ Retention rules are persistent: they remain in effect until you change them. Dru
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](../api-reference/api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Service status API reference](../api-reference/service-status-api.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 
@@ -109,7 +109,16 @@ In the web console you can use the up and down arrows on the right side of the i
 
 Load rules define how Druid assigns segments to [historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
 
-If you have a single tier, Druid automatically names the tier `_default` and loads all segments onto it. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
+If you have a single tier, Druid automatically names the tier `_default`. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
+
+All load rules can have these properties:
+
+|Property|Description|Required|Default value|
+|---------|-----------|---------|-------------|
+| `tieredReplicants`| Map from tier names to the respective number of segment replicas to be loaded on those tiers. The number of replicas for each tier must be either 0 or a positive integer.| No | When `useDefaultTierForNull` is `true`, the default value is `{"_default_tier": 2}` i.e. 2 replicas to be loaded on the `_default_tier`.<br/><br/>When `useDefaultTierForNull` is `false`, the default value is `{}` i.e. no replicas to be loaded on any tier. |
+|`useDefaultTierForNull`|Determines the default value of `tieredReplicants` if it is not specified or set to `null`.| No | `true`|
+
+Specific types of load rules discussed below may have other properties too.
 
 ### Forever load rule
 
@@ -130,6 +139,7 @@ The following example places one replica of each segment on a custom tier named 
 Set the following property:
 
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Period load rule
 
@@ -158,6 +168,7 @@ Set the following properties:
 
   You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Interval load rule
 
@@ -180,6 +191,7 @@ Set the following properties:
 
 - `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ## Drop rules
 
@@ -195,7 +207,7 @@ Forever drop rules have type `dropForever`:
 
 ```json
 {
-  "type": "dropForever",
+  "type": "dropForever"
 }
 ```
 
@@ -209,7 +221,7 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 {
   "type": "dropByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 
@@ -271,7 +283,7 @@ Forever broadcast rules have type `broadcastForever`:
 
 ```json
 {
-  "type": "broadcastForever",
+  "type": "broadcastForever"
 }
 ```
 
@@ -285,7 +297,7 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 {
   "type": "broadcastByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 

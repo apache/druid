@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -43,14 +42,16 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.semantic.ArrayElementIndexes;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -238,12 +239,18 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
 
       IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+          new IndexableAdapter.NestedColumnMergable(
+              indexer.getSortedValueLookups(),
+              indexer.getFieldTypeInfo(),
+              false,
+              false,
+              null
+          )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      expectedTypes = sortedFields.get(NestedPathFinder.JSON_PATH_ROOT);
+      expectedTypes = new FieldTypeInfo.MutableTypeSet((byte) (sortedFields.get(NestedPathFinder.JSON_PATH_ROOT).getByteValue() & 0x7F));
       for (ColumnType type : FieldTypeInfo.convertToSet(expectedTypes.getByteValue())) {
         expectedLogicalType = ColumnType.leastRestrictiveType(expectedLogicalType, type);
       }
@@ -366,17 +373,27 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     SingleValueDimensionVectorSelector dimensionVectorSelector =
         expectedLogicalType.isPrimitive() ? column.makeSingleValueDimensionVectorSelector(vectorOffset) : null;
 
-    StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
     Assert.assertNull(valueSetIndex);
-    DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
+    DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     Assert.assertNull(predicateIndex);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullValueIndex);
+    ValueIndexes valueIndexes = supplier.as(ValueIndexes.class);
+    ArrayElementIndexes arrayElementIndexes = supplier.as(ArrayElementIndexes.class);
+    if (expectedType.getSingleType() != null && expectedType.getSingleType().isArray()) {
+      Assert.assertNotNull(valueIndexes);
+      Assert.assertNotNull(arrayElementIndexes);
+    } else {
+      Assert.assertNull(valueIndexes);
+      Assert.assertNull(arrayElementIndexes);
+    }
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
+    Assert.assertEquals(1, fields.size());
     Assert.assertEquals(
-        ImmutableMap.of(NestedPathFinder.JSON_PATH_ROOT, expectedType),
-        fields
+        expectedType,
+        fields.get(NestedPathFinder.JSON_PATH_ROOT)
     );
     final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(expectedLogicalType);
 
@@ -391,6 +408,10 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertArrayEquals(((List) row).toArray(), (Object[]) valueSelector.getObject());
           if (expectedType.getSingleType() != null) {
             Assert.assertArrayEquals(((List) row).toArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
+            Assert.assertTrue(valueIndexes.forValue(row, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
+            for (Object o : ((List) row)) {
+              Assert.assertTrue("Failed on row: " + row, arrayElementIndexes.containsValue(o, expectedType.getSingleType().getElementType()).computeBitmapResult(resultFactory).get(i));
+            }
           } else {
             // mixed type vector object selector coerces to the most common type
             Assert.assertArrayEquals(ExprEval.ofType(expressionType, row).asArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
@@ -421,7 +442,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             }
           }
         }
-        Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
 
       } else {
         Assert.assertNull(valueSelector.getObject());
@@ -433,7 +454,10 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             Assert.assertNull(dimensionVectorSelector.lookupName(dimensionVectorSelector.getRowVector()[0]));
           }
         }
-        Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+        if (expectedType.getSingleType() != null) {
+          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
+        }
       }
 
       offset.increment();

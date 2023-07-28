@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { sane } from '@druid-toolkit/query';
 import { render } from '@testing-library/react';
-import { sane } from 'druid-query-toolkit';
 import React from 'react';
 
 import { Capabilities } from '../../helpers';

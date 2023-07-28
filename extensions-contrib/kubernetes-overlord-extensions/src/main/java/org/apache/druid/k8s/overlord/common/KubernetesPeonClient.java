@@ -56,10 +56,10 @@ public class KubernetesPeonClient
     // launch job
     return clientApi.executeRequest(client -> {
       client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
-      K8sTaskId taskId = new K8sTaskId(job.getMetadata().getName());
-      log.info("Successfully submitted job: %s ... waiting for job to launch", taskId);
+      String jobName = job.getMetadata().getName();
+      log.info("Successfully submitted job: %s ... waiting for job to launch", jobName);
       // wait until the pod is running or complete or failed, any of those is fine
-      Pod mainPod = getPeonPodWithRetries(taskId);
+      Pod mainPod = getPeonPodWithRetries(jobName);
       Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
                          .waitUntilCondition(pod -> {
                            if (pod == null) {
@@ -68,7 +68,7 @@ public class KubernetesPeonClient
                            return pod.getStatus() != null && pod.getStatus().getPodIP() != null;
                          }, howLong, timeUnit);
       long duration = System.currentTimeMillis() - start;
-      log.info("Took task %s %d ms for pod to startup", taskId, duration);
+      log.info("Took task %s %d ms for pod to startup", jobName, duration);
       return result;
     });
   }
@@ -80,7 +80,7 @@ public class KubernetesPeonClient
                       .v1()
                       .jobs()
                       .inNamespace(namespace)
-                      .withName(taskId.getK8sTaskId())
+                      .withName(taskId.getK8sJobName())
                       .waitUntilCondition(
                           x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
                           && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
@@ -106,7 +106,7 @@ public class KubernetesPeonClient
                                                                  .v1()
                                                                  .jobs()
                                                                  .inNamespace(namespace)
-                                                                 .withName(taskId.getK8sTaskId())
+                                                                 .withName(taskId.getK8sJobName())
                                                                  .delete().isEmpty());
       if (result) {
         log.info("Cleaned up k8s task: %s", taskId);
@@ -128,7 +128,7 @@ public class KubernetesPeonClient
           .v1()
           .jobs()
           .inNamespace(namespace)
-          .withName(taskId.getK8sTaskId())
+          .withName(taskId.getK8sJobName())
           .inContainer("main")
           .watchLog();
       if (logWatch == null) {
@@ -150,7 +150,7 @@ public class KubernetesPeonClient
                                    .v1()
                                    .jobs()
                                    .inNamespace(namespace)
-                                   .withName(taskId.getK8sTaskId())
+                                   .withName(taskId.getK8sJobName())
                                    .inContainer("main")
                                    .getLogInputStream();
       if (logStream == null) {
@@ -212,47 +212,46 @@ public class KubernetesPeonClient
     return toDelete;
   }
 
-  public Optional<Pod> getPeonPod(K8sTaskId taskId)
+  public Optional<Pod> getPeonPod(String jobName)
   {
-    return clientApi.executeRequest(client -> getPeonPod(client, taskId));
+    return clientApi.executeRequest(client -> getPeonPod(client, jobName));
   }
 
-  private Optional<Pod> getPeonPod(KubernetesClient client, K8sTaskId taskId)
+  private Optional<Pod> getPeonPod(KubernetesClient client, String jobName)
   {
     List<Pod> pods = client.pods()
         .inNamespace(namespace)
-        .withLabel("job-name", taskId.getK8sTaskId())
+        .withLabel("job-name", jobName)
         .list()
         .getItems();
     return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
   }
 
-  public Pod getPeonPodWithRetries(K8sTaskId taskId)
+  public Pod getPeonPodWithRetries(String jobName)
   {
-    return clientApi.executeRequest(client -> getPeonPodWithRetries(client, taskId, 5, RetryUtils.DEFAULT_MAX_TRIES));
+    return clientApi.executeRequest(client -> getPeonPodWithRetries(client, jobName, 5, RetryUtils.DEFAULT_MAX_TRIES));
   }
 
   @VisibleForTesting
-  Pod getPeonPodWithRetries(KubernetesClient client, K8sTaskId taskId, int quietTries, int maxTries)
+  Pod getPeonPodWithRetries(KubernetesClient client, String jobName, int quietTries, int maxTries)
   {
-    String k8sTaskId = taskId.getK8sTaskId();
     try {
       return RetryUtils.retry(
           () -> {
-            Optional<Pod> maybePod = getPeonPod(client, taskId);
+            Optional<Pod> maybePod = getPeonPod(client, jobName);
             if (maybePod.isPresent()) {
               return maybePod.get();
             }
             throw new KubernetesResourceNotFoundException(
                 "K8s pod with label: job-name="
-                + k8sTaskId
+                + jobName
                 + " not found");
           },
           DruidK8sConstants.IS_TRANSIENT, quietTries, maxTries
       );
     }
     catch (Exception e) {
-      throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + k8sTaskId + " not found");
+      throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + jobName + " not found");
     }
   }
 }

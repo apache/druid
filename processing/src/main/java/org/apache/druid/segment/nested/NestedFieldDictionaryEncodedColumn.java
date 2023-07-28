@@ -28,6 +28,8 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -40,7 +42,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
@@ -77,6 +79,8 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   private final FieldTypeInfo.TypeSet types;
   @Nullable
   private final ColumnType singleType;
+  private final ColumnType logicalType;
+  private final ExpressionType logicalExpressionType;
   private final ColumnarLongs longsColumn;
   private final ColumnarDoubles doublesColumn;
   private final ColumnarInts column;
@@ -108,6 +112,12 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   )
   {
     this.types = types;
+    ColumnType leastRestrictive = null;
+    for (ColumnType type : FieldTypeInfo.convertToSet(types.getByteValue())) {
+      leastRestrictive = ColumnType.leastRestrictiveType(leastRestrictive, type);
+    }
+    this.logicalType = leastRestrictive;
+    this.logicalExpressionType = ExpressionType.fromColumnTypeStrict(logicalType);
     this.singleType = types.getSingleType();
     this.longsColumn = longsColumn;
     this.doublesColumn = doublesColumn;
@@ -192,13 +202,21 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
     if (singleType != null) {
       switch (singleType.getType()) {
         case LONG:
-          final int globalLong = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          final Long l = GuavaUtils.tryParseLong(val);
+          if (l == null) {
+            return -1;
+          }
+          final int globalLong = globalLongDictionary.indexOf(l);
           if (globalLong < 0) {
             return -1;
           }
           return globalLong + adjustLongId;
         case DOUBLE:
-          final int globalDouble = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          final Double d = Doubles.tryParse(val);
+          if (d == null) {
+            return -1;
+          }
+          final int globalDouble = globalDoubleDictionary.indexOf(d);
           if (globalDouble < 0) {
             return -1;
           }
@@ -209,15 +227,21 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
     } else {
       int candidate = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       if (candidate < 0) {
-        candidate = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
-        if (candidate >= 0) {
-          candidate += adjustLongId;
+        final Long l = GuavaUtils.tryParseLong(val);
+        if (l != null) {
+          candidate = globalLongDictionary.indexOf(l);
+          if (candidate >= 0) {
+            candidate += adjustLongId;
+          }
         }
       }
       if (candidate < 0) {
-        candidate = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
-        if (candidate >= 0) {
-          candidate += adjustDoubleId;
+        final Double d = Doubles.tryParse(val);
+        if (d != null) {
+          candidate = globalDoubleDictionary.indexOf(d);
+          if (candidate >= 0) {
+            candidate += adjustDoubleId;
+          }
         }
       }
       return candidate;
@@ -234,6 +258,29 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
       return globalDoubleDictionary.get(globalId - adjustDoubleId);
     }
     throw new IllegalArgumentException("not a scalar in the dictionary");
+  }
+
+
+  /**
+   * Lookup value from appropriate scalar value dictionary, coercing the value to {@link #logicalType}, particularly
+   * useful for the vector query engine which prefers all the types are consistent
+   * <p>
+   * This method should NEVER be used when values must round trip to be able to be looked up from the array value
+   * dictionary since it might coerce element values to a different type
+   */
+  @Nullable
+  private Object lookupGlobalScalarValueAndCast(int globalId)
+  {
+
+    if (globalId == 0) {
+      return null;
+    }
+    if (singleType != null) {
+      return lookupGlobalScalarObject(globalId);
+    } else {
+      final ExprEval<?> eval = ExprEval.ofType(logicalExpressionType, lookupGlobalScalarObject(globalId));
+      return eval.value();
+    }
   }
 
   @Override
@@ -653,7 +700,17 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           if (nullMark == offsetMark) {
             return true;
           }
-          return DimensionHandlerUtils.isNumericNull(getObject());
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          // zero is always null
+          if (globalId == 0) {
+            return true;
+          } else if (globalId < adjustLongId) {
+            final String value = StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
+            return GuavaUtils.tryParseLong(value) == null && Doubles.tryParse(value) == null;
+          }
+          // if id is less than array ids, it is definitely a number and not null (since null is 0)
+          return globalId >= adjustArrayId;
         }
 
         @Override
@@ -678,7 +735,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
+    final class StringVectorSelector extends StringUtf8DictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
       public StringVectorSelector()
       {
@@ -731,77 +788,53 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    if (singleType != null && singleType.isArray()) {
-      return new VectorObjectSelector()
+    // if the logical type is string, use simplified string vector object selector
+    if (ColumnType.STRING.equals(logicalType)) {
+      final class StringVectorSelector extends StringUtf8DictionaryEncodedColumn.StringVectorObjectSelector
       {
-        private final int[] vector = new int[offset.getMaxVectorSize()];
-        private final Object[] objects = new Object[offset.getMaxVectorSize()];
-        private int id = ReadableVectorInspector.NULL_ID;
-
-        @Override
-
-        public Object[] getObjectVector()
+        public StringVectorSelector()
         {
-          if (id == offset.getId()) {
-            return objects;
-          }
-
-          if (offset.isContiguous()) {
-            column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-          } else {
-            column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-          }
-          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-            final int globalId = dictionary.get(vector[i]);
-            if (globalId < adjustArrayId) {
-              objects[i] = lookupGlobalScalarObject(globalId);
-            } else {
-              int[] arr = globalArrayDictionary.get(globalId - adjustArrayId);
-              if (arr == null) {
-                objects[i] = null;
-              } else {
-                final Object[] array = new Object[arr.length];
-                for (int j = 0; j < arr.length; j++) {
-                  array[j] = lookupGlobalScalarObject(arr[j]);
-                }
-                objects[i] = array;
-              }
-            }
-          }
-          id = offset.getId();
-
-          return objects;
+          super(column, offset);
         }
 
+        @Nullable
         @Override
-        public int getMaxVectorSize()
+        public String lookupName(int id)
         {
-          return offset.getMaxVectorSize();
+          return NestedFieldDictionaryEncodedColumn.this.lookupName(id);
         }
+      }
 
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return offset.getCurrentVectorSize();
-        }
-      };
+      return new StringVectorSelector();
     }
-    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
+    // mixed type, this coerces values to the logical type so that the vector engine can deal with consistently typed
+    // values
+    return new VariantColumn.VariantVectorObjectSelector(
+        offset,
+        column,
+        globalArrayDictionary,
+        logicalExpressionType,
+        adjustArrayId
+    )
     {
-      public StringVectorSelector()
-      {
-        super(column, offset);
-      }
-
-      @Nullable
       @Override
-      public String lookupName(int id)
+      public int adjustDictionaryId(int id)
       {
-        return NestedFieldDictionaryEncodedColumn.this.lookupName(id);
+        return dictionary.get(id);
       }
-    }
 
-    return new StringVectorSelector();
+      @Override
+      public @Nullable Object lookupScalarValue(int dictionaryId)
+      {
+        return NestedFieldDictionaryEncodedColumn.this.lookupGlobalScalarObject(dictionaryId);
+      }
+
+      @Override
+      public @Nullable Object lookupScalarValueAndCast(int dictionaryId)
+      {
+        return NestedFieldDictionaryEncodedColumn.this.lookupGlobalScalarValueAndCast(dictionaryId);
+      }
+    };
   }
 
   @Override

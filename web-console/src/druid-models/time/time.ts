@@ -91,3 +91,15 @@ export function possibleDruidFormatForValues(values: any[]): string | undefined 
     return values.every(value => timeFormatMatches(format, value));
   });
 }
+
+export function chooseByBestTimestamp<T extends { column: string; format: string }>(
+  candidates: T[],
+): T | undefined {
+  return (
+    candidates.find(ts => ts.column === '__time') || // If there is a __time column, just pick it
+    candidates.find(ts => /time/i.test(ts.column) && !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Prefer a suggestion that has "time" in the name and is not a numeric format
+    candidates.find(ts => /time/i.test(ts.column)) || // Otherwise anything that has "time" in the name
+    candidates.find(ts => !NUMERIC_TIME_FORMATS.includes(ts.format)) || // Use a suggestion that is not numeric
+    candidates[0]
+  );
+}

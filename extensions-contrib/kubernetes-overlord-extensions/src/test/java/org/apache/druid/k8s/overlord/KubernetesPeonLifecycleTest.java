@@ -163,7 +163,9 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
-
+    EasyMock.expect(kubernetesClient.deletePeonJob(
+      new K8sTaskId(ID)
+    )).andReturn(true);
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
@@ -574,7 +576,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.absent());
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.absent());
 
     replayAll();
 
@@ -596,7 +598,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.of(pod));
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
 
     replayAll();
 
@@ -621,12 +623,41 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.of(pod));
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
 
     replayAll();
 
     TaskLocation location = peonLifecycle.getTaskLocation();
 
+    Assert.assertEquals("ip", location.getHost());
+    Assert.assertEquals(8100, location.getPort());
+    Assert.assertEquals(-1, location.getTlsPort());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getTaskLocation_saveTaskLocation()
+      throws NoSuchFieldException, IllegalAccessException
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
+
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP("ip")
+        .endStatus()
+        .build();
+
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod)).once();
+
+    replayAll();
+
+    TaskLocation location = peonLifecycle.getTaskLocation();
+    peonLifecycle.getTaskLocation();
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(8100, location.getPort());
     Assert.assertEquals(-1, location.getTlsPort());
@@ -651,7 +682,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         .endStatus()
         .build();
 
-    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId)).andReturn(Optional.of(pod));
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
 
     replayAll();
 

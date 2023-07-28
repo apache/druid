@@ -24,7 +24,7 @@ import {
   SqlExpression,
   SqlType,
   T,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -38,7 +38,7 @@ import type {
 import { inflateDimensionSpec, TIME_COLUMN, upgradeSpec } from '../druid-models';
 import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
-export function getSpecDatasourceName(spec: IngestionSpec): string {
+export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string {
   return deepGet(spec, 'spec.dataSchema.dataSource') || 'unknown_datasource';
 }
 

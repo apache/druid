@@ -23,6 +23,8 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loading.RoundRobinServerSelector;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
@@ -51,14 +53,14 @@ public class RoundRobinServerSelectorTest
   public void testSingleIterator()
   {
     final ServerHolder serverXL = createHistorical("serverXL", 1000);
-    final ServerHolder serverL = createHistorical("serverXL", 900);
-    final ServerHolder serverM = createHistorical("serverXL", 800);
+    final ServerHolder serverL = createHistorical("serverL", 900);
+    final ServerHolder serverM = createHistorical("serverM", 800);
 
     // This server is too small to house the segment
-    final ServerHolder serverXS = createHistorical("serverXL", 10);
+    final ServerHolder serverXS = createHistorical("serverXS", 10);
 
-    DruidCluster cluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster cluster = DruidCluster
+        .builder()
         .addTier(TIER, serverXL, serverM, serverXS, serverL)
         .build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
@@ -78,14 +80,14 @@ public class RoundRobinServerSelectorTest
   public void testNextIteratorContinuesFromSamePosition()
   {
     final ServerHolder serverXL = createHistorical("serverXL", 1000);
-    final ServerHolder serverL = createHistorical("serverXL", 900);
-    final ServerHolder serverM = createHistorical("serverXL", 800);
+    final ServerHolder serverL = createHistorical("serverL", 900);
+    final ServerHolder serverM = createHistorical("serverM", 800);
 
     // This server is too small to house the segment
-    final ServerHolder serverXS = createHistorical("serverXL", 10);
+    final ServerHolder serverXS = createHistorical("serverXS", 10);
 
-    DruidCluster cluster = DruidClusterBuilder
-        .newBuilder()
+    DruidCluster cluster = DruidCluster
+        .builder()
         .addTier(TIER, serverXL, serverM, serverXS, serverL)
         .build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
@@ -109,10 +111,7 @@ public class RoundRobinServerSelectorTest
   @Test
   public void testNoServersInTier()
   {
-    DruidCluster cluster = DruidClusterBuilder
-        .newBuilder()
-        .addTier(TIER)
-        .build();
+    DruidCluster cluster = DruidCluster.builder().addTier(TIER).build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
 
     Iterator<ServerHolder> eligibleServers = selector.getServersInTierToLoadSegment(TIER, segment);
@@ -122,16 +121,13 @@ public class RoundRobinServerSelectorTest
   @Test
   public void testNoEligibleServerInTier()
   {
-    DruidCluster cluster = DruidClusterBuilder
-        .newBuilder()
-        .addTier(
-            TIER,
-            createHistorical("server1", 40),
-            createHistorical("server2", 30),
-            createHistorical("server3", 10),
-            createHistorical("server4", 20)
-        )
-        .build();
+    DruidCluster cluster = DruidCluster.builder().addTier(
+        TIER,
+        createHistorical("server1", 40),
+        createHistorical("server2", 30),
+        createHistorical("server3", 10),
+        createHistorical("server4", 20)
+    ).build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
 
     // Verify that only eligible servers are returned in order of available size
@@ -142,8 +138,9 @@ public class RoundRobinServerSelectorTest
   private ServerHolder createHistorical(String name, long size)
   {
     return new ServerHolder(
-        new DruidServer(name, name, null, size, ServerType.HISTORICAL, TIER, 1).toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new DruidServer(name, name, null, size, ServerType.HISTORICAL, TIER, 1)
+            .toImmutableDruidServer(),
+        new TestLoadQueuePeon()
     );
   }
 }

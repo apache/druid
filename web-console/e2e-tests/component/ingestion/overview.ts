@@ -37,22 +37,22 @@ enum TaskColumn {
 }
 
 /**
- * Represents ingestion overview tab.
+ * Represents task tab.
  */
-export class IngestionOverview {
+export class TasksOverview {
   private readonly page: playwright.Page;
   private readonly baseUrl: string;
 
   constructor(page: playwright.Page, unifiedConsoleUrl: string) {
     this.page = page;
-    this.baseUrl = unifiedConsoleUrl + '#ingestion';
+    this.baseUrl = unifiedConsoleUrl + '#tasks';
   }
 
   async getTasks(): Promise<IngestionTask[]> {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const data = await extractTable(this.page, 'div.bottom-pane div.rt-tr-group', 'div.rt-td');
+    const data = await extractTable(this.page, 'div.rt-tr-group', 'div.rt-td');
 
     return data.map(
       row =>

@@ -18,8 +18,9 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlQuery } from 'druid-query-toolkit';
-import { C, F, N, SqlJoinPart, T } from 'druid-query-toolkit';
+import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, N, SqlJoinPart, T } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { EMPTY_LITERAL, prettyPrintSql } from '../../../../../utils';

@@ -83,6 +83,8 @@ public class KubernetesPeonLifecycle
   @MonotonicNonNull
   private LogWatch logWatch;
 
+  private TaskLocation taskLocation;
+
   protected KubernetesPeonLifecycle(
       Task task,
       KubernetesPeonClient kubernetesClient,
@@ -116,6 +118,8 @@ public class KubernetesPeonLifecycle
           State.PENDING
       );
 
+      // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
+      taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           launchTimeout,
@@ -123,6 +127,11 @@ public class KubernetesPeonLifecycle
       );
 
       return join(timeout);
+    }
+    catch (Exception e) {
+      log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      shutdown();
+      throw e;
     }
     finally {
       state.set(State.STOPPED);
@@ -221,27 +230,31 @@ public class KubernetesPeonLifecycle
       return TaskLocation.unknown();
     }
 
-    Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId);
-    if (!maybePod.isPresent()) {
-      return TaskLocation.unknown();
+    /* It's okay to cache this because podIP only changes on pod restart, and we have to set restartPolicy to Never
+    since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
+    if we decide we need to change this later.
+    **/
+    if (taskLocation == null) {
+      Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
+      if (!maybePod.isPresent()) {
+        return TaskLocation.unknown();
+      }
+
+      Pod pod = maybePod.get();
+      PodStatus podStatus = pod.getStatus();
+
+      if (podStatus == null || podStatus.getPodIP() == null) {
+        return TaskLocation.unknown();
+      }
+      taskLocation = TaskLocation.create(
+          podStatus.getPodIP(),
+          DruidK8sConstants.PORT,
+          DruidK8sConstants.TLS_PORT,
+          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"))
+      );
     }
 
-    Pod pod = maybePod.get();
-    PodStatus podStatus = pod.getStatus();
-
-    if (podStatus == null || podStatus.getPodIP() == null) {
-      return TaskLocation.unknown();
-    }
-
-    return TaskLocation.create(
-        podStatus.getPodIP(),
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        Boolean.parseBoolean(pod.getMetadata()
-            .getAnnotations()
-            .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")
-        )
-    );
+    return taskLocation;
   }
 
   private TaskStatus getTaskStatus(long duration)

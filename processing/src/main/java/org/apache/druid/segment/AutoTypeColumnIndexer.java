@@ -19,13 +19,16 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -34,6 +37,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -56,7 +60,19 @@ import java.util.TreeMap;
 
 public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, StructuredData, StructuredData>
 {
+  /**
+   * have we seen any null values?
+   */
   protected volatile boolean hasNulls = false;
+  /**
+   * Have we seen any objects? Empty objects in particular are sneaky, they don't have any nested paths, so we also
+   * broadly track if we have processed any objects {@link StructuredDataProcessor.ProcessResults#hasObjects()}
+   */
+  protected volatile boolean hasNestedData = false;
+  protected volatile boolean isConstant = true;
+  @Nullable
+  protected volatile Object constantValue = null;
+  private volatile boolean firstRow = true;
 
   protected SortedMap<String, FieldIndexer> fieldIndexers = new TreeMap<>();
   protected final ValueDictionary globalDictionary = new ValueDictionary();
@@ -91,7 +107,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     )
     {
       final ExprEval<?> eval = ExprEval.bestEffortArray(array);
-      if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+      if (eval.type().isPrimitiveArray()) {
         final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
@@ -111,6 +127,12 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       boolean reportParseExceptions
   )
   {
+    if (firstRow) {
+      constantValue = dimValues;
+      firstRow = false;
+    } else if (isConstant) {
+      isConstant = Objects.equals(dimValues, constantValue);
+    }
     final long oldDictSizeInBytes = globalDictionary.sizeInBytes();
     final int oldFieldKeySize = estimatedFieldKeySize;
     final StructuredData data;
@@ -122,7 +144,12 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     } else {
       data = new StructuredData(dimValues);
     }
-    StructuredDataProcessor.ProcessResults info = indexerProcessor.processFields(data == null ? null : data.getValue());
+    final StructuredDataProcessor.ProcessResults info = indexerProcessor.processFields(
+        data == null ? null : data.getValue()
+    );
+    if (info.hasObjects()) {
+      hasNestedData = true;
+    }
     // 'raw' data is currently preserved 'as-is', and not replaced with object references to the global dictionaries
     long effectiveSizeBytes = info.getEstimatedSize();
     // then, we add the delta of size change to the global dictionaries to account for any new space added by the
@@ -136,6 +163,12 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   public void setSparseIndexed()
   {
     this.hasNulls = true;
+    if (firstRow) {
+      firstRow = false;
+    } else if (constantValue != null) {
+      constantValue = null;
+      isConstant = false;
+    }
   }
 
   @Override
@@ -163,10 +196,6 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       if (!entry.getValue().getTypes().isEmpty()) {
         fields.put(entry.getKey(), entry.getValue().getTypes());
       }
-    }
-    // special handling for when column only has arrays with null elements, treat it as a string array
-    if (fields.isEmpty() && fieldIndexers.size() == 1) {
-      fields.put(fieldIndexers.firstKey(), new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING_ARRAY));
     }
     return fields;
   }
@@ -197,10 +226,13 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   )
   {
     final int dimIndex = desc.getIndex();
+    if (fieldIndexers.size() == 0 && isConstant && !hasNestedData) {
+      return DimensionSelector.constant(null, spec.getExtractionFn());
+    }
     final ColumnValueSelector<?> rootLiteralSelector = getRootLiteralValueSelector(currEntry, dimIndex);
     if (rootLiteralSelector != null) {
       final FieldIndexer root = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      final ColumnType rootType = root.getTypes().getSingleType();
+      final ColumnType rootType = root.isSingleType() ? root.getTypes().getSingleType() : getLogicalType();
       if (rootType.isArray()) {
         throw new UOE(
             "makeDimensionSelector is not supported, column [%s] is [%s] typed and should only use makeColumnValueSelector",
@@ -208,17 +240,31 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
             rootType
         );
       }
+      if (spec.getExtractionFn() == null) {
+        return new BaseSingleValueDimensionSelector()
+        {
+          @Nullable
+          @Override
+          protected String getValue()
+          {
+            return Evals.asString(rootLiteralSelector.getObject());
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+
+          }
+        };
+      }
       return new BaseSingleValueDimensionSelector()
       {
         @Nullable
         @Override
         protected String getValue()
         {
-          final Object o = rootLiteralSelector.getObject();
-          if (o == null) {
-            return null;
-          }
-          return o.toString();
+          final String s = Evals.asString(rootLiteralSelector.getObject());
+          return spec.getExtractionFn().apply(s);
         }
 
         @Override
@@ -284,18 +330,41 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
                                  .setHasNulls(hasNulls);
   }
 
-  private ColumnType getLogicalType()
+  public ColumnType getLogicalType()
   {
-    if (fieldIndexers.isEmpty()) {
+    if (hasNestedData) {
+      return ColumnType.NESTED_DATA;
+    }
+    if (isConstant && constantValue == null) {
       // we didn't see anything, so we can be anything, so why not a string?
       return ColumnType.STRING;
     }
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       FieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      ColumnType singleType = rootField.getTypes().getSingleType();
-      return singleType == null ? ColumnType.NESTED_DATA : singleType;
+      ColumnType logicalType = null;
+      for (ColumnType type : FieldTypeInfo.convertToSet(rootField.getTypes().getByteValue())) {
+        logicalType = ColumnType.leastRestrictiveType(logicalType, type);
+      }
+      if (logicalType != null) {
+        // special handle empty arrays
+        if (!rootField.getTypes().hasUntypedArray() || logicalType.isArray()) {
+          return logicalType;
+        }
+        return ColumnTypeFactory.getInstance().ofArray(logicalType);
+      }
     }
     return ColumnType.NESTED_DATA;
+  }
+
+  public boolean isConstant()
+  {
+    return isConstant;
+  }
+
+  @Nullable
+  public Object getConstantValue()
+  {
+    return constantValue;
   }
 
   @Override
@@ -408,51 +477,51 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       int dimIndex
   )
   {
-    if (fieldIndexers.size() > 1) {
+    if (fieldIndexers.size() > 1 || hasNestedData) {
       return null;
     }
     final FieldIndexer root = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-    if (root == null || !root.isSingleType()) {
+    if (root == null) {
       return null;
     }
-    final Object defaultValue = getDefaultValueForType(root.getTypes().getSingleType());
+    final Object defaultValue = getDefaultValueForType(getLogicalType());
     return new ColumnValueSelector<Object>()
     {
       @Override
       public boolean isNull()
       {
         final Object o = getObject();
-        return !(o instanceof Number);
+        return computeNumber(o) == null;
       }
 
       @Override
       public float getFloat()
       {
-        Object value = getObject();
+        Number value = computeNumber(getObject());
         if (value == null) {
           return 0;
         }
-        return ((Number) value).floatValue();
+        return value.floatValue();
       }
 
       @Override
       public double getDouble()
       {
-        Object value = getObject();
+        Number value = computeNumber(getObject());
         if (value == null) {
           return 0;
         }
-        return ((Number) value).doubleValue();
+        return value.doubleValue();
       }
 
       @Override
       public long getLong()
       {
-        Object value = getObject();
+        Number value = computeNumber(getObject());
         if (value == null) {
           return 0;
         }
-        return ((Number) value).longValue();
+        return value.longValue();
       }
 
       @Override
@@ -475,6 +544,22 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         }
 
         return defaultValue;
+      }
+
+      @Nullable
+      private Number computeNumber(@Nullable Object o)
+      {
+        if (o instanceof Number) {
+          return (Number) o;
+        }
+        if (o instanceof String) {
+          Long l = GuavaUtils.tryParseLong((String) o);
+          if (l != null) {
+            return l;
+          }
+          return Doubles.tryParse((String) o);
+        }
+        return null;
       }
 
       @Override
@@ -517,26 +602,27 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
                 eval.type()
             );
           }
+
+          final Object[] theArray = eval.asArray();
           switch (columnType.getElementType().getType()) {
             case LONG:
               typeSet.add(ColumnType.LONG_ARRAY);
-              final Object[] longArray = eval.asArray();
-              sizeEstimate = valueDictionary.addLongArray(longArray);
-              return new StructuredDataProcessor.ProcessedValue<>(longArray, sizeEstimate);
+              sizeEstimate = valueDictionary.addLongArray(theArray);
+              return new StructuredDataProcessor.ProcessedValue<>(theArray, sizeEstimate);
             case DOUBLE:
               typeSet.add(ColumnType.DOUBLE_ARRAY);
-              final Object[] doubleArray = eval.asArray();
-              sizeEstimate = valueDictionary.addDoubleArray(doubleArray);
-              return new StructuredDataProcessor.ProcessedValue<>(doubleArray, sizeEstimate);
+              sizeEstimate = valueDictionary.addDoubleArray(theArray);
+              return new StructuredDataProcessor.ProcessedValue<>(theArray, sizeEstimate);
             case STRING:
-              final Object[] stringArray = eval.asArray();
-              // empty arrays and arrays with all nulls are detected as string arrays, but dont count them as part of
-              // the type set
-              if (stringArray.length > 0 && !Arrays.stream(stringArray).allMatch(Objects::isNull)) {
+              // empty arrays and arrays with all nulls are detected as string arrays, but don't count them as part of
+              // the type set yet, we'll handle that later when serializing
+              if (theArray.length == 0 || Arrays.stream(theArray).allMatch(Objects::isNull)) {
+                typeSet.addUntypedArray();
+              } else {
                 typeSet.add(ColumnType.STRING_ARRAY);
               }
-              sizeEstimate = valueDictionary.addStringArray(stringArray);
-              return new StructuredDataProcessor.ProcessedValue<>(stringArray, sizeEstimate);
+              sizeEstimate = valueDictionary.addStringArray(theArray);
+              return new StructuredDataProcessor.ProcessedValue<>(theArray, sizeEstimate);
             default:
               throw new IAE("Unhandled type: %s", columnType);
           }
