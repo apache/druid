@@ -26,8 +26,8 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -43,6 +43,7 @@ import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
@@ -889,7 +890,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               longsColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
             }
 
-            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+            if (nullIterator != null) {
+              nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+            }
 
             id = offset.getId();
           }
@@ -942,15 +945,84 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               doublesColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
             }
 
-            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+            if (nullIterator != null) {
+              nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+            }
 
             id = offset.getId();
           }
         };
       }
-      throw new UOE("Cannot make vector value selector for [%s] typed nested field", types);
+      throw DruidException.defensive("Cannot make vector value selector for [%s] typed nested field", types);
     }
-    throw new UOE("Cannot make vector value selector for variant typed [%s] nested field", types);
+    if (FieldTypeInfo.convertToSet(types.getByteValue()).stream().allMatch(TypeSignature::isNumeric)) {
+      return new BaseDoubleVectorValueSelector(offset)
+      {
+        private final double[] valueVector = new double[offset.getMaxVectorSize()];
+        private final int[] idVector = new int[offset.getMaxVectorSize()];
+        @Nullable
+        private boolean[] nullVector = null;
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        @Nullable
+        private PeekableIntIterator nullIterator = nullBitmap != null ? nullBitmap.peekableIterator() : null;
+        private int offsetMark = -1;
+        @Override
+        public double[] getDoubleVector()
+        {
+          computeVectorsIfNeeded();
+          return valueVector;
+        }
+
+        @Nullable
+        @Override
+        public boolean[] getNullVector()
+        {
+          computeVectorsIfNeeded();
+          return nullVector;
+        }
+
+        private void computeVectorsIfNeeded()
+        {
+          if (id == offset.getId()) {
+            return;
+          }
+
+          if (offset.isContiguous()) {
+            if (offset.getStartOffset() < offsetMark) {
+              nullIterator = nullBitmap.peekableIterator();
+            }
+            offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
+            column.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
+          } else {
+            final int[] offsets = offset.getOffsets();
+            if (offsets[offsets.length - 1] < offsetMark) {
+              nullIterator = nullBitmap.peekableIterator();
+            }
+            offsetMark = offsets[offsets.length - 1];
+            column.get(idVector, offsets, offset.getCurrentVectorSize());
+          }
+          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+            final int globalId = dictionary.get(idVector[i]);
+            if (globalId == 0) {
+              continue;
+            }
+            if (globalId < adjustDoubleId) {
+              valueVector[i] = globalLongDictionary.get(globalId - adjustLongId).doubleValue();
+            } else {
+              valueVector[i] = globalDoubleDictionary.get(globalId - adjustDoubleId).doubleValue();
+            }
+          }
+
+          if (nullIterator != null) {
+            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+          }
+
+          id = offset.getId();
+        }
+      };
+    }
+    throw DruidException.defensive("Cannot make vector value selector for variant typed [%s] nested field", types);
   }
 
   @Override
