@@ -561,12 +561,17 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     } else {
       try {
         usedSegments = toolbox.getTaskActionClient()
-                              .submit(new RetrieveUsedSegmentsAction(
-                                  dataSource, null, Collections.singletonList(interval), Segments.ONLY_VISIBLE
-                              ));
+                              .submit(
+                                  new RetrieveUsedSegmentsAction(
+                                      dataSource,
+                                      null,
+                                      Collections.singletonList(interval),
+                                      Segments.ONLY_VISIBLE
+                                  )
+                              );
       }
       catch (IOException e) {
-        LOG.error(e,"Error retrieving the used segments for interval[%s].", interval);
+        LOG.error(e, "Error retrieving the used segments for interval[%s].", interval);
         throw new RuntimeException(e);
       }
     }
