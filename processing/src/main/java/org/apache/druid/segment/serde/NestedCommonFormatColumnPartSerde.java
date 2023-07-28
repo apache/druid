@@ -211,9 +211,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
+      // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
@@ -234,9 +233,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
+      // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
@@ -259,7 +257,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // if we are a mixed type, don't call ourself dictionary encoded for now so we don't end up doing the wrong thing
-      // in places. technically we could probably get by by indicating that our dictionary ids are not unique/sorted
+      // in places. technically we could probably get by with indicating that our dictionary ids are not unique/sorted
       // but just in case that still causes problems, skip it all...
       if (supplier.getVariantTypeSetByte() == null) {
         capabilitiesBuilder.setDictionaryEncoded(true);

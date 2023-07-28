@@ -250,7 +250,7 @@ public class ExpressionPlan
 
       // null constants can sometimes trip up the type inference to report STRING, so check if explicitly supplied
       // output type is numeric and stick with that if so
-      if (outputTypeHint != null && outputTypeHint.isNumeric()) {
+      if (Types.isNumeric(outputTypeHint)) {
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(outputTypeHint);
       }
 
