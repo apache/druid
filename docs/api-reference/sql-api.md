@@ -29,16 +29,19 @@ You can submit and cancel [Druid SQL](../querying/sql.md) queries using the Drui
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments. 
 
-## Submit a query
+## Query from Historicals
+
+### Submit a query
 
 Submit a SQL-based query in the JSON request body. Returns a JSON object with the database results and a set of header metadata associated with the query. 
 
 This endpoint also supports querying metadata by querying [metadata tables](../querying/sql-metadata-tables.md).
-### URL
+
+#### URL
 
 <code class="postAPI">POST</code> <code>/druid/v2/sql</code>
 
-### Request body
+#### Request body
 
 * `query`: SQL query string.
 * `resultFormat`: Format of query results.
@@ -54,7 +57,7 @@ This endpoint also supports querying metadata by querying [metadata tables](../q
 * `parameters`: List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](../querying/sql-data-types.md) for a list of supported SQL types.
 
 
-### Responses
+#### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -92,7 +95,7 @@ This endpoint also supports querying metadata by querying [metadata tables](../q
 ---
 
 
-### Sample request
+#### Sample request
 
 The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`.
 
@@ -131,7 +134,7 @@ Content-Length: 192
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response
+#### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
@@ -246,7 +249,7 @@ Content-Length: 192
   ```
 </details>
 
-## Cancel a query
+### Cancel a query
 
 Cancels a query on the Router or the Broker with the associated `sqlQueryId`. Queries can only be canceled with a valid `sqlQueryId`. It must be set in the query context when the query is submitted. Note that Druid does not enforce unique `sqlQueryId` in the query context. Druid cancels all requests that use the same query id.
 
@@ -255,11 +258,11 @@ When you cancel a query, Druid handles the cancellation in a best-effort manner.
 Cancellation requests require READ permission on all resources used in the SQL query. 
 
 
-### URL
+#### URL
 
 <code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/:sqlQueryId</code>
 
-### Responses
+#### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -277,7 +280,7 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample request
+#### Sample request
 
 The following example cancels a request with specified query ID `request01`.
 
@@ -298,478 +301,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Sample response
+#### Sample response
 
 A successful response results in an `HTTP 202` and an empty response body.
-
-## Submit a query for data in deep storage
-
-Submit a query for data stored in deep storage. Any data ingested into Druid is placed into deep storage. The query is contained in the "query" field in the JSON object within the request payload.
-
-Note that at least part of a datasource must be available on a Historical process so that Druid can plan your query and only the user who submits a query can see the results.
-
-### URL
-
-<code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
-
-### Request body
-
-Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. Refer to the [Submit a query](#request-body) endpoint for request body construction.
-
-There are additional context parameters for `sql/statements` specifically: 
-   - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
-   - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
-  
-Note that the only supported value for `resultFormat` is JSON.
-
-### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-<br/>
-
-*Successfully queried from deep storage* 
-
-<!--400 BAD REQUEST-->
-
-<br/>
-
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
-
-```json
-{
-    "error": "Summary of the encountered error.",
-    "errorClass": "Class of exception that caused this error.",
-    "host": "The host on which the error occurred.",
-    "errorCode": "Well-defined error code.",
-    "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
-    "errorMessage": "Summary of the encountered issue with expanded information.",
-    "context": "Additional context about the error."
-}
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-### Sample request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements" \
---header 'Content-Type: application/json' \
---data '{
-    "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
-    "context": {
-        "executionMode":"ASYNC"
-    }  
-}'
-```
-
-<!--HTTP-->
-
-```HTTP
-POST /druid/v2/sql/statements HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-Content-Type: application/json
-Content-Length: 134
-
-{
-    "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
-    "context": {
-        "executionMode":"ASYNC"
-    }  
-}
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-### Sample response
-
-<details>
-  <summary>Click to show sample response</summary>
-
-  ```json
-{
-    "queryId": "query-b82a7049-b94f-41f2-a230-7fef94768745",
-    "state": "ACCEPTED",
-    "createdAt": "2023-07-26T21:16:25.324Z",
-    "schema": [
-        {
-            "name": "__time",
-            "type": "TIMESTAMP",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "channel",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "cityName",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "comment",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "countryIsoCode",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "countryName",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "isAnonymous",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isMinor",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isNew",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isRobot",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isUnpatrolled",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "metroCode",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "namespace",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "page",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "regionIsoCode",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "regionName",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "user",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "delta",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "added",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "deleted",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        }
-    ],
-    "durationMs": -1
-}
-  ```
-</details>
-
-## Get query status
-
-Retrieves information about the query associated with the given query ID. The response matches the response from the POST API if the query is accepted or running. The response for a completed query includes the same information as an in-progress query with several additions:
-
-- A `result` object that summarizes information about your results, such as the total number of rows and a sample record
-- A `pages` object that includes the following information for each page of results:
-  -  `numRows`: the number of rows in that page of results
-  - `sizeInBytes`: the size of the page
-  - `id`: the page number that you can use to reference a specific page when you get query results
-
-### URL
-
-<code name="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
-
-### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-<br/>
-
-*Successfully retrieved query status* 
-
-<!--400 BAD REQUEST-->
-
-<br/>
-
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
-
-```json
-{
-    "error": "Summary of the encountered error.",
-    "errorCode": "Well-defined error code.",
-    "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
-    "errorMessage": "Summary of the encountered issue with expanded information.",
-    "context": "Additional context about the error."
-}
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-#### Sample request
-
-The following example retrieves the status of a query with specified ID `query-9b93f6f7-ab0e-48f5-986a-3520f84f0804`.
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804"
-```
-
-<!--HTTP-->
-
-```HTTP
-GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804 HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-### Sample response
-
-<details>
-  <summary>Click to show sample response</summary>
-
-  ```json
-{
-    "queryId": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804",
-    "state": "SUCCESS",
-    "createdAt": "2023-07-26T22:57:46.620Z",
-    "schema": [
-        {
-            "name": "__time",
-            "type": "TIMESTAMP",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "channel",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "cityName",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "comment",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "countryIsoCode",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "countryName",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "isAnonymous",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isMinor",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isNew",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isRobot",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "isUnpatrolled",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "metroCode",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "namespace",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "page",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "regionIsoCode",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "regionName",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "user",
-            "type": "VARCHAR",
-            "nativeType": "STRING"
-        },
-        {
-            "name": "delta",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "added",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        },
-        {
-            "name": "deleted",
-            "type": "BIGINT",
-            "nativeType": "LONG"
-        }
-    ],
-    "durationMs": 25591,
-    "result": {
-        "numTotalRows": 1,
-        "totalSizeInBytes": 375,
-        "dataSource": "__query_select",
-        "sampleRecords": [
-            [
-                1442018873259,
-                "#ja.wikipedia",
-                "",
-                "/* 対戦通算成績と得失点 */",
-                "",
-                "",
-                0,
-                1,
-                0,
-                0,
-                0,
-                0,
-                "Main",
-                "アルビレックス新潟の年度別成績一覧",
-                "",
-                "",
-                "BlueMoon2662",
-                14,
-                14,
-                0
-            ]
-        ],
-        "pages": [
-            {
-                "id": 0,
-                "numRows": 1,
-                "sizeInBytes": 375
-            }
-        ]
-    }
-}
-  ```
-</details>
-
-## Get query results
-
-Retrieves results for completed queries. Results are separated into pages. When you retrieve the status of a completed query, Druid returns information about the composition of each page and its page number (`id`). 
-
-When getting query results, keep the following in mind:
-
-- JSON is the only supported result format.
-- If you attempt to get the results for an in-progress query, Druid returns an error. 
-
-### URL
-
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
-
-### Query parameters
-* `page`
-    * int (optional)
-    * FILL OUT
-
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-<br/>
-
-*Successfully retrieved query results* 
-
-<!--400 BAD REQUEST-->
-
-<br/>
-
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
-
-```json
-{
-    "error": "Summary of the encountered error.",
-    "errorCode": "Well-defined error code.",
-    "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
-    "errorMessage": "Summary of the encountered issue with expanded information.",
-    "context": "Additional context about the error."
-}
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
