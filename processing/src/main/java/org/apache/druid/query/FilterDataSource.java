@@ -25,8 +25,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.FilterSegmentReference;
+import org.apache.druid.segment.FilterStorageAdapter;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.WrappedSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
 import java.util.List;
@@ -135,9 +136,9 @@ public class FilterDataSource implements DataSource
         cpuTimeAccumulator,
         () ->
             baseSegment ->
-                new FilterSegmentReference(
+                new WrappedSegmentReference(
                     segmentMapFn.apply(baseSegment),
-                    filter
+                    storageAdapter -> new FilterStorageAdapter(storageAdapter, filter)
                 )
     );
   }
