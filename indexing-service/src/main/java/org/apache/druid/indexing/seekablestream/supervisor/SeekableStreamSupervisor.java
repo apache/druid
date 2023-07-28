@@ -4141,7 +4141,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Call {@link FutureUtils#coalesce} on the provided list, and wait for the result.
    */
   private <T> List<Either<Throwable, T>> coalesceAndAwait(final List<ListenableFuture<T>> futures)
-      throws ExecutionException, InterruptedException, TimeoutException
+      throws ExecutionException, InterruptedException
   {
     return FutureUtils.get(FutureUtils.coalesce(futures), true);
   }
