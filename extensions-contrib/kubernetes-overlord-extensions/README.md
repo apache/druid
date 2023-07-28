@@ -182,8 +182,8 @@ the Druid peon process for that task and then exits. The overlord then watches t
     ```
     kind: ConfigMap
     metadata:
-    name: druid-tiny-cluster-peons-config
-    namespace: default
+        name: druid-tiny-cluster-peons-config
+        namespace: default
     apiVersion: v1
     data:
         jvm.config: |-
