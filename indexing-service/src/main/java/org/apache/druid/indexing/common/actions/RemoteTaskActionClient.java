@@ -33,7 +33,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
