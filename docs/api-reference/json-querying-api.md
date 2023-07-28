@@ -34,7 +34,7 @@ Submits a JSON-based native query with the request body.
 
 Druid supports different types of queries for different use cases. All queries require the following properties:
 * `queryType`: A string representing type of query. Druid supports the following native query types: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`. 
-* `dataSource`: A string or object defining the source of data to query. The most common value is the name of the datasource to query. For more information, see [Datasources](../querying/datasources.md).
+* `dataSource`: A string or object defining the source of data to query. The most common value is the name of the datasource to query. For more information, see [Datasources](../querying/datasource.md).
 
 For additional properties based on your query type or use case, see [available native queries](../querying/querying.md#available-queries).
 
