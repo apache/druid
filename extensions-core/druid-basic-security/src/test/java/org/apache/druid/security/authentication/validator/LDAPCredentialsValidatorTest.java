@@ -98,6 +98,7 @@ public class LDAPCredentialsValidatorTest
 
   public static class MockContextFactory implements InitialContextFactory
   {
+    @SuppressWarnings("BanJNDI") // False positive: usage here is a mock in tests.
     @Override
     public Context getInitialContext(Hashtable<?, ?> environment) throws NamingException
     {

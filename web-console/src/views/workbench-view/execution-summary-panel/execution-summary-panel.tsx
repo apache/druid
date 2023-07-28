@@ -19,6 +19,7 @@
 import { Button, ButtonGroup, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { JSX } from 'react';
 import React from 'react';
 
 import type { Execution } from '../../../druid-models';

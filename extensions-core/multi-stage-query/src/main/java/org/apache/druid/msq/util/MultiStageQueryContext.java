@@ -27,7 +27,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
-import org.apache.druid.msq.indexing.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -67,7 +67,7 @@ import java.util.stream.Collectors;
  *
  * <li><b>selectDestination</b>: If the query is a Select, determines the location to write results to, once the query
  * is finished. Depending on the location, the results might also be truncated to {@link Limits#MAX_SELECT_RESULT_ROWS}.
- * Default value is {@link MSQSelectDestination#TASK_REPORT}, which writes all the results to the report.
+ * Default value is {@link MSQSelectDestination#TASKREPORT}, which writes all the results to the report.
  *
  * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
@@ -93,7 +93,7 @@ public class MultiStageQueryContext
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
-  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASK_REPORT.toString();
+  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASKREPORT.getName();
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
@@ -101,9 +101,6 @@ public class MultiStageQueryContext
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
-
-  public static final String CTX_DESTINATION = "destination";
-  private static final String DEFAULT_DESTINATION = null;
 
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
   static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
@@ -159,13 +156,10 @@ public class MultiStageQueryContext
 
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
   {
-    return ClusterStatisticsMergeMode.valueOf(
-        String.valueOf(
-            queryContext.getString(
-                CTX_CLUSTER_STATISTICS_MERGE_MODE,
-                DEFAULT_CLUSTER_STATISTICS_MERGE_MODE
-            )
-        )
+    return QueryContexts.getAsEnum(
+        CTX_CLUSTER_STATISTICS_MERGE_MODE,
+        queryContext.getString(CTX_CLUSTER_STATISTICS_MERGE_MODE, DEFAULT_CLUSTER_STATISTICS_MERGE_MODE),
+        ClusterStatisticsMergeMode.class
     );
   }
 
@@ -179,12 +173,11 @@ public class MultiStageQueryContext
 
   public static WorkerAssignmentStrategy getAssignmentStrategy(final QueryContext queryContext)
   {
-    String assignmentStrategyString = queryContext.getString(
+    return QueryContexts.getAsEnum(
         CTX_TASK_ASSIGNMENT_STRATEGY,
-        DEFAULT_TASK_ASSIGNMENT_STRATEGY
+        queryContext.getString(CTX_TASK_ASSIGNMENT_STRATEGY, DEFAULT_TASK_ASSIGNMENT_STRATEGY),
+        WorkerAssignmentStrategy.class
     );
-
-    return WorkerAssignmentStrategy.fromString(assignmentStrategyString);
   }
 
   public static int getMaxNumTasks(final QueryContext queryContext)
@@ -192,14 +185,6 @@ public class MultiStageQueryContext
     return queryContext.getInt(
         CTX_MAX_NUM_TASKS,
         DEFAULT_MAX_NUM_TASKS
-    );
-  }
-
-  public static Object getDestination(final QueryContext queryContext)
-  {
-    return queryContext.get(
-        CTX_DESTINATION,
-        DEFAULT_DESTINATION
     );
   }
 
@@ -213,11 +198,20 @@ public class MultiStageQueryContext
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
-    return MSQSelectDestination.valueOf(
-        queryContext.getString(
-            CTX_SELECT_DESTINATION,
-            DEFAULT_SELECT_DESTINATION
-        )
+    return QueryContexts.getAsEnum(
+        CTX_SELECT_DESTINATION,
+        queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
+        MSQSelectDestination.class
+    );
+  }
+
+  @Nullable
+  public static MSQSelectDestination getSelectDestinationOrNull(final QueryContext queryContext)
+  {
+    return QueryContexts.getAsEnum(
+        CTX_SELECT_DESTINATION,
+        queryContext.getString(CTX_SELECT_DESTINATION),
+        MSQSelectDestination.class
     );
   }
 

@@ -52,7 +52,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   private static final double SOME_DOUBLE = 1.234;
 
   Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
-      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
           .put("hll", InputBindings.inputSupplier(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
           .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> SOME_STRING))
           .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> SOME_LONG))
