@@ -19,16 +19,16 @@
 
 package org.apache.druid.rpc;
 
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
- * Returned by {@link ServiceClient#asyncRequest(RequestBuilder, HttpResponseHandler)} when a request has failed
- * because the service is closed.
+ * Represents a call to {@link ServiceClient} with some embedded response transformation, exception mapping, etc.
+ * Created by {@link ServiceCallBuilder} and used in {@link ServiceClient#asyncRequest(ServiceCall)}.
  */
-public class ServiceClosedException extends RpcException
+public interface ServiceCall<T>
 {
-  public ServiceClosedException(final String serviceName)
-  {
-    super("Service [%s] is closed", serviceName);
-  }
+  /**
+   * Issue this service call on a specific client.
+   */
+  ListenableFuture<T> go(ServiceClient client);
 }

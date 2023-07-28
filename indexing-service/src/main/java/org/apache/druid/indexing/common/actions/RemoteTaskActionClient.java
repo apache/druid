@@ -81,7 +81,7 @@ public class RemoteTaskActionClient implements TaskActionClient
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
-    catch (ExecutionException e) {
+    catch (Exception e) {
       if (e.getCause() instanceof HttpResponseException) {
         // Rewrite the error to be slightly more useful: point out that there may be information in the Overlord logs.
         final StringFullResponseHolder fullResponseHolder = ((HttpResponseException) e.getCause()).getResponse();

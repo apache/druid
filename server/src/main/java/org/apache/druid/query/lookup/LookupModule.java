@@ -20,20 +20,28 @@
 package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.dimension.LookupDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -81,5 +89,27 @@ public class LookupModule implements DruidModule
   {
     return new LookupNodeService(lookupListeningAnnouncerConfig.getLookupTier());
   }
-}
 
+  @Provides
+  @LazySingleton
+  public LookupServiceClient getLookupServiceClient(
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @Coordinator final ServiceLocator coordinatorLocator,
+      @Json final ObjectMapper jsonMapper,
+      final LookupConfig config
+  )
+  {
+    return new LookupServiceClientImpl(
+        clientFactory.makeClient(
+            NodeRole.COORDINATOR.getJsonName(),
+            coordinatorLocator,
+            StandardRetryPolicy.builder()
+                               .maxAttempts(config.getCoordinatorFetchRetries())
+                               .minWaitMillis(config.getCoordinatorRetryDelay())
+                               .maxWaitMillis(config.getCoordinatorRetryDelay())
+                               .build()
+        ),
+        jsonMapper
+    );
+  }
+}

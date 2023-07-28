@@ -20,11 +20,12 @@
 package org.apache.druid.rpc;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 
 import java.io.IOException;
 
 /**
- * Returned by {@link ServiceClient#asyncRequest} when a request has failed.
+ * Returned by {@link ServiceClient#asyncRequest(RequestBuilder, HttpResponseHandler)} when a request has failed.
  */
 public class RpcException extends IOException
 {

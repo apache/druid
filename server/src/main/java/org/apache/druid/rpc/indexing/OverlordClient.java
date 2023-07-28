@@ -32,6 +32,8 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.joda.time.Interval;
 
@@ -47,7 +49,8 @@ import java.util.Set;
  * All methods return futures, enabling asynchronous logic. If you want a synchronous response, use
  * {@code FutureUtils.get} or {@code FutureUtils.getUnchecked}.
  *
- * Futures resolve to exceptions in the manner described by {@link org.apache.druid.rpc.ServiceClient#asyncRequest}.
+ * Futures resolve to exceptions in the manner described by
+ * {@link org.apache.druid.rpc.ServiceClient#asyncRequest(RequestBuilder, HttpResponseHandler)}.
  *
  * Typically acquired via Guice, where it is registered using {@link org.apache.druid.rpc.guice.ServiceClientModule}.
  */

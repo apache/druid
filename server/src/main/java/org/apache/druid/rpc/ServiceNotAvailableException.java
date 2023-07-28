@@ -20,9 +20,11 @@
 package org.apache.druid.rpc;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 
 /**
- * Returned by {@link ServiceClient#asyncRequest} when a request has failed because the service is not available.
+ * Returned by {@link ServiceClient#asyncRequest(RequestBuilder, HttpResponseHandler)} when a request has failed
+ * because the service is not available.
  */
 public class ServiceNotAvailableException extends RpcException
 {

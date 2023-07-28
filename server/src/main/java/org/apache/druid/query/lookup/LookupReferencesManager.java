@@ -20,7 +20,6 @@
 package org.apache.druid.query.lookup;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -28,25 +27,18 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.lang.mutable.MutableBoolean;
-import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -84,11 +76,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
-  private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<Map<String, Object>>()
-      {
-      };
-
   // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
   // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that
   // into the ref here.
@@ -108,7 +95,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   //for unit testing only
   private final boolean testMode;
 
-  private final DruidLeaderClient druidLeaderClient;
+  private final LookupServiceClient lookupServiceClient;
 
   private final ObjectMapper jsonMapper;
 
@@ -120,18 +107,18 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   public LookupReferencesManager(
       LookupConfig lookupConfig,
       @Json ObjectMapper objectMapper,
-      @Coordinator DruidLeaderClient druidLeaderClient,
+      LookupServiceClient lookupServiceClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig
   )
   {
-    this(lookupConfig, objectMapper, druidLeaderClient, lookupListeningAnnouncerConfig, false);
+    this(lookupConfig, objectMapper, lookupServiceClient, lookupListeningAnnouncerConfig, false);
   }
 
   @VisibleForTesting
   LookupReferencesManager(
       LookupConfig lookupConfig,
       ObjectMapper objectMapper,
-      DruidLeaderClient druidLeaderClient,
+      LookupServiceClient lookupServiceClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
       boolean testMode
   )
@@ -141,7 +128,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     } else {
       this.lookupSnapshotTaker = new LookupSnapshotTaker(objectMapper, lookupConfig.getSnapshotWorkingDir());
     }
-    this.druidLeaderClient = druidLeaderClient;
+    this.lookupServiceClient = lookupServiceClient;
     this.jsonMapper = objectMapper;
     this.lookupListeningAnnouncerConfig = lookupListeningAnnouncerConfig;
     this.lookupConfig = lookupConfig;
@@ -397,70 +384,23 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   @Nullable
   private List<LookupBean> getLookupListFromCoordinator(String tier)
   {
+    final Map<String, LookupExtractorFactoryContainer> lookupMap;
+
     try {
-      MutableBoolean firstAttempt = new MutableBoolean(true);
-      Map<String, LookupExtractorFactoryContainer> lookupMap = RetryUtils.retry(
-          () -> {
-            if (firstAttempt.isTrue()) {
-              firstAttempt.setValue(false);
-            } else if (lookupConfig.getCoordinatorRetryDelay() > 0) {
-              // Adding any configured extra time in addition to the retry wait. In RetryUtils, retry wait starts from
-              // a few seconds, that is likely not enough to coordinator to be back to healthy state, e. g. if it
-              // experiences 30-second GC pause. Default is 1 minute
-              Thread.sleep(lookupConfig.getCoordinatorRetryDelay());
-            }
-            return tryGetLookupListFromCoordinator(tier);
-          },
-          e -> true,
-          lookupConfig.getCoordinatorFetchRetries()
-      );
-      if (lookupMap != null) {
-        List<LookupBean> lookupBeanList = new ArrayList<>();
-        lookupMap.forEach((k, v) -> lookupBeanList.add(new LookupBean(k, null, v)));
-        return lookupBeanList;
-      } else {
-        return null;
-      }
+      lookupMap = FutureUtils.getUnchecked(lookupServiceClient.fetchLookupsForTier(tier), true);
     }
     catch (Exception e) {
-      LOG.error(e, "Error while trying to get lookup list from coordinator for tier[%s]", tier);
+      LOG.error(e, "Error while trying to get lookup list from Coordinator for tier[%s]", tier);
       return null;
     }
-  }
 
-  @Nullable
-  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
-      throws IOException, InterruptedException
-  {
-    final StringFullResponseHolder response = fetchLookupsForTier(tier);
-    if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-      LOG.warn("No lookups found for tier [%s], response [%s]", tier, response);
-      return null;
-    } else if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new IOE(
-          "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
-          response.getStatus(),
-          response.getContent()
-      );
-    }
-
-    // Older version of getSpecificTier returns a list of lookup names.
-    // Lookup loading is performed via snapshot if older version is present.
-    // This check is only for backward compatibility and should be removed in a future release
-    if (response.getContent().startsWith("[")) {
-      LOG.info(
-          "Failed to retrieve lookup information from coordinator, " +
-          "because coordinator appears to be running on older Druid version. " +
-          "Attempting to load lookups using snapshot instead"
-      );
-      return null;
+    if (lookupMap != null) {
+      final List<LookupBean> lookupBeanList = new ArrayList<>();
+      lookupMap.forEach((k, v) -> lookupBeanList.add(new LookupBean(k, null, v)));
+      return lookupBeanList;
     } else {
-      Map<String, Object> lookupNameToGenericConfig =
-          jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
-      return LookupUtils.tryConvertObjectMapToLookupConfigMap(
-          lookupNameToGenericConfig,
-          jsonMapper
-      );
+      LOG.warn("No lookups found for tier [%s]", tier);
+      return null;
     }
   }
 
@@ -580,16 +520,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         return newState;
       }
     }
-  }
-
-  private StringFullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
-  {
-    return druidLeaderClient.go(
-        druidLeaderClient.makeRequest(
-            HttpMethod.GET,
-            StringUtils.format("/druid/coordinator/v1/lookups/config/%s?detailed=true", tier)
-        )
-    );
   }
 
   @VisibleForTesting

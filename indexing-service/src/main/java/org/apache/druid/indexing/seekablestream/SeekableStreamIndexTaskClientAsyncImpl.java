@@ -40,17 +40,15 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceCall;
+import org.apache.druid.rpc.ServiceCallBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
-import org.apache.druid.rpc.ServiceNotAvailableException;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
@@ -61,14 +59,12 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 /**
  * Implementation of {@link SeekableStreamIndexTaskClient} based on {@link ServiceClient}.
@@ -120,7 +116,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
       final boolean retry
   )
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/checkpoints"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/checkpoints"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           final TypeFactory factory = jsonMapper.getTypeFactory();
@@ -136,14 +133,14 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
               );
         })
         .onNotAvailable(e -> Either.value(new TreeMap<>()))
-        .retry(retry)
-        .go();
+        .go(makeClient(id, retry));
   }
 
   @Override
   public ListenableFuture<Boolean> stopAsync(final String id, final boolean publish)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.POST, "/stop" + (publish ? "?publish=true" : "")))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.POST, "/stop" + (publish ? "?publish=true" : "")))
         .onSuccess(r -> true)
         .onHttpError(e -> {
           log.warn("Task [%s] coundln't be stopped because of http request failure [%s].", id, e.getMessage());
@@ -157,37 +154,39 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           log.warn("Task [%s] couldn't be stopped because it is no longer running.", id);
           return Either.value(true);
         })
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
   public ListenableFuture<Boolean> resumeAsync(final String id)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.POST, "/resume"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.POST, "/resume"))
         .onSuccess(r -> true)
         .onException(e -> Either.value(false))
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getCurrentOffsetsAsync(String id, boolean retry)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/offsets/current"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/offsets/current"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> deserializeOffsetsMap(r.getContent()))
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
-        .retry(retry)
-        .go();
+        .go(makeClient(id, retry));
   }
 
   @Override
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getEndOffsetsAsync(String id)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/offsets/end"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/offsets/end"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> deserializeOffsetsMap(r.getContent()))
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
@@ -202,29 +201,32 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
         StringUtils.format("/offsets/end?finish=%s", finalize)
     ).jsonContent(jsonMapper, endOffsets);
 
-    return makeRequest(id, requestBuilder)
+    return ServiceCallBuilder
+        .forRequest(requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)
         .onSuccess(r -> true)
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
   public ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(final String id)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/status"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/status"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(
             r ->
                 JacksonUtils.readValue(jsonMapper, r.getContent(), SeekableStreamIndexTaskRunner.Status.class)
         )
         .onNotAvailable(e -> Either.value(SeekableStreamIndexTaskRunner.Status.NOT_STARTED))
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
   public ListenableFuture<DateTime> getStartTimeAsync(String id)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/time/start"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/time/start"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           if (isNullOrEmpty(r.getContent())) {
@@ -234,14 +236,15 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           }
         })
         .onNotAvailable(e -> Either.value(null))
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(String id)
   {
     final ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseFuture =
-        makeRequest(id, new RequestBuilder(HttpMethod.POST, "/pause"))
+        ServiceCallBuilder
+            .forRequest(new RequestBuilder(HttpMethod.POST, "/pause"))
             .handler(new BytesFullResponseHandler())
             .onSuccess(r -> {
               if (r.getStatus().equals(HttpResponseStatus.OK)) {
@@ -259,7 +262,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
               }
             })
             .onNotAvailable(e -> Either.value(Collections.emptyMap()))
-            .go();
+            .go(makeClient(id, true));
 
     return FutureUtils.transformAsync(
         pauseFuture,
@@ -276,7 +279,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   @Override
   public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(String id)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/rowStats"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/rowStats"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           if (isNullOrEmpty(r.getContent())) {
@@ -287,13 +291,14 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           }
         })
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
   public ListenableFuture<List<ParseExceptionReport>> getParseErrorsAsync(String id)
   {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/unparseableEvents"))
+    return ServiceCallBuilder
+        .forRequest(new RequestBuilder(HttpMethod.GET, "/unparseableEvents"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
           if (isNullOrEmpty(r.getContent())) {
@@ -308,7 +313,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           }
         })
         .onNotAvailable(e -> Either.value(Collections.emptyList()))
-        .go();
+        .go(makeClient(id, true));
   }
 
   @Override
@@ -317,20 +322,45 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     retryExec.shutdownNow();
   }
 
-  /**
-   * Create a {@link SeekableStreamRequestBuilder}.
-   */
-  private SeekableStreamRequestBuilder<Void, Void, Void> makeRequest(
-      String taskId,
-      RequestBuilder requestBuilder
+  private <T> ListenableFuture<T> makeRequest(
+      final String taskId,
+      final ServiceCall<T> serviceCall,
+      final boolean retry
   )
   {
-    return new SeekableStreamRequestBuilder<>(
-        taskId,
-        requestBuilder,
-        IgnoreHttpResponseHandler.INSTANCE,
-        Function.identity()
-    );
+    return makeClient(taskId, retry).asyncRequest(serviceCall);
+  }
+
+  private ServiceClient makeClient(final String taskId, final boolean retry)
+  {
+    final ServiceRetryPolicy retryPolicy = makeRetryPolicy(taskId, retry);
+
+    // We're creating a new locator for each request and not closing it. This is OK, since SeekableStreamTaskLocator
+    // is stateless, cheap to create, and its close() method does nothing.
+    final SeekableStreamTaskLocator locator = new SeekableStreamTaskLocator(taskInfoProvider, taskId);
+
+    // We're creating a new client for each request. This is OK, clients are cheap to create and do not contain
+    // state that is important for us to retain across requests. (The main state they retain is preferred location
+    // from prior redirects; but tasks don't do redirects.)
+    return serviceClientFactory.makeClient(taskId, locator, retryPolicy);
+  }
+
+  private ServiceRetryPolicy makeRetryPolicy(final String taskId, final boolean retry)
+  {
+    final StandardRetryPolicy baseRetryPolicy;
+
+    if (retry) {
+      baseRetryPolicy = StandardRetryPolicy.builder()
+                                           .maxAttempts(httpRetries + 1)
+                                           .minWaitMillis(IndexTaskClient.MIN_RETRY_WAIT_SECONDS * 1000)
+                                           .maxWaitMillis(IndexTaskClient.MAX_RETRY_WAIT_SECONDS * 1000)
+                                           .retryNotAvailable(false)
+                                           .build();
+    } else {
+      baseRetryPolicy = StandardRetryPolicy.noRetries();
+    }
+
+    return new SpecificTaskRetryPolicy(taskId, baseRetryPolicy);
   }
 
   /**
@@ -413,204 +443,6 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   private static boolean isNullOrEmpty(@Nullable final byte[] content)
   {
     return content == null || content.length == 0;
-  }
-
-  /**
-   * Helper for setting up each request's desired response, error handling, and retry behavior.
-   */
-  private class SeekableStreamRequestBuilder<IntermediateType, FinalType, T>
-  {
-    private final String taskId;
-    private final RequestBuilder requestBuilder;
-
-    private final List<Function<Throwable, Either<Throwable, T>>> exceptionMappers = new ArrayList<>();
-    private HttpResponseHandler<IntermediateType, FinalType> responseHandler;
-    private Function<FinalType, T> responseTransformer;
-    private boolean retry = true;
-
-    SeekableStreamRequestBuilder(
-        String taskId,
-        RequestBuilder requestBuilder,
-        HttpResponseHandler<IntermediateType, FinalType> responseHandler,
-        Function<FinalType, T> responseTransformer
-    )
-    {
-      this.taskId = taskId;
-      this.requestBuilder = requestBuilder;
-      this.responseHandler = responseHandler;
-      this.responseTransformer = responseTransformer;
-    }
-
-    /**
-     * Handler for requests. The result from this handler is fed into the transformer provided by {@link #onSuccess}.
-     */
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public <NewIntermediateType, NewFinalType> SeekableStreamRequestBuilder<NewIntermediateType, NewFinalType, T> handler(
-        final HttpResponseHandler<NewIntermediateType, NewFinalType> handler
-    )
-    {
-      this.responseHandler = (HttpResponseHandler) handler;
-      return (SeekableStreamRequestBuilder) this;
-    }
-
-    /**
-     * Response mapping for successful requests.
-     */
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public <NewT> SeekableStreamRequestBuilder<IntermediateType, FinalType, NewT> onSuccess(
-        final Function<FinalType, NewT> responseTransformer
-    )
-    {
-      this.responseTransformer = (Function) responseTransformer;
-      return (SeekableStreamRequestBuilder) this;
-    }
-
-    /**
-     * Whether the request should be retried on failure. Default is true.
-     */
-    public SeekableStreamRequestBuilder<IntermediateType, FinalType, T> retry(boolean retry)
-    {
-      this.retry = retry;
-      return this;
-    }
-
-    /**
-     * Error mapping for all exceptions.
-     */
-    public SeekableStreamRequestBuilder<IntermediateType, FinalType, T> onException(final Function<Throwable, Either<Throwable, T>> fn)
-    {
-      exceptionMappers.add(fn);
-      return this;
-    }
-
-    /**
-     * Error mapping for {@link HttpResponseException}, which occurs when a task returns a non-2xx HTTP code.
-     */
-    public SeekableStreamRequestBuilder<IntermediateType, FinalType, T> onHttpError(final Function<HttpResponseException, Either<Throwable, T>> fn)
-    {
-      return onException(e -> {
-        if (e instanceof HttpResponseException) {
-          return fn.apply((HttpResponseException) e);
-        } else {
-          return Either.error(e);
-        }
-      });
-    }
-
-    /**
-     * Error mapping for {@link ServiceNotAvailableException}, which occurs when a task is not available.
-     */
-    public SeekableStreamRequestBuilder<IntermediateType, FinalType, T> onNotAvailable(final Function<ServiceNotAvailableException, Either<Throwable, T>> fn)
-    {
-      return onException(e -> {
-        if (e instanceof ServiceNotAvailableException) {
-          return fn.apply((ServiceNotAvailableException) e);
-        } else {
-          return Either.error(e);
-        }
-      });
-    }
-
-    /**
-     * Error mapping for {@link ServiceClosedException}, which occurs when a task is not running.
-     */
-    public SeekableStreamRequestBuilder<IntermediateType, FinalType, T> onClosed(final Function<ServiceClosedException, Either<Throwable, T>> fn)
-    {
-      return onException(e -> {
-        if (e instanceof ServiceClosedException) {
-          return fn.apply((ServiceClosedException) e);
-        } else {
-          return Either.error(e);
-        }
-      });
-    }
-
-    /**
-     * Issue the request.
-     */
-    public ListenableFuture<T> go()
-    {
-      final ServiceClient client = makeClient(taskId, retry);
-      final SettableFuture<T> retVal = SettableFuture.create();
-
-      Futures.addCallback(
-          FutureUtils.transform(
-              client.asyncRequest(requestBuilder.timeout(httpTimeout), responseHandler),
-              responseTransformer
-          ),
-          new FutureCallback<T>()
-          {
-            @Override
-            public void onSuccess(@Nullable T result)
-            {
-              retVal.set(result);
-            }
-
-            @Override
-            public void onFailure(Throwable t)
-            {
-              Either<Throwable, T> either = Either.error(t);
-
-              for (final Function<Throwable, Either<Throwable, T>> exceptionMapper : exceptionMappers) {
-                if (!either.isError()) {
-                  break;
-                }
-
-                try {
-                  final Either<Throwable, T> nextEither = exceptionMapper.apply(either.error());
-                  if (nextEither != null) {
-                    either = nextEither;
-                  }
-                }
-                catch (Throwable e) {
-                  // Not expected: on-error function should never throw exceptions. Continue mapping.
-                  log.warn(e, "Failed to map exception encountered while contacting task [%s]", taskId);
-                }
-              }
-
-              if (either.isError()) {
-                retVal.setException(either.error());
-              } else {
-                retVal.set(either.valueOrThrow());
-              }
-            }
-          }
-      );
-
-      return retVal;
-    }
-
-    private ServiceClient makeClient(final String taskId, final boolean retry)
-    {
-      final ServiceRetryPolicy retryPolicy = makeRetryPolicy(taskId, retry);
-
-      // We're creating a new locator for each request and not closing it. This is OK, since SeekableStreamTaskLocator
-      // is stateless, cheap to create, and its close() method does nothing.
-      final SeekableStreamTaskLocator locator = new SeekableStreamTaskLocator(taskInfoProvider, taskId);
-
-      // We're creating a new client for each request. This is OK, clients are cheap to create and do not contain
-      // state that is important for us to retain across requests. (The main state they retain is preferred location
-      // from prior redirects; but tasks don't do redirects.)
-      return serviceClientFactory.makeClient(taskId, locator, retryPolicy);
-    }
-
-    private ServiceRetryPolicy makeRetryPolicy(final String taskId, final boolean retry)
-    {
-      final StandardRetryPolicy baseRetryPolicy;
-
-      if (retry) {
-        baseRetryPolicy = StandardRetryPolicy.builder()
-                                             .maxAttempts(httpRetries + 1)
-                                             .minWaitMillis(IndexTaskClient.MIN_RETRY_WAIT_SECONDS * 1000)
-                                             .maxWaitMillis(IndexTaskClient.MAX_RETRY_WAIT_SECONDS * 1000)
-                                             .retryNotAvailable(false)
-                                             .build();
-      } else {
-        baseRetryPolicy = StandardRetryPolicy.noRetries();
-      }
-
-      return new SpecificTaskRetryPolicy(taskId, baseRetryPolicy);
-    }
   }
 
   static class SeekableStreamTaskLocator implements ServiceLocator

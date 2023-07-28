@@ -79,10 +79,22 @@ public interface ServiceClient
   );
 
   /**
+   * Perform a service call asynchronously.
+   *
+   * Service calls internally use {@link #asyncRequest(RequestBuilder, HttpResponseHandler)} but may transform
+   * responses, map exceptions, etc. The specific {@link ServiceCall} instance determines what transformations
+   * and mappings occur.
+   */
+  default <T> ListenableFuture<T> asyncRequest(ServiceCall<T> call)
+  {
+    return call.go(this);
+  }
+
+  /**
    * Perform a request synchronously.
    *
-   * Same behavior as {@link #asyncRequest}, except the result is returned synchronously. Any exceptions from the
-   * underlying service call are wrapped in an ExecutionException.
+   * Same behavior as {@link #asyncRequest(RequestBuilder, HttpResponseHandler)}, except the result is returned
+   * synchronously using {@link FutureUtils#getUnchecked(ListenableFuture, boolean)}.
    */
   default <IntermediateType, FinalType> FinalType request(
       RequestBuilder requestBuilder,
@@ -90,7 +102,19 @@ public interface ServiceClient
   ) throws InterruptedException, ExecutionException
   {
     // Cancel the future if we are interrupted. Nobody else is waiting for it.
-    return FutureUtils.get(asyncRequest(requestBuilder, handler), true);
+    return FutureUtils.getUnchecked(asyncRequest(requestBuilder, handler), true);
+  }
+
+  /**
+   * Perform a service call synchronously.
+   *
+   * Same behavior as {@link #asyncRequest(ServiceCall)}, except the result is returned synchronously using
+   * {@link FutureUtils#getUnchecked(ListenableFuture, boolean)}.
+   */
+  default <T> T request(ServiceCall<T> call)
+  {
+    // Cancel the future if we are interrupted. Nobody else is waiting for it.
+    return FutureUtils.getUnchecked(asyncRequest(call), true);
   }
 
   /**

@@ -52,7 +52,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClientTest
 {
@@ -134,7 +133,7 @@ public class RemoteTaskActionClientTest
                     EasyMock.anyObject(BytesFullResponseHandler.class)
                 )
             )
-            .andThrow(new ExecutionException(new HttpResponseException(responseHolder)));
+            .andThrow(new RuntimeException(new HttpResponseException(responseHolder)));
 
     EasyMock.replay(directOverlordClient);
 
