@@ -38,6 +38,8 @@ import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -190,7 +192,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   public void testSumsNoVectorize()
   {
     if (QueryContexts.Vectorize.FORCE.equals(vectorize)) {
-      // variant types cannot vectorize aggregators
+      // variant types cannot vectorize aggregators because string wrapper for numbers is not supported for vectorize
       return;
     }
     /*
@@ -236,15 +238,17 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterLong()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
                                   .filters(
-                                      new AndDimFilter(
-                                          new EqualityFilter("long", ColumnType.LONG, 2L, null),
-                                          new EqualityFilter("v0", ColumnType.LONG, 2L, null)
+                                      new OrDimFilter(
+                                        new AndDimFilter(
+                                            new EqualityFilter("long", ColumnType.LONG, 2L, null),
+                                            new EqualityFilter("v0", ColumnType.LONG, 2L, null)
+                                        ),
+                                        NullFilter.forColumn("long"),
+                                        NullFilter.forColumn("v1")
                                       )
                                   )
                                   .virtualColumns(
@@ -253,6 +257,12 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                           "$.",
                                           "v0",
                                           ColumnType.LONG
+                                      ),
+                                      new NestedFieldVirtualColumn(
+                                          "obj",
+                                          "$.b.z[1]",
+                                          "v1",
+                                          ColumnType.STRING
                                       )
                                   )
                                   .aggregators(new CountAggregatorFactory("count"))
@@ -264,7 +274,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
             new Result<>(
                 DateTimes.of("2023-01-01T00:00:00.000Z"),
                 new TimeseriesResultValue(
-                    ImmutableMap.of("count", 2L)
+                    ImmutableMap.of("count", 8L)
                 )
             )
         )
@@ -274,8 +284,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantAsString()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -312,8 +320,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantAsStringNoIndexes()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -350,8 +356,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantAsLong()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -388,8 +392,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantAsLongNoIndexes()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -426,8 +428,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantArrayAsString()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -464,8 +464,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantArrayAsDouble()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -502,8 +500,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantArrayAsArray()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -540,8 +536,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantArrayStringArray()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
@@ -575,8 +569,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   @Test
   public void testFilterVariantArrayStringArrayNoIndexes()
   {
-    // this doesn't really have anything to do with nested columns
-    // just a smoke test to make sure everything else is sane
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_datasource")
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))

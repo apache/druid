@@ -54,6 +54,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
@@ -524,12 +525,22 @@ public class NestedFieldVirtualColumn implements VirtualColumn
           leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
         }
       }
+      if (leastRestrictiveType != null && leastRestrictiveType.isNumeric() && !Types.isNumeric(expectedType)) {
+        return ExpressionVectorSelectors.castValueSelectorToObject(
+            offset,
+            columnName,
+            complexColumn.makeVectorValueSelector(parts, offset),
+            leastRestrictiveType,
+            expectedType
+        );
+      }
       final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
       if (leastRestrictiveType != null && leastRestrictiveType.isArray() && !expectedType.isArray()) {
         final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
         final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
         return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
       }
+
       return objectSelector;
     }
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
