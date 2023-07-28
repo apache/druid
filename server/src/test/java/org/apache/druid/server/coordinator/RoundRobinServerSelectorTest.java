@@ -23,8 +23,8 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.RoundRobinServerSelector;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
@@ -140,7 +140,7 @@ public class RoundRobinServerSelectorTest
     return new ServerHolder(
         new DruidServer(name, name, null, size, ServerType.HISTORICAL, TIER, 1)
             .toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
   }
 }
