@@ -177,8 +177,8 @@ Any runtime property or jvm config used by the peon process can also be passed. 
 ```
 kind: ConfigMap
 metadata:
-name: druid-tiny-cluster-peons-config
-namespace: default
+    name: druid-tiny-cluster-peons-config
+    namespace: default
 apiVersion: v1
 data:
     jvm.config: |-
