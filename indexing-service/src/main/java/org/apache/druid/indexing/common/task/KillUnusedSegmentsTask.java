@@ -63,13 +63,22 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
 
+  /**
+   * Default nuke batch size. This is a small enough size that we still get value from batching, while
+   * yielding as quickly as possible. In one real cluster environment backed with mysql, ~2000rows/sec,
+   * with batch size of 100, means a batch should only less than a second for the task lock, and depending
+   * on the segment store latency, unoptimised S3 cleanups typically take 5-10 seconds per 100. Over time
+   * we expect the S3 cleanup to get quicker, so this should be < 1 second, which means we'll be yielding
+   * the task lockbox every 1-2 seconds.
+   */
   private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
 
   private final boolean markAsUnused;
 
-  /** Split processing to try and keep each nuke operation relatively short, in the case that either
-    * the database or the storage layer is particularly slow.
-    */
+  /**
+   * Split processing to try and keep each nuke operation relatively short, in the case that either
+   * the database or the storage layer is particularly slow.
+   */
   private final int batchSize;
 
   // counter included primarily for testing
