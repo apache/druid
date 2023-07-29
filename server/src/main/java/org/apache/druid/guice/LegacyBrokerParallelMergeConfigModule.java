@@ -17,38 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
-import org.apache.druid.java.util.metrics.MonitorSchedulerConfig;
-import org.joda.time.Duration;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.query.LegacyBrokerParallelMergeConfig;
 
-/**
- */
-public class DruidMonitorSchedulerConfig extends MonitorSchedulerConfig
+@Deprecated
+public class LegacyBrokerParallelMergeConfigModule implements Module
 {
-  @JsonProperty
-  private String schedulerClassName = BasicMonitorScheduler.class.getName();
-
-  @JsonProperty
-  private Period emissionPeriod = new Period("PT1M");
-
-  public String getSchedulerClassName()
-  {
-    return schedulerClassName;
-  }
-
-  @JsonProperty
-  public Period getEmissionPeriod()
-  {
-    return emissionPeriod;
-  }
 
   @Override
-  public Duration getEmitterPeriod()
+  public void configure(Binder binder)
   {
-    return emissionPeriod.toStandardDuration();
+    ConfigProvider.bind(binder, LegacyBrokerParallelMergeConfig.class);
   }
 }

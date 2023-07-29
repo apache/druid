@@ -37,7 +37,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAu
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 
 import javax.annotation.Nullable;
 import java.util.List;

@@ -17,12 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime;
+package org.apache.druid.java.util.metrics;
 
-import org.skife.config.Config;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 
-public abstract class DbSegmentPublisherConfig
+/**
+ */
+public class DruidMonitorSchedulerConfig
 {
-  @Config("druid.metadata.storage.tables.segments")
-  public abstract String getSegmentTable();
+  @JsonProperty
+  private String schedulerClassName = BasicMonitorScheduler.class.getName();
+
+  @JsonProperty
+  private Period emissionPeriod = new Period("PT1M");
+
+  @JsonProperty
+  public String getSchedulerClassName()
+  {
+    return schedulerClassName;
+  }
+
+  @JsonProperty
+  public Period getEmissionPeriod()
+  {
+    return emissionPeriod;
+  }
+
+  public Duration getEmitterPeriod()
+  {
+    return emissionPeriod.toStandardDuration();
+  }
 }

@@ -41,7 +41,7 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
   private final ExecutorService monitorRunner;
 
   public ClockDriftSafeMonitorScheduler(
-      MonitorSchedulerConfig config,
+      DruidMonitorSchedulerConfig config,
       ServiceEmitter emitter,
       List<Monitor> monitors,
       CronScheduler monitorScheduler,

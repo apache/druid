@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -100,6 +101,9 @@ public class QueryStackTests
       NoQueryLaningStrategy.INSTANCE,
       new ServerConfig()
   );
+
+  public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
+
   private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
@@ -187,6 +191,18 @@ public class QueryStackTests
     );
   }
 
+  public static BrokerParallelMergeConfig getParallelMergeConfig(
+      boolean useParallelMergePoolConfigured
+  )
+  {
+    return new BrokerParallelMergeConfig() {
+      @Override
+      public boolean useParallelMergePool()
+      {
+        return useParallelMergePoolConfigured;
+      }
+    };
+  }
   public static DruidProcessingConfig getProcessingConfig(
       boolean useParallelMergePoolConfigured,
       final int mergeBuffers
@@ -221,12 +237,6 @@ public class QueryStackTests
         }
         return mergeBuffers;
       }
-
-      @Override
-      public boolean useParallelMergePoolConfigured()
-      {
-        return useParallelMergePoolConfigured;
-      }
     };
   }
 
@@ -256,7 +266,7 @@ public class QueryStackTests
         closer,
         getProcessingConfig(
             useParallelMergePoolConfigured,
-            DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
+            DEFAULT_NUM_MERGE_BUFFERS
         ),
         minTopNThresholdSupplier
     );

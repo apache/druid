@@ -34,7 +34,7 @@ public class BasicMonitorScheduler extends MonitorScheduler
   private final ScheduledExecutorService exec;
 
   public BasicMonitorScheduler(
-      MonitorSchedulerConfig config,
+      DruidMonitorSchedulerConfig config,
       ServiceEmitter emitter,
       List<Monitor> monitors,
       ScheduledExecutorService exec

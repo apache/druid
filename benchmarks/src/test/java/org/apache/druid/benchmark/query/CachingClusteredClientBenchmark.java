@@ -54,6 +54,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -258,12 +259,6 @@ public class CachingClusteredClientBenchmark
       {
         return numProcessingThreads;
       }
-
-      @Override
-      public boolean useParallelMergePool()
-      {
-        return true;
-      }
     };
 
     conglomerate = new DefaultQueryRunnerFactoryConglomerate(
@@ -339,7 +334,13 @@ public class CachingClusteredClientBenchmark
         new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), 0),
         new CacheConfig(),
         new DruidHttpClientConfig(),
-        processingConfig,
+        new BrokerParallelMergeConfig() {
+          @Override
+          public boolean useParallelMergePool()
+          {
+            return true;
+          }
+        },
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,

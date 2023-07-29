@@ -93,7 +93,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     ExecutorService executor = Mockito.mock(ExecutorService.class);
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
-        Mockito.mock(MonitorSchedulerConfig.class),
+        Mockito.mock(DruidMonitorSchedulerConfig.class),
         Mockito.mock(ServiceEmitter.class),
         ImmutableList.of(monitor1, monitor2),
         CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("monitor-scheduler-test").build(),
@@ -153,7 +153,7 @@ public class ClockDriftSafeMonitorSchedulerTest
 
     Monitor monitor = Mockito.mock(Monitor.class);
 
-    MonitorSchedulerConfig config = Mockito.mock(MonitorSchedulerConfig.class);
+    DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
     Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
@@ -217,7 +217,7 @@ public class ClockDriftSafeMonitorSchedulerTest
 
     Monitor monitor = Mockito.mock(Monitor.class);
 
-    MonitorSchedulerConfig config = Mockito.mock(MonitorSchedulerConfig.class);
+    DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
     Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
@@ -248,7 +248,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     Mockito.when(monitor.monitor(ArgumentMatchers.any(ServiceEmitter.class)))
            .thenThrow(new RuntimeException("Test throwing exception while monitoring"));
 
-    MonitorSchedulerConfig config = Mockito.mock(MonitorSchedulerConfig.class);
+    DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
     Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
 
     CountDownLatch latch = new CountDownLatch(1);
@@ -310,7 +310,7 @@ public class ClockDriftSafeMonitorSchedulerTest
   {
     ExecutorService executor = Mockito.mock(ExecutorService.class);
     Monitor monitor = Mockito.mock(Monitor.class);
-    MonitorSchedulerConfig config = Mockito.mock(MonitorSchedulerConfig.class);
+    DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
     Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
 
     CountDownLatch latch = new CountDownLatch(1);
