@@ -97,7 +97,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
         newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
-    Assert.assertEquals(1L, task.getCountBatchesIssued());
+    Assert.assertEquals(1L, task.getNumBatchesProcessed());
   }
 
 
@@ -144,7 +144,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         newSegment(Intervals.of("2019-01-01/2019-02-01"), version),
         newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
-    Assert.assertEquals(1L, task.getCountBatchesIssued());
+    Assert.assertEquals(1L, task.getNumBatchesProcessed());
   }
 
   @Test
@@ -194,7 +194,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"));
 
     Assert.assertEquals(Collections.emptyList(), unusedSegments);
-    Assert.assertEquals(4L, task.getCountBatchesIssued());
+    Assert.assertEquals(4L, task.getNumBatchesProcessed());
   }
 
   @Test
@@ -229,7 +229,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"));
 
     Assert.assertEquals(Collections.emptyList(), unusedSegments);
-    Assert.assertEquals(2L, task.getCountBatchesIssued());
+    Assert.assertEquals(2L, task.getNumBatchesProcessed());
   }
 
   private static DataSegment newSegment(Interval interval, String version)

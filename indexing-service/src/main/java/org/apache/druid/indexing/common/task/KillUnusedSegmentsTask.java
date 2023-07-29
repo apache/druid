@@ -63,14 +63,17 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
 
-  // We split this to try and keep each nuke operation relatively short, in the case that either
-  // the database or the storage layer is particularly slow.
   private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
 
   private final boolean markAsUnused;
+
+  /** Split processing to try and keep each nuke operation relatively short, in the case that either
+    * the database or the storage layer is particularly slow.
+    */
   private final int batchSize;
 
-  private long countBatchesIssued = 0;
+  // counter included primarily for testing
+  private long numBatchesProcessed = 0;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -123,9 +126,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
   @JsonIgnore
   @VisibleForTesting
-  long getCountBatchesIssued()
+  long getNumBatchesProcessed()
   {
-    return countBatchesIssued;
+    return numBatchesProcessed;
   }
 
   @Override
@@ -152,6 +155,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     // task lockbox to run. By splitting the segment list into smaller batches, we have an opportunity to yield the
     // lock to other activity that might need to happen using the overlord tasklockbox.
 
+    LOG.info("kill starting: id [%s] dataSource [%s] interval [%s], total segments [%d], batches [%d], ([%d] segments per batch)",
+            getId(), getDataSource(), getInterval(), allUnusedSegments.size(), unusedSegmentBatches.size(), batchSize);
+
     for (final List<DataSegment> unusedSegments : unusedSegmentBatches) {
       if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
         throw new ISE(
@@ -162,7 +168,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         );
       }
 
-      // Kill segments:
+      // Kill segments
       // Order is important here: we want the nuke action to clean up the metadata records _before_ the
       // segments are removed from storage, this helps maintain that we will always have a storage segment if
       // the metadata segment is present. If the segment nuke throws an exception, then the segment cleanup is
@@ -170,8 +176,16 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
       toolbox.getDataSegmentKiller().kill(unusedSegments);
-      countBatchesIssued++;
+      numBatchesProcessed++;
+
+      if (numBatchesProcessed % 10 == 0) {
+        LOG.info("kill progress: id [%s] dataSource [%s] batch progress: [%d/%d]",
+                getId(), getDataSource(), numBatchesProcessed, allUnusedSegments.size());
+      }
     }
+
+    LOG.info("kill complete: id [%s] dataSource [%s] interval [%s], total segments [%d], batches [%d]",
+            getId(), getDataSource(), getInterval(), allUnusedSegments.size(), unusedSegmentBatches.size());
 
     return TaskStatus.success(getId());
   }

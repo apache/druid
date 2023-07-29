@@ -96,9 +96,15 @@ The available grammar is:
     "dataSource": <task_datasource>,
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
     "context": <task context>,
-    "batchSize": <optional batch size, default is 100. Too large will affect overlord stability.>
+    "batchSize": <optional_batch size>
 }
 ```
+
+Special parameter explanations:
+
+| Parameter    |Default| Explanation                                                                                            |
+|--------------|-------|--------------------------------------------------------------------------------------------------------|
+| batchSize    |100    | Split Metadata and Segment storage into smaller batches for processing. The Tasks lockbox is locked during operation, preventing other segment operations. Splitting the task into batches allows the kill job to yield to other task lockbox operations.|
 
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
