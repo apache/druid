@@ -22,7 +22,7 @@ title: "Query from deep storage"
   ~ under the License.
   -->
 
-> Query from deep storage is an experimental feature.
+> Query from deep storage is an [experimental feature](../development/experimental.md).
 
 ## Segments in deep storage
 
@@ -30,22 +30,16 @@ Any data you ingest into Druid is already stored in deep storage, so you don't n
 
 To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to load only the segments you do want on Historical processes. 
 
-For example, use the `loadByInterval` load rule and set  `tieredReplicants.YOUR_TIER` (such as `tieredReplicants._default_tier`) to 0 for a specific interval. If the default tier is the only tier in your cluster, this results in that interval only being available from deep storage.
+The easiest way to do this is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`:
 
-For example, the following interval load rule assigns 0 replicants for the specified interval to the tier `_default_tier`:
-
-```
+```json
   {
-    "interval": "2017-01-19T00:00:00.000Z/2017-09-20T00:00:00.000Z",
-    "tieredReplicants": {
-      "_default_tier": 0
-    },
-    "useDefaultTierForNull": true,
+    "interval": "2016-06-27T00:00:00.000Z/2016-06-27T02:00:00.000Z",
+    "tieredReplicants": {},
+    "useDefaultTierForNull": false,
     "type": "loadByInterval"
   }
 ```
-
-This means that any segments within that interval don't get loaded onto `_default_tier`. 
 
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
@@ -80,9 +74,9 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 {"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
 ```  
 
-Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
+Generally, the request body fields are the same between the `sql` and `/sql/statements` endpoints.
 
-There are additional context parameters for `sql/statements` specifically: 
+There are additional context parameters for `/sql/statements` specifically: 
 
    - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
    - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
