@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -65,6 +66,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -99,7 +101,7 @@ public class RunRulesTest
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules(Set::size);
+    ruleRunner = new RunRules();
     loadQueueManager = new SegmentLoadQueueManager(null, segmentsMetadataManager, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
@@ -506,22 +508,20 @@ public class RunRulesTest
         .add(createServerHolder("serverNorm", "normal", mockPeon))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster).build();
 
     runDutyAndGetStats(params);
 
-    final List<AlertEvent> events = emitter.getAlerts();
+    final List<Event> events = emitter.getEvents();
     Assert.assertEquals(1, events.size());
 
-    AlertEvent alertEvent = events.get(0);
+    AlertEvent alertEvent = (AlertEvent) events.get(0);
     EventMap eventMap = alertEvent.toMap();
-    Assert.assertEquals(
-        "No matching retention rule for [24] segments in datasource[test]",
-        eventMap.get("description")
-    );
+    Assert.assertEquals("Unable to find matching rules!", eventMap.get("description"));
+
+    Map<String, Object> dataMap = alertEvent.getDataMap();
+    Assert.assertEquals(usedSegments.size(), dataMap.get("segmentsWithMissingRulesCount"));
+
     EasyMock.verify(mockPeon);
   }
 

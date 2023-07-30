@@ -43,8 +43,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("dropSkip", "segment/dropSkipped/count");
     public static final CoordinatorStat MOVE_SKIPPED
         = CoordinatorStat.toDebugAndEmit("moveSkip", "segment/moveSkipped/count");
-    public static final CoordinatorStat DELETE_SKIPPED
-        = CoordinatorStat.toDebugAndEmit("deleteSkip", "segment/deleteSkipped/count");
 
     // Current state of segments of a datasource
     public static final CoordinatorStat USED
