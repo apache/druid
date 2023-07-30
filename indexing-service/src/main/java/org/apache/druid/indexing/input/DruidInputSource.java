@@ -552,10 +552,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final Collection<DataSegment> usedSegments;
     if (toolbox == null) {
       usedSegments = FutureUtils.getUnchecked(
-          coordinatorClient.fetchUsedSegments(
-              dataSource,
-              Collections.singletonList(Preconditions.checkNotNull(interval, "interval"))
-          ),
+          coordinatorClient.fetchUsedSegments(dataSource, Collections.singletonList(interval)),
           true
       );
     } else {

@@ -160,9 +160,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private final String baseSubtaskSpecName;
 
   private final InputSource baseInputSource;
-  // A reference to the baseInputSource or another input source craeted using the baseInputSource and a TaskToolbox
-  // This helps return the same object
-  private final AtomicReference<InputSource> inputSource = new AtomicReference<>();
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -520,6 +517,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     try {
+      final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
+
       initializeSubTaskCleaner();
 
       if (isParallelMode()) {
@@ -537,10 +536,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           return runSinglePhaseParallel(toolbox);
         }
       } else {
-        if (!getInputSource().isSplittable()) {
+        if (!getInputSource(inputSourceWithToolbox).isSplittable()) {
           LOG.warn(
               "firehoseFactory[%s] is not splittable. Running sequentially.",
-              getInputSource().getClass().getSimpleName()
+              getInputSource(inputSourceWithToolbox).getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
           LOG.warn(
@@ -1827,9 +1826,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   /**
    * To be called only after the toolbox has been set in runTask
    *
+   * @param inputSource Atomic reference to input source
    * @return the base input source with the toolbox
    */
-  private InputSource getInputSource()
+  private InputSource getInputSource(AtomicReference<InputSource> inputSource)
   {
     if (inputSource.get() == null) {
       final InputSource theInputSource;
@@ -1838,7 +1838,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       } else {
         theInputSource = baseInputSource;
       }
-      this.inputSource.set(theInputSource);
+      inputSource.set(theInputSource);
     }
     return inputSource.get();
   }
