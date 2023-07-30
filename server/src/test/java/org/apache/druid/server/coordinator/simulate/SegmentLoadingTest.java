@@ -505,6 +505,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Run 3: Loads of unused segments are cancelled
     runCoordinatorCycle();
+    verifyValue(Metric.LOAD_QUEUE_COUNT, 0L);
     verifyValue(Metric.CANCELLED_ACTIONS, 10L);
   }
 

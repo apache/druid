@@ -137,7 +137,12 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
-    return usedSegments.remove(segmentId.toString()) != null;
+    boolean updated = usedSegments.remove(segmentId.toString()) != null;
+    if (updated) {
+      snapshot = null;
+    }
+
+    return updated;
   }
 
   @Nullable
