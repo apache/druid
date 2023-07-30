@@ -1500,9 +1500,9 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"[\"a\",\"b\"]", ImmutableList.of("a", "b")},
             new Object[]{"[\"b\",\"c\"]", ImmutableList.of("b", "c")},
             new Object[]{"d", ImmutableList.of("d")},
-            new Object[]{"", Collections.singletonList(useDefault ? null : "")},
-            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)},
-            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)}
+            new Object[]{"", useDefault ? null : Collections.singletonList("")},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null}
         )).verifyResults();
   }
 
@@ -1709,7 +1709,7 @@ public class MSQSelectTest extends MSQTestBase
                                             .build();
 
     ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{Collections.singletonList(null), !useDefault ? 2L : 3L});
+    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
     if (!useDefault) {
       expected.add(new Object[]{Collections.singletonList(""), 1L});
     }
@@ -2136,7 +2136,7 @@ public class MSQSelectTest extends MSQTestBase
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{Collections.singletonList(null), !useDefault ? 2L : 3L});
+    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
     if (!useDefault) {
       expected.add(new Object[]{Collections.singletonList(""), 1L});
     }

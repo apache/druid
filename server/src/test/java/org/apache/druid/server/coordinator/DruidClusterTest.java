@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,13 +47,13 @@ public class DruidClusterTest
   private static final ServerHolder NEW_REALTIME = new ServerHolder(
       new DruidServer("name1", "host2", null, 100L, ServerType.REALTIME, "tier1", 0)
           .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
-      new LoadQueuePeonTester()
+      new TestLoadQueuePeon()
   );
 
   private static final ServerHolder NEW_HISTORICAL = new ServerHolder(
       new DruidServer("name1", "host2", null, 100L, ServerType.HISTORICAL, "tier1", 0)
           .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
-      new LoadQueuePeonTester()
+      new TestLoadQueuePeon()
   );
 
   private DruidCluster.Builder clusterBuilder;
@@ -67,14 +67,14 @@ public class DruidClusterTest
             new ServerHolder(
                 new DruidServer("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0)
                     .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
-                new LoadQueuePeonTester()
+                new TestLoadQueuePeon()
             )
         )
         .add(
             new ServerHolder(
                 new DruidServer("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0)
                     .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
-                new LoadQueuePeonTester()
+                new TestLoadQueuePeon()
             )
         );
   }

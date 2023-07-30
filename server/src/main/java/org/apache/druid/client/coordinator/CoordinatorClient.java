@@ -19,176 +19,33 @@
 
 package org.apache.druid.client.coordinator;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import javax.ws.rs.core.MediaType;
-import java.util.Collection;
 import java.util.List;
 
-public class CoordinatorClient
+public interface CoordinatorClient
 {
-  private final DruidLeaderClient druidLeaderClient;
-  private final ObjectMapper jsonMapper;
-
-  @Inject
-  public CoordinatorClient(
-      ObjectMapper jsonMapper,
-      @Coordinator DruidLeaderClient druidLeaderClient
-  )
-  {
-    this.jsonMapper = jsonMapper;
-    this.druidLeaderClient = druidLeaderClient;
-  }
+  /**
+   * Checks if the given segment is handed off or not.
+   */
+  ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor);
 
   /**
-   * Checks the given segment is handed off or not.
-   * It can return null if the HTTP call returns 404 which can happen during rolling update.
+   * Fetches segment metadata for the given dataSource and segmentId.
    */
-  @Nullable
-  public Boolean isHandOffComplete(String dataSource, SegmentDescriptor descriptor)
-  {
-    try {
-      StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.GET,
-              StringUtils.format(
-                  "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s",
-                  StringUtils.urlEncode(dataSource),
-                  descriptor.getInterval(),
-                  descriptor.getPartitionNumber(),
-                  descriptor.getVersion()
-              )
-          )
-      );
+  ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId);
 
-      if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-        return null;
-      }
+  /**
+   * Fetches segment metadata for the given dataSource and intervals.
+   */
+  ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals);
 
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while fetching serverView status[%s] content[%s]",
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Boolean>()
-      {
-      });
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
-  {
-    try {
-      StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.GET,
-              StringUtils.format(
-                  "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
-                  StringUtils.urlEncode(dataSource),
-                  interval.toString().replace('/', '_'),
-                  incompleteOk
-              )
-          )
-      );
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while fetching serverView status[%s] content[%s]",
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
-          {
-          }
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
-  {
-    try {
-      StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.POST,
-              StringUtils.format(
-                  "/druid/coordinator/v1/metadata/datasources/%s/segments?full",
-                  StringUtils.urlEncode(dataSource)
-              )
-          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(intervals))
-      );
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while fetching used segments in a data source for intervals: status[%s] content[%s]",
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<DataSegment>>()
-          {
-          }
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public DataSegment fetchUsedSegment(String dataSource, String segmentId)
-  {
-    try {
-      StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.GET,
-              StringUtils.format(
-                  "/druid/coordinator/v1/metadata/datasources/%s/segments/%s",
-                  StringUtils.urlEncode(dataSource),
-                  StringUtils.urlEncode(segmentId)
-              )
-          )
-      );
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while fetching database segment[%s] in dataSource[%s] with status[%s] content[%s]",
-            segmentId,
-            dataSource,
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<DataSegment>()
-          {
-          }
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
+  /**
+   * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy
+   */
+  CoordinatorClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
 }

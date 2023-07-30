@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
@@ -84,7 +84,7 @@ public class BalancerStrategyTest
   {
     final ServerHolder serverHolder = new ServerHolder(
         new DruidServer("server1", "host1", null, 10L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
-        new LoadQueuePeonTester());
+        new TestLoadQueuePeon());
     Assert.assertFalse(
         balancerStrategy.findServersToLoadSegment(
             proposedDataSegment,
@@ -99,12 +99,12 @@ public class BalancerStrategyTest
     final ServerHolder serverHolder1 = new ServerHolder(
         new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
             .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
-        new LoadQueuePeonTester());
+        new TestLoadQueuePeon());
 
     final ServerHolder serverHolder2 = new ServerHolder(
         new DruidServer("server2", "host2", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
             .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
-        new LoadQueuePeonTester());
+        new TestLoadQueuePeon());
 
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder1);
@@ -119,7 +119,7 @@ public class BalancerStrategyTest
   {
     final ServerHolder serverHolder = new ServerHolder(
         new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).toImmutableDruidServer(),
-        new LoadQueuePeonTester());
+        new TestLoadQueuePeon());
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);
     final ServerHolder foundServerHolder = balancerStrategy

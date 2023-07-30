@@ -438,6 +438,40 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertOnFoo1WithTimeAggregatorAndMultipleWorkers()
+  {
+    Map<String, Object> localContext = new HashMap<>(context);
+    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.MAX.name());
+    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT MILLIS_TO_TIMESTAMP((SUM(CAST(\"m1\" AS BIGINT)))) AS __time "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(localContext)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1970-01-01/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{21L}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+
+  @Test
   public void testInsertOnFoo1WithTimePostAggregator()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -647,12 +681,12 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedResultRows(
                          NullHandling.replaceWithDefault() ?
                          ImmutableList.of(
-                             new Object[]{0L, new Object[]{null}},
+                             new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{"b", "c"}},
                              new Object[]{0L, new Object[]{"d"}}
                          ) : ImmutableList.of(
-                             new Object[]{0L, new Object[]{null}},
+                             new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{""}},
                              new Object[]{0L, new Object[]{"b", "c"}},

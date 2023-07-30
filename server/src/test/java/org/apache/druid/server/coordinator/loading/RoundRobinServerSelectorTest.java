@@ -140,7 +140,7 @@ public class RoundRobinServerSelectorTest
     return new ServerHolder(
         new DruidServer(name, name, null, size, ServerType.HISTORICAL, TIER, 1)
             .toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
   }
 }

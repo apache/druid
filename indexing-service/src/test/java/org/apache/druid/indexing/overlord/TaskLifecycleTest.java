@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
@@ -693,7 +694,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
         new NoopOverlordClient(),
-        null,
+        new NoopCoordinatorClient(),
         null,
         null,
         null,

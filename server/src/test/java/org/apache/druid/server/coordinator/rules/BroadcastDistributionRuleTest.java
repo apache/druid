@@ -29,10 +29,9 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -125,7 +124,7 @@ public class BroadcastDistributionRuleTest
             0
         ).addDataSegment(smallSegment)
          .toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     holdersOfLargeSegments.add(
@@ -140,7 +139,7 @@ public class BroadcastDistributionRuleTest
                 0
             ).addDataSegment(largeSegments.get(0))
              .toImmutableDruidServer(),
-            new LoadQueuePeonTester()
+            new TestLoadQueuePeon()
         )
     );
     holdersOfLargeSegments.add(
@@ -155,7 +154,7 @@ public class BroadcastDistributionRuleTest
                 0
             ).addDataSegment(largeSegments.get(1))
              .toImmutableDruidServer(),
-            new LoadQueuePeonTester()
+            new TestLoadQueuePeon()
         )
     );
     holdersOfLargeSegments.add(
@@ -170,7 +169,7 @@ public class BroadcastDistributionRuleTest
                 0
             ).addDataSegment(largeSegments.get(2))
              .toImmutableDruidServer(),
-            new LoadQueuePeonTester()
+            new TestLoadQueuePeon()
         )
     );
 
@@ -186,7 +185,7 @@ public class BroadcastDistributionRuleTest
                 0
             ).addDataSegment(largeSegments2.get(0))
              .toImmutableDruidServer(),
-            new LoadQueuePeonTester()
+            new TestLoadQueuePeon()
         )
     );
     holdersOfLargeSegments2.add(
@@ -201,7 +200,7 @@ public class BroadcastDistributionRuleTest
                 0
             ).addDataSegment(largeSegments2.get(1))
              .toImmutableDruidServer(),
-            new LoadQueuePeonTester()
+            new TestLoadQueuePeon()
         )
     );
 
@@ -216,7 +215,7 @@ public class BroadcastDistributionRuleTest
             0
         ).addDataSegment(largeSegments.get(0))
          .toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     decommissioningServer1 = new ServerHolder(
@@ -230,7 +229,7 @@ public class BroadcastDistributionRuleTest
             0
         ).addDataSegment(smallSegment)
          .toImmutableDruidServer(),
-        new LoadQueuePeonTester(),
+        new TestLoadQueuePeon(),
         true
     );
 
@@ -245,7 +244,7 @@ public class BroadcastDistributionRuleTest
             0
         ).addDataSegment(largeSegments.get(1))
          .toImmutableDruidServer(),
-        new LoadQueuePeonTester(),
+        new TestLoadQueuePeon(),
         true
     );
 
