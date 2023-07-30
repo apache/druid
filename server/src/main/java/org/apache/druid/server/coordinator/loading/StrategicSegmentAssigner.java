@@ -32,7 +32,9 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,6 +52,7 @@ import java.util.stream.Collectors;
  * <p>
  * An instance of this class is freshly created for each coordinator run.
  */
+@NotThreadSafe
 public class StrategicSegmentAssigner implements SegmentActionHandler
 {
   private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
@@ -64,8 +67,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private final boolean useRoundRobinAssignment;
 
-  private final Set<String> tiersWithNoServer = new HashSet<>();
+  private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
+  private final Map<String, Set<SegmentId>> segmentsToDelete = new HashMap<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -99,11 +103,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return replicaCountMap.toReplicationStatus();
   }
 
-  public void makeAlerts()
+  public Map<String, Set<SegmentId>> getSegmentsToDelete()
   {
-    if (!tiersWithNoServer.isEmpty()) {
-      log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", tiersWithNoServer).emit();
-    }
+    return segmentsToDelete;
+  }
+
+  public Map<String, Set<String>> getDatasourceToInvalidLoadTiers()
+  {
+    return datasourceToInvalidLoadTiers;
   }
 
   /**
@@ -203,7 +210,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
 
       if (!allTiersInCluster.contains(tier)) {
-        tiersWithNoServer.add(tier);
+        datasourceToInvalidLoadTiers.computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+                                    .add(tier);
       }
     });
 
@@ -342,9 +350,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   @Override
   public void deleteSegment(DataSegment segment)
   {
-    loadQueueManager.deleteSegment(segment);
-    RowKey rowKey = RowKey.of(Dimension.DATASOURCE, segment.getDataSource());
-    stats.add(Stats.Segments.DELETED, rowKey, 1);
+    segmentsToDelete
+        .computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+        .add(segment.getId());
   }
 
   /**
