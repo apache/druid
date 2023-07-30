@@ -2924,8 +2924,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .filters(and(
-                      bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
-                      new SelectorDimFilter("j0.unnest", "Baz", null)
+                      NullHandling.sqlCompatible()
+                      ? equality("dimZipf", "27", ColumnType.LONG)
+                      : bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
+                      equality("j0.unnest", "Baz", ColumnType.STRING)
                   ))
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
@@ -2999,21 +3001,23 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                   "_j0.unnest",
                                   "\"dimMultivalEnumerated\"",
                                   ColumnType.STRING
-                              ), new SelectorDimFilter("_j0.unnest", "Hello", null)
+                              ), equality("_j0.unnest", "Hello", ColumnType.STRING)
                           ),
                           expressionVirtualColumn(
                               "__j0.unnest",
                               "\"dimMultivalEnumerated\"",
                               ColumnType.STRING
                           ),
-                          new SelectorDimFilter("__j0.unnest", "World", null)
+                          equality("__j0.unnest", "World", ColumnType.STRING)
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .filters(and(
-                      bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
-                      new SelectorDimFilter("j0.unnest", "Baz", null)
+                      NullHandling.sqlCompatible()
+                      ? equality("dimZipf", "27", ColumnType.LONG)
+                      : bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
+                      equality("j0.unnest", "Baz", ColumnType.STRING)
                   ))
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
@@ -3065,16 +3069,24 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "\"dimMultivalEnumerated\"",
                               ColumnType.STRING
                           ),
-                          new SelectorDimFilter("__j0.unnest", "World", null)
+                          equality("__j0.unnest", "World", ColumnType.STRING)
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .filters(and(
-                      bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
+                      NullHandling.sqlCompatible() ? equality("dimZipf", "27", ColumnType.LONG) : bound(
+                          "dimZipf",
+                          "27",
+                          "27",
+                          false,
+                          false,
+                          null,
+                          StringComparators.NUMERIC
+                      ),
                       or(
-                          new SelectorDimFilter("j0.unnest", "Baz", null),
-                          new SelectorDimFilter("_j0.unnest", "Hello", null)
+                          equality("j0.unnest", "Baz", ColumnType.STRING),
+                          equality("_j0.unnest", "Hello", ColumnType.STRING)
                       )
                   ))
                   .legacy(false)

@@ -19,7 +19,10 @@
 
 package org.apache.druid.segment.filter;
 
+import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 
 import java.util.Arrays;
 
@@ -43,5 +46,20 @@ public class FilterTestUtils
   public static SelectorFilter selector(final String fieldName, final String value)
   {
     return new SelectorFilter(fieldName, value, null);
+  }
+
+  public static Filter sdf(String dimension, String value)
+  {
+    return new SelectorDimFilter(dimension, value, null).toFilter();
+  }
+
+  public static Filter sdf(String dimension, String value, ExtractionFn extractionFn)
+  {
+    return new SelectorDimFilter(dimension, value, extractionFn).toFilter();
+  }
+
+  public static DimFilter sdfd(String dimension, String value, ExtractionFn extractionFn)
+  {
+    return new SelectorDimFilter(dimension, value, extractionFn);
   }
 }
