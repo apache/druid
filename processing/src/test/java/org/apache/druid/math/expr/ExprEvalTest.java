@@ -464,6 +464,8 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
+
+
     List<Object> mixedNested2 = ImmutableList.of(
         "a",
         1L,
@@ -485,6 +487,37 @@ public class ExprEvalTest extends InitializedNullHandlingTest
             new Object[]{"a"},
             new Object[]{1L},
             new Object[]{3.0},
+            new Object[]{"a", "b", "c"},
+            new Object[]{1L, 2L, 3L},
+            new Object[]{3.0, 4.0, 5.0},
+            new Object[]{nested1, nested2, nested3}
+        },
+        coerced.rhs
+    );
+
+
+    List<Object> mixedNested3 = ImmutableList.of(
+        "a",
+        1L,
+        3.0,
+        nested1,
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of(nested1, nested2, nested3)
+    );
+    coerced = ExprEval.coerceListToArray(mixedNested3, false);
+    // this one is only ARRAY<COMPLEX<json>> instead of ARRAY<ARRAY<COMPLEX<json>> because of a COMPLEX<json> element..
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            "a",
+            1L,
+            3.0,
+            nested1,
             new Object[]{"a", "b", "c"},
             new Object[]{1L, 2L, 3L},
             new Object[]{3.0, 4.0, 5.0},
