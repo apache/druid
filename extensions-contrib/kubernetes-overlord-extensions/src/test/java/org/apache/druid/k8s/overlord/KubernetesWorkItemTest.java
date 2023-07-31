@@ -282,4 +282,10 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     Assert.assertEquals(task.getDataSource(), workItem.getDataSource());
   }
+
+  @Test
+  public void test_getTask()
+  {
+    Assert.assertEquals(task, workItem.getTask());
+  }
 }

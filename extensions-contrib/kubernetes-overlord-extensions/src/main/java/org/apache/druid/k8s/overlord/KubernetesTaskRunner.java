@@ -217,7 +217,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
   }
 
-  private void listenOnTaskState(KubernetesPeonLifecycle.State state, String taskId)
+  @VisibleForTesting
+  protected void listenOnTaskState(KubernetesPeonLifecycle.State state, String taskId)
   {
     switch (state) {
       case RUNNING:
@@ -236,6 +237,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                          new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
                      )
         );
+      default:
+        // ignore other state transition now
     }
   }
 

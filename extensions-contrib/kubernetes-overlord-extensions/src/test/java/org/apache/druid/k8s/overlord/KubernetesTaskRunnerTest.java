@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -601,6 +602,28 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
 
     Assert.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_metricsReported_whenTaskStateChange()
+  {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.unknown();
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    emitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));
+
+    replayAll();
+
+    runner.listenOnTaskState(KubernetesPeonLifecycle.State.RUNNING, task.getId());
 
     verifyAll();
   }

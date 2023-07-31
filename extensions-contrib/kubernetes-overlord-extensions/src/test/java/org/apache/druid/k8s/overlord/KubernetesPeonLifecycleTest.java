@@ -155,8 +155,6 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
     stateListener.accept(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
-    stateListener.accept(KubernetesPeonLifecycle.State.STOPPED, ID);
-    EasyMock.expectLastCall().once();
 
     replayAll();
 
@@ -348,8 +346,6 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     logWatch.close();
     EasyMock.expectLastCall();
     stateListener.accept(KubernetesPeonLifecycle.State.RUNNING, ID);
-    EasyMock.expectLastCall().once();
-    stateListener.accept(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     stateListener.accept(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();

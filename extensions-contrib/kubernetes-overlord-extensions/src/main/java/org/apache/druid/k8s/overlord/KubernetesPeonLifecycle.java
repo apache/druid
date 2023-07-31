@@ -139,8 +139,10 @@ public class KubernetesPeonLifecycle
       throw e;
     }
     finally {
-      state.set(State.STOPPED);
-      stateListener.accept(state.get(), taskId.getOriginalTaskId());
+      if (!State.STOPPED.equals(state.get())) {
+        state.set(State.STOPPED);
+        stateListener.accept(state.get(), taskId.getOriginalTaskId());
+      }
     }
   }
 
@@ -183,8 +185,10 @@ public class KubernetesPeonLifecycle
         log.warn(e, "Task [%s] cleanup failed", taskId);
       }
 
-      state.set(State.STOPPED);
-      stateListener.accept(state.get(), taskId.getOriginalTaskId());
+      if (!State.STOPPED.equals(state.get())) {
+        state.set(State.STOPPED);
+        stateListener.accept(state.get(), taskId.getOriginalTaskId());
+      }
     }
   }
 
