@@ -119,11 +119,7 @@ public class CaseOperatorConversion implements SqlOperatorConversion
         DimFilter thenFilter = null, elseFilter = null;
         final DimFilter isNull;
         if (plannerContext.isUseBoundsAndSelectors()) {
-          isNull = new SelectorDimFilter(
-              condition.getArguments().get(0).getDirectColumn(),
-              null,
-              null
-          );
+          isNull = new SelectorDimFilter(condition.getArguments().get(0).getDirectColumn(), null, null);
         } else {
           isNull = NullFilter.forColumn(condition.getArguments().get(0).getDirectColumn());
         }

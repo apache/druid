@@ -230,6 +230,7 @@
     <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
+    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -280,6 +281,7 @@
     <!-- false positive -->
     <cve>CVE-2023-2251</cve>
     <cve>CVE-2022-3064</cve>
+    <cve>CVE-2021-4235</cve>	<!-- Suppressed as we don't parse user provided yamls -->
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -390,6 +392,13 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1$</packageUrl>
     <cve>CVE-2022-33915</cve>
+  </suppress>
+  <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
   </suppress>
   <suppress>
     <!--
@@ -681,6 +690,8 @@
    file name: okhttp-*.jar
    ]]></notes>
     <cve>CVE-2021-0341</cve>
+    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2023-3782</cve> <!-- Suppressed since okhttp in Druid doesn't use the BrotliInterceptor -->
   </suppress>
 
   <suppress>
@@ -739,6 +750,38 @@
     <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
     <vulnerabilityName>1084597</vulnerabilityName>
     <vulnerabilityName>1088594</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?ansi-regex -->
+    <notes><![CDATA[
+   file name: ansi-regex:5.0.0
+   ]]></notes>
+    <vulnerabilityName>1091190</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?glob-parent -->
+    <notes><![CDATA[
+   file name: glob-parent:5.1.1
+   ]]></notes>
+    <vulnerabilityName>1091181</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?minimatch -->
+    <notes><![CDATA[
+   file name: minimatch:3.0.4
+   ]]></notes>
+    <vulnerabilityName>1092637</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?y18n -->
+    <notes><![CDATA[
+   file name: y18n:4.0.0
+   ]]></notes>
+    <vulnerabilityName>1091234</vulnerabilityName>
   </suppress>
 
   <suppress>
@@ -811,6 +854,7 @@
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
     <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
+    <cve>CVE-2023-37475</cve> <!-- Druid does not use Hamba avro -->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
@@ -850,5 +894,12 @@
     <cve>CVE-2018-10237</cve>
     <cve>CVE-2020-8908</cve> <!-- We do not use com.google.common.io.Files.createTempDir() https://nvd.nist.gov/vuln/detail/CVE-2020-8908 -->
     <cve>CVE-2023-2976</cve> <!-- We do not use com.google.common.io.FileBackedOutputStream https://nvd.nist.gov/vuln/detail/CVE-2023-2976 -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: okio-1.15.0.jar
+    ]]></notes>
+    <cve>CVE-2023-3635</cve> <!-- We don't expect a DOS due to malformed gzip buffers because externally crafted gzip archives are not expected as input to Druid -->
   </suppress>
 </suppressions>

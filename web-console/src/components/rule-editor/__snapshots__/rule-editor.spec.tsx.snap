@@ -195,19 +195,14 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                     test1
                   </option>
                   <option
-                    value="test"
+                    value="test2"
                   >
-                    test
+                    test2
                   </option>
                   <option
-                    value="test"
+                    value="test3"
                   >
-                    test
-                  </option>
-                  <option
-                    value="test"
-                  >
-                    test
+                    test3
                   </option>
                 </select>
                 <span
