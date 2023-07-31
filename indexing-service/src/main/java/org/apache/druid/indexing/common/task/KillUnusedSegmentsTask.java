@@ -164,7 +164,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     // task lockbox to run. By splitting the segment list into smaller batches, we have an opportunity to yield the
     // lock to other activity that might need to happen using the overlord tasklockbox.
 
-    LOG.info("kill starting: id [%s] dataSource [%s] interval [%s], total segments [%d], batches [%d], ([%d] segments per batch)",
+    LOG.info("Running kill task[%s] for dataSource[%s] and interval[%s]. Killing total [%,d] unused segments in [%d] batches(batchSize = [%d]).",
             getId(), getDataSource(), getInterval(), allUnusedSegments.size(), unusedSegmentBatches.size(), batchSize);
 
     for (final List<DataSegment> unusedSegments : unusedSegmentBatches) {
