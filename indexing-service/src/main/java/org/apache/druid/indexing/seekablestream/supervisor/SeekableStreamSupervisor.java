@@ -121,7 +121,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -306,7 +305,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
      */
     String getType();
 
-    void handle() throws ExecutionException, InterruptedException, TimeoutException;
+    void handle() throws ExecutionException, InterruptedException;
   }
 
   private static class StatsFromTaskResult
@@ -494,10 +493,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
    * @throws InterruptedException
    * @throws ExecutionException
-   * @throws TimeoutException
    */
   private boolean changeTaskCount(int desiredActiveTaskCount)
-      throws InterruptedException, ExecutionException, TimeoutException
+      throws InterruptedException, ExecutionException
   {
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
@@ -552,7 +550,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     private static final String TYPE = "graceful_shutdown_notice";
 
     @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    public void handle() throws InterruptedException, ExecutionException
     {
       gracefulShutdownInternal();
       super.handle();
@@ -570,7 +568,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     private static final String TYPE = "shutdown_notice";
 
     @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    public void handle() throws InterruptedException, ExecutionException
     {
       recordSupplier.close();
 
@@ -1226,8 +1224,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.warn(ie, "getStats() interrupted.");
       throw new RuntimeException(ie);
     }
-    catch (ExecutionException | TimeoutException eete) {
-      throw new RuntimeException(eete);
+    catch (ExecutionException ee) {
+      throw new RuntimeException(ee);
     }
   }
 
@@ -1246,8 +1244,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.warn(ie, "getCurrentParseErrors() interrupted.");
       throw new RuntimeException(ie);
     }
-    catch (ExecutionException | TimeoutException eete) {
-      throw new RuntimeException(eete);
+    catch (ExecutionException ee) {
+      throw new RuntimeException(ee);
     }
   }
 
@@ -1257,10 +1255,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return A map of groupId->taskId->task row stats
    * @throws InterruptedException
    * @throws ExecutionException
-   * @throws TimeoutException
    */
   private Map<String, Map<String, Object>> getCurrentTotalStats()
-      throws InterruptedException, ExecutionException, TimeoutException
+      throws InterruptedException, ExecutionException
   {
     Map<String, Map<String, Object>> allStats = new HashMap<>();
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
@@ -1331,10 +1328,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return A list of parse error strings
    * @throws InterruptedException
    * @throws ExecutionException
-   * @throws TimeoutException
    */
   private List<ParseExceptionReport> getCurrentParseErrors()
-      throws InterruptedException, ExecutionException, TimeoutException
+      throws InterruptedException, ExecutionException
   {
     final List<ListenableFuture<ErrorsFromTaskResult>> futures = new ArrayList<>();
     final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
@@ -1567,7 +1563,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  public void gracefulShutdownInternal() throws ExecutionException, InterruptedException
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
@@ -1747,7 +1743,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
+  private void discoverTasks() throws ExecutionException, InterruptedException
   {
     int taskCount = 0;
     List<String> futureTaskIds = new ArrayList<>();
@@ -2867,7 +2863,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
+  private void updateTaskStatus() throws ExecutionException, InterruptedException
   {
     final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     final List<String> futureTaskIds = new ArrayList<>();
@@ -2933,7 +2929,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException
+  private void checkTaskDuration() throws ExecutionException, InterruptedException
   {
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
@@ -3207,7 +3203,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   private void checkPendingCompletionTasks()
-      throws ExecutionException, InterruptedException, TimeoutException
+      throws ExecutionException, InterruptedException
   {
     List<ListenableFuture<Void>> futures = new ArrayList<>();
 
@@ -3309,7 +3305,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     coalesceAndAwait(futures);
   }
 
-  private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
+  private void checkCurrentTaskState() throws ExecutionException, InterruptedException
   {
     Map<String, Task> activeTaskMap = getActiveTaskMap();
 
@@ -3772,7 +3768,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void updateCurrentOffsets() throws InterruptedException, ExecutionException, TimeoutException
+  private void updateCurrentOffsets() throws InterruptedException, ExecutionException
   {
     final List<ListenableFuture<Void>> futures = Stream.concat(
         activelyReadingTaskGroups.values().stream().flatMap(taskGroup -> taskGroup.tasks.entrySet().stream()),
