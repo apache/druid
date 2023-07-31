@@ -21,6 +21,8 @@ package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.common.task.Task;
 
+import java.util.function.BiConsumer;
+
 public class TestPeonLifecycleFactory implements PeonLifecycleFactory
 {
   private final KubernetesPeonLifecycle kubernetesPeonLifecycle;
@@ -31,7 +33,7 @@ public class TestPeonLifecycleFactory implements PeonLifecycleFactory
   }
 
   @Override
-  public KubernetesPeonLifecycle build(Task task)
+  public KubernetesPeonLifecycle build(Task task, BiConsumer<KubernetesPeonLifecycle.State, String> stateListener)
   {
     return kubernetesPeonLifecycle;
   }

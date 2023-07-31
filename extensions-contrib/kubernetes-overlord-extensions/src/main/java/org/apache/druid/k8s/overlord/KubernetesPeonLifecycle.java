@@ -47,6 +47,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 /**
  * This class is a wrapper per Druid task responsible for managing the task lifecycle
@@ -79,6 +80,7 @@ public class KubernetesPeonLifecycle
   private final TaskLogs taskLogs;
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
+  private final BiConsumer<State, String> stateListener;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -89,13 +91,15 @@ public class KubernetesPeonLifecycle
       Task task,
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      BiConsumer<State, String> stateListener
   )
   {
     this.taskId = new K8sTaskId(task);
     this.kubernetesClient = kubernetesClient;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
+    this.stateListener = stateListener;
   }
 
   /**
@@ -117,6 +121,7 @@ public class KubernetesPeonLifecycle
           state.get(),
           State.PENDING
       );
+      stateListener.accept(state.get(), taskId.getOriginalTaskId());
 
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
@@ -135,6 +140,7 @@ public class KubernetesPeonLifecycle
     }
     finally {
       state.set(State.STOPPED);
+      stateListener.accept(state.get(), taskId.getOriginalTaskId());
     }
   }
 
@@ -158,6 +164,7 @@ public class KubernetesPeonLifecycle
           state.get(),
           State.RUNNING
       );
+      stateListener.accept(state.get(), taskId.getOriginalTaskId());
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
@@ -177,6 +184,7 @@ public class KubernetesPeonLifecycle
       }
 
       state.set(State.STOPPED);
+      stateListener.accept(state.get(), taskId.getOriginalTaskId());
     }
   }
 
