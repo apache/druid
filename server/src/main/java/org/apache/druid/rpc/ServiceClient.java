@@ -25,8 +25,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.rpc.indexing.OverlordClient;
 
-import java.util.concurrent.ExecutionException;
-
 /**
  * Mid-level client that provides an API similar to low-level {@link HttpClient}, but accepts {@link RequestBuilder}
  * instead of {@link org.apache.druid.java.util.http.client.Request}, and internally handles service location
@@ -99,7 +97,7 @@ public interface ServiceClient
   default <IntermediateType, FinalType> FinalType request(
       RequestBuilder requestBuilder,
       HttpResponseHandler<IntermediateType, FinalType> handler
-  ) throws InterruptedException, ExecutionException
+  )
   {
     // Cancel the future if we are interrupted. Nobody else is waiting for it.
     return FutureUtils.getUnchecked(asyncRequest(requestBuilder, handler), true);

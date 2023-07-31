@@ -58,7 +58,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -130,8 +129,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(2).build());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -171,8 +170,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(2).build());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -221,8 +220,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(2).build());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -310,8 +309,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -360,8 +359,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(10).build());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -386,8 +385,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(10).build());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -410,8 +409,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.unlimited());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -435,8 +434,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.unlimited());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -459,8 +458,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -482,8 +481,8 @@ public class ServiceClientImplTest
 
     serviceClient = makeServiceClient(StandardRetryPolicy.noRetries());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -527,8 +526,8 @@ public class ServiceClientImplTest
                            .build()
     );
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -551,8 +550,8 @@ public class ServiceClientImplTest
     // Use an unlimited retry policy to ensure that the future actually resolves.
     serviceClient = makeServiceClient(StandardRetryPolicy.unlimited());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -575,8 +574,8 @@ public class ServiceClientImplTest
     // Use an unlimited retry policy to ensure that the future actually resolves.
     serviceClient = makeServiceClient(StandardRetryPolicy.unlimited());
 
-    final ExecutionException e = Assert.assertThrows(
-        ExecutionException.class,
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
         () -> doRequest(serviceClient, requestBuilder)
     );
 
@@ -741,7 +740,7 @@ public class ServiceClientImplTest
   private static Map<String, String> doRequest(
       final ServiceClient serviceClient,
       final RequestBuilder requestBuilder
-  ) throws InterruptedException, ExecutionException
+  ) throws InterruptedException, RuntimeException
   {
     return serviceClient.request(requestBuilder, null /* Not verified by mocks */);
   }
