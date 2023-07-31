@@ -233,7 +233,7 @@ Note that `sampleRecords` has been truncated for brevity.
 curl --location 'http://ROUTER:PORT/druid/v2/sql/statements/:queryId'
 ```
 
-Note that the response has been truncated for brevity
+Note that the response has been truncated for brevity.
 
 <details><summary>Show the response</summary>
 

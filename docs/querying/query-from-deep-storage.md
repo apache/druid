@@ -24,9 +24,11 @@ title: "Query from deep storage"
 
 > Query from deep storage is an [experimental feature](../development/experimental.md).
 
-## Segments in deep storage
+Druid can query segments that are only stored in deep storage. Running a query from deep storage is slower than running queries from segments that are loaded on Historical processes, but it's a great tool for data that you either access infrequently or where the low latency results that typical Druid queries provide is not necessary. Queries from deep storage can increase the surface area of data available to query without requring you to scale your Historical processes to accodomate more segments.
 
-Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the space savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes.
+## Keep segments in deep storage only
+
+Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes.
 
 To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to load only the segments you do want on Historical processes. 
 
@@ -79,7 +81,7 @@ Generally, the request body fields are the same between the `sql` and `/sql/stat
 There are additional context parameters for `/sql/statements` specifically: 
 
    - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
-   - `selectDestination` set to `DURABLE_STORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
+   - `selectDestination` set to `DURABLESTORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 The following sample query includes the two additional context parameters that querying from deep storage supports:
 

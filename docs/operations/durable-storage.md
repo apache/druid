@@ -58,7 +58,14 @@ For queries where you want to use fault tolerance for workers,  set `faultTolera
 
 Saving the final results for queries from deep storage to durable storage instead of task reports allows you to fetch large result sets.
 
-When you run a query, include the context parameter `selectDestination` and set it to `DURABLE_STORAGE`.
+When you run a query, include the context parameter `selectDestination` and set it to `DURABLESTORAGE`:
+
+```json
+    "context":{
+        ...
+        "selectDestination": "DURABLESTORAGE"
+    }
+```
 
 You can also write intermediate results to durable storage (`durableShuffleStorage`) for better reliability. The location where workers write intermediate results is different than the location where final results get stored. This means that durable storage for results can be enabled even if you don't write intermediate results to durable storage.
 
