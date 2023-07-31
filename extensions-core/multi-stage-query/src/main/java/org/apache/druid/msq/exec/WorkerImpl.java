@@ -853,13 +853,14 @@ public class WorkerImpl implements Worker
     if (controllerAlive && !snapshotsTree.isEmpty()) {
       try {
         controllerClient.postCounters(id(), snapshotsTree);
-      } catch (IOException e) {
+      }
+      catch (IOException e) {
         if (e.getCause() instanceof ServiceClosedException) {
           // Suppress. This can happen if the controller goes away while a postCounters call is in flight.
           log.debug(e, "Ignoring failure on postCounters, because controller has gone away.");
+        } else {
+          throw e;
         }
-
-        throw e;
       }
     }
   }
