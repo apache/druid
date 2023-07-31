@@ -33,7 +33,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router 
 
 Submit a SQL-based query in the JSON request body. Returns a JSON object with the database results and a set of header metadata associated with the query. 
 
-This endpoint also supports querying metadata by querying [metadata tables](../querying/sql-metadata-tables.md).
+This endpoint also supports querying metadata by using [metadata tables](../querying/sql-metadata-tables.md).
 
 #### URL
 
@@ -140,7 +140,7 @@ Content-Length: 192
 <details>
   <summary>Click to show sample response</summary>
 
-  ```json
+```json
 [
     {
         "__time": {
@@ -247,14 +247,14 @@ Content-Length: 192
         "deleted": 0
     }
 ]
-  ```
+```
 </details>
 
 ### Cancel a query
 
-Cancels a query on the Router or the Broker with the associated `sqlQueryId`. Queries can only be canceled with a valid `sqlQueryId`. It must be set in the query context when the query is submitted. Note that Druid does not enforce unique `sqlQueryId` in the query context. Druid cancels all requests that use the same query id.
+Cancels a query on the Router or the Broker with the associated `sqlQueryId`. Queries can only be canceled with a valid `sqlQueryId`. The `sqlQueryId` must be set in the query context when the query is submitted. Note that Druid does not enforce unique `sqlQueryId` in the query context. Druid cancels all requests that use the same query ID.
 
-When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
+When you cancel a query, Druid handles the cancellation in a best-effort manner. Druid immediately marks the query as canceled and aborts the query execution as soon as possible. However, the query may continue running for a short time after you make the cancellation request.
 
 Cancellation requests require READ permission on all resources used in the SQL query. 
 
