@@ -78,7 +78,7 @@ cleaner can be scheduled to clean the directories corresponding to which there i
 the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
 for the cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
-Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySEconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations)
+Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySEconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
 
 Note that the cleaner also removes query from deep storage results if the task is removed from the metadata store.
 

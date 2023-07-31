@@ -175,7 +175,7 @@ Make sure you note the `queryID`. You'll need it to interact with the query.
 
 </details>
 
-Compare this to if you were to submit the query to Druid SQL's regular endpoint, `POST /sq/`: 
+Compare this to if you were to submit the query to Druid SQL's regular endpoint, `POST /sql`: 
 
 ```
 curl --location 'http://localhost:8888/druid/v2/sql/statements' \

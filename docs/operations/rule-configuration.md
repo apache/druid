@@ -120,7 +120,7 @@ All load rules can have these properties:
 
 Specific types of load rules discussed below may have other properties too.
 
-Load rules are also how you take advantage of the resource savings that [query the data from deep storage](../querying/query-from-deep-storage.md) provides. One way to configure data so that certain segments are not loaded onto Historical tiers but is available to query from deep storage is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false` for those segments, either by interval or by period.
+Load rules are also how you take advantage of the resource savings that [query the data from deep storage](../querying/query-from-deep-storage.md) provides. One way to configure data so that certain segments are not loaded onto Historical tiers but are available to query from deep storage is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false` for those segments, either by interval or by period.
 
 ### Forever load rule
 

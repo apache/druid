@@ -83,9 +83,9 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 {"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
 ```  
 
-Generally, the request body fields are the same between the `sql` and `/sql/statements` endpoints.
+Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
 
-There are additional context parameters for `/sql/statements` specifically: 
+There are additional context parameters for `sql/statements` specifically: 
 
    - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
    - `selectDestination` set to `DURABLESTORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
