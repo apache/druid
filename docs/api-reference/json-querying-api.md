@@ -279,21 +279,20 @@ Content-Length: 817
 <details>
   <summary>Click to show sample response</summary>
 
-    ```json
-    [
-        {
-            "version": "v1",
-            "timestamp": "2022-01-01T00:00:00.000Z",
-            "event": {
-                "upvoteSum": 8.0419541E7,
-                "upvoteToPostRatio": 69.53014661762697,
-                "postCount": 1156614,
-                "username": "miette"
-            }
+```json
+[
+    {
+        "version": "v1",
+        "timestamp": "2022-01-01T00:00:00.000Z",
+        "event": {
+            "upvoteSum": 8.0419541E7,
+            "upvoteToPostRatio": 69.53014661762697,
+            "postCount": 1156614,
+            "username": "miette"
         }
-    ]
-    ```
-    
+    }
+]
+```
 </details>
 
 ## Get segment information for query

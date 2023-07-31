@@ -309,8 +309,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 <details>
   <summary>Click to show sample response</summary>
 
-  ```json
-  {
+```json
 {
     "gopherProxySet": "false",
     "awt.toolkit": "sun.lwawt.macosx.LWCToolkit",
