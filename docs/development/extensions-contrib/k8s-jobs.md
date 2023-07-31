@@ -28,7 +28,7 @@ Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it ha
 
 ## How it works
 
-The K8s extension builds a pod spec from each task using the specified pod adapter. All jobs are natively restorable, they are decoupled from the druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
+The K8s extension builds a pod spec for each task using the specified pod adapter. All jobs are natively restorable, they are decoupled from the Druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
 
 
 ## Configuration
