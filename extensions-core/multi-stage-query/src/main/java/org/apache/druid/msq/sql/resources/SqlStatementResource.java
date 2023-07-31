@@ -33,6 +33,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.Forbidden;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.guice.annotations.MSQ;
@@ -253,7 +254,7 @@ public class SqlStatementResource
       if (sqlStatementResult.isPresent()) {
         return Response.ok().entity(sqlStatementResult.get()).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
     }
     catch (DruidException e) {
@@ -299,14 +300,14 @@ public class SqlStatementResource
                             );
       }
 
-      TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
+      TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
       if (taskResponse == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
 
       TaskStatusPlus statusPlus = taskResponse.getStatus();
       if (statusPlus == null || !MSQControllerTask.TYPE.equals(statusPlus.getType())) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
 
       MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
@@ -397,7 +398,7 @@ public class SqlStatementResource
         }
 
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
     }
     catch (DruidException e) {
@@ -524,8 +525,11 @@ public class SqlStatementResource
   )
   {
     if (sqlStatementState == SqlStatementState.SUCCESS) {
-      Map<String, Object> payload = SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(
-          queryId)));
+      Map<String, Object> payload =
+          SqlStatementResourceHelper.getPayload(contactOverlord(
+              overlordClient.taskReportAsMap(queryId),
+              queryId
+          ));
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(payload, MSQTaskReportPayload.class);
       Optional<List<PageInformation>> pageList = SqlStatementResourceHelper.populatePageList(
           msqTaskReportPayload,
@@ -592,7 +596,7 @@ public class SqlStatementResource
   private Optional<SqlStatementResult> getStatementStatus(String queryId, String currentUser, boolean withResults)
       throws DruidException
   {
-    TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
+    TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
     if (taskResponse == null) {
       return Optional.empty();
     }
@@ -612,8 +616,7 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(
-              queryId))
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
       );
     } else {
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -637,7 +640,7 @@ public class SqlStatementResource
 
   private MSQControllerTask getMSQControllerTaskOrThrow(String queryId, String currentUser)
   {
-    TaskPayloadResponse taskPayloadResponse = contactOverlord(overlordClient.taskPayload(queryId));
+    TaskPayloadResponse taskPayloadResponse = contactOverlord(overlordClient.taskPayload(queryId), queryId);
     SqlStatementResourceHelper.isMSQPayload(taskPayloadResponse, queryId);
 
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
@@ -674,7 +677,7 @@ public class SqlStatementResource
       }
 
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId))), MSQTaskReportPayload.class);
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
 
       if (msqTaskReportPayload.getResults().getResultYielder() == null) {
         results = Optional.empty();
@@ -685,7 +688,7 @@ public class SqlStatementResource
     } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
 
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId))), MSQTaskReportPayload.class);
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
 
       List<PageInformation> pages =
           SqlStatementResourceHelper.populatePageList(
@@ -723,7 +726,8 @@ public class SqlStatementResource
                                     return new FrameChannelSequence(standardImplementation.openChannel(
                                         finalStage.getId(),
                                         (int) pageInformation.getId(),
-                                        (int) pageInformation.getId()// we would always have partition number == worker number
+                                        (int) pageInformation.getId()
+// we would always have partition number == worker number
                                     ));
                                   }
                                   catch (Exception e) {
@@ -875,7 +879,7 @@ public class SqlStatementResource
     }
   }
 
-  private <T> T contactOverlord(final ListenableFuture<T> future)
+  private <T> T contactOverlord(final ListenableFuture<T> future, String queryId)
   {
     try {
       return FutureUtils.getUnchecked(future, true);
@@ -885,10 +889,8 @@ public class SqlStatementResource
         HttpResponseException httpResponseException = (HttpResponseException) e.getCause();
         if (httpResponseException.getResponse() != null && httpResponseException.getResponse().getResponse().getStatus()
                                                                                 .equals(HttpResponseStatus.NOT_FOUND)) {
-          // since we get a 404, we mark the request as an invalid input. This code path is generally triggered when user passes a `queryId` which is not found on the overlord.
-          throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                              .ofCategory(DruidException.Category.INVALID_INPUT)
-                              .build("Unable to contact overlord " + e.getMessage());
+          // since we get a 404, we mark the request as a NotFound. This code path is generally triggered when user passes a `queryId` which is not found in the overlord.
+          throw queryNotFoundException(queryId);
         }
       }
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
@@ -897,5 +899,9 @@ public class SqlStatementResource
     }
   }
 
+  private static DruidException queryNotFoundException(String queryId)
+  {
+    return NotFound.exception("Query[%s] not found", queryId);
+  }
 
 }

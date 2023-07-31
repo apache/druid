@@ -256,11 +256,12 @@ public class SqlStatementResourceTest extends MSQTestBase
                   0,
                   new CounterSnapshots(ImmutableMap.of(
                       "output",
-                      new ChannelCounters.Snapshot(new long[]{1L, 2L},
-                                                   new long[]{3L, 5L},
-                                                   new long[]{},
-                                                   new long[]{},
-                                                   new long[]{}
+                      new ChannelCounters.Snapshot(
+                          new long[]{1L, 2L},
+                          new long[]{3L, 5L},
+                          new long[]{},
+                          new long[]{},
+                          new long[]{}
                       )
                   )
                   )
@@ -594,10 +595,9 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   }
 
-  public static void assertNullResponse(Response response, Response.Status expectectedStatus)
+  public static void assertNotFound(Response response, String queryId)
   {
-    Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
-    Assert.assertNull(response.getEntity());
+    assertExceptionMessage(response, StringUtils.format("Query[%s] not found", queryId), Response.Status.NOT_FOUND);
   }
 
   public static void assertExceptionMessage(
@@ -837,9 +837,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   public void testNonMSQTasks()
   {
     for (String queryID : ImmutableList.of(RUNNING_NON_MSQ_TASK, FAILED_NON_MSQ_TASK, FINISHED_NON_MSQ_TASK)) {
-      assertNullResponse(resource.doGetStatus(queryID, makeOkRequest()), Response.Status.NOT_FOUND);
-      assertNullResponse(resource.doGetResults(queryID, 0L, makeOkRequest()), Response.Status.NOT_FOUND);
-      assertNullResponse(resource.deleteQuery(queryID, makeOkRequest()), Response.Status.NOT_FOUND);
+      assertNotFound(resource.doGetStatus(queryID, makeOkRequest()), queryID);
+      assertNotFound(resource.doGetResults(queryID, 0L, makeOkRequest()), queryID);
+      assertNotFound(resource.deleteQuery(queryID, makeOkRequest()), queryID);
     }
   }
 
@@ -910,7 +910,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  public void forbiddenTests()
+  public void testForbiddenRequest()
   {
     Assert.assertEquals(
         Response.Status.FORBIDDEN.getStatusCode(),
@@ -937,7 +937,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  public void taskIdNotFoundTests()
+  public void testTaskIdNotFound()
   {
     String taskIdNotFound = "notFound";
     final DefaultHttpResponse incorrectResponse =
@@ -950,15 +950,15 @@ public class SqlStatementResourceTest extends MSQTestBase
     Mockito.when(overlordClient.taskStatus(taskIdNotFound)).thenReturn(settableFuture);
 
     Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
+        Response.Status.NOT_FOUND.getStatusCode(),
         resource.doGetStatus(taskIdNotFound, makeOkRequest()).getStatus()
     );
     Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
+        Response.Status.NOT_FOUND.getStatusCode(),
         resource.doGetResults(taskIdNotFound, null, makeOkRequest()).getStatus()
     );
     Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
+        Response.Status.NOT_FOUND.getStatusCode(),
         resource.deleteQuery(taskIdNotFound, makeOkRequest()).getStatus()
     );
   }
