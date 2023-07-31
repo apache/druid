@@ -193,7 +193,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       }
     }
 
-    LOG.info("kill complete: id [%s] dataSource [%s] interval [%s], total segments [%d], batches [%d]",
+    LOG.info("Finished kill task[%s] for dataSource[%s] and interval[%s]. Deleted total [%,d] unused segments in [%d] batches.",
             getId(), getDataSource(), getInterval(), allUnusedSegments.size(), unusedSegmentBatches.size());
 
     return TaskStatus.success(getId());
