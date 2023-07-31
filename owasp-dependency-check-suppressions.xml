@@ -691,6 +691,7 @@
    ]]></notes>
     <cve>CVE-2021-0341</cve>
     <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2023-3782</cve> <!-- Suppressed since okhttp in Druid doesn't use the BrotliInterceptor -->
   </suppress>
 
   <suppress>
@@ -749,6 +750,38 @@
     <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
     <vulnerabilityName>1084597</vulnerabilityName>
     <vulnerabilityName>1088594</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?ansi-regex -->
+    <notes><![CDATA[
+   file name: ansi-regex:5.0.0
+   ]]></notes>
+    <vulnerabilityName>1091190</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?glob-parent -->
+    <notes><![CDATA[
+   file name: glob-parent:5.1.1
+   ]]></notes>
+    <vulnerabilityName>1091181</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?minimatch -->
+    <notes><![CDATA[
+   file name: minimatch:3.0.4
+   ]]></notes>
+    <vulnerabilityName>1092637</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- package-lock.json?y18n -->
+    <notes><![CDATA[
+   file name: y18n:4.0.0
+   ]]></notes>
+    <vulnerabilityName>1091234</vulnerabilityName>
   </suppress>
 
   <suppress>
@@ -821,6 +854,7 @@
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
     <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
+    <cve>CVE-2023-37475</cve> <!-- Druid does not use Hamba avro -->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
