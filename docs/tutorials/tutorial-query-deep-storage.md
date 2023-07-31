@@ -7,7 +7,7 @@ title: "Tutorial: Query from deep storage"
 
 Query from deep storage allows you to query segments that are stored only in deep storage, which provides lower costs than if you were to load everything onto Historical processes. The tradeoff is that queries from deep storage may take longer to complete. 
 
-This tutorial walks you through loading example data, configuring load rules so that not all the segments are loaded onto Historical processes, and querying data from deep storage.
+This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical processes, and querying data from deep storage.
 
 To run the queries in this tutorial, replace `ROUTER:PORT` with the location of the Router process and its port number. For example, use `localhost:8888` for the quickstart deployment.
 
@@ -177,7 +177,7 @@ The response for a running query is the same as the response from when you submi
 
 ### Response for a completed query
 
-A successful query also returns a `pages` array that includes the page numbers (`id`), rows per page (`numRows`), and the size of the page (`sizeInBytes`). You can pass the page number as a paramter when you get results to refine the results you get.
+A successful query also returns a `pages` object that includes the page numbers (`id`), rows per page (`numRows`), and the size of the page (`sizeInBytes`). You can pass the page number as a parameter when you get results to refine the results you get.
 
 Note that `sampleRecords` has been truncated for brevity.
 
