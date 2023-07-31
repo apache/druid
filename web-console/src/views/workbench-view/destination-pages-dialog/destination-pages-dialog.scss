@@ -16,26 +16,11 @@
  * limitations under the License.
  */
 
-import type { ErrorResponse } from '../../utils';
+@import '../../../variables';
 
-export type AsyncState = 'ACCEPTED' | 'RUNNING' | 'SUCCESS' | 'FAILED';
-
-export interface AsyncStatusResponse {
-  queryId: string;
-  state: AsyncState;
-  createdAt: string;
-  durationMs: number;
-  schema?: { name: string; type: string; nativeType: string }[];
-  result?: {
-    dataSource: string;
-    sampleRecords: any[][];
-    numTotalRows: number;
-    totalSizeInBytes: number;
-    pages: {
-      id: number;
-      numRows: number;
-      sizeInBytes: number;
-    }[];
-  };
-  errorDetails?: ErrorResponse;
+.destination-pages-dialog {
+  &.#{$bp-ns}-dialog {
+    min-width: 700px;
+    min-height: 480px;
+  }
 }

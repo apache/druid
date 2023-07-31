@@ -303,7 +303,13 @@ export function formatDurationHybrid(ms: NumberLike): string {
 }
 
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) {
+    if (singular.endsWith('y')) {
+      plural = singular.replace(/y$/, 'ies');
+    } else {
+      plural = singular + 's';
+    }
+  }
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
