@@ -333,6 +333,49 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
+    Map<String, Object> nested1 = ImmutableMap.of("x", 1L, "y", 2L);
+    List<Object> mixedObject = ImmutableList.of(
+        "a",
+        1L,
+        3.0,
+        nested1
+    );
+    coerced = ExprEval.coerceListToArray(mixedObject, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            "a",
+            1L,
+            3.0,
+            nested1
+        },
+        coerced.rhs
+    );
+
+    List<Object> mixedObject2 = ImmutableList.of(
+        nested1,
+        "a",
+        1L,
+        3.0
+    );
+    coerced = ExprEval.coerceListToArray(mixedObject2, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            nested1,
+            "a",
+            1L,
+            3.0
+        },
+        coerced.rhs
+    );
+
     List<List<String>> nestedLists = ImmutableList.of(
         ImmutableList.of("a", "b", "c"),
         ImmutableList.of("d", "e", "f")
@@ -344,7 +387,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
-    Map<String, Object> nested1 = ImmutableMap.of("x", 1L, "y", 2L);
+
     Map<String, Object> nested2 = ImmutableMap.of("x", 4L, "y", 5L);
     List<Map<String, Object>> listUnknownComplex = ImmutableList.of(nested1, nested2);
     coerced = ExprEval.coerceListToArray(listUnknownComplex, false);
@@ -420,6 +463,36 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         },
         coerced.rhs
     );
+
+    List<Object> mixedNested2 = ImmutableList.of(
+        "a",
+        1L,
+        3.0,
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of(nested1, nested2, nested3)
+    );
+    coerced = ExprEval.coerceListToArray(mixedNested2, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA)
+        ),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{"a"},
+            new Object[]{1L},
+            new Object[]{3.0},
+            new Object[]{"a", "b", "c"},
+            new Object[]{1L, 2L, 3L},
+            new Object[]{3.0, 4.0, 5.0},
+            new Object[]{nested1, nested2, nested3}
+        },
+        coerced.rhs
+    );
+
 
     List<List<Object>> mixedUnknown = ImmutableList.of(
         ImmutableList.of("a", "b", "c"),
