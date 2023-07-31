@@ -188,8 +188,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       numBatchesProcessed++;
 
       if (numBatchesProcessed % 10 == 0) {
-        LOG.info("kill progress: id [%s] dataSource [%s] batch progress: [%d/%d]",
-                getId(), getDataSource(), numBatchesProcessed, allUnusedSegments.size());
+        LOG.info("Processed [%d/%d] batches for kill task[%s].",
+                numBatchesProcessed, unusedSegmentBatches.size(), getId());
       }
     }
 
