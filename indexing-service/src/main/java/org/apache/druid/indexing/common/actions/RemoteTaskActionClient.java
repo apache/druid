@@ -76,10 +76,6 @@ public class RemoteTaskActionClient implements TaskActionClient
           taskAction.getReturnTypeReference()
       );
     }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
     catch (Exception e) {
       if (e.getCause() instanceof HttpResponseException) {
         // Rewrite the error to be slightly more useful: point out that there may be information in the Overlord logs.
