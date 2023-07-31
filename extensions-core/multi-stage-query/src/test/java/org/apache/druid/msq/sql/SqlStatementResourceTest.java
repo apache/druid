@@ -597,7 +597,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   public static void assertNotFound(Response response, String queryId)
   {
-    assertExceptionMessage(response, StringUtils.format("Query[%s] not found", queryId), Response.Status.NOT_FOUND);
+    assertExceptionMessage(response, StringUtils.format("Query [%s] was not found. The query details are no longer present or might not be of the type [%s]. Verify that the id is correct.", queryId, MSQControllerTask.TYPE), Response.Status.NOT_FOUND);
   }
 
   public static void assertExceptionMessage(
