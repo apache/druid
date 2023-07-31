@@ -1,6 +1,7 @@
 ---
 id: tutorial-query-deep-storage
 title: "Tutorial: Query from deep storage"
+sidebar_label: "Query from deep storage"
 ---
 
 > Query from deep storage is an [experimental feature](../development/experimental.md).
@@ -10,6 +11,8 @@ Query from deep storage allows you to query segments that are stored only in dee
 This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical processes, and querying data from deep storage.
 
 To run the queries in this tutorial, replace `ROUTER:PORT` with the location of the Router process and its port number. For example, use `localhost:8888` for the quickstart deployment.
+
+For more general information, see [Query from deep storage](../querying/query-from-deep-storage.md).
 
 ## Load example data
 
@@ -82,7 +85,10 @@ The JSON form of the rule is as follows:
 
 The rest of the segments use the default load rules for the cluster. For the quickstart, that means all the other segments get loaded onto Historical processes.
 
-You can configure the load rules through the API or the Druid console. To configure the load rules through the Druid console, go to **Datasources > ... in the Actions column > Edit retention rules**. Then, paste the provided JSON into the JSON tab.
+You can configure the load rules through the API or the Druid console. To configure the load rules through the Druid console, go to **Datasources > ... in the Actions column > Edit retention rules**. Then, paste the provided JSON into the JSON tab:
+
+![](../assets/tutorial-query-deepstorage-retention-rule.png)
+
 
 ### Verify the replication factor
 
@@ -101,7 +107,7 @@ Note that the number of replicas and replication factor may differ temporarily a
 Now that there are segments that are only available from deep storage, run the following query:
 
 ```sql
-SELECT * FROM "page" WHERE "__time" <  TIMESTAMP'2016-06-27 00:10:00' LIMIT 10
+SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'2016-06-27 00:10:00' LIMIT 10
 ```
 
 With the context parameter:
@@ -116,17 +122,16 @@ For example, run the following curl command:
 curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT page FROM \"wikipedia\" WHERE \"__time\" <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
+    "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
     "context":{
         "executionMode":"ASYNC"
-    }
-    
+    }  
 }'
 ```
 
 This query looks for records with timestamps that precede `00:10:00`. Based on the load rule you configured earlier, this data is only available from deep storage.
 
-When you submit the query through the API, you get the following response
+When you submit the query from deep storage through the API, you get the following response:
 
 <details><summary>Show the response</summary>
 
@@ -146,16 +151,20 @@ When you submit the query through the API, you get the following response
 }
 ```
 
+Make sure you note the `queryID`. You'll need it to interact with the query.
+
 </details>
 
 Compare this to if you were to submit the query to Druid SQL's regular endpoint, `POST /sq/`: 
 
 ```
-curl --location 'http://ROUTER:PORT/druid/v2/sql/' \
+curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT * FROM \"wikipedia\" WHERE \"__time\" <  TIMESTAMP'\''2016-06-27 00:10:00'\''"
-    
+    "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
+    "context":{
+        "executionMode":"ASYNC"
+    }  
 }'
 ```
 
@@ -229,6 +238,8 @@ Note that `sampleRecords` has been truncated for brevity.
 
 ## Get query results
 
+Replace `:queryId` with the ID for your query and run the following curl command to get your query results:
+
 ```
 curl --location 'http://ROUTER:PORT/druid/v2/sql/statements/:queryId'
 ```
@@ -254,4 +265,9 @@ Note that the response has been truncated for brevity.
 ]
 ```
 
-<details>
+</details>
+
+## Further reading
+
+* [Query from deep storage](../querying/query-from-deep-storage.md)
+* [Query from deep storage API reference](../api-reference/sql-api.md#query-from-deep-storage)

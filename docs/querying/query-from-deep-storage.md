@@ -35,13 +35,20 @@ To do this, configure [load rules](../operations/rule-configuration.md#load-rule
 The easiest way to do this is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`:
 
 ```json
+[
   {
-    "interval": "2016-06-27T00:00:00.000Z/2016-06-27T02:00:00.000Z",
+    "interval": "2016-06-27T00:00:00.000Z/2016-06-27T02:59:00.000Z",
     "tieredReplicants": {},
     "useDefaultTierForNull": false,
     "type": "loadByInterval"
   }
+]
 ```
+
+To configure the load rules through the Druid console, go to **Datasources > ... in the Actions column > Edit retention rules**. Then, paste the provided JSON into the JSON tab:
+
+![](../assets/tutorial-query-deepstorage-retention-rule.png)
+
 
 You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
 
@@ -180,4 +187,7 @@ You can use the optional `page`, `size`, and `timeout` parameters to refine your
 
 When you try to get results for a query from deep storage, you may receive an error that states the query is still running. Wait until the query completes before you try again.
 
+## Further reading
 
+* [Query from deep storage tutorial](../tutorials/tutorial-query-deep-storage.md)
+* [Query from deep storage API reference](../api-reference/sql-api.md#query-from-deep-storage)
