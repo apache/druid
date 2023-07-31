@@ -100,7 +100,7 @@ The available grammar is:
 }
 ```
 
-Special parameter explanations:
+Some of the parameters used in the task payload are further explained below:
 
 | Parameter    |Default| Explanation                                                                                            |
 |--------------|-------|--------------------------------------------------------------------------------------------------------|
