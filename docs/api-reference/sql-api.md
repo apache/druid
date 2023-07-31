@@ -23,9 +23,7 @@ sidebar_label: Druid SQL
   ~ under the License.
   -->
 
-Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md). This topic describes the SQL language.
-
-You can submit and cancel [Druid SQL](../querying/sql.md) queries using the Druid SQL API.
+Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md). This topic describes the SQL language.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments. 
 
@@ -50,12 +48,15 @@ This endpoint also supports querying metadata by querying [metadata tables](../q
   * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Sent with the HTTP header `Content-Type: text/plain`.
   * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Sent with the HTTP header `Content-Type: text/plain`. 
   * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Sent with the HTTP header `Content-Type: text/csv`. 
-* `header`: Adds a header row with information on column names for the query result when set to `true`. You can optionally include `typesHeader` and `sqlTypesHeader`.<br/><br/> Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed.<br/><br/>If working with an older version of Druid, set `header` to `true` to verify compatibility. Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes` when the client connects to an older Druid version with support for the `typesHeader` and `sqlTypesHeader` parameters. Additionally, Druid returns a `X-Druid-SQL-Query-Id` HTTP header with the value of `sqlQueryId` from the [query context parameters](../querying/sql-query-context.md) if specified, else Druid will generate a SQL query ID.
+* `header`: Adds a header row with information on column names for the query result when set to `true`. You can optionally include `typesHeader` and `sqlTypesHeader`. 
+
+    Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed. 
+    
+    If working with an older version of Druid, set `header` to `true` to verify compatibility. Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes` when the client connects to an older Druid version with support for the `typesHeader` and `sqlTypesHeader` parameters. Additionally, Druid returns a `X-Druid-SQL-Query-Id` HTTP header with the value of `sqlQueryId` from the [query context parameters](../querying/sql-query-context.md) if specified, else Druid will generate a SQL query ID.
 * `typesHeader`: Adds Druid runtime type information in the header. Can only be set when `header` is also `true`.
 * `sqlTypesHeader`: Adds SQL type information in the header. Can only be set when `header` is also `true`.
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
 * `parameters`: List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](../querying/sql-data-types.md) for a list of supported SQL types.
-
 
 #### Responses
 
@@ -97,7 +98,7 @@ This endpoint also supports querying metadata by querying [metadata tables](../q
 
 #### Sample request
 
-The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`.
+The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` parameter. Optional properties `header`, `typesHeader`, and `sqlTypesHeader` are included to add type information to the response.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -111,7 +112,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
     "context" : {"sqlQueryId" : "request01"},
     "header" : true,
     "typesHeader" : true,
-      "sqlTypesHeader" : true
+    "sqlTypesHeader" : true
 }'
 ```
 
@@ -128,7 +129,7 @@ Content-Length: 192
     "context" : {"sqlQueryId" : "request01"},
     "header" : true,
     "typesHeader" : true,
-      "sqlTypesHeader" : true
+    "sqlTypesHeader" : true
 }
 ```
 
@@ -279,6 +280,8 @@ Cancellation requests require READ permission on all resources used in the SQL q
 *Invalid `sqlQueryId` or query was completed before cancellation request* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
