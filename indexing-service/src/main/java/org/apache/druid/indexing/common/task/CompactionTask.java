@@ -733,7 +733,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             coordinatorClient,
             segmentCacheManagerFactory,
             toolbox.getConfig()
-        ),
+        ).withTaskToolbox(toolbox),
         null,
         false,
         compactionIOConfig.isDropExisting()
