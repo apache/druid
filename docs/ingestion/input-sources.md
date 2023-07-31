@@ -794,6 +794,196 @@ The following is an example of a Combining input source spec:
 ...
 ```
 
+## Iceberg input source
+
+> To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
+
+You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
+
+The Iceberg input source cannot be independent as it relies on the existing input sources to read from the data files.
+For example, if the warehouse associated with an Iceberg catalog is on S3, you must also load the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension.
+
+The following is a sample spec for a HDFS warehouse source:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "iceberg",
+        "tableName": "iceberg_table",
+        "namespace": "iceberg_namespace",
+        "icebergCatalog": {
+            "type": "hive",
+            "warehousePath": "hdfs://warehouse/path",
+            "catalogUri": "thrift://hive-metastore.x.com:8970",
+            "catalogProperties": {
+                "hive.metastore.connect.retries": "1",
+                "hive.metastore.execute.setugi": "false",
+                "hive.metastore.kerberos.principal": "KRB_PRINCIPAL",
+                "hive.metastore.sasl.enabled": "true",
+                "metastore.catalog.default": "catalog_test",
+                "hadoop.security.authentication": "kerberos",
+                "hadoop.security.authorization": "true"
+            }
+        },
+        "icebergFilter": {
+            "type": "interval",
+            "filterColumn": "event_time",
+            "intervals": [
+              "2023-05-10T19:00:00.000Z/2023-05-10T20:00:00.000Z"
+            ]
+        },
+        "warehouseSource": {
+            "type": "hdfs"
+        }
+      },
+      "inputFormat": {
+        "type": "parquet"
+      }
+  },
+      ...
+},
+...
+```
+
+The following is a sample spec for a S3 warehouse source:
+
+```json
+...
+        "ioConfig": {
+          "type": "index_parallel",
+          "inputSource": {
+            "type": "iceberg",
+            "tableName": "iceberg_table",
+            "namespace": "iceberg_namespace",
+            "icebergCatalog": {
+              "type": "hive",
+              "warehousePath": "hdfs://warehouse/path",
+              "catalogUri": "thrift://hive-metastore.x.com:8970",
+              "catalogProperties": {
+                "hive.metastore.connect.retries": "1",
+                "hive.metastore.execute.setugi": "false",
+                "hive.metastore.kerberos.principal": "KRB_PRINCIPAL",
+                "hive.metastore.sasl.enabled": "true",
+                "metastore.catalog.default": "default_catalog",
+                "fs.s3a.access.key" : "S3_ACCESS_KEY",
+                "fs.s3a.secret.key" : "S3_SECRET_KEY",
+                "fs.s3a.endpoint" : "S3_API_ENDPOINT"
+              }
+            },
+            "icebergFilter": {
+              "type": "interval",
+              "filterColumn": "event_time",
+              "intervals": [
+                "2023-05-10T19:00:00.000Z/2023-05-10T20:00:00.000Z"
+              ]
+            },
+            "warehouseSource": {
+              "type": "s3",
+              "endpointConfig": {
+                "url": "teststore.aws.com",
+                "signingRegion": "us-west-2a"
+              },
+              "clientConfig": {
+                "protocol": "http",
+                "disableChunkedEncoding": true,
+                "enablePathStyleAccess": true,
+                "forceGlobalBucketAccessEnabled": false
+              },
+              "properties": {
+                "accessKeyId": {
+                  "type": "default",
+                  "password": "foo"
+                },
+                "secretAccessKey": {
+                  "type": "default",
+                  "password": "bar"
+                }
+              },
+            }
+          },
+          "inputFormat": {
+            "type": "parquet"
+          }
+        },
+...
+},
+```
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set the value to `iceberg`.|yes|
+|tableName|The Iceberg table name configured in the catalog.|yes|
+|namespace|The Iceberg namespace associated with the table|yes|
+|icebergFilter|The JSON Object that filters data files within a snapshot|no|
+|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table|yes|
+|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse|yes|
+
+###Catalog Object
+
+The catalog object supports `local` and `hive` catalog types.
+
+The following table lists the properties of a `local` catalog:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `local`.|yes|
+|warehousePath|The location of the warehouse associated with the catalog|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
+
+The following table lists the properties of a `hive` catalog:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `hive`.|yes|
+|warehousePath|The location of the warehouse associated with the catalog|yes|
+|catalogUri|The URI associated with the hive catalog|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
+
+### Iceberg filter object
+
+This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+
+`equals` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `equals`.|yes|
+|filterColumn|The name of the column from the Iceberg table schema to use for filtering.|yes|
+|filterValue|The value to filter on.|yes|
+
+`interval` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `interval`.|yes|
+|filterColumn|The column name from the iceberg table schema based on which filtering needs to happen|yes|
+|intervals|A JSON array containing ISO 8601 interval strings. This defines the time ranges to filter on. The start interval is inclusive and the end interval is exclusive. |yes|
+
+`and` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `and`.|yes|
+|filters|List of iceberg filters that needs to be AND-ed|yes|
+
+`or` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `or`.|yes|
+|filters|List of iceberg filters that needs to be OR-ed|yes|
+
+`not` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `not`.|yes|
+|filter|The iceberg filter on which logical NOT is applied|yes|
+
+
+
 The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
 Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
 - `range` or `single_dim` partitioning: greater than or equal to 1

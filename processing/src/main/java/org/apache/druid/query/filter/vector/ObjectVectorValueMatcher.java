@@ -21,6 +21,7 @@ package org.apache.druid.query.filter.vector;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
@@ -53,6 +54,12 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    return BooleanVectorValueMatcher.of(selector, matchValue == null);
+  }
+
+  @Override
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
     final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();
@@ -77,7 +84,6 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

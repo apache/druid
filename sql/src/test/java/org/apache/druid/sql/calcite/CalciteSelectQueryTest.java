@@ -592,8 +592,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
-                        bound("dim1", "d", null, true, false, null, StringComparators.LEXICOGRAPHIC),
-                        selector("dim2", "a", null)
+                        range("dim1", ColumnType.STRING, "d", null, true, false),
+                        equality("dim2", "a", ColumnType.STRING)
                     )
                 )
                 .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
@@ -612,6 +612,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithCascadeExtractionFilter()
   {
+    if (NullHandling.sqlCompatible()) {
+      // cannot vectorize due to expression filter
+      cannotVectorize();
+    }
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
@@ -622,15 +626,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setDimFilter(
                     or(
-                        selector(
+                        NullHandling.replaceWithDefault()
+                        ? selector(
                             "dim1",
                             "e",
                             cascade(
                                 new SubstringDimExtractionFn(1, null),
                                 new SubstringDimExtractionFn(0, 1)
                             )
-                        ),
-                        selector("dim2", "a", null)
+                        )
+                        : expressionFilter("(substring(substring(\"dim1\", 1, -1), 0, 1) == 'e')"),
+                        equality("dim2", "a", ColumnType.STRING)
                     )
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
@@ -670,8 +676,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                 .setDimFilter(
                     or(
-                        selector("v0", "3", null),
-                        selector("v1", "3", null)
+                        equality("v0", 3L, ColumnType.LONG),
+                        equality("v1", 3L, ColumnType.LONG)
                     )
                 )
                 .setContext(QUERY_CONTEXT_DEFAULT)
@@ -987,19 +993,19 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
-            .granularity(Granularities.ALL)
-            .aggregators(aggregators(
-                new CountAggregatorFactory("a0"),
-                new DoubleSumAggregatorFactory("a1", "m2")
-            ))
-            .postAggregators(
-                expressionPostAgg("p0", "(exp(\"a0\") + 10)")
-            )
-            .context(QUERY_CONTEXT_DEFAULT)
-            .build()),
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DEFAULT)
+                               .build()),
         ImmutableList.of(
             new Object[]{11.0, NullHandling.defaultDoubleValue()}
         )
@@ -1038,15 +1044,15 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent'",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .filters(selector("dim1", "nonexistent", null))
-            .granularity(Granularities.ALL)
-            .aggregators(aggregators(
-                new CountAggregatorFactory("a0")
-            ))
-            .context(TIMESERIES_CONTEXT_BY_GRAN)
-            .build()),
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .filters(equality("dim1", "nonexistent", ColumnType.STRING))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0")
+                               ))
+                               .context(TIMESERIES_CONTEXT_BY_GRAN)
+                               .build()),
         ImmutableList.of()
     );
 
@@ -1054,15 +1060,15 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOOR(__time TO DAY)",
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .filters(selector("dim1", "nonexistent", null))
-            .granularity(Granularities.DAY)
-            .aggregators(aggregators(
-                new CountAggregatorFactory("a0")
-            ))
-            .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
-            .build()),
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .filters(equality("dim1", "nonexistent", ColumnType.STRING))
+                               .granularity(Granularities.DAY)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0")
+                               ))
+                               .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
+                               .build()),
         ImmutableList.of()
     );
   }
@@ -1181,7 +1187,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
                     expressionVirtualColumn("v1", "'a'", ColumnType.STRING)
                 )
-                .filters(selector("dim2", "a", null))
+                .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("__time", "v0", "v1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1212,7 +1218,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
-                .filters(selector("dim2", "a", null))
+                .filters(equality("dim2", "a", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1237,7 +1243,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(selector("dim2", "a", null))
+                .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("__time", "dim1", "dim2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1412,7 +1418,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     expressionVirtualColumn("v0", "(\"m1\" + 1)", ColumnType.FLOAT)
                 )
-                .filters(selector("v0", "7", null))
+                .filters(
+                    NullHandling.replaceWithDefault()
+                    ? selector("v0", "7")
+                    : equality("v0", 7.0, ColumnType.FLOAT)
+                )
                 .columns("dim1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)

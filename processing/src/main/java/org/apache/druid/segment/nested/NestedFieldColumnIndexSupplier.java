@@ -44,23 +44,23 @@ import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.NumericRangeIndex;
-import org.apache.druid.segment.column.SimpleBitmapColumnIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -132,7 +132,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     if (clazz.equals(NullValueIndex.class)) {
       final BitmapColumnIndex nullIndex;
       if (localDictionarySupplier.get().get(0) == 0) {
-        // null index is always 0 in the global dictionary, even if there are no null rows in any of the literal columns
+        // null index is always 0 in the global dictionary, even if there are no null rows in any of the nested fields
         nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
       } else {
         nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
@@ -145,40 +145,40 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     if (singleType != null) {
       switch (singleType.getType()) {
         case STRING:
-          if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedStringValueSetIndex();
-          } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-            return (T) new NestedStringLexicographicalRangeIndex();
-          } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedStringPredicateIndex();
+          if (clazz.equals(StringValueSetIndexes.class)) {
+            return (T) new NestedStringValueSetIndexes();
+          } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
+            return (T) new NestedStringLexicographicalRangeIndexes();
+          } else if (clazz.equals(DruidPredicateIndexes.class)) {
+            return (T) new NestedStringPredicateIndexes();
           }
           return null;
         case LONG:
-          if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedLongValueSetIndex();
-          } else if (clazz.equals(NumericRangeIndex.class)) {
-            return (T) new NestedLongNumericRangeIndex();
-          } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedLongPredicateIndex();
+          if (clazz.equals(StringValueSetIndexes.class)) {
+            return (T) new NestedLongStringValueSetIndex();
+          } else if (clazz.equals(NumericRangeIndexes.class)) {
+            return (T) new NestedLongNumericRangeIndexes();
+          } else if (clazz.equals(DruidPredicateIndexes.class)) {
+            return (T) new NestedLongPredicateIndexes();
           }
           return null;
         case DOUBLE:
-          if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedDoubleValueSetIndex();
-          } else if (clazz.equals(NumericRangeIndex.class)) {
-            return (T) new NestedDoubleNumericRangeIndex();
-          } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedDoublePredicateIndex();
+          if (clazz.equals(StringValueSetIndexes.class)) {
+            return (T) new NestedDoubleStringValueSetIndex();
+          } else if (clazz.equals(NumericRangeIndexes.class)) {
+            return (T) new NestedDoubleNumericRangeIndexes();
+          } else if (clazz.equals(DruidPredicateIndexes.class)) {
+            return (T) new NestedDoublePredicateIndexes();
           }
           return null;
         default:
           return null;
       }
     }
-    if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new NestedVariantValueSetIndex();
-    } else if (clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new NestedVariantPredicateIndex();
+    if (clazz.equals(StringValueSetIndexes.class)) {
+      return (T) new NestedVariantStringValueSetIndexes();
+    } else if (clazz.equals(DruidPredicateIndexes.class)) {
+      return (T) new NestedVariantPredicateIndexes();
     }
     return null;
   }
@@ -353,7 +353,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedStringValueSetIndex implements StringValueSetIndex
+  private class NestedStringValueSetIndexes implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -435,7 +435,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedStringLexicographicalRangeIndex implements LexicographicalRangeIndex
+  private class NestedStringLexicographicalRangeIndexes implements LexicographicalRangeIndexes
   {
     @Override
     @Nullable
@@ -533,7 +533,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedStringPredicateIndex implements DruidPredicateIndex
+  private class NestedStringPredicateIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -598,7 +598,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongValueSetIndex implements StringValueSetIndex
+  private class NestedLongStringValueSetIndex implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -718,7 +718,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongNumericRangeIndex implements NumericRangeIndex
+  private class NestedLongNumericRangeIndexes implements NumericRangeIndexes
   {
     @Override
     @Nullable
@@ -729,10 +729,26 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         boolean endStrict
     )
     {
+      final Long startLong;
+      final Long endLong;
+      if (startValue == null) {
+        startLong = null;
+      } else if (startStrict) {
+        startLong = (long) Math.floor(startValue.doubleValue());
+      } else {
+        startLong = (long) Math.ceil(startValue.doubleValue());
+      }
+      if (endValue == null) {
+        endLong = null;
+      } else if (endStrict) {
+        endLong = (long) Math.ceil(endValue.doubleValue());
+      } else {
+        endLong = (long) Math.floor(endValue.doubleValue());
+      }
       return makeRangeIndex(
-          startValue != null ? startValue.longValue() : null,
+          startLong,
           startStrict,
-          endValue != null ? endValue.longValue() : null,
+          endLong,
           endStrict,
           localDictionarySupplier.get(),
           globalLongDictionarySupplier.get(),
@@ -741,7 +757,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongPredicateIndex implements DruidPredicateIndex
+  private class NestedLongPredicateIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -811,7 +827,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoubleValueSetIndex implements StringValueSetIndex
+  private class NestedDoubleStringValueSetIndex implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -930,7 +946,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoubleNumericRangeIndex implements NumericRangeIndex
+  private class NestedDoubleNumericRangeIndexes implements NumericRangeIndexes
   {
     @Override
     @Nullable
@@ -953,7 +969,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoublePredicateIndex implements DruidPredicateIndex
+  private class NestedDoublePredicateIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -1023,7 +1039,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private abstract class NestedVariantLiteralIndex
+  private abstract class NestedVariantIndexes
   {
     final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
     final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
@@ -1072,9 +1088,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   }
 
   /**
-   * {@link StringValueSetIndex} but for variant typed nested literal columns
+   * {@link StringValueSetIndexes} but for variant typed nested columns
    */
-  private class NestedVariantValueSetIndex extends NestedVariantLiteralIndex implements StringValueSetIndex
+  private class NestedVariantStringValueSetIndexes extends NestedVariantIndexes implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -1151,9 +1167,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   }
 
   /**
-   * {@link DruidPredicateIndex} but for variant typed nested literal columns
+   * {@link DruidPredicateIndexes} but for variant typed nested fields
    */
-  private class NestedVariantPredicateIndex extends NestedVariantLiteralIndex implements DruidPredicateIndex
+  private class NestedVariantPredicateIndexes extends NestedVariantIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable

@@ -19,6 +19,7 @@
 import { HotkeysProvider, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
+import type { JSX } from 'react';
 import React from 'react';
 import type { RouteComponentProps } from 'react-router';
 import { Redirect } from 'react-router';
@@ -34,6 +35,7 @@ import { AppToaster } from './singletons';
 import { compact, localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
 import {
   DatasourcesView,
+  ExploreView,
   HomeView,
   LoadDataView,
   LookupsView,
@@ -220,7 +222,7 @@ export class ConsoleApplication extends React.PureComponent<
   private readonly wrapInViewContainer = (
     active: HeaderActiveTab,
     el: JSX.Element,
-    classType: 'normal' | 'narrow-pad' | 'thin' = 'normal',
+    classType: 'normal' | 'narrow-pad' | 'thin' | 'thinner' = 'normal',
   ) => {
     const { capabilities } = this.state;
 
@@ -397,7 +399,7 @@ export class ConsoleApplication extends React.PureComponent<
       'services',
       <ServicesView
         filters={stringToTableFilters(p.match.params.filters)}
-        onFiltersChange={viewFilterChange('tasks')}
+        onFiltersChange={viewFilterChange('services')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
       />,
@@ -412,6 +414,10 @@ export class ConsoleApplication extends React.PureComponent<
         onFiltersChange={viewFilterChange('lookups')}
       />,
     );
+  };
+
+  private readonly wrappedExploreView = () => {
+    return this.wrapInViewContainer('explore', <ExploreView />, 'thinner');
   };
 
   render() {
@@ -470,6 +476,11 @@ export class ConsoleApplication extends React.PureComponent<
               {capabilities.hasCoordinatorAccess() && (
                 <Route path={pathWithFilter('lookups')} component={this.wrappedLookupsView} />
               )}
+
+              {capabilities.hasSql() && (
+                <Route path="/explore" component={this.wrappedExploreView} />
+              )}
+
               <Route component={this.wrappedHomeView} />
             </Switch>
           </div>

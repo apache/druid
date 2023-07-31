@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
@@ -34,9 +35,10 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -230,6 +232,26 @@ public class ColumnComparisonFilter implements Filter
           return NULL_VALUE;
         }
         return new String[]{Long.toString(selector.getLong())};
+      };
+    }
+
+    @Override
+    public Supplier<String[]> makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        @Nullable ColumnCapabilities columnCapabilities
+    )
+    {
+      return () -> {
+        final Object o = selector.getObject();
+        if (o instanceof Object[]) {
+          final Object[] arr = (Object[]) o;
+          final String[] s = new String[arr.length];
+          for (int i = 0; i < arr.length; i++) {
+            s[i] = Evals.asString(arr[i]);
+          }
+          return s;
+        }
+        return NULL_VALUE;
       };
     }
 

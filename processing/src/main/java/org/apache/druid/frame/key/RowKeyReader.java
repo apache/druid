@@ -125,7 +125,7 @@ public class RowKeyReader
             rowReader.fieldReader(fieldNumber)
                      .makeColumnValueSelector(keyMemory, fieldPointer);
 
-        return selector.getObject() instanceof List;
+        return selector.getObject() instanceof List || selector.getObject() instanceof Object[];
       }
     }
   }

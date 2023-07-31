@@ -17,6 +17,7 @@
  */
 
 export * from './async-query/async-query.mock';
+export * from './coordinator-dynamic-config/coordinator-dynamic-config.mock';
 export * from './execution/execution-ingest-complete.mock';
 export * from './execution/execution-ingest-error.mock';
 export * from './stages/stages.mock';

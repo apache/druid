@@ -34,32 +34,39 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.NumericRangeIndex;
-import org.apache.druid.segment.column.SimpleBitmapColumnIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -191,15 +198,19 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
       }
       return (T) (NullValueIndex) () -> nullIndex;
-    } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
-               || clazz.equals(DictionaryEncodedValueIndex.class)) {
-      return (T) new DoubleDictionaryEncodedValueSetIndex();
-    } else if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new DoubleValueSetIndex();
-    } else if (clazz.equals(NumericRangeIndex.class)) {
+    } else if (clazz.equals(ValueIndexes.class)) {
+      return (T) new DoubleValueIndexes();
+    } else if (clazz.equals(StringValueSetIndexes.class)) {
+      return (T) new DoubleStringValueSetIndexes();
+    } else if (clazz.equals(NumericRangeIndexes.class)) {
       return (T) new DoubleNumericRangeIndex();
-    } else if (clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new DoublePredicateIndex();
+    } else if (clazz.equals(DruidPredicateIndexes.class)) {
+      return (T) new DoublePredicateIndexes();
+    } else if (
+        clazz.equals(DictionaryEncodedStringValueIndex.class) ||
+        clazz.equals(DictionaryEncodedValueIndex.class)
+    ) {
+      return (T) new DoubleDictionaryEncodedValueSetIndex();
     }
 
     return null;
@@ -215,7 +226,45 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
-  private class DoubleValueSetIndex implements StringValueSetIndex
+  private class DoubleValueIndexes implements ValueIndexes
+  {
+    @Nullable
+    @Override
+    public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
+    {
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
+      final double doubleValue = castForComparison.asDouble();
+      return new SimpleBitmapColumnIndex()
+      {
+        final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+        @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          final int id = dictionary.indexOf(doubleValue);
+          if (id < 0) {
+            return 0.0;
+          }
+          return (double) getBitmap(id).size() / totalRows;
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          final int id = dictionary.indexOf(doubleValue);
+          if (id < 0) {
+            return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
+          }
+          return bitmapResultFactory.wrapDimensionValue(getBitmap(id));
+        }
+      };
+    }
+  }
+
+  private class DoubleStringValueSetIndexes implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -356,7 +405,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
-  private class DoubleNumericRangeIndex implements NumericRangeIndex
+  private class DoubleNumericRangeIndex implements NumericRangeIndexes
   {
     @Nullable
     @Override
@@ -406,7 +455,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
-  private class DoublePredicateIndex implements DruidPredicateIndex
+  private class DoublePredicateIndexes implements DruidPredicateIndexes
   {
     @Nullable
     @Override
