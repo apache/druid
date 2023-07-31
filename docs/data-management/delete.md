@@ -104,7 +104,7 @@ Some of the parameters used in the task payload are further explained below:
 
 | Parameter    |Default| Explanation                                                                                            |
 |--------------|-------|--------------------------------------------------------------------------------------------------------|
-| batchSize    |100    | Split Metadata and Segment storage into smaller batches for processing. The Tasks lockbox is locked during operation, preventing other segment operations. Splitting the task into batches allows the kill job to yield to other task lockbox operations.|
+| `batchSize`    |100    | Maximum number of segments that are deleted in one kill batch. Some operations on the Overlord may get stuck while a `kill` task is in progress due to concurrency constraints (such as in `TaskLockbox`). Thus, a `kill` task splits the list of unused segments to be deleted into smaller batches to yield the Overlord resources intermittently to other task operations.|
 
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
