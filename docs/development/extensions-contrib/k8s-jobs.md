@@ -35,7 +35,7 @@ The K8s extension builds a pod spec for each task using the specified pod adapte
 
 To use this extension please make sure to  [include](../../configuration/extensions.md#loading-extensions)`druid-kubernetes-overlord-extensions` in the extensions load list for your overlord process.
 
-The extension uses `druid.indexer.runner.capacity` to limit the number of k8s jobs in flight. You should set this to a reasonable value. Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
+The extension uses `druid.indexer.runner.capacity` to limit the number of k8s jobs in flight. A good initial value for this would be the sum of the total task slots of all the middle managers you were running before switching to K8s based ingestion. The K8s task runner uses one thread per Job that is created, so setting this number too large can cause memory issues on the overlord. Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
 
 Other configurations required are:
 `druid.indexer.runner.type: k8s` and `druid.indexer.task.encapsulatedTask: true`
@@ -99,9 +99,9 @@ kind: "PodTemplate"
 template:
   metadata:
     annotations:
-      custom-annotation: "hello"
+      sidecar.istio.io/proxyCPU: "512m" # to handle a injected istio sidecar
     labels:
-      custom-label: "hello"
+      app.kubernetes.io/name: "druid-realtime-backend"
   spec:
     affinity: {}
     containers:
