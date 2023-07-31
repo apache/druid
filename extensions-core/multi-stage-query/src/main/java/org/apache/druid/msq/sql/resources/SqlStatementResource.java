@@ -768,7 +768,7 @@ public class SqlStatementResource
   ) throws IOException
   {
     try {
-      try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
+      try (final ResultFormat.Writer writer = ResultFormat.OBJECTLINES.createFormatter(os, jsonMapper)) {
         Yielder<Object[]> yielder = results.get();
         List<ColumnNameAndTypes> rowSignature = signature.get();
         writer.writeResponseStart();
