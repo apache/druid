@@ -166,6 +166,10 @@ public class AggregatorUtil
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String postAggName)
   {
+    if (postAggregatorList.isEmpty()) {
+      return postAggregatorList;
+    }
+
     ArrayList<PostAggregator> rv = new ArrayList<>();
     Set<String> deps = new HashSet<>();
     deps.add(postAggName);
