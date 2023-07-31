@@ -57,7 +57,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
-import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -122,7 +121,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -517,7 +515,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     try {
-      final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
 
       initializeSubTaskCleaner();
 
@@ -536,10 +533,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           return runSinglePhaseParallel(toolbox);
         }
       } else {
-        if (!getInputSource(inputSourceWithToolbox).isSplittable()) {
+        if (!baseInputSource.isSplittable()) {
           LOG.warn(
               "firehoseFactory[%s] is not splittable. Running sequentially.",
-              getInputSource(inputSourceWithToolbox).getClass().getSimpleName()
+              baseInputSource.getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
           LOG.warn(
@@ -1821,26 +1818,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         throw e;
       }
     }
-  }
-
-  /**
-   * To be called only after the toolbox has been set in runTask
-   *
-   * @param inputSource Atomic reference to input source
-   * @return the base input source with the toolbox
-   */
-  private InputSource getInputSource(AtomicReference<InputSource> inputSource)
-  {
-    if (inputSource.get() == null) {
-      final InputSource theInputSource;
-      if (baseInputSource instanceof TaskInputSource) {
-        theInputSource = ((TaskInputSource) baseInputSource).withTaskToolbox(toolbox);
-      } else {
-        theInputSource = baseInputSource;
-      }
-      inputSource.set(theInputSource);
-    }
-    return inputSource.get();
   }
 
   /**

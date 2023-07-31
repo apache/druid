@@ -287,12 +287,6 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     );
   }
 
-  @Nullable
-  private TaskToolbox getToolbox()
-  {
-    return this.toolbox;
-  }
-
   @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
@@ -369,7 +363,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (interval == null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(getToolbox(), coordinatorClient, dataSource, interval);
+      return getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
     }
   }
 
@@ -384,7 +378,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Streams.sequentialStreamFrom(
           createSplits(
-              getToolbox(),
+              toolbox,
               coordinatorClient,
               dataSource,
               interval,
@@ -404,7 +398,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Iterators.size(
           createSplits(
-              getToolbox(),
+              toolbox,
               coordinatorClient,
               dataSource,
               interval,
@@ -430,7 +424,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         coordinatorClient,
         segmentCacheManagerFactory,
         taskConfig,
-        getToolbox()
+        toolbox
     );
   }
 
