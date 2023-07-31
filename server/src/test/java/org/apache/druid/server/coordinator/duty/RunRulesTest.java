@@ -45,10 +45,10 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
-import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -1277,7 +1277,7 @@ public class RunRulesTest
 
     final DruidCluster cluster = DruidCluster
         .builder()
-        .add(createServerHolder("server", "normal", new TestLoadQueuePeon()))
+        .add(createServerHolder("server", "normal", new LoadQueuePeonTester()))
         .build();
 
     final DataSegment segment = usedSegments.get(0);
