@@ -45,6 +45,9 @@ import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
+import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -1260,6 +1263,39 @@ public class RunRulesTest
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testSegmentWithZeroRequiredReplicasHasZeroReplicationFactor()
+  {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(Collections.emptyMap(), false)
+        )
+    ).anyTimes();
+    EasyMock.replay(databaseRuleManager);
+
+    final DruidCluster cluster = DruidCluster
+        .builder()
+        .add(createServerHolder("server", "normal", new TestLoadQueuePeon()))
+        .build();
+
+    final DataSegment segment = usedSegments.get(0);
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(cluster, segment)
+        .withBalancerStrategy(new RandomBalancerStrategy())
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
+    params = ruleRunner.run(params);
+
+    Assert.assertNotNull(params);
+    SegmentReplicationStatus replicationStatus = params.getSegmentReplicationStatus();
+    Assert.assertNotNull(replicationStatus);
+
+    SegmentReplicaCount replicaCounts = replicationStatus.getReplicaCountsInCluster(segment.getId());
+    Assert.assertNotNull(replicaCounts);
+    Assert.assertEquals(0, replicaCounts.required());
+    Assert.assertEquals(0, replicaCounts.totalLoaded());
+    Assert.assertEquals(0, replicaCounts.requiredAndLoadable());
   }
 
   private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)

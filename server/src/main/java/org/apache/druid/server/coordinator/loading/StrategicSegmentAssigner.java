@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -201,19 +202,25 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   @Override
   public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
-    // Identify empty tiers and determine total required replicas
     final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
-    tierToReplicaCount.forEach((tier, requiredReplicas) -> {
-      reportTierCapacityStats(segment, requiredReplicas, tier);
 
-      SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
-      replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+    if (tierToReplicaCount.isEmpty()) {
+      // Track the counts for a segment even if it requires 0 replicas on all tiers
+      replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
+    } else {
+      // Identify empty tiers and determine total required replicas
+      tierToReplicaCount.forEach((tier, requiredReplicas) -> {
+        reportTierCapacityStats(segment, requiredReplicas, tier);
 
-      if (!allTiersInCluster.contains(tier)) {
-        datasourceToInvalidLoadTiers.computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
-                                    .add(tier);
-      }
-    });
+        SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
+        replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+
+        if (!allTiersInCluster.contains(tier)) {
+          datasourceToInvalidLoadTiers.computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+                                      .add(tier);
+        }
+      });
+    }
 
     SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
     final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
