@@ -15,7 +15,7 @@ To run the queries in this tutorial, replace `ROUTER:PORT` with the location of 
 
 Use the **Load data** wizard or the following SQL query to ingest the `wikipedia` sample datasource bundled with Druid. If you use the wizard, make sure you change the partitioning to be by hour.
 
-Partitioning by hour provides more segment granularity, so can selectively load segments onto Historicals or keep in deep storage.
+Partitioning by hour provides more segment granularity, so you can selectively load segments onto Historicals or keep them in deep storage.
 
 <details><summary>Show the query</summary>
 
@@ -61,40 +61,28 @@ PARTITIONED BY HOUR
 
 ## Configure a load rule
 
-The load rules in this section do two things:
-
-- Any segments that fall within the following interval are only available from deep storage:
+The load rule configures Druid to keep any segments that fall within the following interval only in deep storage:
 
 ```
-2016-06-27T00:00:00.000Z/2016-06-27T02:00:00.000Z
+2016-06-27T00:00:00.000Z/2016-06-27T02:59:00.000Z
 ```
 
-- The segments that fall within the following interval get loaded onto Historical tiers:
-
-```
-2016-06-27T02:00:00.001Z/2016-06-27T23:00:00.000Z
-```
+The JSON form of the rule is as follows:
 
 ```json
 [
   {
-    "interval": "2016-06-27T00:00:00.000Z/2016-06-27T02:00:00.000Z",
+    "interval": "2016-06-27T00:00:00.000Z/2016-06-27T02:59:00.000Z",
     "tieredReplicants": {},
-    "useDefaultTierForNull": false,
-    "type": "loadByInterval"
-  },
-  {
-    "interval": "2016-06-27T02:00:00.001Z/2016-06-27T23:00:00.000Z",
-    "tieredReplicants": {
-      "_default_tier": 2
-    },
     "useDefaultTierForNull": false,
     "type": "loadByInterval"
   }
 ]
 ```
 
-You can configure the load rules through the API or the Druid console. For example,
+The rest of the segments use the default load rules for the cluster. For the quickstart, that means all the other segments get loaded onto Historical processes.
+
+You can configure the load rules through the API or the Druid console. To configure the load rules through the Druid console, go to **Datasources > ... in the Actions column > Edit retention rules**. Then, paste the provided JSON into the JSON tab.
 
 ### Verify the replication factor
 
@@ -104,16 +92,16 @@ Segments that are only available from deep storage have a `replication_factor` o
 SELECT "segment_id", "replication_factor", "num_replicas"  FROM sys."segments" WHERE datasource = 'wikipedia'
 ```
 
-You can also verify it through the Druid console on the **Segments** page.
+You can also verify it through the Druid console by checking the **Replication factor** column in the **Segments** view.
 
 Note that the number of replicas and replication factor may differ temporarily as Druid processes your retention rules.
 
 ## Query from deep storage
 
-Now that there is a segment that's only available from deep storage, run the following query:
+Now that there are segments that are only available from deep storage, run the following query:
 
 ```sql
-SELECT * FROM "page" WHERE "__time" <  TIMESTAMP'2016-06-27 00:10:00'"
+SELECT * FROM "page" WHERE "__time" <  TIMESTAMP'2016-06-27 00:10:00' LIMIT 10
 ```
 
 With the context parameter:
@@ -122,11 +110,13 @@ With the context parameter:
 "executionMode": "ASYNC"
 ```
 
+For example, run the following curl command:
+
 ```
-curl --location 'http://ROUTER:PORT/druid/v2/sql/statements' \
+curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT page FROM \"wikipedia\" WHERE \"__time\" <  TIMESTAMP'\''2016-06-27 00:10:00'\''",
+    "query":"SELECT page FROM \"wikipedia\" WHERE \"__time\" <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
     "context":{
         "executionMode":"ASYNC"
     }
@@ -134,7 +124,7 @@ curl --location 'http://ROUTER:PORT/druid/v2/sql/statements' \
 }'
 ```
 
-This query looks for records with timestamps that precede `01:00:00`. Based on the load rule you configured earlier, this data is only available from deep storage.
+This query looks for records with timestamps that precede `00:10:00`. Based on the load rule you configured earlier, this data is only available from deep storage.
 
 When you submit the query through the API, you get the following response
 
@@ -169,18 +159,29 @@ curl --location 'http://ROUTER:PORT/druid/v2/sql/' \
 }'
 ```
 
-
-The response you get back is an empty response cause there are no records on the Historicals
+The response you get back is an empty response cause there are no records on the Historicals that match the query.
 
 ## Get query status
+
+Replace `:queryId` with the ID for your query and run the following curl command to get your query status:
+
+```
+curl --location --request GET 'http://localhost:8888/druid/v2/sql/statements/:queryId' \
+--header 'Content-Type: application/json' \
+```
+
 
 ### Response for a running query
 
 The response for a running query is the same as the response from when you submitted the query except the `state` is `RUNNING` instead of `ACCEPTED`.
 
-
-
 ### Response for a completed query
+
+A successful query also returns a `pages` array that includes the page numbers (`id`), rows per page (`numRows`), and the size of the page (`sizeInBytes`). You can pass the page number as a paramter when you get results to refine the results you get.
+
+Note that `sampleRecords` has been truncated for brevity.
+
+<details><summary>Show the response</summary>
 
 ```json
 {
@@ -212,9 +213,6 @@ The response for a running query is the same as the response from when you submi
             ...
             ...
             ...
-            [
-                "Talk:The Zeitgeist Movement"
-            ]
         ],
         "pages": [
             {
@@ -227,9 +225,33 @@ The response for a running query is the same as the response from when you submi
 }
 ```
 
+</details>
+
 ## Get query results
 
+```
+curl --location 'http://ROUTER:PORT/druid/v2/sql/statements/:queryId'
+```
+
+Note that the response has been truncated for brevity
+
+<details><summary>Show the response</summary>
 
 ```json
-
+[
+    {
+        "page": "Salo Toraut"
+    },
+    {
+        "page": "利用者:ワーナー成増/放送ウーマン賞"
+    },
+    {
+        "page": "Bailando 2015"
+    },
+    ...
+    ...
+    ...
+]
 ```
+
+<details>
