@@ -58,7 +58,7 @@ abstract class InputSourceSplitParallelIndexTaskRunner<T extends Task, R extends
         context
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource();
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
   }
 
   @Override

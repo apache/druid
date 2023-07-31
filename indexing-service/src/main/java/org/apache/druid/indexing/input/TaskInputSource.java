@@ -17,24 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.msq.rpc;
+package org.apache.druid.indexing.input;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.indexing.common.TaskToolbox;
 
 /**
- * Interface for {@link org.apache.druid.rpc.ServiceClient}-backed communication with the Coordinator.
+ * An InputSource that allows setting a {@link TaskToolbox}
+ * to be used for various purposes such as submitting task actions to the Overlord.
  */
-public interface CoordinatorServiceClient
+public interface TaskInputSource extends InputSource
 {
   /**
-   * Fetches segment metadata for the given dataSource and segmentId from the Coordinator
+   * Creates and returns a new {@code InputSource} which uses the given {@code TaskToolbox}.
    */
-  ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId);
-
-  /**
-   * Returns a new CoordinatorServiceClient backed by a ServiceClient which follows the provided retryPolicy
-   */
-  CoordinatorServiceClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
+  InputSource withTaskToolbox(TaskToolbox toolbox);
 }

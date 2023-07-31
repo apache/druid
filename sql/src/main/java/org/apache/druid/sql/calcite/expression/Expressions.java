@@ -54,6 +54,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -512,7 +513,7 @@ public class Expressions
 
       final DimFilter equalFilter;
       final ColumnType outputType = druidExpression.getDruidType();
-      final boolean isOutputNumeric = outputType != null && outputType.isNumeric();
+      final boolean isOutputNumeric = Types.isNumeric(outputType);
       // if a simple extraction, we can typically use the base column directly for filtering. however, some expressions
       // such as cast also appear as a simple extraction because some native layer things can handle the cast
       // themselves, so we check the output type of the expression and compare it to the type of the direct column. a

@@ -2290,7 +2290,17 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+completeTasks
+runningTasks
+waitingTasks
+pendingTasks
+shutdownAllTasks
+supervisorId
+suspendAll
+resumeAll
+terminateAll
 selfDiscovered
+loadstatus
 isLeader
 loadstatus
 sqlQueryId

@@ -32,7 +32,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -237,17 +236,17 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_doTask_withoutWorkItem_throwsISE()
+  public void test_doTask_withoutWorkItem_throwsRuntimeException()
   {
     Assert.assertThrows(
         "Task [id] disappeared",
-        ISE.class,
+        RuntimeException.class,
         () -> runner.doTask(task, true)
     );
   }
 
   @Test
-  public void test_doTask_whenShutdownRequested_throwsISE()
+  public void test_doTask_whenShutdownRequested_throwsRuntimeException()
   {
     KubernetesWorkItem workItem = new KubernetesWorkItem(task, null);
     workItem.shutdown();
@@ -256,7 +255,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Assert.assertThrows(
         "Task [id] has been shut down",
-        ISE.class,
+        RuntimeException.class,
         () -> runner.doTask(task, true)
     );
   }
