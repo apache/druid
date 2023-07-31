@@ -451,10 +451,30 @@ public class EvalTest extends InitializedNullHandlingTest
         ).asArray()
     );
 
-    Assert.assertThrows(IAE.class, () -> ExprEval.ofLong(1234L).castTo(nestedArray));
-    Assert.assertThrows(IAE.class, () -> ExprEval.of("hello").castTo(nestedArray));
-    Assert.assertThrows(IAE.class, () -> ExprEval.ofDouble(1.234).castTo(nestedArray));
-    Assert.assertThrows(IAE.class, () -> ExprEval.ofComplex(ExpressionType.NESTED_DATA, 1234L).castTo(nestedArray));
+    cast = ExprEval.ofLong(1234L).castTo(nestedArray);
+    Assert.assertEquals(nestedArray, cast.type());
+    Assert.assertArrayEquals(
+        new Object[]{1234L},
+        cast.asArray()
+    );
+    cast = ExprEval.of("hello").castTo(nestedArray);
+    Assert.assertEquals(nestedArray, cast.type());
+    Assert.assertArrayEquals(
+        new Object[]{"hello"},
+        cast.asArray()
+    );
+    cast = ExprEval.ofDouble(1.234).castTo(nestedArray);
+    Assert.assertEquals(nestedArray, cast.type());
+    Assert.assertArrayEquals(
+        new Object[]{1.234},
+        cast.asArray()
+    );
+    cast = ExprEval.ofComplex(ExpressionType.NESTED_DATA, 1234L).castTo(nestedArray);
+    Assert.assertArrayEquals(
+        new Object[]{1234L},
+        cast.asArray()
+    );
+    Assert.assertEquals(nestedArray, cast.type());
   }
 
   @Test
