@@ -19,18 +19,17 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.data.input.AbstractInputSourceBuilder;
+import org.apache.druid.data.input.InputSourceFactory;
 
 import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class LocalInputSourceBuilder extends AbstractInputSourceBuilder
+public class LocalInputSourceFactory implements InputSourceFactory
 {
-  public static final String TYPE_KEY = "local";
 
   @Override
-  public LocalInputSource generateInputSource(List<String> inputFilePaths)
+  public LocalInputSource create(List<String> inputFilePaths)
   {
     return new LocalInputSource(
         null,
