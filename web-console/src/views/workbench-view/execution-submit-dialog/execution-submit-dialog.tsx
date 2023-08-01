@@ -23,6 +23,7 @@ import AceEditor from 'react-ace';
 
 import { Execution } from '../../../druid-models';
 import { AppToaster } from '../../../singletons';
+import type { QueryDetailArchive } from '../../../utils';
 import { offsetToRowColumn } from '../../../utils';
 
 import './execution-submit-dialog.scss';
@@ -39,7 +40,7 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
   const [archive, setArchive] = useState('');
 
   function handleSubmit(): void {
-    let parsed: any;
+    let parsed: QueryDetailArchive;
     try {
       parsed = JSONBig.parse(archive);
     } catch (e) {
@@ -55,13 +56,13 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
     }
 
     let execution: Execution | undefined;
-    const detailArchiveVersion = parsed.detailArchiveVersion ?? parsed.profileVersion;
+    const detailArchiveVersion = parsed.detailArchiveVersion ?? (parsed as any).profileVersion;
     if (typeof detailArchiveVersion === 'number') {
       try {
         if (detailArchiveVersion === 2) {
-          execution = Execution.fromTaskReport(parsed.reports).updateWithTaskPayload(
-            parsed.payload,
-          );
+          execution = Execution.fromTaskReport(parsed.reports)
+            .updateWithTaskPayload(parsed.payload)
+            .updateWithAsyncStatus(parsed.statementsStatus);
         } else {
           AppToaster.show({
             intent: Intent.DANGER,
@@ -76,9 +77,9 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
         });
         return;
       }
-    } else if (typeof parsed.multiStageQuery === 'object') {
+    } else if (typeof (parsed as any).multiStageQuery === 'object') {
       try {
-        execution = Execution.fromTaskReport(parsed);
+        execution = Execution.fromTaskReport(parsed as any);
       } catch (e) {
         AppToaster.show({
           intent: Intent.DANGER,

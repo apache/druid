@@ -121,7 +121,13 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             }
           />
         </FormGroup>
-        <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+        <FormJsonSelector
+          tab={currentTab}
+          onChange={t => {
+            setJsonError(undefined);
+            setCurrentTab(t);
+          }}
+        />
         {currentTab === 'form' ? (
           <AutoForm
             fields={LOOKUP_FIELDS}
@@ -134,11 +140,8 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
           <JsonInput
             value={lookupSpec}
             height="80vh"
-            onChange={m => {
-              onChange('spec', m);
-              setJsonError(undefined);
-            }}
-            onError={setJsonError}
+            onChange={m => onChange('spec', m)}
+            setError={setJsonError}
             issueWithValue={spec => AutoForm.issueWithModel(spec, LOOKUP_FIELDS)}
           />
         )}
