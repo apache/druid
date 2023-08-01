@@ -302,14 +302,21 @@ export function formatDurationHybrid(ms: NumberLike): string {
   }
 }
 
-export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) {
-    if (singular.endsWith('y')) {
-      plural = singular.replace(/y$/, 'ies');
-    } else {
-      plural = singular + 's';
-    }
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/.*(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/.*([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/.*(f|fe)$/.test(word)) {
+    return word.replace(/f?e?$/, 'ves');
+  } else {
+    return word + 's';
   }
+}
+
+export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
