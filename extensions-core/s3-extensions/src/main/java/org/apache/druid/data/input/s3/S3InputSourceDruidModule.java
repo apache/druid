@@ -38,15 +38,10 @@ public class S3InputSourceDruidModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-<<<<<<< HEAD
-        new SimpleModule().registerSubtypes(new NamedType(S3InputSource.class, S3StorageDruidModule.SCHEME),
-                                            new NamedType(S3InputSourceBuilder.class, S3StorageDruidModule.SCHEME))
-=======
         new SimpleModule().registerSubtypes(
             new NamedType(S3InputSource.class, S3StorageDruidModule.SCHEME),
             new NamedType(S3InputSourceFactory.class, S3StorageDruidModule.SCHEME)
         )
->>>>>>> efb32810c4 (Clean up the core API required for Iceberg extension (#14614))
     );
   }
 
