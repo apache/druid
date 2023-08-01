@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -63,6 +65,10 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final boolean addServiceAsLabel;
 
+  @JsonProperty
+  @Nullable
+  private final Map<String, String> extraLabels;
+
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("strategy") @Nullable Strategy strategy,
@@ -72,7 +78,8 @@ public class PrometheusEmitterConfig
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
-      @JsonProperty("flushPeriod") Integer flushPeriod
+      @JsonProperty("flushPeriod") Integer flushPeriod,
+      @JsonProperty("extraLabels") @Nullable Map<String, String> extraLabels
   )
   {
     this.strategy = strategy != null ? strategy : Strategy.exporter;
@@ -94,6 +101,11 @@ public class PrometheusEmitterConfig
     this.flushPeriod = flushPeriod;
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
+    this.extraLabels = extraLabels != null ? extraLabels : Collections.emptyMap();
+    // Validate label names early to prevent Prometheus exceptions later.
+    for (String key : this.extraLabels.keySet()) {
+      Preconditions.checkArgument(PATTERN.matcher(key).matches(), "Invalid metric label name: " + key);
+    }
   }
 
   public String getNamespace()
@@ -135,6 +147,12 @@ public class PrometheusEmitterConfig
   public boolean isAddServiceAsLabel()
   {
     return addServiceAsLabel;
+  }
+
+  @Nullable
+  public Map<String, String> getExtraLabels()
+  {
+    return extraLabels;
   }
 
   public enum Strategy
