@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import java.io.IOException;
@@ -50,6 +51,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   private final WorkerTaskRunner workerTaskRunner;
   private final Boolean sendTasksToWorkerTaskRunner;
 
+  private static final EmittingLogger log = new EmittingLogger(KubernetesTaskRunner.class);
   public KubernetesAndWorkerTaskRunner(
       KubernetesTaskRunner kubernetesTaskRunner,
       WorkerTaskRunner workerTaskRunner,
@@ -129,6 +131,9 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
+    log.info(kubernetesTaskRunner.getKnownTasks().toString());
+    log.info(workerTaskRunner.getKnownTasks().toString());
+    log.info(Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList()).toString());
     return Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList());
 
   }

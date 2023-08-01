@@ -21,7 +21,9 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 
 public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<KubernetesAndWorkerTaskRunner>
@@ -29,18 +31,21 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   public static final String TYPE_NAME = "k8sAndWorker";
 
   private final KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
-  private final TaskRunnerFactory<HttpRemoteTaskRunner> workerTaskRunnerFactory;
+  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private final HttpRemoteTaskRunnerFactory workerTaskRunnerFactory;
 
   private KubernetesAndWorkerTaskRunner runner;
 
   @Inject
   public KubernetesAndWorkerTaskRunnerFactory(
       KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory,
-      TaskRunnerFactory<HttpRemoteTaskRunner> workerTaskRunnerFactory
+      HttpRemoteTaskRunnerFactory workerTaskRunnerFactory,
+      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig
   )
   {
     this.kubernetesTaskRunnerFactory = kubernetesTaskRunnerFactory;
     this.workerTaskRunnerFactory = workerTaskRunnerFactory;
+    this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
   }
 
   @Override
