@@ -56,7 +56,9 @@ For queries where you want to use fault tolerance for workers,  set `faultTolera
 
 ## Use durable storage for queries from deep storage
 
-Saving the final results for queries from deep storage to durable storage instead of task reports allows you to fetch large result sets.
+Depending on the size of the results you're expecting, saving the final results for queries from deep storage to durable storage might be needed.
+
+By default, Druid saves the final results for queries from deep storage to task reports. Generally, this is acceptable for smaller result sets but may lead to timeouts for larger result sets. 
 
 When you run a query, include the context parameter `selectDestination` and set it to `DURABLESTORAGE`:
 
