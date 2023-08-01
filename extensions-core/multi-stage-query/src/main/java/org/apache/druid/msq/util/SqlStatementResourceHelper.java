@@ -26,6 +26,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.indexer.TaskLocation;
@@ -104,17 +105,11 @@ public class SqlStatementResourceHelper
   public static void isMSQPayload(TaskPayloadResponse taskPayloadResponse, String queryId) throws DruidException
   {
     if (taskPayloadResponse == null || taskPayloadResponse.getPayload() == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Query[%s] not found", queryId);
+      throw NotFound.exception("Query[%s] not found", queryId);
     }
 
     if (MSQControllerTask.class != taskPayloadResponse.getPayload().getClass()) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Query[%s] not found", queryId);
+      throw NotFound.exception("Query[%s] not found", queryId);
     }
   }
 

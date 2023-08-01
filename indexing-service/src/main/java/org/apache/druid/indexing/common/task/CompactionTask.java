@@ -167,9 +167,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
   @JsonIgnore
-  private final RetryPolicyFactory retryPolicyFactory;
-
-  @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
       (taskObject, config) -> {
         final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
@@ -193,8 +190,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
-      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory
+      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory
   )
   {
     super(
@@ -248,7 +244,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
-    this.retryPolicyFactory = retryPolicyFactory;
   }
 
   @VisibleForTesting
@@ -470,9 +465,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         metricsSpec,
         granularitySpec,
         toolbox.getCoordinatorClient(),
-        segmentCacheManagerFactory,
-        retryPolicyFactory,
-        ioConfig.isDropExisting()
+        segmentCacheManagerFactory
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -579,9 +572,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
-      final SegmentCacheManagerFactory segmentCacheManagerFactory,
-      final RetryPolicyFactory retryPolicyFactory,
-      final boolean dropExisting
+      final SegmentCacheManagerFactory segmentCacheManagerFactory
   ) throws IOException
   {
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = retrieveRelevantTimelineHolders(
@@ -657,7 +648,6 @@ public class CompactionTask extends AbstractBatchIndexTask
                     interval,
                     coordinatorClient,
                     segmentCacheManagerFactory,
-                    retryPolicyFactory,
                     ioConfig
                 ),
                 compactionTuningConfig
@@ -696,7 +686,6 @@ public class CompactionTask extends AbstractBatchIndexTask
                   segmentProvider.interval,
                   coordinatorClient,
                   segmentCacheManagerFactory,
-                  retryPolicyFactory,
                   ioConfig
               ),
               compactionTuningConfig
@@ -711,7 +700,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       Interval interval,
       CoordinatorClient coordinatorClient,
       SegmentCacheManagerFactory segmentCacheManagerFactory,
-      RetryPolicyFactory retryPolicyFactory,
       CompactionIOConfig compactionIOConfig
   )
   {
@@ -744,9 +732,8 @@ public class CompactionTask extends AbstractBatchIndexTask
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             toolbox.getConfig()
-        ),
+        ).withTaskToolbox(toolbox),
         null,
         false,
         compactionIOConfig.isDropExisting()
@@ -1322,8 +1309,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           granularitySpec,
           tuningConfig,
           context,
-          segmentCacheManagerFactory,
-          retryPolicyFactory
+          segmentCacheManagerFactory
       );
     }
   }

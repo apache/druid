@@ -53,6 +53,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
@@ -384,7 +385,10 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         return typeDetectingArrayPredicateSupplier.get();
       }
 
-      return arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType));
+      return new FallbackPredicate<>(
+          arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType)),
+          ExpressionType.fromColumnTypeStrict(arrayType)
+      );
     }
 
     @Override
@@ -395,19 +399,24 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
 
     private Supplier<Predicate<String>> makeStringPredicateSupplier()
     {
-      return Suppliers.memoize(() -> Predicates.equalTo(matchValue.castTo(ExpressionType.STRING).asString()));
+      return Suppliers.memoize(() -> {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
+        if (castForComparison == null) {
+          return Predicates.alwaysFalse();
+        }
+        return Predicates.equalTo(castForComparison.asString());
+      });
     }
 
     private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final Long valueAsLong = (Long) matchValue.castTo(ExpressionType.LONG).valueOrDefault();
-
-        if (valueAsLong == null) {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
+        if (castForComparison == null) {
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
           // store the primitive, so we don't unbox for every comparison
-          final long unboxedLong = valueAsLong;
+          final long unboxedLong = castForComparison.asLong();
           return input -> input == unboxedLong;
         }
       });
@@ -416,13 +425,12 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final Double doubleValue = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();
-
-        if (doubleValue == null) {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
+        if (castForComparison == null) {
           return DruidFloatPredicate.ALWAYS_FALSE;
         } else {
           // Compare with floatToIntBits instead of == to canonicalize NaNs.
-          final int floatBits = Float.floatToIntBits(doubleValue.floatValue());
+          final int floatBits = Float.floatToIntBits((float) castForComparison.asDouble());
           return input -> Float.floatToIntBits(input) == floatBits;
         }
       });
@@ -431,13 +439,12 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final Double aDouble = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();
-
-        if (aDouble == null) {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
+        if (castForComparison == null) {
           return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           // Compare with doubleToLongBits instead of == to canonicalize NaNs.
-          final long bits = Double.doubleToLongBits(aDouble);
+          final long bits = Double.doubleToLongBits(castForComparison.asDouble());
           return input -> Double.doubleToLongBits(input) == bits;
         }
       });
@@ -458,7 +465,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return Suppliers.memoize(() -> input -> {
         final ExprEval<?> eval = ExprEval.bestEffortOf(input);
         final Comparator<Object[]> arrayComparator = eval.type().getNullableStrategy();
-        final Object[] matchArray = matchValue.castTo(eval.type()).asArray();
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, eval.type());
+        if (castForComparison == null) {
+          return false;
+        }
+        final Object[] matchArray = castForComparison.asArray();
         return arrayComparator.compare(input, matchArray) == 0;
       });
     }
@@ -466,7 +477,12 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(arrayType);
       final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
-      final Object[] matchArray = matchValue.castTo(expressionType).asArray();
+
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, expressionType);
+      if (castForComparison == null) {
+        return Predicates.alwaysFalse();
+      }
+      final Object[] matchArray = castForComparison.asArray();
       return input -> arrayComparator.compare(input, matchArray) == 0;
     }
 
@@ -520,29 +536,41 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
-      return ValueMatchers.makeStringValueMatcher(
-          selector,
-          matchValue.castTo(ExpressionType.STRING).asString(),
-          multiValue
-      );
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
+      if (castForComparison == null) {
+        return BooleanValueMatcher.of(false);
+      }
+      return ValueMatchers.makeStringValueMatcher(selector, castForComparison.asString(), multiValue);
     }
 
     @Override
     public ValueMatcher makeFloatProcessor(BaseFloatColumnValueSelector selector)
     {
-      return ValueMatchers.makeFloatValueMatcher(selector, (float) matchValue.castTo(ExpressionType.DOUBLE).asDouble());
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
+      if (castForComparison == null) {
+        return BooleanValueMatcher.of(false);
+      }
+      return ValueMatchers.makeFloatValueMatcher(selector, (float) castForComparison.asDouble());
     }
 
     @Override
     public ValueMatcher makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
     {
-      return ValueMatchers.makeDoubleValueMatcher(selector, matchValue.castTo(ExpressionType.DOUBLE).asDouble());
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
+      if (castForComparison == null) {
+        return BooleanValueMatcher.of(false);
+      }
+      return ValueMatchers.makeDoubleValueMatcher(selector, castForComparison.asDouble());
     }
 
     @Override
     public ValueMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      return ValueMatchers.makeLongValueMatcher(selector, matchValue.castTo(ExpressionType.LONG).asLong());
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
+      if (castForComparison == null) {
+        return BooleanValueMatcher.of(false);
+      }
+      return ValueMatchers.makeLongValueMatcher(selector, castForComparison.asLong());
     }
 
     @Override

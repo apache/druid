@@ -147,7 +147,7 @@ public class OverlordClientImpl implements OverlordClient
     }
 
     if (maxCompletedTasks != null) {
-      pathBuilder.append(params == 0 ? '?' : '&').append("maxCompletedTasks=").append(maxCompletedTasks);
+      pathBuilder.append(params == 0 ? '?' : '&').append("max=").append(maxCompletedTasks);
     }
 
     return FutureUtils.transform(

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -194,18 +195,24 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   @Override
   public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
-    // Identify empty tiers and determine total required replicas
     final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
-    tierToReplicaCount.forEach((tier, requiredReplicas) -> {
-      reportTierCapacityStats(segment, requiredReplicas, tier);
 
-      SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
-      replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+    if (tierToReplicaCount == null || tierToReplicaCount.isEmpty()) {
+      // Track the counts for a segment even if it requires 0 replicas on all tiers
+      replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
+    } else {
+      // Identify empty tiers and determine total required replicas
+      tierToReplicaCount.forEach((tier, requiredReplicas) -> {
+        reportTierCapacityStats(segment, requiredReplicas, tier);
 
-      if (!allTiersInCluster.contains(tier)) {
-        tiersWithNoServer.add(tier);
-      }
-    });
+        SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
+        replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+
+        if (!allTiersInCluster.contains(tier)) {
+          tiersWithNoServer.add(tier);
+        }
+      });
+    }
 
     SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
     final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
@@ -348,7 +355,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Loads the broadcast segment if it is not loaded on the given server.
+   * Loads the broadcast segment if it is not already loaded on the given server.
    * Returns true only if the segment was successfully queued for load on the server.
    */
   private boolean loadBroadcastSegment(DataSegment segment, ServerHolder server)
@@ -357,19 +364,21 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     } else if (server.isDroppingSegment(segment)) {
       return server.cancelOperation(SegmentAction.DROP, segment);
+    } else if (server.canLoadSegment(segment)) {
+      return loadSegment(segment, server);
     }
 
-    if (server.canLoadSegment(segment) && loadSegment(segment, server)) {
-      return true;
+    final String skipReason;
+    if (server.getAvailableSize() < segment.getSize()) {
+      skipReason = "Not enough disk space";
+    } else if (server.isLoadQueueFull()) {
+      skipReason = "Load queue is full";
     } else {
-      log.makeAlert("Could not assign broadcast segment for datasource [%s]", segment.getDataSource())
-         .addData("segmentId", segment.getId())
-         .addData("segmentSize", segment.getSize())
-         .addData("hostName", server.getServer().getHost())
-         .addData("availableSize", server.getAvailableSize())
-         .emit();
-      return false;
+      skipReason = "Unknown error";
     }
+
+    incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
+    return false;
   }
 
   /**

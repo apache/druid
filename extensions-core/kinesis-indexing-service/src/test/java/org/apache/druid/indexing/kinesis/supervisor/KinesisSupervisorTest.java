@@ -197,8 +197,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -471,7 +469,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         false
     );
-    KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, null, OBJECT_MAPPER);
+    KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
         taskStorage,
         taskMaster,
@@ -3967,8 +3965,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -5041,7 +5037,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -5077,8 +5072,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -5185,7 +5178,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -5276,7 +5268,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -5365,7 +5356,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
-        null,
         null,
         null
     )

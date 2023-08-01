@@ -184,7 +184,7 @@ public class OverlordClientImplTest
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/indexer/v1/tasks?state=RUNNING&datasource=foo%3F&maxCompletedTasks=0"
+            "/druid/indexer/v1/tasks?state=RUNNING&datasource=foo%3F&max=0"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -203,7 +203,7 @@ public class OverlordClientImplTest
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/indexer/v1/tasks?maxCompletedTasks=0"
+            "/druid/indexer/v1/tasks?max=0"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -422,7 +422,7 @@ public class OverlordClientImplTest
   public void test_taskPayload() throws ExecutionException, InterruptedException, JsonProcessingException
   {
     final String taskID = "taskId_1";
-    final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(taskID, "test", null, null);
+    final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(taskID, "test", null, null, null);
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/" + taskID),

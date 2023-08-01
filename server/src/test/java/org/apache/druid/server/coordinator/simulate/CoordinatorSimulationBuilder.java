@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
@@ -328,6 +329,16 @@ public class CoordinatorSimulationBuilder
     public void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
     {
       env.setDynamicConfig(dynamicConfig);
+    }
+
+    @Override
+    public void setRetentionRules(String datasource, Rule... rules)
+    {
+      env.ruleManager.overrideRule(
+          datasource,
+          Arrays.asList(rules),
+          new AuditInfo("sim", "sim", "localhost")
+      );
     }
 
     @Override
