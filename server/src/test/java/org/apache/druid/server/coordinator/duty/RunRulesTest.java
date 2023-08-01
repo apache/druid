@@ -159,7 +159,7 @@ public class RunRulesTest
                 .withSmartSegmentLoading(false)
                 .build()
         )
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -223,7 +223,7 @@ public class RunRulesTest
                                     .withSmartSegmentLoading(false)
                                     .build()
         )
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -296,7 +296,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -381,7 +381,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
@@ -433,7 +433,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -475,7 +475,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     runDutyAndGetStats(params);
@@ -563,7 +563,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -614,7 +614,7 @@ public class RunRulesTest
                 .build()
         )
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -661,7 +661,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -704,7 +704,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -762,7 +762,7 @@ public class RunRulesTest
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -816,7 +816,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams params =
         createCoordinatorRuntimeParams(druidCluster)
             .withBalancerStrategy(balancerStrategy)
-            .withSegmentLoadQueueManager(loadQueueManager)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -839,7 +839,7 @@ public class RunRulesTest
         createCoordinatorRuntimeParams(druidCluster)
             .withUsedSegmentsInTest(overFlowSegment)
             .withBalancerStrategy(balancerStrategy)
-            .withSegmentLoadQueueManager(loadQueueManager)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build()
     );
 
@@ -898,7 +898,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withReplicationThrottleLimit(7).build())
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -962,7 +962,7 @@ public class RunRulesTest
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
         .withUsedSegmentsInTest(longerUsedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1017,7 +1017,7 @@ public class RunRulesTest
         .withUsedSegmentsInTest(usedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-        .withSegmentLoadQueueManager(loadQueueManager)
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1079,7 +1079,7 @@ public class RunRulesTest
         createCoordinatorRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentLoadQueueManager(loadQueueManager)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1133,7 +1133,7 @@ public class RunRulesTest
         createCoordinatorRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentLoadQueueManager(loadQueueManager)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1188,7 +1188,7 @@ public class RunRulesTest
         createCoordinatorRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new RandomBalancerStrategy())
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentLoadQueueManager(loadQueueManager)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
@@ -1250,7 +1250,7 @@ public class RunRulesTest
         createCoordinatorRuntimeParams(druidCluster, dataSegment)
             .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .withSegmentLoadQueueManager(loadQueueManager)
+            .withSegmentAssignerUsing(loadQueueManager)
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);

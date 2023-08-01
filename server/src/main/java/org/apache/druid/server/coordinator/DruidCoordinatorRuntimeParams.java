@@ -326,7 +326,7 @@ public class DruidCoordinatorRuntimeParams
      * Sets the {@link SegmentLoadQueueManager} which is used to construct the
      * {@link StrategicSegmentAssigner} for this run.
      */
-    public Builder withSegmentLoadQueueManager(SegmentLoadQueueManager loadQueueManager)
+    public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
     {
       this.loadQueueManager = loadQueueManager;
       return this;

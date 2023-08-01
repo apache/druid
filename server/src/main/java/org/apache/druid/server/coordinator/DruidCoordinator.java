@@ -830,7 +830,7 @@ public class DruidCoordinator
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withBalancerStrategy(balancerStrategy)
-                   .withSegmentLoadQueueManager(loadQueueManager)
+                   .withSegmentAssignerUsing(loadQueueManager)
                    .build();
     }
 
