@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentAllocateResult;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
@@ -40,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
@@ -129,14 +129,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatePendingSegments(
+  public List<SegmentAllocateResult> allocatePendingSegments(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
       List<SegmentCreateRequest> requests
   )
   {
-    return Collections.emptyMap();
+    return Collections.emptyList();
   }
 
   @Override

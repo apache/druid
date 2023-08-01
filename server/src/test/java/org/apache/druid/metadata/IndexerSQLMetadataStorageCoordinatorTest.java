@@ -79,10 +79,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private static final int MAX_SQL_MEATADATA_RETRY_FOR_TEST = 2;
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
+      = new TestDerbyConnector.DerbyConnectorRule();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -1910,7 +1908,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         false,
         Collections.singletonList(request)
-    ).get(request);
+    ).get(0).getSegmentId();
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
 
@@ -1921,7 +1919,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         false,
         Collections.singletonList(request1)
-    ).get(request1);
+    ).get(0).getSegmentId();
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
 
@@ -1932,7 +1930,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         false,
         Collections.singletonList(request2)
-    ).get(request2);
+    ).get(0).getSegmentId();
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
 
@@ -1943,7 +1941,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         false,
         Collections.singletonList(request3)
-    ).get(request3);
+    ).get(0).getSegmentId();
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId3.toString());
     Assert.assertEquals(segmentId2, segmentId3);
@@ -1955,7 +1953,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         interval,
         false,
         Collections.singletonList(request4)
-    ).get(request4);
+    ).get(0).getSegmentId();
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_3", segmentId4.toString());
   }

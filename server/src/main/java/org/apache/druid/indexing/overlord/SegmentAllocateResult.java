@@ -17,14 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.actions;
+package org.apache.druid.indexing.overlord;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 public class SegmentAllocateResult
 {
   private final SegmentIdWithShardSpec segmentId;
   private final String errorMessage;
+
+  public static SegmentAllocateResult success(SegmentIdWithShardSpec segmentId)
+  {
+    return new SegmentAllocateResult(segmentId, null);
+  }
+
+  public static SegmentAllocateResult failure(String errorMsgFormat, Object... args)
+  {
+    return new SegmentAllocateResult(null, StringUtils.format(errorMsgFormat, args));
+  }
 
   public SegmentAllocateResult(SegmentIdWithShardSpec segmentId, String errorMessage)
   {

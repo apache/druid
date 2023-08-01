@@ -240,11 +240,11 @@ public class SegmentAllocationQueueTest
     Future<SegmentIdWithShardSpec> future = allocationQueue.add(request);
 
     // Verify that the future is already complete and segment allocation has failed
-    Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
+    ISE exception = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
     Assert.assertEquals(
         "Segment allocation queue is full. Check the metric `task/action/batch/runTime` "
         + "to determine if metadata operations are slow.",
-        t.getMessage()
+        exception.getMessage()
     );
   }
 

@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -166,10 +165,10 @@ public interface IndexerMetadataStorageCoordinator
    *                                Should be set to false if replica tasks would index events in same order
    * @param requests                Requests for which to allocate segments. All
    *                                the requests must share the same partition space.
-   * @return Map from request to allocated segment id. The map does not contain
-   * entries for failed requests.
+   * @return List of allocation results. This list must have an entry corresponding
+   * to each {@code SegmentCreateRequest} in the correct order.
    */
-  Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatePendingSegments(
+  List<SegmentAllocateResult> allocatePendingSegments(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,

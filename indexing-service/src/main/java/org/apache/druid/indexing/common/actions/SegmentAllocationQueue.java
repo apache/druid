@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentAllocateResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
@@ -228,7 +229,7 @@ public class SegmentAllocationQueue
       batch.failPendingRequests("Not leader anymore");
       return false;
     } else if (processingQueue.offer(batch.key)) {
-      log.debug("Added a new batch [%s] to queue.", batch.key);
+      log.debug("Added a new batch[%s] to queue.", batch.key);
       return true;
     } else {
       batch.failPendingRequests(
@@ -246,7 +247,7 @@ public class SegmentAllocationQueue
    */
   private void requeueBatch(AllocateRequestBatch batch)
   {
-    log.info("Requeueing [%d] failed requests in batch [%s].", batch.size(), batch.key);
+    log.info("Requeueing [%d] failed requests in batch[%s].", batch.size(), batch.key);
     keyToBatch.compute(batch.key, (key, existingBatch) -> {
       if (existingBatch == null) {
         return addBatchToQueue(batch) ? batch : null;
@@ -276,7 +277,7 @@ public class SegmentAllocationQueue
       catch (Throwable t) {
         nextBatch.failPendingRequests(t);
         processed = true;
-        log.error(t, "Error while processing batch [%s]", nextKey);
+        log.error(t, "Error while processing batch[%s]", nextKey);
       }
 
       // Requeue if not fully processed yet
@@ -323,8 +324,9 @@ public class SegmentAllocationQueue
   }
 
   /**
-   * Processes the given batch. Returns true if the batch was completely processed
-   * and should not be requeued.
+   * Processes the given batch.
+   *
+   * @return true if the batch was completely processed and should not be requeued.
    */
   private boolean processBatch(AllocateRequestBatch requestBatch)
   {
@@ -337,7 +339,7 @@ public class SegmentAllocationQueue
     }
 
     log.debug(
-        "Processing [%d] requests for batch [%s], queue time [%s].",
+        "Processing [%d] requests for batch[%s], queueTime[%s].",
         requestBatch.size(), requestKey, requestKey.getQueueTime()
     );
 
@@ -351,28 +353,26 @@ public class SegmentAllocationQueue
 
     emitBatchMetric("task/action/batch/attempts", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
-    log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
+    log.info("Successfully processed [%d/%d] requests in batch[%s].", successCount, batchSize, requestKey);
 
     if (requestBatch.isEmpty()) {
       return true;
     }
 
     // Requeue the batch only if used segments have changed
-    log.debug("There are [%d] failed requests in batch [%s].", requestBatch.size(), requestKey);
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
       log.warn(
-          "Completing [%d] failed requests in batch [%s] with null value as there"
+          "Completing [%d] failed requests in batch[%s] with null value as there"
           + " are conflicting segments. Cannot retry allocation until the set of"
-          + " used segments overlapping the allocation interval [%s] changes.",
-          size(), requestKey, requestKey.preferredAllocationInterval
+          + " used segments overlapping the allocation interval[%s] changes.",
+          requestBatch.size(), requestKey, requestKey.preferredAllocationInterval
       );
 
       requestBatch.completePendingRequestsWithNull();
       return true;
     } else {
-      log.debug("Used segments have changed. Requeuing failed requests.");
       return false;
     }
   }
@@ -618,19 +618,17 @@ public class SegmentAllocationQueue
       if (result.isSuccess()) {
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
-      } else if (request.canRetry()) {
-        log.info(
-            "Allocation failed on attempt [%d] due to error [%s]. Can still retry action [%s].",
-            request.getAttempts(), result.getErrorMessage(), request.getAction()
-        );
       } else {
-        emitTaskMetric("task/action/failed/count", 1L, request);
-        log.error(
-            "Exhausted max attempts [%d] for allocation with latest error [%s]."
-            + " Completing action [%s] with a null value.",
-            request.getAttempts(), result.getErrorMessage(), request.getAction()
+        log.info(
+            "Failed allocation attempt[%d/%d] for task[%s], batch[%s]: %s",
+            request.getAttempts(), request.getMaxAttempts(), request.getTask().getId(),
+            key, result.getErrorMessage()
         );
-        requestToFuture.remove(request).complete(null);
+
+        if (request.getAttempts() >= request.getMaxAttempts()) {
+          emitTaskMetric("task/action/failed/count", 1L, request);
+          requestToFuture.remove(request).complete(null);
+        }
       }
     }
 

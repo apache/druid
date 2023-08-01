@@ -60,14 +60,14 @@ public class SegmentAllocateRequest
     ++attempts;
   }
 
-  public boolean canRetry()
-  {
-    return attempts < maxAttempts;
-  }
-
   public int getAttempts()
   {
     return attempts;
+  }
+
+  public int getMaxAttempts()
+  {
+    return maxAttempts;
   }
 
   public Interval getRowInterval()
