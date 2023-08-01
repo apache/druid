@@ -355,7 +355,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Loads the broadcast segment if it is not loaded on the given server.
+   * Loads the broadcast segment if it is not already loaded on the given server.
    * Returns true only if the segment was successfully queued for load on the server.
    */
   private boolean loadBroadcastSegment(DataSegment segment, ServerHolder server)
@@ -364,19 +364,21 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     } else if (server.isDroppingSegment(segment)) {
       return server.cancelOperation(SegmentAction.DROP, segment);
+    } else if (server.canLoadSegment(segment)) {
+      return loadSegment(segment, server);
     }
 
-    if (server.canLoadSegment(segment) && loadSegment(segment, server)) {
-      return true;
+    final String skipReason;
+    if (server.getAvailableSize() < segment.getSize()) {
+      skipReason = "Not enough disk space";
+    } else if (server.isLoadQueueFull()) {
+      skipReason = "Load queue is full";
     } else {
-      log.makeAlert("Could not assign broadcast segment for datasource [%s]", segment.getDataSource())
-         .addData("segmentId", segment.getId())
-         .addData("segmentSize", segment.getSize())
-         .addData("hostName", server.getServer().getHost())
-         .addData("availableSize", server.getAvailableSize())
-         .emit();
-      return false;
+      skipReason = "Unknown error";
     }
+
+    incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
+    return false;
   }
 
   /**
