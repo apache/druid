@@ -69,7 +69,7 @@ When you run a query, include the context parameter `selectDestination` and set 
     }
 ```
 
-You can also write intermediate results to durable storage (`durableShuffleStorage`) for better reliability. The location where workers write intermediate results is different than the location where final results get stored. This means that durable storage for results can be enabled even if you don't write intermediate results to durable storage.
+You can also write intermediate results to durable storage (`durableShuffleStorage`) for better reliability. The location where workers write intermediate results is different than the location where final results get stored. This means that durable storage for results can be enabled even if you don't write intermediate results to durable storage. 
 
 If you write the results for queries from deep storage to durable storage, the results are cleaned up when the task is removed from the metadata store. 
 
@@ -82,5 +82,5 @@ for the cluster's MSQ tasks. If the location contains other files or directories
 
 Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySEconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
 
-Note that the cleaner also removes query from deep storage results if the task is removed from the metadata store.
+Note that if you choose to write query results to durable storage,the results are cleaned up when the task is removed from the metadata store.
 
