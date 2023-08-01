@@ -20,6 +20,7 @@
 package org.apache.druid.storage.azure.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.RetryUtils;
 
@@ -41,17 +42,25 @@ public class AzureOutputConfig
   @JsonProperty
   private final HumanReadableBytes chunkSize;
 
-  private static final HumanReadableBytes DEFAULT_CHUNK_SIZE = new HumanReadableBytes("100MiB");
+  private static final HumanReadableBytes DEFAULT_CHUNK_SIZE = new HumanReadableBytes("4MiB");
+
+  // Minimum limit is self-imposed, so that chunks are appropriately sized, and we don't spend a lot of time downloading
+  // the part of the blobs
+  private static final long AZURE_MIN_CHUNK_SIZE_BYTES = new HumanReadableBytes("256KiB").getBytes();
+
+  // Maximum limit is imposed by Azure, on the size of one block blob
+  private static final long AZURE_MAX_CHUNK_SIZE_BYTES = new HumanReadableBytes("4000MiB").getBytes();
+
 
   @JsonProperty
   private final int maxRetry;
 
   public AzureOutputConfig(
-      final String container,
-      final String prefix,
-      final File tempDir,
-      @Nullable final HumanReadableBytes chunkSize,
-      @Nullable final Integer maxRetry
+      @JsonProperty(value = "container", required = true) String container,
+      @JsonProperty(value = "prefix", required = true) String prefix,
+      @JsonProperty(value = "tempDir", required = true) File tempDir,
+      @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
+      @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
   )
   {
     this.container = container;
@@ -59,6 +68,7 @@ public class AzureOutputConfig
     this.tempDir = tempDir;
     this.chunkSize = chunkSize != null ? chunkSize : DEFAULT_CHUNK_SIZE;
     this.maxRetry = maxRetry != null ? maxRetry : RetryUtils.DEFAULT_MAX_TRIES;
+    validateFields();
   }
 
 
@@ -85,6 +95,24 @@ public class AzureOutputConfig
   public int getMaxRetry()
   {
     return maxRetry;
+  }
+
+  private void validateFields()
+  {
+    if (chunkSize.getBytes() < AZURE_MIN_CHUNK_SIZE_BYTES || chunkSize.getBytes() > AZURE_MAX_CHUNK_SIZE_BYTES) {
+      throw InvalidInput.exception(
+          "'chunkSize' [%d] bytes to the AzureConfig should be between [%d] bytes and [%d] bytes",
+          chunkSize.getBytes(),
+          AZURE_MIN_CHUNK_SIZE_BYTES,
+          AZURE_MAX_CHUNK_SIZE_BYTES
+      );
+    }
+
+    if (!tempDir.canRead() || !tempDir.canWrite()) {
+      throw InvalidInput.exception("Cannot read or write on the 'tempDir' [%s]. "
+                                   + "Please provide a different path to store the intermediate contents of AzureStorageConnector"
+      );
+    }
   }
 
   @Override

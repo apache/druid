@@ -24,18 +24,58 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 
 import java.io.File;
+import java.util.Objects;
 import java.util.function.Supplier;
 
-// Start inclusive, end exclusive
+/**
+ * POJO for storing the parameters required to support chunking of the downloads by {@link ChunkingStorageConnector}.
+ * The implementations of the {@link ChunkingStorageConnector} should essentially provide a way to build this object,
+ * which contains the information required to support chunking.
+ * Therefore, to a call of {@link org.apache.druid.storage.StorageConnector#readRange(String, long, long)}, the
+ * implementations of the chunking storage connectors would fetch the required chunks using the information present in
+ * this POJO.
+ */
 public class ChunkingStorageConnectorParameters<T>
 {
+  /**
+   * Starting point from where to begin reading the cloud object. This is inclusive.
+   */
   private final long start;
+
+  /**
+   * Ending point till where to end reading the cloud object. This is exclusive.
+   */
   private final long end;
+
+  /**
+   * Absolute storage path of the cloud object.
+   */
   private final String cloudStoragePath;
+
+  /**
+   * Given a range (start inclusive, end exclusive), fetch the object which represents the provided range of the remote
+   * object
+   */
   private final ChunkingStorageConnector.GetObjectFromRangeFunction<T> objectSupplier;
+
+  /**
+   * Fetching function, which opens the input stream to the range provided by the given object
+   */
   private final ObjectOpenFunction<T> objectOpenFunction;
+
+  /**
+   * Condition to initiate a retry if downloading the chunk errors out
+   */
   private final Predicate<Throwable> retryCondition;
+
+  /**
+   * Max number of retries while reading the storage connector
+   */
   private final int maxRetry;
+
+  /**
+   * Temporary directory where the chunks are stored
+   */
   private final Supplier<File> tempDirSupplier;
 
   public ChunkingStorageConnectorParameters(
@@ -99,6 +139,45 @@ public class ChunkingStorageConnectorParameters<T>
     return tempDirSupplier;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ChunkingStorageConnectorParameters<?> that = (ChunkingStorageConnectorParameters<?>) o;
+    return start == that.start &&
+           end == that.end &&
+           maxRetry == that.maxRetry &&
+           Objects.equals(cloudStoragePath, that.cloudStoragePath) &&
+           Objects.equals(objectSupplier, that.objectSupplier) &&
+           Objects.equals(objectOpenFunction, that.objectOpenFunction) &&
+           Objects.equals(retryCondition, that.retryCondition) &&
+           Objects.equals(tempDirSupplier, that.tempDirSupplier);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        start,
+        end,
+        cloudStoragePath,
+        objectSupplier,
+        objectOpenFunction,
+        retryCondition,
+        maxRetry,
+        tempDirSupplier
+    );
+  }
+
+  /**
+   * Builder for {@link ChunkingStorageConnectorParameters}. Performs null checks and asserts preconditions before
+   * building the instance
+   */
   public static class Builder<T>
   {
     private long start;

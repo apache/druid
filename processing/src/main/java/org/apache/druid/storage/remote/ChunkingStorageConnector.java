@@ -43,11 +43,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * An abstract implementation of the storage connectors that download the file from the remote storage in chunks
  * and presents the downloaded chunks as a single {@link InputStream} for the consumers of the connector.
  * This implementation benefits over keeping the InputStream to the remote source open since we don't require the
- * connection to be open for the entire duration
+ * connection to be open for the entire duration.
+ * Checkout {@link ChunkingStorageConnectorParameters} to see the inputs required to support chunking
  */
 public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
-  private static final long DOWNLOAD_MAX_CHUNK_SIZE = 100_000_000;
+  private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 100_000_000;
 
   public ChunkingStorageConnector()
   {
@@ -61,7 +62,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
   }
 
   @Override
-  public InputStream readRange(String path, long from, long size) throws IOException
+  public InputStream readRange(String path, long from, long size)
   {
     return buildInputStream(buildInputParams(path, from, size));
   }
@@ -72,7 +73,10 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
 
   private InputStream buildInputStream(ChunkingStorageConnectorParameters<T> params)
   {
-    AtomicLong currentReadStartPosition = new AtomicLong(params.getStart());
+    // Position from where the read needs to be resumed
+    final AtomicLong currentReadStartPosition = new AtomicLong(params.getStart());
+
+    // Final position, exclusive
     long readEnd = params.getEnd();
 
     AtomicBoolean isSequenceStreamClosed = new AtomicBoolean(false);
@@ -111,7 +115,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
 
             // exclusive
             long currentReadEndPosition = Math.min(
-                currentReadStartPosition.get() + DOWNLOAD_MAX_CHUNK_SIZE,
+                currentReadStartPosition.get() + DOWNLOAD_MAX_CHUNK_SIZE_BYTES,
                 readEnd
             );
 
