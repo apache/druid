@@ -595,7 +595,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (maybeArray instanceof Object[]) {
                 Object[] anArray = (Object[]) maybeArray;
                 if (elementNumber < anArray.length) {
-                  elements[i] = anArray[elementNumber];
+                  // no one will ever ask for an object selector on primitive array elements unless asking for string types...
+                  elements[i] = Evals.asString(anArray[elementNumber]);
                 } else {
                   elements[i] = null;
                 }
