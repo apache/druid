@@ -30,6 +30,8 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -39,7 +41,11 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class TransformSpecTest extends InitializedNullHandlingTest
 {
@@ -294,5 +300,42 @@ public class TransformSpecTest extends InitializedNullHandlingTest
         transformSpec,
         jsonMapper.readValue(jsonMapper.writeValueAsString(transformSpec), TransformSpec.class)
     );
+  }
+
+
+  @Test
+  public void testToTransformerOnce() throws Exception
+  {
+    ExecutorService es = Execs.multiThreaded(
+            Runtime.getRuntime().availableProcessors() * 2,
+            "testToTransformerOnce-%d");
+
+    final TransformSpec transformSpec = new TransformSpec(
+            null,
+            ImmutableList.of(
+                    new ExpressionTransform("__time", "__time + 3600000", TestExprMacroTable.INSTANCE)
+            )
+    );
+
+    // submit tasks to collect a reference, assert they are all the same
+    final int numIterations = 10000;
+
+    List<Future<Transformer>> results = new ArrayList<>(numIterations);
+    for (int i = 0; i < numIterations; i++) {
+      results.add(es.submit(transformSpec::toTransformer));
+    }
+
+    // have to have returned something
+    Assert.assertNotNull(results.get(0).get());
+
+    // results should all be identity equal
+    // equals() is not enough here
+    for (int i = 0; i < numIterations; i++) {
+      Assert.assertSame(
+              StringUtils.format("results were different between rows %s and %s", 0, i),
+              results.get(0).get(),
+              results.get(i).get());
+    }
+    es.shutdownNow();
   }
 }

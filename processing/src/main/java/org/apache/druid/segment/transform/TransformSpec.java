@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Specifies how input rows should be filtered and transforms. There are two parts: a "filter" (which can filter out
@@ -47,6 +48,9 @@ public class TransformSpec
 
   private final DimFilter filter;
   private final List<Transform> transforms;
+
+  // Transformer is expensive to create, and immutable; reuse it once created
+  private final AtomicReference<Transformer> transformer = new AtomicReference<>();
 
   @JsonCreator
   public TransformSpec(
@@ -108,7 +112,14 @@ public class TransformSpec
    */
   public Transformer toTransformer()
   {
-    return new Transformer(this);
+    Transformer existing = transformer.get();
+    if (existing != null) {
+      return existing;
+    }
+
+    Transformer newTransformer = new Transformer(this);
+    boolean didSetOurs = transformer.compareAndSet(null, newTransformer);
+    return didSetOurs ? newTransformer : transformer.get();
   }
 
   public Set<String> getRequiredColumns()
