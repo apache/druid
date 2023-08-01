@@ -233,10 +233,7 @@ export async function getTaskExecution(
       },
     );
 
-    const destinationPages = statusResp.data?.result?.pages;
-    if (destinationPages) {
-      execution = execution.changeDestinationPages(destinationPages);
-    }
+    execution = execution.updateWithAsyncStatus(statusResp.data);
   }
 
   if (execution.hasPotentiallyStuckStage()) {

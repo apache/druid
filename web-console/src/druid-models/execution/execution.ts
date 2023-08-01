@@ -480,6 +480,12 @@ export class Execution {
     return ret;
   }
 
+  public updateWithAsyncStatus(statusPayload: AsyncStatusResponse): Execution {
+    const destinationPages = statusPayload.result?.pages;
+    if (!destinationPages) return this;
+    return this.changeDestinationPages(destinationPages);
+  }
+
   public markDestinationDatasourceLoaded(): Execution {
     const { destination } = this;
     if (destination?.type !== 'dataSource') return this;
