@@ -23,7 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -60,7 +63,26 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
 
+  /**
+   * Default nuke batch size. This is a small enough size that we still get value from batching, while
+   * yielding as quickly as possible. In one real cluster environment backed with mysql, ~2000rows/sec,
+   * with batch size of 100, means a batch should only less than a second for the task lock, and depending
+   * on the segment store latency, unoptimised S3 cleanups typically take 5-10 seconds per 100. Over time
+   * we expect the S3 cleanup to get quicker, so this should be < 1 second, which means we'll be yielding
+   * the task lockbox every 1-2 seconds.
+   */
+  private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
+
   private final boolean markAsUnused;
+
+  /**
+   * Split processing to try and keep each nuke operation relatively short, in the case that either
+   * the database or the storage layer is particularly slow.
+   */
+  private final int batchSize;
+
+  // counter included primarily for testing
+  private long numBatchesProcessed = 0;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -68,7 +90,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("markAsUnused") Boolean markAsUnused
+      @JsonProperty("markAsUnused") Boolean markAsUnused,
+      @JsonProperty("batchSize") Integer batchSize
   )
   {
     super(
@@ -78,6 +101,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         context
     );
     this.markAsUnused = markAsUnused != null && markAsUnused;
+    this.batchSize = (batchSize != null) ? batchSize : DEFAULT_SEGMENT_NUKE_BATCH_SIZE;
+    Preconditions.checkArgument(this.batchSize > 0, "batchSize should be greater than zero");
   }
 
   @JsonProperty
@@ -85,6 +110,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public boolean isMarkAsUnused()
   {
     return markAsUnused;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getBatchSize()
+  {
+    return batchSize;
   }
 
   @Override
@@ -101,6 +133,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     return ImmutableSet.of();
   }
 
+  @JsonIgnore
+  @VisibleForTesting
+  long getNumBatchesProcessed()
+  {
+    return numBatchesProcessed;
+  }
+
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
@@ -114,24 +153,48 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     }
 
     // List unused segments
-    final List<DataSegment> unusedSegments = toolbox
+    final List<DataSegment> allUnusedSegments = toolbox
         .getTaskActionClient()
         .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval()));
 
-    if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
-      throw new ISE(
-          "Locks[%s] for task[%s] can't cover segments[%s]",
-          taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
-          getId(),
-          unusedSegments
-      );
+    final List<List<DataSegment>> unusedSegmentBatches = Lists.partition(allUnusedSegments, batchSize);
+
+    // The individual activities here on the toolbox have possibility to run for a longer period of time,
+    // since they involve calls to metadata storage and archival object storage. And, the tasks take hold of the
+    // task lockbox to run. By splitting the segment list into smaller batches, we have an opportunity to yield the
+    // lock to other activity that might need to happen using the overlord tasklockbox.
+
+    LOG.info("Running kill task[%s] for dataSource[%s] and interval[%s]. Killing total [%,d] unused segments in [%d] batches(batchSize = [%d]).",
+            getId(), getDataSource(), getInterval(), allUnusedSegments.size(), unusedSegmentBatches.size(), batchSize);
+
+    for (final List<DataSegment> unusedSegments : unusedSegmentBatches) {
+      if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
+        throw new ISE(
+                "Locks[%s] for task[%s] can't cover segments[%s]",
+                taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
+                getId(),
+                unusedSegments
+        );
+      }
+
+      // Kill segments
+      // Order is important here: we want the nuke action to clean up the metadata records _before_ the
+      // segments are removed from storage, this helps maintain that we will always have a storage segment if
+      // the metadata segment is present. If the segment nuke throws an exception, then the segment cleanup is
+      // abandoned.
+
+      toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+      toolbox.getDataSegmentKiller().kill(unusedSegments);
+      numBatchesProcessed++;
+
+      if (numBatchesProcessed % 10 == 0) {
+        LOG.info("Processed [%d/%d] batches for kill task[%s].",
+                numBatchesProcessed, unusedSegmentBatches.size(), getId());
+      }
     }
 
-    // Kill segments
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-    for (DataSegment segment : unusedSegments) {
-      toolbox.getDataSegmentKiller().kill(segment);
-    }
+    LOG.info("Finished kill task[%s] for dataSource[%s] and interval[%s]. Deleted total [%,d] unused segments in [%d] batches.",
+            getId(), getDataSource(), getInterval(), allUnusedSegments.size(), unusedSegmentBatches.size());
 
     return TaskStatus.success(getId());
   }

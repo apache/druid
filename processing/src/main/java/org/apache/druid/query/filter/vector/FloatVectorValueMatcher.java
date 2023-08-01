@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -50,6 +53,25 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
 
     final float matchValFloat = matchVal;
 
+    return makeFloatMatcher(matchValFloat);
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
+    if (castForComparison == null) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
+    if (castForComparison.isNumericNull()) {
+      return makeNullValueMatcher(selector);
+    }
+    return makeFloatMatcher((float) castForComparison.asDouble());
+  }
+
+  private BaseVectorValueMatcher makeFloatMatcher(float matchValFloat)
+  {
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -75,7 +97,6 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
@@ -112,7 +133,6 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

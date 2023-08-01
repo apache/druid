@@ -24,7 +24,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.DruidException;
 import org.apache.druid.indexer.TaskInfo;
@@ -47,7 +46,6 @@ import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
-import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 
 import javax.annotation.Nullable;
@@ -228,7 +226,11 @@ public class MetadataTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    Map<TaskLookupType, TaskLookup> theTaskLookups = processTaskLookups(taskLookups);
+    Map<TaskLookupType, TaskLookup> theTaskLookups =
+        TaskStorageUtils.processTaskLookups(
+            taskLookups,
+            DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold())
+        );
     return Collections.unmodifiableList(handler.getTaskInfos(theTaskLookups, datasource));
   }
 
@@ -238,34 +240,18 @@ public class MetadataTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    Map<TaskLookupType, TaskLookup> processedTaskLookups = processTaskLookups(taskLookups);
+    Map<TaskLookupType, TaskLookup> processedTaskLookups =
+        TaskStorageUtils.processTaskLookups(
+            taskLookups,
+            DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold())
+        );
+
     return Collections.unmodifiableList(
         handler.getTaskStatusList(processedTaskLookups, datasource)
                .stream()
                .map(TaskStatusPlus::fromTaskIdentifierInfo)
                .collect(Collectors.toList())
     );
-  }
-
-  private Map<TaskLookupType, TaskLookup> processTaskLookups(
-      Map<TaskLookupType, TaskLookup> taskLookups
-  )
-  {
-    Map<TaskLookupType, TaskLookup> processedTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
-    for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
-      if (entry.getKey() == TaskLookupType.COMPLETE) {
-        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
-        processedTaskLookups.put(
-            entry.getKey(),
-            completeTaskLookup.hasTaskCreatedTimeFilter()
-            ? completeTaskLookup
-            : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
-        );
-      } else {
-        processedTaskLookups.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return processedTaskLookups;
   }
 
   @Override

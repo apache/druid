@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
@@ -173,9 +174,24 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(this::createEntity).iterator(),
+        getInputEntities(inputFormat),
         temporaryDirectory
     );
+  }
+
+  /**
+   * Return an iterator of {@link InputEntity} corresponding to the objects represented by this input source, as read
+   * by the provided {@link InputFormat}.
+   */
+  Iterator<InputEntity> getInputEntities(final InputFormat inputFormat)
+  {
+    // Use createSplits with FilePerSplitHintSpec.INSTANCE as a way of getting the list of objects to read
+    // out of either "prefixes", "objects", or "uris". The specific splits don't matter because we are going
+    // to flatten them anyway.
+    return createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
+        .flatMap(split -> split.get().stream())
+        .map(this::createEntity)
+        .iterator();
   }
 
   @Override
@@ -311,7 +327,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
                   long size = splitWidget.getObjectSize(o.getLocation());
                   return new InputFileAttribute(
                       size,
-                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size);
+                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size
+                  );
                 } else {
                   return new InputFileAttribute(
                       o.getSize(),

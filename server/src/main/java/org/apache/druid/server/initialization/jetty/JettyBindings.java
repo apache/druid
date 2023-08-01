@@ -65,10 +65,18 @@ public class JettyBindings
     private final String[] paths;
     private final int maxRequests;
 
-    public QosFilterHolder(String[] paths, int maxRequests)
+    private final long timeoutMs;
+
+    public QosFilterHolder(String[] paths, int maxRequests, long timeoutMs)
     {
       this.paths = paths;
       this.maxRequests = maxRequests;
+      this.timeoutMs = timeoutMs;
+    }
+
+    public QosFilterHolder(String[] paths, int maxRequests)
+    {
+      this(paths, maxRequests, -1);
     }
 
     @Override
@@ -86,6 +94,9 @@ public class JettyBindings
     @Override
     public Map<String, String> getInitParameters()
     {
+      if (timeoutMs >= 0) {
+        return ImmutableMap.of("maxRequests", String.valueOf(maxRequests), "suspendMs", String.valueOf(timeoutMs));
+      }
       return ImmutableMap.of("maxRequests", String.valueOf(maxRequests));
     }
 

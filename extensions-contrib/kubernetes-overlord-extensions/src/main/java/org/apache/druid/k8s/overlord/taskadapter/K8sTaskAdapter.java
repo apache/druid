@@ -149,7 +149,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     return new JobBuilder()
         .withNewMetadata()
-        .withName(k8sTaskId.getK8sTaskId())
+        .withName(k8sTaskId.getK8sJobName())
         .addToLabels(labels)
         .addToAnnotations(annotations)
         .endMetadata()
@@ -309,7 +309,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     // clean up the podSpec
     podSpec.setNodeName(null);
     podSpec.setRestartPolicy("Never");
-    podSpec.setHostname(k8sTaskId.getK8sTaskId());
+    podSpec.setHostname(k8sTaskId.getK8sJobName());
     podSpec.setTerminationGracePeriodSeconds(taskRunnerConfig.getGraceTerminationPeriodSeconds());
 
     PodTemplateSpec podTemplate = new PodTemplateSpec();

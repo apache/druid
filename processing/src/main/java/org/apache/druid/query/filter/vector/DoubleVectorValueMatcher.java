@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -48,8 +51,25 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
       return BooleanVectorValueMatcher.of(selector, false);
     }
 
-    final double matchValDouble = matchVal;
+    return makeDoubleMatcher(matchVal);
+  }
 
+  @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
+    if (castForComparison == null) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
+    if (castForComparison.isNumericNull()) {
+      return makeNullValueMatcher(selector);
+    }
+    return makeDoubleMatcher(castForComparison.asDouble());
+  }
+
+  private BaseVectorValueMatcher makeDoubleMatcher(double matchValDouble)
+  {
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -74,11 +94,11 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
   }
+
 
   @Override
   public VectorValueMatcher makeMatcher(final DruidPredicateFactory predicateFactory)
@@ -111,7 +131,6 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

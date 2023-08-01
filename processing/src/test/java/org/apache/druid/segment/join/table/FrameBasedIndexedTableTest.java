@@ -48,7 +48,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
@@ -365,8 +367,16 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
     IndexedTable.Reader reader = frameBasedIndexedTable.columnReader(columnNumber);
     List<Object[]> originalRows = dataSource.getRowsAsSequence().toList();
     for (int i = 0; i < numRows; ++i) {
-      Object original = originalRows.get(i)[columnNumber];
-      Assert.assertEquals(original, reader.read(i));
+      final Object originalValue = originalRows.get(i)[columnNumber];
+      final Object actualValue = reader.read(i);
+
+      if (!Objects.deepEquals(originalValue, actualValue)) {
+        // Call Assert.assertEquals, which we expect to fail, to get a nice failure message
+        Assert.assertEquals(
+            originalValue instanceof Object[] ? Arrays.toString((Object[]) originalValue) : originalValue,
+            actualValue instanceof Object[] ? Arrays.toString((Object[]) actualValue) : actualValue
+        );
+      }
     }
   }
 }

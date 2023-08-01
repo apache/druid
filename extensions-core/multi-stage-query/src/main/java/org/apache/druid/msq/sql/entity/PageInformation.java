@@ -21,6 +21,7 @@ package org.apache.druid.msq.sql.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
@@ -32,36 +33,22 @@ import java.util.Objects;
  */
 public class PageInformation
 {
+  private final long id;
   @Nullable
   private final Long numRows;
   @Nullable
   private final Long sizeInBytes;
-  private final long id;
 
   @JsonCreator
   public PageInformation(
+      @JsonProperty("id") long id,
       @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("sizeInBytes") @Nullable Long sizeInBytes,
-      @JsonProperty("id") long id
+      @JsonProperty("sizeInBytes") @Nullable Long sizeInBytes
   )
   {
+    this.id = id;
     this.numRows = numRows;
     this.sizeInBytes = sizeInBytes;
-    this.id = id;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Long getNumRows()
-  {
-    return numRows;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Long getSizeInBytes()
-  {
-    return sizeInBytes;
   }
 
   @JsonProperty
@@ -69,6 +56,23 @@ public class PageInformation
   {
     return id;
   }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Long getNumRows()
+  {
+    return numRows;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Long getSizeInBytes()
+  {
+    return sizeInBytes;
+  }
+
 
   @Override
   public boolean equals(Object o)
@@ -89,16 +93,16 @@ public class PageInformation
   @Override
   public int hashCode()
   {
-    return Objects.hash(numRows, sizeInBytes, id);
+    return Objects.hash(id, numRows, sizeInBytes);
   }
 
   @Override
   public String toString()
   {
     return "PageInformation{" +
-           "numRows=" + numRows +
+           "id=" + id +
+           ", numRows=" + numRows +
            ", sizeInBytes=" + sizeInBytes +
-           ", id=" + id +
            '}';
   }
 
