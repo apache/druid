@@ -30,7 +30,7 @@ You can use durable storage to improve querying from deep storage and SQL-based 
 Durable storage for queries from deep storage provides a location where you can write the results of deep storage queries to. Durable storage for SQL-based ingestion is used to temporarily house intermediate files, which can improve reliability.
 
 Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
-by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes).
+while sorting the data. Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes).
 If the configured limit is too low, Druid may throw the error, `NotEnoughTemporaryStorageFault`.
 
 ## Enable durable storage
