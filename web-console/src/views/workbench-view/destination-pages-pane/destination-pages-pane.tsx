@@ -54,7 +54,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
   }
 
   function getPageFilename(pageIndex: number) {
-    return `${id}_page${pageIndex}.json`;
+    return `${id}_page${pageIndex}.jsonl`;
   }
 
   async function downloadAllPages() {
@@ -121,7 +121,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             Cell: ({ value }) => (
               <AnchorButton
                 icon={IconNames.DOWNLOAD}
-                text="download .json"
+                text="download .jsonl"
                 minimal
                 href={getPageUrl(value)}
                 download={getPageFilename(value)}
