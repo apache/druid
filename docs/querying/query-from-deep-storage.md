@@ -30,9 +30,9 @@ Druid can query segments that are only stored in deep storage. Running a query f
 
 Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes.
 
-To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to load only the segments you do want on Historical processes. 
+To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to manage the which segments are only in deep storage and which get loaded onto Historical processes.
 
-The easiest way to do this is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`:
+The easiest way to do this is to explicitly configure the segments that don't get loaded onto Historical processes. Set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`. For example, if you configure the following rule for a datasource:
 
 ```json
 [
@@ -44,6 +44,8 @@ The easiest way to do this is to set `tieredReplicants` to an empty array and `u
   }
 ]
 ```
+
+Any segment that falls within the specified interval exists only in deep storage. For segments that aren't in this interval, they'll use the default cluster load rules or any other load rules you configure.
 
 To configure the load rules through the Druid console, go to **Datasources > ... in the Actions column > Edit retention rules**. Then, paste the provided JSON into the JSON tab:
 

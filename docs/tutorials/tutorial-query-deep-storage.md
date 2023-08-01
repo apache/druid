@@ -178,7 +178,7 @@ Make sure you note the `queryID`. You'll need it to interact with the query.
 Compare this to if you were to submit the query to Druid SQL's regular endpoint, `POST /sql`: 
 
 ```
-curl --location 'http://localhost:8888/druid/v2/sql/statements' \
+curl --location 'http://localhost:8888/druid/v2/sql/' \
 --header 'Content-Type: application/json' \
 --data '{
     "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
