@@ -113,7 +113,7 @@ template:
       env:
       - name: CUSTOM_ENV_VARIABLE
         value: "hello"
-      image: apache/druid:26.0.0
+      image: apache/druid:{{DRUIDVERSION}}
       name: main
       ports:
       - containerPort: 8091
