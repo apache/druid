@@ -513,10 +513,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskStatus(KEY_1);
-    String report = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    String report;
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+        inputStreamOptional.get(),
+        StandardCharsets.UTF_8
+    ))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(STATUS_CONTENTS, report);
   }
