@@ -27,9 +27,17 @@ import javax.annotation.Nullable;
 
 public interface VectorValueMatcherFactory
 {
+  /**
+   * Specialized value matcher for string equality used by {@link org.apache.druid.query.filter.SelectorDimFilter}
+   */
   VectorValueMatcher makeMatcher(@Nullable String value);
 
-  VectorValueMatcher makeMatcher(Object value, ColumnType type);
+  /**
+   * Specialized value matcher for equality used by {@link org.apache.druid.query.filter.EqualityFilter}. The
+   * matchValue parameter must be the appropriate Java type for the matchValueType {@link ColumnType}. Implementors can
+   * use this information to coerce the match value to the native type of the values to match against as necessary.
+   */
+  VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType);
 
   VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory);
 

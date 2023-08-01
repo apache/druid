@@ -54,9 +54,9 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
-    return BooleanVectorValueMatcher.of(selector, value == null);
+    return BooleanVectorValueMatcher.of(selector, matchValue == null);
   }
 
   @Override

@@ -732,7 +732,7 @@ public class WorkerImpl implements Worker
     final int frameSize = frameContext.memoryParameters().getStandardFrameSize();
 
     if (durableStageStorageEnabled || (isFinalStage
-                                       && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))) {
+                                       && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           task().getWorkerNumber(),
@@ -741,7 +741,7 @@ public class WorkerImpl implements Worker
           frameSize,
           MSQTasks.makeStorageConnector(context.injector()),
           context.tempDir(),
-          (isFinalStage && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))
+          (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
       );
     } else {
       final File fileChannelDirectory =
@@ -1320,7 +1320,7 @@ public class WorkerImpl implements Worker
     {
       final DurableStorageOutputChannelFactory durableStorageOutputChannelFactory;
       if (durableStageStorageEnabled || (isFinalStage
-                                         && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))) {
+                                         && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))) {
         durableStorageOutputChannelFactory = DurableStorageOutputChannelFactory.createStandardImplementation(
             task.getControllerTaskId(),
             task().getWorkerNumber(),
@@ -1329,7 +1329,7 @@ public class WorkerImpl implements Worker
             frameContext.memoryParameters().getStandardFrameSize(),
             MSQTasks.makeStorageConnector(context.injector()),
             context.tempDir(),
-            (isFinalStage && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))
+            (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
         );
       } else {
         return;
