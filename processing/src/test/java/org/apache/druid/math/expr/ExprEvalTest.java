@@ -567,10 +567,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     eval = ExprEval.of("1234.3");
 
     cast = eval.castTo(ExpressionType.DOUBLE);
-    Assert.assertEquals(1234.3, (double) cast.value(), 0.0);
+    Assert.assertEquals(1234.3, cast.value());
 
     cast = eval.castTo(ExpressionType.LONG);
-    Assert.assertEquals(1234L, (long) cast.value());
+    Assert.assertEquals(1234L, cast.value());
 
     cast = eval.castTo(ExpressionType.DOUBLE_ARRAY);
     Assert.assertArrayEquals(new Object[]{1234.3}, (Object[]) cast.value());
