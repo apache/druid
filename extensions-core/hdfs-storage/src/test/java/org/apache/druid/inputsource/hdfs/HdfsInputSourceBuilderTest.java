@@ -19,6 +19,7 @@
 
 package org.apache.druid.inputsource.hdfs;
 
+import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +33,7 @@ public class HdfsInputSourceBuilderTest
   {
     Configuration conf = new Configuration();
     HdfsInputSourceConfig inputSourceConfig = new HdfsInputSourceConfig(null);
-    HdfsInputSourceFactory hdfsInputSourceAdapter = new HdfsInputSourceFactory(conf, inputSourceConfig);
+    InputSourceFactory hdfsInputSourceAdapter = new HdfsInputSourceFactory(conf, inputSourceConfig);
     Assert.assertTrue(hdfsInputSourceAdapter.create(Arrays.asList("hdfs://localhost:7020/bar/def.parquet", "hdfs://localhost:7020/bar/abc.parquet")) instanceof HdfsInputSource);
   }
 }

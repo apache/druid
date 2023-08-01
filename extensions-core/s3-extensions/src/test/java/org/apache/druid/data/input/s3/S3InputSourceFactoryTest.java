@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.s3;
 
+import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
@@ -43,7 +44,7 @@ public class S3InputSourceFactoryTest
         "s3://bar/foo/file3.txt"
     );
 
-    S3InputSourceFactory s3Builder = new S3InputSourceFactory(
+    InputSourceFactory s3Builder = new S3InputSourceFactory(
         service,
         serverSides3Builder,
         dataConfig,

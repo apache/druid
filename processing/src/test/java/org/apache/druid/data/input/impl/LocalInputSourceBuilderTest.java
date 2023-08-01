@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.data.input.InputSourceFactory;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,7 +35,7 @@ public class LocalInputSourceBuilderTest
   @Test
   public void testAdapterGet()
   {
-    LocalInputSourceFactory localInputSourceAdapter = new LocalInputSourceFactory();
+    InputSourceFactory localInputSourceAdapter = new LocalInputSourceFactory();
     Assert.assertTrue(localInputSourceAdapter.create(Arrays.asList(
         "foo.parquet",
         "bar.parquet"
