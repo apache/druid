@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -87,38 +86,42 @@ public class S3TaskLogs implements TaskLogs
   private Optional<InputStream> streamTaskFile(final long offset, String taskKey) throws IOException
   {
     try {
-      final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
+      return S3Utils.retryS3Operation(
+          () -> {
+            try {
+              final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
 
-      try {
-        final long start;
-        final long end = objectMetadata.getContentLength() - 1;
+              final long start;
+              final long end = objectMetadata.getContentLength() - 1;
 
-        if (offset > 0 && offset < objectMetadata.getContentLength()) {
-          start = offset;
-        } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
-          start = objectMetadata.getContentLength() + offset;
-        } else {
-          start = 0;
-        }
+              if (offset > 0 && offset < objectMetadata.getContentLength()) {
+                start = offset;
+              } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
+                start = objectMetadata.getContentLength() + offset;
+              } else {
+                start = 0;
+              }
 
-        final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
-            .withMatchingETagConstraint(ensureQuotated(objectMetadata.getETag()))
-            .withRange(start, end);
+              final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
+                  .withMatchingETagConstraint(ensureQuotated(objectMetadata.getETag()))
+                  .withRange(start, end);
 
-        return Optional.of(service.getObject(request).getObjectContent());
-      }
-      catch (AmazonServiceException e) {
-        throw new IOException(e);
-      }
+              return Optional.of(service.getObject(request).getObjectContent());
+            }
+            catch (AmazonS3Exception e) {
+              if (404 == e.getStatusCode()
+                  || "NoSuchKey".equals(e.getErrorCode())
+                  || "NoSuchBucket".equals(e.getErrorCode())) {
+                return Optional.absent();
+              } else {
+                throw e;
+              }
+            }
+          }
+      );
     }
-    catch (AmazonS3Exception e) {
-      if (404 == e.getStatusCode()
-          || "NoSuchKey".equals(e.getErrorCode())
-          || "NoSuchBucket".equals(e.getErrorCode())) {
-        return Optional.absent();
-      } else {
-        throw new IOE(e, "Failed to stream logs from: %s", taskKey);
-      }
+    catch (Exception e) {
+      throw new IOE(e, "Failed to stream logs from: %s", taskKey);
     }
   }
 
