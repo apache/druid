@@ -869,7 +869,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return isNumericNull() ? null : new Object[]{value.doubleValue()};
+      return value == null ? null : new Object[]{valueOrDefault().doubleValue()};
     }
 
     @Override
@@ -950,7 +950,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return isNumericNull() ? null : new Object[]{value.longValue()};
+      return value == null ? null : new Object[]{valueOrDefault().longValue()};
     }
 
     @Override
@@ -968,13 +968,16 @@ public abstract class ExprEval<T>
         case STRING:
           return ExprEval.of(asString());
         case ARRAY:
+          if (value == null) {
+            return new ArrayExprEval(castTo, null);
+          }
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(value == null ? null : new Object[]{value.doubleValue()});
+              return ExprEval.ofDoubleArray(new Object[]{value.doubleValue()});
             case LONG:
               return ExprEval.ofLongArray(asArray());
             case STRING:
-              return ExprEval.ofStringArray(value == null ? null : new Object[]{value.toString()});
+              return ExprEval.ofStringArray(new Object[]{value.toString()});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
               return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
@@ -1141,18 +1144,21 @@ public abstract class ExprEval<T>
         case STRING:
           return this;
         case ARRAY:
+          if (value == null) {
+            return new ArrayExprEval(castTo, null);
+          }
           final Number number = computeNumber();
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
               return ExprEval.ofDoubleArray(
-                  value == null ? null : new Object[]{number == null ? null : number.doubleValue()}
+                  new Object[]{number == null ? null : number.doubleValue()}
               );
             case LONG:
               return ExprEval.ofLongArray(
-                  value == null ? null : new Object[]{number == null ? null : number.longValue()}
+                  new Object[]{number == null ? null : number.longValue()}
               );
             case STRING:
-              return ExprEval.ofStringArray(value == null ? null : new Object[]{value});
+              return ExprEval.ofStringArray(new Object[]{value});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
               return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
