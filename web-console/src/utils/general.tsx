@@ -304,12 +304,12 @@ export function formatDurationHybrid(ms: NumberLike): string {
 
 function pluralize(word: string): string {
   // Ignoring irregular plurals.
-  if (/.*(s|x|z|ch|sh)$/.test(word)) {
+  if (/(s|x|z|ch|sh)$/.test(word)) {
     return word + 'es';
-  } else if (/.*([^aeiou])y$/.test(word)) {
+  } else if (/([^aeiou])y$/.test(word)) {
     return word.slice(0, -1) + 'ies';
-  } else if (/.*(f|fe)$/.test(word)) {
-    return word.replace(/f?e?$/, 'ves');
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
   } else {
     return word + 's';
   }
