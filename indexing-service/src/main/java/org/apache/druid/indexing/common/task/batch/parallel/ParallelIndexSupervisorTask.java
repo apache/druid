@@ -159,6 +159,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * Only the compaction task can have a special base name.
    */
   private final String baseSubtaskSpecName;
+
   private final InputSource baseInputSource;
 
   /**
@@ -517,6 +518,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     try {
+
       initializeSubTaskCleaner();
 
       if (isParallelMode()) {
@@ -524,6 +526,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
+
         if (isGuaranteedRollup(
             getIngestionMode(),
             ingestionSchema.getTuningConfig()

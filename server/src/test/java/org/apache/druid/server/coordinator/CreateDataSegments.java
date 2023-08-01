@@ -20,28 +20,35 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Test utility to create {@link DataSegment}s for a given datasource.
  */
 public class CreateDataSegments
 {
+  private static final DateTime DEFAULT_START = DateTimes.of("2012-10-24");
+
   private final String datasource;
 
-  private DateTime startTime;
-  private Granularity granularity;
-  private int numPartitions;
-  private int numIntervals;
+  private DateTime startTime = DEFAULT_START;
+  private Granularity granularity = Granularities.DAY;
+  private int numPartitions = 1;
+  private int numIntervals = 1;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -66,6 +73,12 @@ public class CreateDataSegments
     return this;
   }
 
+  public CreateDataSegments startingAt(long startOfFirstInterval)
+  {
+    this.startTime = DateTimes.utc(startOfFirstInterval);
+    return this;
+  }
+
   public CreateDataSegments withNumPartitions(int numPartitions)
   {
     this.numPartitions = numPartitions;
@@ -74,12 +87,19 @@ public class CreateDataSegments
 
   public List<DataSegment> eachOfSizeInMb(long sizeMb)
   {
-    final List<DataSegment> segments = new ArrayList<>();
+    boolean isEternityInterval = Objects.equals(granularity, Granularities.ALL);
+    if (isEternityInterval) {
+      numIntervals = 1;
+    }
 
     int uniqueIdInInterval = 0;
     DateTime nextStart = startTime;
+
+    final List<DataSegment> segments = new ArrayList<>();
     for (int numInterval = 0; numInterval < numIntervals; ++numInterval) {
-      Interval nextInterval = new Interval(nextStart, granularity.increment(nextStart));
+      Interval nextInterval = isEternityInterval
+                              ? Intervals.ETERNITY
+                              : new Interval(nextStart, granularity.increment(nextStart));
       for (int numPartition = 0; numPartition < numPartitions; ++numPartition) {
         segments.add(
             new NumberedDataSegment(
@@ -87,7 +107,7 @@ public class CreateDataSegments
                 nextInterval,
                 new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
-                sizeMb
+                sizeMb << 20
             )
         );
       }
@@ -102,6 +122,7 @@ public class CreateDataSegments
    */
   private static class NumberedDataSegment extends DataSegment
   {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyyMMdd");
     private final int uniqueId;
 
     private NumberedDataSegment(
@@ -129,7 +150,9 @@ public class CreateDataSegments
     @Override
     public String toString()
     {
-      return "{" + getDataSource() + "::" + uniqueId + "}";
+      return "{" + getDataSource()
+             + "::" + getInterval().getStart().toString(FORMATTER)
+             + "::" + uniqueId + "}";
     }
   }
 }

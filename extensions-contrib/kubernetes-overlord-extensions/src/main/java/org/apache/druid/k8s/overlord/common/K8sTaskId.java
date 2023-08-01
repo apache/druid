@@ -19,17 +19,14 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import org.apache.commons.lang3.RegExUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.indexing.common.task.Task;
 
-import java.util.Locale;
 import java.util.Objects;
 
 public class K8sTaskId
 {
 
-  private final String k8sTaskId;
+  private final String k8sJobName;
   private final String originalTaskId;
 
   public K8sTaskId(Task task)
@@ -40,14 +37,12 @@ public class K8sTaskId
   public K8sTaskId(String taskId)
   {
     this.originalTaskId = taskId;
-    // replace all the ": - . _" to "", try to reduce the length of pod name and meet pod naming specifications 64 characters.
-    this.k8sTaskId = StringUtils.left(RegExUtils.replaceAll(taskId, "[^a-zA-Z0-9\\\\s]", "")
-                                                .toLowerCase(Locale.ENGLISH), 63);
+    this.k8sJobName = KubernetesOverlordUtils.convertTaskIdToJobName(taskId);
   }
 
-  public String getK8sTaskId()
+  public String getK8sJobName()
   {
-    return k8sTaskId;
+    return k8sJobName;
   }
 
   public String getOriginalTaskId()
@@ -65,18 +60,18 @@ public class K8sTaskId
       return false;
     }
     K8sTaskId k8sTaskId1 = (K8sTaskId) o;
-    return k8sTaskId.equals(k8sTaskId1.k8sTaskId) && originalTaskId.equals(k8sTaskId1.originalTaskId);
+    return k8sJobName.equals(k8sTaskId1.k8sJobName) && originalTaskId.equals(k8sTaskId1.originalTaskId);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(k8sTaskId, originalTaskId);
+    return Objects.hash(k8sJobName, originalTaskId);
   }
 
   @Override
   public String toString()
   {
-    return "[ " + originalTaskId + ", " + k8sTaskId + "]";
+    return "[ " + originalTaskId + ", " + k8sJobName + "]";
   }
 }

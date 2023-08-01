@@ -18,14 +18,15 @@
 
 import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from 'druid-query-toolkit';
-import { C, SqlColumnDeclaration, SqlType } from 'druid-query-toolkit';
+import type { SqlExpression } from '@druid-toolkit/query';
+import { C, SqlColumnDeclaration, SqlType } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
 import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
 import type { InputFormat, InputSource } from '../../../druid-models';
 import {
   BATCH_INPUT_FORMAT_FIELDS,
+  chooseByBestTimestamp,
   DETECTION_TIMESTAMP_SPEC,
   guessColumnTypeFromSampleResponse,
   guessIsArrayFromSampleResponse,
@@ -57,6 +58,7 @@ export interface InputFormatAndMore {
 
 interface PossibleTimeExpression {
   column: string;
+  format: string;
   timeExpression: SqlExpression;
 }
 
@@ -115,9 +117,8 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
   let possibleTimeExpression: PossibleTimeExpression | undefined;
   if (previewSampleResponse) {
-    possibleTimeExpression = filterMap(
-      getHeaderNamesFromSampleResponse(previewSampleResponse),
-      column => {
+    possibleTimeExpression = chooseByBestTimestamp(
+      filterMap(getHeaderNamesFromSampleResponse(previewSampleResponse), column => {
         const values = filterMap(previewSampleResponse.data, d => d.input?.[column]);
         const possibleDruidFormat = possibleDruidFormatForValues(values);
         if (!possibleDruidFormat) return;
@@ -126,6 +127,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
         if (column === TIME_COLUMN) {
           return {
             column,
+            format: '',
             timeExpression: C(column),
           };
         }
@@ -135,10 +137,11 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
         return {
           column,
+          format: possibleDruidFormat,
           timeExpression: formatSql.fillPlaceholders([C(column)]),
         };
-      },
-    )[0];
+      }),
+    );
   }
 
   const headerNames = previewSampleResponse

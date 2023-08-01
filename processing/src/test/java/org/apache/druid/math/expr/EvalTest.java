@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import junitparams.converters.Nullable;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -987,6 +988,48 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArrayComparison()
+  {
+    Expr.ObjectBinding bindings = InputBindings.forInputSuppliers(
+        ImmutableMap.<String, InputBindings.InputSupplier<?>>builder()
+                    .put(
+                        "stringArray",
+                        InputBindings.inputSupplier(ExpressionType.STRING_ARRAY, () -> new Object[]{"a", "b", null, "c"})
+                    )
+                    .put(
+                        "longArray",
+                        InputBindings.inputSupplier(ExpressionType.LONG_ARRAY, () -> new Object[]{1L, null, 2L, 3L})
+                    )
+                    .put(
+                        "doubleArray",
+                        InputBindings.inputSupplier(ExpressionType.DOUBLE_ARRAY, () -> new Object[]{1.1, 2.2, 3.3, null})
+                    )
+                    .build()
+    );
+
+    Assert.assertEquals(0L, eval("['a','b',null,'c'] > stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("['a','b',null,'c'] >= stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("['a','b',null,'c'] == stringArray", bindings).value());
+    Assert.assertEquals(0L, eval("['a','b',null,'c'] != stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("['a','b',null,'c'] <= stringArray", bindings).value());
+    Assert.assertEquals(0L, eval("['a','b',null,'c'] < stringArray", bindings).value());
+
+    Assert.assertEquals(0L, eval("[1,null,2,3] > longArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1,null,2,3] >= longArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1,null,2,3] == longArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1,null,2,3] != longArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1,null,2,3] <= longArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1,null,2,3] < longArray", bindings).value());
+
+    Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] > doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] >= doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] == doubleArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] != doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] <= doubleArray", bindings).value());
+    Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] < doubleArray", bindings).value());
+  }
+
+  @Test
   public void testValueOrDefault()
   {
     ExprEval<?> longNull = ExprEval.ofLong(null);
@@ -1321,6 +1364,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     // by default, booleans are handled as strings
     assertBestEffortOf(true, ExpressionType.STRING, "true");
+    assertBestEffortOf(Arrays.asList(true, false), ExpressionType.STRING_ARRAY, new Object[]{"true", "false"});
 
     assertBestEffortOf(
         new byte[]{1, 2, 3, 4},
@@ -1336,6 +1380,7 @@ public class EvalTest extends InitializedNullHandlingTest
       // in strict boolean mode, they are longs
       ExpressionProcessing.initializeForStrictBooleansTests(true);
       assertBestEffortOf(true, ExpressionType.LONG, 1L);
+      assertBestEffortOf(Arrays.asList(true, false), ExpressionType.LONG_ARRAY, new Object[]{1L, 0L});
     }
     finally {
       // reset
@@ -1381,11 +1426,17 @@ public class EvalTest extends InitializedNullHandlingTest
         new Object[] {"1.0", "2", "3", "true", "false"}
     );
 
-    // best effort of doesn't know of nested type, what happens if we have some nested data?
     assertBestEffortOf(
         ImmutableMap.of("x", 1L, "y", 2L),
-        ExpressionType.UNKNOWN_COMPLEX,
+        ExpressionType.NESTED_DATA,
         ImmutableMap.of("x", 1L, "y", 2L)
+    );
+
+    SerializablePair<String, Long> someOtherComplex = new SerializablePair<>("hello", 1234L);
+    assertBestEffortOf(
+        someOtherComplex,
+        ExpressionType.UNKNOWN_COMPLEX,
+        someOtherComplex
     );
   }
 

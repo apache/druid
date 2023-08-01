@@ -255,7 +255,7 @@ public class InputBindings
    * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
    * {@link Expr}
    */
-  public static Expr.ObjectBinding forInputSuppliers(final Map<String, InputSupplier> bindings)
+  public static Expr.ObjectBinding forInputSuppliers(final Map<String, InputSupplier<?>> bindings)
   {
     return new Expr.ObjectBinding()
     {

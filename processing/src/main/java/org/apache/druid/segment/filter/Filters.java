@@ -35,16 +35,16 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
-import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -90,29 +90,6 @@ public class Filters
     return dimFilter == null ? null : dimFilter.toOptimizedFilter();
   }
 
-  /**
-   * Create a ValueMatcher that compares row values to the provided string.
-   * <p>
-   * An implementation of this method should be able to handle dimensions of various types.
-   *
-   * @param columnSelectorFactory Selector for columns.
-   * @param columnName            The column to filter.
-   * @param value                 The value to match against, represented as a String.
-   *
-   * @return An object that matches row values on the provided value.
-   */
-  public static ValueMatcher makeValueMatcher(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final String columnName,
-      final String value
-  )
-  {
-    return ColumnProcessors.makeProcessor(
-        columnName,
-        new ConstantValueMatcherFactory(value),
-        columnSelectorFactory
-    );
-  }
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.
@@ -154,9 +131,9 @@ public class Filters
     Preconditions.checkNotNull(predicateFactory, "predicateFactory");
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier != null) {
-      final DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
-      if (predicateIndex != null) {
-        return predicateIndex.forPredicate(predicateFactory);
+      final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+      if (predicateIndexes != null) {
+        return predicateIndexes.forPredicate(predicateFactory);
       }
       // index doesn't exist
       return null;
@@ -167,7 +144,7 @@ public class Filters
            : new AllFalseBitmapColumnIndex(selector);
   }
 
-  public static BitmapColumnIndex makeNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  public static BitmapColumnIndex makeMissingColumnNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
   {
     return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
   }

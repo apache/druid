@@ -32,10 +32,12 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import {
   AboutDialog,
+  CompactionDynamicConfigDialog,
   CoordinatorDynamicConfigDialog,
   DoctorDialog,
   OverlordDynamicConfigDialog,
@@ -61,12 +63,14 @@ export type HeaderActiveTab =
   | 'data-loader'
   | 'streaming-data-loader'
   | 'classic-batch-data-loader'
-  | 'ingestion'
+  | 'supervisors'
+  | 'tasks'
   | 'datasources'
   | 'segments'
   | 'services'
   | 'workbench'
   | 'sql-data-loader'
+  | 'explore'
   | 'lookups';
 
 const DruidLogo = React.memo(function DruidLogo() {
@@ -238,6 +242,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
     useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
+  const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
 
   const showSplitDataLoaderMenu = capabilities.hasMultiStageQuery();
 
@@ -281,6 +286,15 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         href="#lookups"
         disabled={!capabilities.hasCoordinatorAccess()}
         selected={active === 'lookups'}
+      />
+      <MenuDivider />
+      <MenuItem
+        icon={IconNames.COMPASS}
+        text="Explore"
+        label="(experimental)"
+        href="#explore"
+        disabled={!capabilities.hasSql()}
+        selected={active === 'explore'}
       />
     </Menu>
   );
@@ -339,6 +353,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         text="Overlord dynamic config"
         onClick={() => setOverlordDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasOverlordAccess()}
+      />
+      <MenuItem
+        icon={IconNames.COMPRESSED}
+        text="Compaction dynamic config"
+        onClick={() => setCompactionDynamicConfigDialogOpen(true)}
+        disabled={!capabilities.hasCoordinatorAccess()}
       />
 
       <MenuDivider />
@@ -432,10 +452,19 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <AnchorButton
           className="header-entry"
           minimal
-          active={active === 'ingestion'}
+          active={active === 'supervisors'}
+          icon={IconNames.EYE_OPEN}
+          text="Supervisors"
+          href="#supervisors"
+          disabled={!capabilities.hasSqlOrOverlordAccess()}
+        />
+        <AnchorButton
+          className="header-entry"
+          minimal
+          active={active === 'tasks'}
           icon={IconNames.GANTT_CHART}
-          text="Ingestion"
-          href="#ingestion"
+          text="Tasks"
+          href="#tasks"
           disabled={!capabilities.hasSqlOrOverlordAccess()}
         />
         <AnchorButton
@@ -483,6 +512,11 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       )}
       {overlordDynamicConfigDialogOpen && (
         <OverlordDynamicConfigDialog onClose={() => setOverlordDynamicConfigDialogOpen(false)} />
+      )}
+      {compactionDynamicConfigDialogOpen && (
+        <CompactionDynamicConfigDialog
+          onClose={() => setCompactionDynamicConfigDialogOpen(false)}
+        />
       )}
     </Navbar>
   );

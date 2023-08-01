@@ -268,7 +268,27 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   protected abstract SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType> createTaskRunner();
 
-  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier();
+  /**
+   * Deprecated method for providing the {@link RecordSupplier} that connects with the stream. New extensions should
+   * override {@link #newTaskRecordSupplier(TaskToolbox)} instead.
+   */
+  @Deprecated
+  protected RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Subclasses must override this method to provide the {@link RecordSupplier} that connects with the stream.
+   *
+   * The default implementation delegates to {@link #newTaskRecordSupplier()}, which is deprecated, in order to support
+   * existing extensions that have implemented that older method instead of this newer one. New extensions should
+   * override this method, not {@link #newTaskRecordSupplier()}.
+   */
+  protected RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> newTaskRecordSupplier(final TaskToolbox toolbox)
+  {
+    return newTaskRecordSupplier();
+  }
 
   @VisibleForTesting
   public Appenderator getAppenderator()

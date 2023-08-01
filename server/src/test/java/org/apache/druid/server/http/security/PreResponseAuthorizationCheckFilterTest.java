@@ -107,6 +107,34 @@ public class PreResponseAuthorizationCheckFilterTest
   }
 
   @Test
+  public void testMissingAuthorizationCheck401ResponseAndNotCommitted() throws ServletException, IOException
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null, null);
+
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.requestUri = "uri";
+    req.method = "GET";
+    req.remoteAddr = "1.2.3.4";
+    req.remoteHost = "aHost";
+
+    MockHttpServletResponse resp = new MockHttpServletResponse();
+    resp.setStatus(401);
+
+    req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+
+    PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
+        authenticators,
+        new DefaultObjectMapper()
+    );
+    filter.doFilter(req, resp, (request, response) -> {
+    });
+
+    Assert.assertEquals(401, resp.getStatus());
+  }
+
+  @Test
   public void testMissingAuthorizationCheckWithForbidden() throws Exception
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());

@@ -122,6 +122,8 @@
     https://github.com/FasterXML/jackson-databind/issues/3328
     -->
     <cve>CVE-2021-46877</cve>
+    <!-- According to jackson community, this is not a security issue, see https://github.com/FasterXML/jackson-databind/issues/3972#issuecomment-1596193098, https://github.com/jeremylong/DependencyCheck/issues/5779 -->
+    <cve>CVE-2023-35116</cve>
   </suppress>
 
 
@@ -192,10 +194,14 @@
       ~       ... 27 more
       -->
     <notes><![CDATA[
+   file name: hibernate-validator-5.3.6.Final.jar
    file name: hibernate-validator-5.2.5.Final.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.hibernate/hibernate\-validator@.*$</packageUrl>
     <cve>CVE-2017-7536</cve>
+    <cve>CVE-2019-10219</cve> <!-- We don't use SafeHtml validator annotation https://nvd.nist.gov/vuln/detail/CVE-2019-10219 -->
+    <cve>CVE-2019-14900</cve> <!-- Not applicable to hibernate validator https://github.com/hibernate/hibernate-orm/pull/3438 -->
+    <cve>CVE-2020-10693</cve> <!-- We don't take user input in constraint violation message https://hibernate.atlassian.net/browse/HV-1774 -->
     <cve>CVE-2020-25638</cve>
   </suppress>
   <suppress>
@@ -216,9 +222,15 @@
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
     <cve>CVE-2020-11612</cve>
+    <cve>CVE-2021-21290</cve> <!-- We don't use HttpPostRequestDecoder or HttpPostMultiPartRequestDecoder which uses vulnerable AbstractDiskHttpData - https://github.com/advisories/GHSA-5mcr-gq6c-3hq2 -->
+    <cve>CVE-2021-21295</cve> <!-- We don't use HTTP2MultiplexCodec or Http2FrameCodec or Http2StreamFrameToHttpObjectCodec affected or convert HTTP/2 to HTTP/1.1 requests - https://github.com/advisories/GHSA-wm47-8v5p-wjpj -->
+    <cve>CVE-2021-21409</cve> <!-- We don't use Http2HeaderFrame or convert HTTP/2 to HTTP/1.1 requests https://github.com/advisories/GHSA-f256-j965-7f32 -->
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
+    <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
+    <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
+    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -259,22 +271,12 @@
     <cve>CVE-2023-1436</cve>
   </suppress>
   <suppress>
-    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
-    <notes><![CDATA[
-    file name: snakeyaml-1.6.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.yaml/snakeyaml@1.6$</packageUrl>
-    <cve>CVE-2017-18640</cve>
-    <cve>CVE-2022-25857</cve>
-    <cve>CVE-2023-2251</cve>
-    <cve>CVE-2022-3064</cve>
-  </suppress>
-  <suppress>
     <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
+    <!-- We need to update several other components to move to Snakeyaml 2.0 to address CVE-2022-1471 -->
+    <!-- Snakeyaml 1.33 added to dependencyManagement in main pom file -->
     <notes><![CDATA[
-    file name: snakeyaml-1.27.jar
+    file name: snakeyaml-1.33.jar
     ]]></notes>
-    <cve>CVE-2022-25857</cve>
     <cve>CVE-2022-1471</cve>
     <!-- false positive -->
     <cve>CVE-2023-2251</cve>
@@ -391,6 +393,13 @@
     <cve>CVE-2022-33915</cve>
   </suppress>
   <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
+  </suppress>
+  <suppress>
     <!--
       - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
       -->
@@ -470,14 +479,6 @@
      This vulnerability should be fixed soon and the suppression should be removed.
      ]]></notes>
     <cve>CVE-2020-13949</cve>
-  </suppress>
-
-  <suppress>
-    <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
-    <notes><![CDATA[
-     file name: velocity-engine-core-2.2.jar:
-     ]]></notes>
-    <cve>CVE-2020-13936</cve>
   </suppress>
 
   <suppress>
@@ -603,7 +604,7 @@
     <cve>CVE-2015-7430</cve>
     <cve>CVE-2017-3162</cve>
   </suppress>
-  
+
   <suppress>
     <!-- Suppress avro cves that are only applicable to .NET SDK-->
     <notes><![CDATA[
@@ -688,6 +689,7 @@
    file name: okhttp-*.jar
    ]]></notes>
     <cve>CVE-2021-0341</cve>
+    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
   </suppress>
 
   <suppress>
@@ -712,13 +714,6 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.calcite/calcite\-core@.*$</packageUrl>
     <cve>CVE-2020-13955</cve>
-  </suppress>
-  <suppress>
-    <!-- False positive. 42.3.3 is not affected by the CVE. And we don't use Resultset.refreshRow method either  -->
-    <notes><![CDATA[
-   file name: postgresql-42.3.3.jar
-   ]]></notes>
-    <cve>CVE-2022-31197</cve>
   </suppress>
   <suppress>
     <!-- avatica-server-1.17.0.jar -->
@@ -818,12 +813,20 @@
   <suppress>
     <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
     <notes><![CDATA[
-     file name: hadoop-client-runtime-3.3.5.jar
+     file name: hadoop-client-runtime-3.3.6.jar
      ]]></notes>
     <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
     <cve>CVE-2022-26612</cve>
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
+    <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
+  </suppress>
+  <suppress>
+    <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
+    <notes><![CDATA[
+     file name: hadoop-client-api-3.3.6.jar: jquery.dataTables.min.js (pkg:javascript/jquery.datatables@1.10.18)
+     ]]></notes>
+    <vulnerabilityName>prototype pollution</vulnerabilityName>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -832,5 +835,29 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.ranger/ranger\-plugins\-.*@2.0.0$</packageUrl>
     <!-- applies to ranger-hive-plugin which afaict we do not use https://nvd.nist.gov/vuln/detail/CVE-2021-40331 -->
     <cve>CVE-2021-40331</cve>
+  </suppress>
+
+  <!-- filed against random script set, doesn't apply to any Maven artifacts - https://github.com/jeremylong/DependencyCheck/issues/5213 -->
+  <suppress>
+    <notes><![CDATA[
+      file name: plexus-utils-3.0.24.jar
+      file name: async-http-client-netty-utils-2.5.3.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/.*/.*@.*$</packageUrl>
+    <cve>CVE-2021-4277</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: guava-16.0.1.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.google\.guava/guava@16.0.1$</packageUrl>
+    <!--
+      ~ We don't either use AtomicDoubleArray (when serialized with Java serialization) or
+      ~ CompoundOrdering (when serialized with GWT serialization) nor do we use Java or GWT serialization. https://nvd.nist.gov/vuln/detail/cve-2018-10237
+    -->
+    <cve>CVE-2018-10237</cve>
+    <cve>CVE-2020-8908</cve> <!-- We do not use com.google.common.io.Files.createTempDir() https://nvd.nist.gov/vuln/detail/CVE-2020-8908 -->
+    <cve>CVE-2023-2976</cve> <!-- We do not use com.google.common.io.FileBackedOutputStream https://nvd.nist.gov/vuln/detail/CVE-2023-2976 -->
   </suppress>
 </suppressions>

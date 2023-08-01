@@ -50,6 +50,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   private final Set<DataSegment> published = Sets.newConcurrentHashSet();
   private final Set<DataSegment> nuked = Sets.newConcurrentHashSet();
   private final List<DataSegment> unusedSegments;
+  private int deleteSegmentsCount = 0;
 
   public TestIndexerMetadataStorageCoordinator()
   {
@@ -216,6 +217,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public void deleteSegments(Set<DataSegment> segments)
   {
+    deleteSegmentsCount++;
     nuked.addAll(segments);
   }
 
@@ -233,6 +235,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public Set<DataSegment> getNuked()
   {
     return ImmutableSet.copyOf(nuked);
+  }
+
+  public int getDeleteSegmentsCount()
+  {
+    return deleteSegmentsCount;
   }
 
   public void setUnusedSegments(List<DataSegment> newUnusedSegments)

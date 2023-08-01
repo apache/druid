@@ -1,7 +1,7 @@
 ---
 id: index
 title: SQL-based ingestion
-sidebar_label: Overview
+sidebar_label: SQL-based ingestion
 description: Introduces multi-stage query architecture and its task engine
 ---
 
@@ -62,7 +62,7 @@ transformation: creating new tables based on queries of other tables.
 To add the extension to an existing cluster, add `druid-multi-stage-query` to `druid.extensions.loadlist` in your
 `common.runtime.properties` file.
 
-For more information about how to load an extension, see [Loading extensions](../development/extensions.md#loading-extensions).
+For more information about how to load an extension, see [Loading extensions](../configuration/extensions.md#loading-extensions).
 
 To use [EXTERN](reference.md#extern-function), you need READ permission on the resource named "EXTERNAL" of the resource type
 "EXTERNAL". If you encounter a 403 error when trying to use `EXTERN`, verify that you have the correct permissions.

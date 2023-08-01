@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -37,8 +38,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -47,6 +46,7 @@ import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
@@ -54,10 +54,14 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.filtration.RangeRefKey;
+import org.apache.druid.sql.calcite.filtration.Ranges;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -509,7 +513,7 @@ public class Expressions
 
       final DimFilter equalFilter;
       final ColumnType outputType = druidExpression.getDruidType();
-      final boolean isOutputNumeric = outputType != null && outputType.isNumeric();
+      final boolean isOutputNumeric = Types.isNumeric(outputType);
       // if a simple extraction, we can typically use the base column directly for filtering. however, some expressions
       // such as cast also appear as a simple extraction because some native layer things can handle the cast
       // themselves, so we check the output type of the expression and compare it to the type of the direct column. a
@@ -517,22 +521,30 @@ public class Expressions
       // column instead for filtering to ensure that results are correct
       if (druidExpression.isSimpleExtraction() &&
           !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
-        equalFilter = new SelectorDimFilter(
-            druidExpression.getSimpleExtraction().getColumn(),
-            NullHandling.defaultStringValue(),
-            druidExpression.getSimpleExtraction().getExtractionFn()
-        );
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          equalFilter = new SelectorDimFilter(
+              druidExpression.getSimpleExtraction().getColumn(),
+              NullHandling.defaultStringValue(),
+              druidExpression.getSimpleExtraction().getExtractionFn()
+          );
+        } else {
+          if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
+            // return null to fallback to using an expression filter
+            return null;
+          }
+          equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
+        }
       } else if (virtualColumnRegistry != null) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
             operand.getType()
         );
 
-        equalFilter = new SelectorDimFilter(
-            virtualColumn,
-            NullHandling.defaultStringValue(),
-            null
-        );
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          equalFilter = new SelectorDimFilter(virtualColumn, NullHandling.defaultStringValue(), null);
+        } else {
+          equalFilter = NullFilter.forColumn(virtualColumn);
+        }
       } else {
         return null;
       }
@@ -545,7 +557,7 @@ public class Expressions
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -586,8 +598,12 @@ public class Expressions
         flippedKind = kind;
       }
 
+      final DruidExpression rhsExpression = toDruidExpression(plannerContext, rowSignature, rhs);
+      final Expr rhsParsed = rhsExpression != null
+                                       ? plannerContext.parseExpression(rhsExpression.getExpression())
+                                       : null;
       // rhs must be a literal
-      if (rhs.getKind() != SqlKind.LITERAL) {
+      if (rhsParsed == null || !rhsParsed.isLiteral()) {
         return null;
       }
 
@@ -598,11 +614,18 @@ public class Expressions
       }
 
       // Special handling for filters on FLOOR(__time TO granularity).
-      final Granularity queryGranularity = toQueryGranularity(lhsExpression, plannerContext.getExprMacroTable());
+      final Granularity queryGranularity =
+          toQueryGranularity(lhsExpression, plannerContext.getExpressionParser());
       if (queryGranularity != null) {
         // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
         final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-        return buildTimeFloorFilter(ColumnHolder.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
+        return buildTimeFloorFilter(
+            ColumnHolder.TIME_COLUMN_NAME,
+            queryGranularity,
+            flippedKind,
+            rhsMillis,
+            plannerContext
+        );
       }
 
       final String column;
@@ -626,68 +649,104 @@ public class Expressions
 
         final Granularity granularity = ExtractionFns.toQueryGranularity(extractionFn);
         if (granularity != null) {
-          // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
+          // lhs is FLOOR(__time TO granularity); rhs must be a timestamp.
           final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-          final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
-
-          // Is rhs aligned on granularity boundaries?
-          final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
-
-          // Create a BoundRefKey that strips the extractionFn and compares __time as a number.
-          final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
-
-          return getBoundTimeDimFilter(flippedKind, boundRefKey, rhsInterval, rhsAligned);
+          return buildTimeFloorFilter(column, granularity, flippedKind, rhsMillis, plannerContext);
         }
       }
 
-      final String val;
-      final RexLiteral rhsLiteral = (RexLiteral) rhs;
-      if (SqlTypeName.NUMERIC_TYPES.contains(rhsLiteral.getTypeName())) {
-        val = String.valueOf(RexLiteral.value(rhsLiteral));
-      } else if (SqlTypeName.CHAR_TYPES.contains(rhsLiteral.getTypeName())) {
-        val = String.valueOf(RexLiteral.stringValue(rhsLiteral));
-      } else if (SqlTypeName.TIMESTAMP == rhsLiteral.getTypeName() || SqlTypeName.DATE == rhsLiteral.getTypeName()) {
-        val = String.valueOf(
-            Calcites.calciteDateTimeLiteralToJoda(
-                rhsLiteral,
-                plannerContext.getTimeZone()
-            ).getMillis()
-        );
+      final ColumnType matchValueType = Calcites.getColumnTypeForRelDataType(rhs.getType());
+
+      if (plannerContext.isUseBoundsAndSelectors()) {
+        if (matchValueType == null || !matchValueType.isPrimitive()) {
+          // Fall back to expression filter.
+          return null;
+        }
+
+        final String stringVal;
+
+        if (rhsParsed.getLiteralValue() == null) {
+          stringVal = NullHandling.defaultStringValue();
+        } else if (RexUtil.isLiteral(rhs, true) && SqlTypeName.NUMERIC_TYPES.contains(rhs.getType().getSqlTypeName())) {
+          // Peek inside the original rhs for numerics, rather than using the parsed version, for highest fidelity
+          // to what the query originally contained. (It may be a BigDecimal.)
+          stringVal = String.valueOf(RexLiteral.value(rhs));
+        } else {
+          stringVal = String.valueOf(rhsParsed.getLiteralValue());
+        }
+
+        if (stringVal == null) {
+          // Fall back to expression filter.
+          return null;
+        }
+
+        // Numeric lhs needs a numeric comparison.
+        final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
+        final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
+        final DimFilter filter;
+
+        // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
+        switch (flippedKind) {
+          case EQUALS:
+            filter = Bounds.equalTo(boundRefKey, stringVal);
+            break;
+          case NOT_EQUALS:
+            filter = new NotDimFilter(Bounds.equalTo(boundRefKey, stringVal));
+            break;
+          case GREATER_THAN:
+            filter = Bounds.greaterThan(boundRefKey, stringVal);
+            break;
+          case GREATER_THAN_OR_EQUAL:
+            filter = Bounds.greaterThanOrEqualTo(boundRefKey, stringVal);
+            break;
+          case LESS_THAN:
+            filter = Bounds.lessThan(boundRefKey, stringVal);
+            break;
+          case LESS_THAN_OR_EQUAL:
+            filter = Bounds.lessThanOrEqualTo(boundRefKey, stringVal);
+            break;
+          default:
+            throw new IllegalStateException("Shouldn't have got here");
+        }
+
+        return filter;
       } else {
-        // Don't know how to filter on this kind of literal.
-        return null;
+        final Object val = rhsParsed.getLiteralValue();
+
+        if (extractionFn != null || val == null) {
+          // fall back to expression filter
+          return null;
+        }
+
+        final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
+        final DimFilter filter;
+
+        // Always use RangeFilter, to simplify filter optimization later
+        switch (flippedKind) {
+          case EQUALS:
+            filter = Ranges.equalTo(rangeRefKey, val);
+            break;
+          case NOT_EQUALS:
+            filter = new NotDimFilter(Ranges.equalTo(rangeRefKey, val));
+            break;
+          case GREATER_THAN:
+            filter = Ranges.greaterThan(rangeRefKey, val);
+            break;
+          case GREATER_THAN_OR_EQUAL:
+            filter = Ranges.greaterThanOrEqualTo(rangeRefKey, val);
+            break;
+          case LESS_THAN:
+            filter = Ranges.lessThan(rangeRefKey, val);
+            break;
+          case LESS_THAN_OR_EQUAL:
+            filter = Ranges.lessThanOrEqualTo(rangeRefKey, val);
+            break;
+          default:
+            throw new IllegalStateException("Shouldn't have got here");
+        }
+
+        return filter;
       }
-
-      // Numeric lhs needs a numeric comparison.
-      final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
-      final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
-      final DimFilter filter;
-
-      // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
-      switch (flippedKind) {
-        case EQUALS:
-          filter = Bounds.equalTo(boundRefKey, val);
-          break;
-        case NOT_EQUALS:
-          filter = new NotDimFilter(Bounds.equalTo(boundRefKey, val));
-          break;
-        case GREATER_THAN:
-          filter = Bounds.greaterThan(boundRefKey, val);
-          break;
-        case GREATER_THAN_OR_EQUAL:
-          filter = Bounds.greaterThanOrEqualTo(boundRefKey, val);
-          break;
-        case LESS_THAN:
-          filter = Bounds.lessThan(boundRefKey, val);
-          break;
-        case LESS_THAN_OR_EQUAL:
-          filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
-          break;
-        default:
-          throw new IllegalStateException("Shouldn't have got here");
-      }
-
-      return filter;
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
       final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
@@ -713,9 +772,16 @@ public class Expressions
   )
   {
     final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, rexNode);
-    return druidExpression != null
-           ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
-           : null;
+
+    if (druidExpression != null) {
+      return new ExpressionDimFilter(
+          druidExpression.getExpression(),
+          plannerContext.parseExpression(druidExpression.getExpression()),
+          null
+      );
+    }
+
+    return null;
   }
 
   /**
@@ -725,9 +791,9 @@ public class Expressions
    * @return granularity or null if not possible
    */
   @Nullable
-  public static Granularity toQueryGranularity(final DruidExpression expression, final ExprMacroTable macroTable)
+  public static Granularity toQueryGranularity(final DruidExpression expression, final ExpressionParser parser)
   {
-    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, macroTable);
+    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, parser);
 
     if (expr == null) {
       return null;
@@ -746,10 +812,10 @@ public class Expressions
   @Nullable
   public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(
       final DruidExpression expression,
-      final ExprMacroTable macroTable
+      final ExpressionParser parser
   )
   {
-    final Expr expr = Parser.parse(expression.getExpression(), macroTable);
+    final Expr expr = parser.parse(expression.getExpression());
 
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
       return (TimestampFloorExprMacro.TimestampFloorExpr) expr;
@@ -765,18 +831,23 @@ public class Expressions
       final String column,
       final Granularity granularity,
       final SqlKind operatorKind,
-      final long rhsMillis
+      final long rhsMillis,
+      final PlannerContext plannerContext
   )
   {
-    final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
     final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
 
     // Is rhs aligned on granularity boundaries?
     final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
 
-    return getBoundTimeDimFilter(operatorKind, boundRefKey, rhsInterval, rhsAligned);
+    if (plannerContext.isUseBoundsAndSelectors()) {
+      final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
+      return getBoundTimeDimFilter(operatorKind, boundRefKey, rhsInterval, rhsAligned);
+    } else {
+      final RangeRefKey rangeRefKey = new RangeRefKey(column, ColumnType.LONG);
+      return getRangeTimeDimFilter(operatorKind, rangeRefKey, rhsInterval, rhsAligned);
+    }
   }
-
 
   private static DimFilter getBoundTimeDimFilter(
       SqlKind operatorKind,
@@ -806,6 +877,39 @@ public class Expressions
                : Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       case LESS_THAN_OR_EQUAL:
         return Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
+      default:
+        throw new IllegalStateException("Shouldn't have got here");
+    }
+  }
+
+  private static DimFilter getRangeTimeDimFilter(
+      SqlKind operatorKind,
+      RangeRefKey rangeRefKey,
+      Interval interval,
+      boolean isAligned
+  )
+  {
+    switch (operatorKind) {
+      case EQUALS:
+        return isAligned
+               ? Ranges.interval(rangeRefKey, interval)
+               : Filtration.matchNothing();
+      case NOT_EQUALS:
+        return isAligned
+               ? new NotDimFilter(Ranges.interval(rangeRefKey, interval))
+               : Filtration.matchEverything();
+      case GREATER_THAN:
+        return Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+      case GREATER_THAN_OR_EQUAL:
+        return isAligned
+               ? Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getStartMillis()))
+               : Ranges.greaterThanOrEqualTo(rangeRefKey, String.valueOf(interval.getEndMillis()));
+      case LESS_THAN:
+        return isAligned
+               ? Ranges.lessThan(rangeRefKey, String.valueOf(interval.getStartMillis()))
+               : Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
+      case LESS_THAN_OR_EQUAL:
+        return Ranges.lessThan(rangeRefKey, String.valueOf(interval.getEndMillis()));
       default:
         throw new IllegalStateException("Shouldn't have got here");
     }

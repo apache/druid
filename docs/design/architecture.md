@@ -29,7 +29,7 @@ Druid has a distributed architecture that is designed to be cloud-friendly and e
 
 The following diagram shows the services that make up the Druid architecture, how they are typically organized into servers, and how queries and data flow through this architecture.
 
-<img src="../assets/druid-architecture.png" width="800"/>
+![Druid architecture](../assets/druid-architecture.png)
 
 The following sections describe the components of this architecture. 
 
@@ -80,7 +80,7 @@ both in deep storage and across your Historical servers for the data you plan to
 Deep storage is an important part of Druid's elastic, fault-tolerant design. Druid bootstraps from deep storage even
 if every single data server is lost and re-provisioned.
 
-For more details, please see the [Deep storage](../dependencies/deep-storage.md) page.
+For more details, please see the [Deep storage](../design/deep-storage.md) page.
 
 ### Metadata storage
 
@@ -88,13 +88,13 @@ The metadata storage holds various shared system metadata such as segment usage 
 clustered deployment, this is typically a traditional RDBMS like PostgreSQL or MySQL. In a single-server
 deployment, it is typically a locally-stored Apache Derby database.
 
-For more details, please see the [Metadata storage](../dependencies/metadata-storage.md) page.
+For more details, please see the [Metadata storage](../design/metadata-storage.md) page.
 
 ### ZooKeeper
 
 Used for internal service discovery, coordination, and leader election.
 
-For more details, please see the [ZooKeeper](../dependencies/zookeeper.md) page.
+For more details, please see the [ZooKeeper](zookeeper.md) page.
 
 
 ## Storage design
@@ -107,7 +107,7 @@ example, a single day, if your datasource is partitioned by day). Within a chunk
 [_segments_](../design/segments.md). Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
 organized into time chunks, it's sometimes helpful to think of segments as living on a timeline like the following:
 
-<img src="../assets/druid-timeline.png" width="800" />
+![Segment timeline](../assets/druid-timeline.png)
 
 A datasource may have anywhere from just a few segments, up to hundreds of thousands and even millions of segments. Each
 segment is created by a MiddleManager as _mutable_ and _uncommitted_. Data is queryable as soon as it is added to
@@ -203,7 +203,7 @@ new segments. Then it drops the old segments a few minutes later.
 Each segment has a lifecycle that involves the following three major areas:
 
 1. **Metadata store:** Segment metadata (a small JSON payload generally no more than a few KB) is stored in the
-[metadata store](../dependencies/metadata-storage.md) once a segment is done being constructed. The act of inserting
+[metadata store](../design/metadata-storage.md) once a segment is done being constructed. The act of inserting
 a record for a segment into the metadata store is called _publishing_. These metadata records have a boolean flag
 named `used`, which controls whether the segment is intended to be queryable or not. Segments created by realtime tasks will be
 available before they are published, since they are only published when the segment is complete and will not accept

@@ -119,7 +119,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
         context
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource();
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
   }
 
   @VisibleForTesting

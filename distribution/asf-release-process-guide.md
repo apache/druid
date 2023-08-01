@@ -286,16 +286,12 @@ must be tagged properly to make this script working. See the above [Release note
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false clean release:clean release:prepare
+$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
 ```
 
 In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later. 
 We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
-If you want to skip tests, you can do so with following command
 
-```bash
-$ mvn -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
-```
 
 **Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 

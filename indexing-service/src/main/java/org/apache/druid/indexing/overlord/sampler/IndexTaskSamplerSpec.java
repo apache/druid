@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.SamplerResponse;
@@ -28,9 +29,17 @@ import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class IndexTaskSamplerSpec implements SamplerSpec
 {
@@ -79,5 +88,22 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   public SamplerResponse sample()
   {
     return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
+  }
+
+  @Override
+  public String getType()
+  {
+    return SamplerModule.INDEX_SCHEME;
+  }
+
+  @Override
+  @JsonIgnore
+  @Nonnull
+  public Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    return inputSource.getTypes()
+                      .stream()
+                      .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                      .collect(Collectors.toSet());
   }
 }

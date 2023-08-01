@@ -146,7 +146,7 @@ public class QueryFrameworkUtils
         druidSchemaManager
     );
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
@@ -168,7 +168,8 @@ public class QueryFrameworkUtils
     InformationSchema informationSchema =
         new InformationSchema(
             catalog,
-            authorizerMapper
+            authorizerMapper,
+            createOperatorTable(injector)
         );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);

@@ -77,7 +77,7 @@ public class DoublesSketchMergeAggregator implements Aggregator
       return;
     }
     if (object instanceof DoublesSketch) {
-      union.update((DoublesSketch) object);
+      union.union((DoublesSketch) object);
     } else {
       union.update(selector.getDouble());
     }

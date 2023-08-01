@@ -48,7 +48,6 @@ import java.util.Set;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
-  public static final String INPUT_SOURCE_TYPE = "kinesis";
   private static final String TYPE = "index_kinesis";
   private static final Logger log = new Logger(KinesisIndexTask.class);
 
@@ -101,7 +100,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   }
 
   @Override
-  protected KinesisRecordSupplier newTaskRecordSupplier()
+  protected KinesisRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
       throws RuntimeException
   {
     KinesisIndexTaskIOConfig ioConfig = ((KinesisIndexTaskIOConfig) super.ioConfig);
@@ -162,7 +161,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   public Set<ResourceAction> getInputSourceResources()
   {
     return Collections.singleton(new ResourceAction(
-        new Resource(INPUT_SOURCE_TYPE, ResourceType.EXTERNAL),
+        new Resource(KinesisIndexingServiceModule.SCHEME, ResourceType.EXTERNAL),
         Action.READ
     ));
   }

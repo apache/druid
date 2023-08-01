@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -137,6 +138,16 @@ public abstract class FlatTextInputFormat implements InputFormat
            Objects.equals(listDelimiter, that.listDelimiter) &&
            Objects.equals(columns, that.columns) &&
            Objects.equals(delimiter, that.delimiter);
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
+    if (CompressionUtils.Format.GZ == compressionFormat) {
+      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
+    }
+    return size;
   }
 
   @Override

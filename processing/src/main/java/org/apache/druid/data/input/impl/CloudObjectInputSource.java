@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
@@ -125,6 +126,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       return getSplitsForObjects(
+          inputFormat,
           getSplitWidget(),
           getSplitHintSpecOrDefault(splitHintSpec),
           objects,
@@ -132,6 +134,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       );
     } else if (!CollectionUtils.isNullOrEmpty(uris)) {
       return getSplitsForObjects(
+          inputFormat,
           getSplitWidget(),
           getSplitHintSpecOrDefault(splitHintSpec),
           Lists.transform(uris, CloudObjectLocation::new),
@@ -139,6 +142,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       );
     } else {
       return getSplitsForPrefixes(
+          inputFormat,
           getSplitWidget(),
           getSplitHintSpecOrDefault(splitHintSpec),
           prefixes,
@@ -170,9 +174,24 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(this::createEntity).iterator(),
+        getInputEntities(inputFormat),
         temporaryDirectory
     );
+  }
+
+  /**
+   * Return an iterator of {@link InputEntity} corresponding to the objects represented by this input source, as read
+   * by the provided {@link InputFormat}.
+   */
+  Iterator<InputEntity> getInputEntities(final InputFormat inputFormat)
+  {
+    // Use createSplits with FilePerSplitHintSpec.INSTANCE as a way of getting the list of objects to read
+    // out of either "prefixes", "objects", or "uris". The specific splits don't matter because we are going
+    // to flatten them anyway.
+    return createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
+        .flatMap(split -> split.get().stream())
+        .map(this::createEntity)
+        .iterator();
   }
 
   @Override
@@ -226,6 +245,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * implementations do), this method filters out empty objects.
    */
   private static Stream<InputSplit<List<CloudObjectLocation>>> getSplitsForPrefixes(
+      final InputFormat inputFormat,
       final CloudObjectSplitWidget splitWidget,
       final SplitHintSpec splitHintSpec,
       final List<URI> prefixes,
@@ -246,6 +266,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     // Only consider nonempty objects. Note: size may be unknown; if so we allow it through, to avoid
     // calling getObjectSize and triggering a network call.
     return toSplitStream(
+        inputFormat,
         splitWidget,
         splitHintSpec,
         Iterators.filter(iterator, object -> object.getSize() != 0) // Allow UNKNOWN_SIZE through
@@ -262,6 +283,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * come in through prefixes.)
    */
   private static Stream<InputSplit<List<CloudObjectLocation>>> getSplitsForObjects(
+      final InputFormat inputFormat,
       final CloudObjectSplitWidget splitWidget,
       final SplitHintSpec splitHintSpec,
       final List<CloudObjectLocation> objectLocations,
@@ -279,6 +301,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     }
 
     return toSplitStream(
+        inputFormat,
         splitWidget,
         splitHintSpec,
         Iterators.transform(
@@ -289,6 +312,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   }
 
   private static Stream<InputSplit<List<CloudObjectLocation>>> toSplitStream(
+      final InputFormat inputFormat,
       final CloudObjectSplitWidget splitWidget,
       final SplitHintSpec splitHintSpec,
       final Iterator<CloudObjectSplitWidget.LocationWithSize> objectIterator
@@ -300,9 +324,18 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
             o -> {
               try {
                 if (o.getSize() == CloudObjectSplitWidget.UNKNOWN_SIZE) {
-                  return new InputFileAttribute(splitWidget.getObjectSize(o.getLocation()));
+                  long size = splitWidget.getObjectSize(o.getLocation());
+                  return new InputFileAttribute(
+                      size,
+                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size
+                  );
                 } else {
-                  return new InputFileAttribute(o.getSize());
+                  return new InputFileAttribute(
+                      o.getSize(),
+                      inputFormat != null
+                      ? inputFormat.getWeightedSize(o.getLocation().getPath(), o.getSize())
+                      : o.getSize()
+                  );
                 }
               }
               catch (IOException e) {

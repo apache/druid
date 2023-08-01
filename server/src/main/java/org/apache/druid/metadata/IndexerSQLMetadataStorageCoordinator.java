@@ -2154,32 +2154,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public void deleteSegments(final Set<DataSegment> segments)
   {
-    connector.getDBI().inTransaction(
-        new TransactionCallback<Void>()
-        {
-          @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
-          {
-            int segmentSize = segments.size();
-            String dataSource = "";
-            for (final DataSegment segment : segments) {
-              dataSource = segment.getDataSource();
-              deleteSegment(handle, segment);
-            }
-            log.debugSegments(segments, "Delete the metadata of segments");
-            log.info("Removed [%d] segments from metadata storage for dataSource [%s]!", segmentSize, dataSource);
+    if (segments.isEmpty()) {
+      log.info("No segments to delete.");
+      return;
+    }
 
-            return null;
+    final String deleteSql = StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable());
+    final String dataSource = segments.stream().findFirst().map(DataSegment::getDataSource).get();
+
+    // generate the IDs outside the transaction block
+    final List<String> ids = segments.stream().map(s -> s.getId().toString()).collect(Collectors.toList());
+
+    int numDeletedSegments = connector.getDBI().inTransaction((handle, transactionStatus) -> {
+          final PreparedBatch batch = handle.prepareBatch(deleteSql);
+
+          for (final String id : ids) {
+            batch.bind("id", id).add();
           }
+
+          int[] deletedRows = batch.execute();
+          return Arrays.stream(deletedRows).sum();
         }
     );
-  }
 
-  private void deleteSegment(final Handle handle, final DataSegment segment)
-  {
-    handle.createStatement(StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable()))
-          .bind("id", segment.getId().toString())
-          .execute();
+    log.debugSegments(segments, "Delete the metadata of segments");
+    log.info("Deleted [%d] segments from metadata storage for dataSource [%s].", numDeletedSegments, dataSource);
   }
 
   private void updatePayload(final Handle handle, final DataSegment segment) throws IOException

@@ -23,14 +23,23 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
-public class KubernetesWorkItemTest
+@RunWith(EasyMockRunner.class)
+public class KubernetesWorkItemTest extends EasyMockSupport
 {
   private KubernetesWorkItem workItem;
   private Task task;
+
+  @Mock
+  KubernetesPeonLifecycle kubernetesPeonLifecycle;
 
   @Before
   public void setup()
@@ -70,21 +79,16 @@ public class KubernetesWorkItemTest
   @Test
   public void test_shutdown_withKubernetesPeonLifecycle()
   {
-    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
-        task,
-        null,
-        null,
-        null
-    ) {
-      @Override
-      protected synchronized void shutdown()
-      {
-      }
-    };
+    kubernetesPeonLifecycle.shutdown();
+    EasyMock.expectLastCall();
+    kubernetesPeonLifecycle.startWatchingLogs();
+    EasyMock.expectLastCall();
 
-    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+    replayAll();
+    workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
 
     workItem.shutdown();
+    verifyAll();
     Assert.assertTrue(workItem.isShutdownRequested());
   }
 

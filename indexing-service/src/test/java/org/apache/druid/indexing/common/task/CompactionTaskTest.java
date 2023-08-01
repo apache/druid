@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
@@ -35,7 +36,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -103,6 +107,7 @@ import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -127,6 +132,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -139,12 +145,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -152,6 +158,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -934,9 +941,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1009,9 +1014,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1085,9 +1088,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1161,9 +1162,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1227,9 +1226,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
 
     ingestionSpecs.sort(
@@ -1273,9 +1270,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -1312,9 +1307,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1357,9 +1350,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
   }
 
@@ -1383,9 +1374,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
   }
 
@@ -1421,9 +1410,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1461,9 +1448,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1503,9 +1488,7 @@ public class CompactionTaskTest
             null
         ),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1543,9 +1526,7 @@ public class CompactionTaskTest
         null,
         null,
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1582,9 +1563,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1621,9 +1600,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
 
     Assert.assertEquals(6, ingestionSpecs.size());
@@ -1647,9 +1624,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         COORDINATOR_CLIENT,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        segmentCacheManagerFactory
     );
     Assert.assertEquals(6, ingestionSpecs.size());
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
@@ -1883,23 +1858,22 @@ public class CompactionTaskTest
     }
   }
 
-  private static class TestCoordinatorClient extends CoordinatorClient
+  private static class TestCoordinatorClient extends NoopCoordinatorClient
   {
     private final Map<DataSegment, File> segmentMap;
 
     TestCoordinatorClient(Map<DataSegment, File> segmentMap)
     {
-      super(null, null);
       this.segmentMap = segmentMap;
     }
 
     @Override
-    public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+    public ListenableFuture<List<DataSegment>> fetchUsedSegments(
         String dataSource,
         List<Interval> intervals
     )
     {
-      return ImmutableSet.copyOf(segmentMap.keySet());
+      return Futures.immediateFuture(ImmutableList.copyOf(segmentMap.keySet()));
     }
   }
 
@@ -1979,7 +1953,7 @@ public class CompactionTaskTest
         Map<DataSegment, File> segmentFileMap
     )
     {
-      super(mapper, () -> 0);
+      super(mapper, ColumnConfig.DEFAULT);
 
       queryableIndexMap = Maps.newHashMapWithExpectedSize(segmentFileMap.size());
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {
@@ -2186,6 +2160,14 @@ public class CompactionTaskTest
     public String getType()
     {
       return "compact";
+    }
+
+    @Nonnull
+    @JsonIgnore
+    @Override
+    public Set<ResourceAction> getInputSourceResources()
+    {
+      return ImmutableSet.of();
     }
 
     @JsonProperty
