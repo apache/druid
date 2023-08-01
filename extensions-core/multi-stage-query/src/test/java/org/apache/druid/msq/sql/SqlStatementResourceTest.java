@@ -95,7 +95,6 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -747,39 +746,44 @@ public class SqlStatementResourceTest extends MSQTestBase
     Response resultsResponse = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
 
-    List<Map<String, Object>> rows = new ArrayList<>();
-    rows.add(ROW1);
-    rows.add(ROW2);
+    String expectedResult = "{\"_time\":123,\"alias\":\"foo\",\"market\":\"bar\"}\n"
+                            + "{\"_time\":234,\"alias\":\"foo1\",\"market\":\"bar1\"}\n\n";
 
-    Assert.assertEquals(rows, getResultRowsFromResponse(resultsResponse));
+    assertExpectedResults(expectedResult, resultsResponse);
 
     Assert.assertEquals(
         Response.Status.OK.getStatusCode(),
         resource.deleteQuery(FINISHED_SELECT_MSQ_QUERY, makeOkRequest()).getStatus()
     );
 
-    Assert.assertEquals(
-        rows,
-        getResultRowsFromResponse(resource.doGetResults(
+    assertExpectedResults(
+        expectedResult,
+        resource.doGetResults(
             FINISHED_SELECT_MSQ_QUERY,
             0L,
             makeOkRequest()
-        ))
+        )
     );
 
-    Assert.assertEquals(
-        rows,
-        getResultRowsFromResponse(resource.doGetResults(
+    assertExpectedResults(
+        expectedResult,
+        resource.doGetResults(
             FINISHED_SELECT_MSQ_QUERY,
             null,
             makeOkRequest()
-        ))
+        )
     );
 
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
     );
+  }
+
+  private void assertExpectedResults(String expectedResult, Response resultsResponse) throws IOException
+  {
+    byte[] bytes = SqlResourceTest.responseToByteArray(resultsResponse);
+    Assert.assertEquals(expectedResult, new String(bytes, StandardCharsets.UTF_8));
   }
 
   @Test
