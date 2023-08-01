@@ -618,17 +618,20 @@ public class SegmentAllocationQueue
       if (result.isSuccess()) {
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
-      } else {
-        log.info(
+      } else if (request.canRetry()) {
+        log.debug(
             "Failed allocation attempt[%d/%d] for task[%s], batch[%s]: %s",
-            request.getAttempts(), request.getMaxAttempts(), request.getTask().getId(),
-            key, result.getErrorMessage()
+            request.getAttempts(), request.getMaxAttempts(),
+            request.getTask().getId(), key, result.getErrorMessage()
         );
-
-        if (request.getAttempts() >= request.getMaxAttempts()) {
-          emitTaskMetric("task/action/failed/count", 1L, request);
-          requestToFuture.remove(request).complete(null);
-        }
+      } else {
+        log.error(
+            "Failed allocation attempt[%d/%d] for task[%s], batch[%s]: %s",
+            request.getAttempts(), request.getMaxAttempts(),
+            request.getTask().getId(), key, result.getErrorMessage()
+        );
+        emitTaskMetric("task/action/failed/count", 1L, request);
+        requestToFuture.remove(request).complete(null);
       }
     }
 
