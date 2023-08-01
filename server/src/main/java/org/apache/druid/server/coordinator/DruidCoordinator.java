@@ -696,7 +696,7 @@ public class DruidCoordinator
             DruidCoordinatorRuntimeParams
                 .newBuilder(coordinatorStartTime)
                 .withDatabaseRuleManager(metadataRuleManager)
-                .withDataSourcesSnapshot(dataSourcesSnapshot)
+                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .build();
