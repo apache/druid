@@ -869,7 +869,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return isNumericNull() ? null : new Object[] {value.doubleValue()};
+      return isNumericNull() ? null : new Object[]{value.doubleValue()};
     }
 
     @Override
@@ -891,15 +891,12 @@ public abstract class ExprEval<T>
             case DOUBLE:
               return ExprEval.ofDoubleArray(asArray());
             case LONG:
-              return ExprEval.ofLongArray(value == null ? null : new Object[] {value.longValue()});
+              return ExprEval.ofLongArray(value == null ? null : new Object[]{value.longValue()});
             case STRING:
-              return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
+              return ExprEval.ofStringArray(value == null ? null : new Object[]{value.toString()});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
-              return new ArrayExprEval(
-                  castTo,
-                  new Object[] {castTo(elementType).value()}
-              );
+              return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
           }
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
@@ -953,7 +950,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return isNumericNull() ? null : new Object[] {value.longValue()};
+      return isNumericNull() ? null : new Object[]{value.longValue()};
     }
 
     @Override
@@ -973,17 +970,14 @@ public abstract class ExprEval<T>
         case ARRAY:
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ExprEval.ofDoubleArray(value == null ? null : new Object[] {value.doubleValue()});
+              return ExprEval.ofDoubleArray(value == null ? null : new Object[]{value.doubleValue()});
             case LONG:
               return ExprEval.ofLongArray(asArray());
             case STRING:
-              return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
+              return ExprEval.ofStringArray(value == null ? null : new Object[]{value.toString()});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
-              return new ArrayExprEval(
-                  castTo,
-                  new Object[] {castTo(elementType).value()}
-              );
+              return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
           }
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
@@ -1075,7 +1069,7 @@ public abstract class ExprEval<T>
     @Override
     public Object[] asArray()
     {
-      return value == null ? null : new Object[] {value};
+      return value == null ? null : new Object[]{value};
     }
 
     private int computeInt()
@@ -1151,20 +1145,17 @@ public abstract class ExprEval<T>
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
               return ExprEval.ofDoubleArray(
-                  value == null ? null : new Object[] {number == null ? null : number.doubleValue()}
+                  value == null ? null : new Object[]{number == null ? null : number.doubleValue()}
               );
             case LONG:
               return ExprEval.ofLongArray(
-                  value == null ? null : new Object[] {number == null ? null : number.longValue()}
+                  value == null ? null : new Object[]{number == null ? null : number.longValue()}
               );
             case STRING:
-              return ExprEval.ofStringArray(value == null ? null : new Object[] {value});
+              return ExprEval.ofStringArray(value == null ? null : new Object[]{value});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
-              return new ArrayExprEval(
-                  castTo,
-                  new Object[] {castTo(elementType).value()}
-              );
+              return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
           }
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
