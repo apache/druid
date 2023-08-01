@@ -158,6 +158,19 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Lookups"
           />
+          <Blueprint4.MenuDivider />
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            href="#explore"
+            icon="compass"
+            label="(experimental)"
+            multiline={false}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Explore"
+          />
         </Blueprint4.Menu>
       }
       defaultIsOpen={false}

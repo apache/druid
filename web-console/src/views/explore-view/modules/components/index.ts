@@ -16,38 +16,4 @@
  * limitations under the License.
  */
 
-@import './variables';
-
-.console-application {
-  .view-container {
-    position: absolute;
-    top: $header-bar-height;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: $standard-padding;
-    overflow-y: auto;
-
-    &.narrow-pad {
-      padding: $standard-padding $thin-padding;
-    }
-
-    &.thin {
-      padding: 10px;
-    }
-
-    &.thinner {
-      padding: 5px;
-    }
-
-    .app-view {
-      position: relative;
-    }
-  }
-
-  .control-separator {
-    width: 100%;
-    height: 22px;
-    border-top: 2px solid #6d8ea9;
-  }
-}
+export * from './generic-output-table/generic-output-table';
