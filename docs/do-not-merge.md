@@ -12,11 +12,13 @@ Review the upgrade notes and incompatible changes before you upgrade to Druid 27
 
 # Highlights
 
+change highglights to actual highlights and link to other sections w/ more details
+
 <!-- HIGHLIGHTS H2. FOR EACH MAJOR FEATURE FOR THE RELEASE -->
 
 ## Query from deep storage (experimental)
 
-Druid now supports querying segments that are stored only in deep storage. When you query from deep storage, you increase the data available for queries without necessarily having to scale your Historical processes to accommodate more data. To take advantage of the potential storage savings, make sure you configure your load rules to not load all your segments onto Historical processes. 
+Druid now supports querying segments that are stored only in deep storage. When you query from deep storage, you can query larger  data available for queries without necessarily having to scale your Historical processes to accommodate more data. To take advantage of the potential storage savings, make sure you configure your load rules to not load all your segments onto Historical processes. 
 
 Note that at least one segment of a datasource must be loaded onto a Historical process so that the Broker can plan the query. It can be any segment though.
 
@@ -30,20 +32,15 @@ As part of this feature, there are new API endpoints available to interact with 
 
 - Get query results with `GET /sql/statements/:queryID`
 
-[14416](https://github.com/apache/druid/pull/14416)
-[14512](https://github.com/apache/druid/pull/14512)
-[14527](https://github.com/apache/druid/pull/14527)
+[#14416](https://github.com/apache/druid/pull/14416)
 
-## Java 17 support
+[#14512](https://github.com/apache/druid/pull/14512)
 
-Druid now fully supports Java 17.
-[14384](https://github.com/apache/druid/pull/14384)
+[#14527](https://github.com/apache/druid/pull/14527)
 
-## Array column types
+ADD LINK TO DOCS
 
-Array column types are now generally available.
-
-For more information about this feature, see the [26.0.0 release notes for array column types](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29).
+WILL TO JAZZ IT UP 
 
 ## Schema auto-discovery
 
@@ -51,7 +48,20 @@ Schema auto-discovery is now generally available.
 
 For more information about this feature, see the [26.0.0 release notes for Schema auto-discovery](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29-schema-auto-discovery-%28experimental%29).
 
+## Array column types - COMBINE WITH SCHEMA AUTO-DISCOVERY
+
+As part of Schema auto-discovery, array column types are now generally available. 
+
+- THERE ARE CAVEATS MUST USE AUTO TYPE COLUMN INDEXER FROM SCHEMA AUTO-DISCOVERY
+- GET CAVEATS FROM CLINT
+
+
+For more information about this feature, see the [26.0.0 release notes for array column types](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29).
+
+
 ## Smart segment loading
+
+INSTEAD OF PRIORITIZING THINGS EQUALLY; WE PRIORITIZE NEW SEGMENTS THAT ARE UNDERREPLICATED
 
 The Coordinator is now more stable and user-friendly. This is accompanied by several bug fixes, logging and metric improvements, and a whole new range of capabilities.
 
@@ -73,15 +83,33 @@ As part of this change, new metrics are available. For more information, see [Ne
 
 [13197](https://github.com/apache/druid/pull/13197)
 
+## Java 17 support
+
+Druid now fully supports Java 17.
+
+[#14384](https://github.com/apache/druid/pull/14384)
+
 ## Hadoop 2 deprecated
 
 Support for Hadoop 2 is now deprecated. It will be removed in a future release.
 
+APACHE DRUID IS BUILT WITH HADOOP 3. WILL TO GIVE MORE.
+
+## Parameter execution
+
+Follow up9 w/ Amatya
+
+
 # Additional features and improvements
 
-## MSQ task engine
+## SQL-based ingestion
 
 ### `maxInputBytesPerWorker` context parameter
+
+THIS IS UNDOCUMENTED. SO INSTEAD JUST SAY THE MAX INPUT BYTES PER WORKER IS NOW 512. PREVOUSLY, IT WAS 10 GIB
+
+MOVE TO UPGRADE NOTES
+
 
 The context parameter now denotes the estimated weighted size (in bytes) of the input to split on. The MSQ task engine now takes into account the input format and compression format instead of the actual file size reported by the file system.
 
@@ -98,24 +126,41 @@ The MSQ fault, `InsertCannotOrderByDescending`, is deprecated. An INSERT or REPL
 
 [14436](https://github.com/apache/druid/pull/14436)
 
-### SELECT query results
+[14370](https://github.com/apache/druid/pull/14370)
+
+### - IMPROVED SEGMENT SIZES
+
+Changed the default `clusterStatisticsMergeMode` to SEQUENTIAL WHICH LEADS TO MORE ACCURATE SEGMENT SIZES
+
+[#14310](https://github.com/apache/druid/pull/14310)
+
+- Added a query context parameter `MultiStageQueryContext` to determine whether the result of an MSQ select query is limited [#14476](https://github.com/apache/druid/pull/14476)
+
+### ADD https://github.com/apache/druid/pull/14048
+
+### Other SQL-based ingestion improvements
+
+- The same aggregator can now have two output names [14367](https://github.com/apache/druid/pull/14367)
+- Enabled using functions as inputs for `index` and `length` parameters [#14480](https://github.com/apache/druid/pull/14480)
+- Improved parse exceptions ASK FOR PR
+- Temporary storage as a runtime parameter. MSQ will start honoring changes to the Middle Manager. ASK FOR PR
+
+## NEW SECTION QUERIES RUNNING ON MSQ
+
+### Query from deep storage
+
+### TRUNCATED QUERY RESULTS
 
 SELECT queries executed using MSQ now generate only a subset of the results in the query reports.
 To fetch the complete result set, run the query using the native engine.
 
-[14370](https://github.com/apache/druid/pull/14370)
-
-
-### Other MSQ improvements
-
-- The same aggregator can now have two output names [14367](https://github.com/apache/druid/pull/14367)
-- Changed the default `clusterStatisticsMergeMode` to SEQUENTIAL (#14310)[https://github.com/apache/druid/pull/14310]
-- Added a query context parameter `MultiStageQueryContext` to determine whether the result of an MSQ select query is limited (#14476)[https://github.com/apache/druid/pull/14476]
-- Enabled using functions as inputs for `index` and `length` parameters (#14480)[https://github.com/apache/druid/pull/14480]
+14370
 
 ## Ingestion
 
 ### New property for task completion updates
+
+MOVE TO CLUSTER MANAGEMENT
 
 The new property `druid.indexer.queue.taskCompleteHandlerNumThreads` controls the number of threads used by the Overlord `TaskQueue` to handle task completion updates received from the workers.
 
@@ -127,11 +172,15 @@ The following metrics have been added:
 
 ### Improved response to max_allowed_packet limit
 
+MOVE TO OTHER INGESTION IMPROVEMENTS
+
 If the Overlord fails to insert a task into the metadata because of a payload that exceeds the `max_allowed_packet` limit, the response now returns `400 Bad request` instead of `500 Internal server error`. This prevents an `index_parallel` task from retrying the insertion of a bad sub-task indefinitely and causes it to fail immediately.
 
 [14271](https://github.com/apache/druid/pull/14271)
 
 ### Improved handling of mixed type arrays
+
+REMOVE. JUST PART OF SCHEMA AUTO-DISCOVERY BEING GA
 
 Druid now handles mixed type arrays such as `[["a", "b", "c"], {"x": 123}]` as `ARRAY<COMPLEX<json>` rather than throwing an incompatible type exception.
 
@@ -143,13 +192,7 @@ Druid now handles mixed type arrays such as `[["a", "b", "c"], {"x": 123}]` as `
 * Removed double synchronization on simple map operations in Kubernetes task runner. [14435](https://github.com/apache/druid/pull/14435)
 * Kubernetes overlord extension now cleans up the job if the task pod fails to come up in time. [14425](https://github.com/apache/druid/pull/14425)
 
-## Querying
-
-### New function for regular expression replacement
-
-The new function `REGEXP_REPLACE` allows you to replace all instances of a pattern with a replacement string.
-
-[14460](https://github.com/apache/druid/pull/14460)
+## MULTI-STAGE TASK QUERIES
 
 ### Query results directory
 
@@ -157,9 +200,22 @@ Druid now supports a `query-results` directory in durable storage to store query
 
 [14446](https://github.com/apache/druid/pull/14446)
 
+## QUERYING
+
+### New function for regular expression replacement
+
+The new function `REGEXP_REPLACE` allows you to replace all instances of a pattern with a replacement string.
+
+[14460](https://github.com/apache/druid/pull/14460)
+
+
 ### Limit for subquery results by memory usage
 
+MOVE TO HIGHLIGHTS
+
 Users can now add a guardrail to prevent subquery’s results from exceeding the set number of bytes by setting `druid.server.http.maxSubqueryRows` in the Broker's config or `maxSubqueryRows` in the query context. This feature is experimental for now and would default back to row-based limiting in case it fails to get the accurate size of the results consumed by the query.
+
+THIS IS PREFERABLE TO ROW-BASED.
 
 [13952](https://github.com/apache/druid/pull/13952)
 
@@ -170,6 +226,8 @@ You can now use `HLL_SKETCH_ESTIMATE` and `THETA_SKETCH_ESTIMATE` as expressions
 [14312](https://github.com/apache/druid/pull/14312)
 
 ### String encoding parameter for HLL sketches
+
+REMOVE
 
 HLL sketches now accept a new `stringEncoding` parameter to build sketches with UTF-8 bytes.
 
@@ -185,7 +243,9 @@ Updated EARLIEST_BY and LATEST_BY function signatures as follows:
 [14352](https://github.com/apache/druid/pull/14352)
 
 
-### Exposed Druid functions
+### INFORMATION_SCHEMA.ROUTINES TABLE
+
+THIS TABLE CAN BE USED TO PROGRAMATICALLY GET INFORMATION ABOUT THE FUNCTIONS THAT DRUID SQL SUPPORTS
 
 Exposed information about Druid functions in the `INFORMATION_SCHEMA.ROUTINES` table. The table contains the following columns:
 
@@ -199,6 +259,14 @@ Exposed information about Druid functions in the `INFORMATION_SCHEMA.ROUTINES` t
 [14378](https://github.com/apache/druid/pull/14378)
 
 ### New Broker configuration for SQL schema migrations
+
+ADD TO UPGRADE SECTION TOO. TYPE CHANGE. TELL DRUID HOW TO BEHAVE IF YOUR SCHEMA EVOLVES OVER TIME.
+
+I ALREADY KNOW WHAT MY EXISTING SCHEMA IS. MAKES QUERYING MORE RESILIENT TO NEW SEGMENTS INTRODUCING NEW TYPES.
+
+YOUR ORIGINAL COLUMN IS LONG AND NEW SEGMENTS ARE STRING.
+
+
 
 A new broker configuration, `druid.sql.planner.metadataColumnTypeMergePolicy`, adds configurable modes to how column types are computed for the SQL table schema when faced with differences between segments.
 
@@ -214,14 +282,20 @@ The new `leastRestrictive` mode chooses the most appropriate type that data acro
 ### EXPLAIN PLAN improvements
 
 The EXPLAIN PLAN result includes a new column `ATTRIBUTES` that describes the attributes of a query.
-See [SQL query translation](docs/querying/sql-translation.md) for more information and examples.
+See SQL query translation for more information and examples.
 
 [14391](https://github.com/apache/druid/pull/14391)
 
 
+### NEW FILTERS FROM CLINT'S PR
+
+NEED DOCS TOO
+
 ## Metrics and monitoring
 
-### Added a new SysMonitorOshi monitor
+### Added a new OSHI SYS monitor
+
+ADD TO HIGHLIGHTS
 
 Added a new monitor `SysMonitorOshi` to replace `SysMonitor`. The new monitor has a wider support for different machine architectures including ARM instances. We recommend switching to `SysMonitorOshi` as `SysMonitor` is now deprecated and will be removed in future releases.
 
@@ -233,7 +307,9 @@ Added a new monitor `ServiceStatusMonitor` to monitor the service health of the 
 
 [14443](https://github.com/apache/druid/pull/14443)
 
-### New segment metrics
+### New BROKER metrics
+
+SOME OF THESE NAMES ARE GOING TO CHANGE FOR 27.0
 
 The following metrics are now available for Brokers:
 
@@ -241,6 +317,10 @@ The following metrics are now available for Brokers:
 |------|-----------|----------|------------|
 |`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`| | 
 |`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache. Emitted once per refresh per datasource.|`dataSource`| | 
+
+
+### NEW COORDINATOR METRICS
+
 | `segment/loadQueue/assigned` | Number of segments assigned for load or drop to the load queue of a server. |`dataSource`,`server` | Varies |
 | `segment/loadQueue/success` |Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
 | `segment/loadQueue/cancelled` |Number of segment assignments that were canceled before completion. |`dataSource`,`server` | 0 |
@@ -250,6 +330,8 @@ The following metrics are now available for Brokers:
 [13197](https://github.com/apache/druid/pull/13197)
 
 ### New metrics for task completion updates
+
+CHANGE TO TABLE. 
 
 The following metrics have been added:
 * `task/status/queue/count`: Monitors the number of queued items
@@ -265,13 +347,19 @@ Added `groupId` to task metrics emitted by the Overlord. This is helpful for gro
 
 ### New metrics for monitoring sync status of `HttpServerInventoryView`
 
+NAME CHANGE. KASHIF WILL HAVE A PR FOR UPDATING THE CODE
+
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|-----------|----------|
-|`segment/serverview/sync/healthy`|Sync status of the Coordinator/Broker with a segment-loading server such as a Historical or Peon. Emitted by the Coordinator and Brokers only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `segment/serverview/sync/unstableTime` to debug slow startup of the Coordinator.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
-|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator/Broker has been failing to sync with a segment-loading server. Emitted by the Coordinator and Brokers only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
+|`segment/serverview/sync/healthy`|Sync status of the Coordinator/Broker with a segment-loading server such as a Historical or Peon. Emitted by the Coordinator and Brokers only when HTTP-based server view is enabled. This metric can be used in conjunction with `segment/serverview/sync/unstableTime` to debug slow startup of the Coordinator.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
+|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator/Broker has been failing to sync with a segment-loading server. Emitted by the Coordinator and Brokers only when HTTP-based server view is enabled.|`server`, `tier`|Not emitted for synced servers.|
+
 ## Cluster management
 
+
 ### Removed unused Coordinator dynamic configuration properties
+
+PART OF SMART SEGMENT LOADING 
 
 The following Coordinator dynamic configs have been removed:
 
@@ -282,11 +370,15 @@ The following Coordinator dynamic configs have been removed:
 
 ### Made Coordinator more resilient to leadership changes
 
+PART OF SMART SEGMENT LOADING
+
 The Coordinator is more resilient to leadership changes now and does not get stuck even if re-election happens while a Coordinator run is in progress.
 
 [14385](https://github.com/apache/druid/pull/14385)
 
 ### Improved segment balancing strategy
+
+PART OF SMART SEGMENT LOADING
 
 The `cost` balancer strategy performs much better now and is capable of moving more segments in a single Coordinator run. These improvements were made by borrowing ideas from the `cachingCost` strategy.
 
@@ -296,11 +388,15 @@ The `cachingCost` strategy itself has been known to cause issues and is now depr
 
 ### Enabled empty tiered replicants for load rules
 
-Druid now allows empty tiered replicants in load rules.
+MENTION THAT THIS IS PART OF QUERY DEEP STORAGE
+
+Druid now allows empty tiered replicants in load rules. 
 
 [14432](https://github.com/apache/druid/pull/14432)
 
 ### Changed Coordinator configs values
+
+PART OF SMART SEGMENT LOADING
 
 The following Coordinator dynamic configs have new default values:
 
@@ -320,13 +416,10 @@ New metrics are available to monitor the sync status of `HttpServerInventoryView
 
 [14517](https://github.com/apache/druid/pull/14517)
 
-### Improved error messages
-
-Introduced a new unified exception, `DruidException`, for surfacing errors. It is partially compatible with the old way of reporting error messages. Response codes remain the same, all fields that previously existed on the response will continue to exist and be populated, including `errorMessage`. Some error messages have changed to be more consumable by humans and some cases have the message restructured. There should be no impact to the response codes.
-
-[14004](https://github.com/apache/druid/pull/14004)
 
 ## Web console
+
+ASK VAD TO TAKE A LOOK AT WEB CONSOLE SECTION
 
 ### Supervisors and Tasks
 
@@ -356,6 +449,13 @@ druid.emitter.kafka.segmentMetadata.topic=foo
 
 [14281](https://github.com/apache/druid/pull/14281)
 
+### CONTRIBUTOR EXTENSIONS
+
+THESE ARE NOT SHIPPED WITH DRUID BUT YOU CAN BUILD IT 
+
+- BUILD ICEBERG EXTENSION WITH 27
+- AM
+
 ## Dependency updates
 
 The following dependencies have had their versions bumped:
@@ -366,19 +466,35 @@ The following dependencies have had their versions bumped:
 
 ## Developer notes
 
+Introduced a new unified exception, `DruidException`, for surfacing errors. It is partially compatible with the old way of reporting error messages. Response codes remain the same, all fields that previously existed on the response will continue to exist and be populated, including `errorMessage`. Some error messages have changed to be more consumable by humans and some cases have the message restructured. There should be no impact to the response codes.
+
+
 [`org.apache.druid.common.exception.DruidException`](https://github.com/apache/druid/blob/27.0.0/processing/src/main/java/org/apache/druid/common/exception/DruidException.java#L28) is deprecated in favor of the more comprehensive [`org.apache.druid.error.DruidException`](https://github.com/apache/druid/blob/master/processing/src/main/java/org/apache/druid/error/DruidException.java).
 
 [`org.apache.druid.metadata.EntryExistsException`](https://github.com/apache/druid/blob/27.0.0/processing/src/main/java/org/apache/druid/metadata/EntryExistsException.java) is deprecated and will be removed in a future release.
 
+[14004](https://github.com/apache/druid/pull/14004)
 [14554](https://github.com/apache/druid/pull/14554)
 
 # Upgrade notes and incompatible changes
 
 ## Upgrade notes
 
+### SQL COMPATABILITY MODE
+
 ### Hadoop 2
 
 Support for Hadoop 2 has been deprecated. It will be removed in a future release.
+
+### GROUP BY V1
+
+REMOVE IN NEXT RELEASE
+
+### PUSH-BASED REAL-TIME INGESTION DEPRECATED
+
+REMOVE IN NEXT RELEASE
+
+### CACHING COST 
 
 ## Incompatible changes
 
@@ -388,9 +504,7 @@ Support for Hadoop 2 has been deprecated. It will be removed in a future release
 
 [14500](https://github.com/apache/druid/pull/14500)
 
-
 # Credits
 Thanks to everyone who contributed to this release!
 
 <list of gh ids>
-
