@@ -2925,7 +2925,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .filters(and(
                       NullHandling.sqlCompatible()
-                      ? equality("dimZipf", "27", ColumnType.LONG)
+                      ? numericEquality("dimZipf", "27", ColumnType.LONG)
                       : bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
                       equality("j0.unnest", "Baz", ColumnType.STRING)
                   ))
@@ -3015,7 +3015,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .filters(and(
                       NullHandling.sqlCompatible()
-                      ? equality("dimZipf", "27", ColumnType.LONG)
+                      ? numericEquality("dimZipf", "27", ColumnType.LONG)
                       : bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
                       equality("j0.unnest", "Baz", ColumnType.STRING)
                   ))

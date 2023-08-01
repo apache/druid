@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -30,29 +29,13 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.BoundDimFilter;
-import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
-<<<<<<< HEAD
-import org.apache.druid.query.filter.InDimFilter;
-import org.apache.druid.query.filter.LikeDimFilter;
-import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-=======
->>>>>>> 27981e5e51 (Refactor logic for unnest filters/query filters and add tests)
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.BoundFilter;
-import org.apache.druid.segment.filter.ColumnComparisonFilter;
-import org.apache.druid.segment.filter.FalseFilter;
-import org.apache.druid.segment.filter.LikeFilter;
-import org.apache.druid.segment.filter.NotFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -76,8 +59,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.druid.segment.filter.FilterTestUtils.sdf;
-import static org.apache.druid.segment.filter.FilterTestUtils.sdfd;
+import static org.apache.druid.segment.filter.FilterTestUtils.selector;
 import static org.apache.druid.segment.filter.Filters.and;
 import static org.apache.druid.segment.filter.Filters.or;
 
@@ -295,13 +277,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
 
     final OrFilter baseFilter = new OrFilter(ImmutableList.of(
-        sdf(OUTPUT_COLUMN_NAME, "1", null),
-        sdf(inputColumn, "2", null)
+        selector(OUTPUT_COLUMN_NAME, "1"),
+        selector(inputColumn, "2")
     ));
 
     final OrFilter expectedPushDownFilter = new OrFilter(ImmutableList.of(
-        sdf(inputColumn, "1", null),
-        sdf(inputColumn, "2", null)
+        selector(inputColumn, "1"),
+        selector(inputColumn, "2")
     ));
 
     final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
@@ -339,18 +321,18 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
 
     final OrFilter baseFilter = new OrFilter(ImmutableList.of(
-        sdf(OUTPUT_COLUMN_NAME, "1", null),
+        selector(OUTPUT_COLUMN_NAME, "1"),
         new AndFilter(ImmutableList.of(
-            sdf(inputColumn, "2", null),
-            sdf(OUTPUT_COLUMN_NAME, "10", null)
+            selector(inputColumn, "2"),
+            selector(OUTPUT_COLUMN_NAME, "10")
         ))
     ));
 
     final OrFilter expectedPushDownFilter = new OrFilter(ImmutableList.of(
-        sdf(inputColumn, "1", null),
+        selector(inputColumn, "1"),
         new AndFilter(ImmutableList.of(
-            sdf(inputColumn, "2", null),
-            sdf(inputColumn, "10", null)
+            selector(inputColumn, "2"),
+            selector(inputColumn, "10")
         ))
     ));
 
@@ -379,11 +361,11 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   public void test_nested_filters_unnested_and_topLevel1And3filtersInOR()
   {
     final Filter testQueryFilter = and(ImmutableList.of(
-        sdf(OUTPUT_COLUMN_NAME, "3", null),
+        selector(OUTPUT_COLUMN_NAME, "3"),
         or(ImmutableList.of(
-            sdf("newcol", "2", null),
-            sdf(COLUMNNAME, "2", null),
-            sdf(OUTPUT_COLUMN_NAME, "1", null)
+            selector("newcol", "2"),
+            selector(COLUMNNAME, "2"),
+            selector(OUTPUT_COLUMN_NAME, "1")
         ))
     ));
     testComputeBaseAndPostUnnestFilters(
@@ -392,16 +374,64 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || unnested-multi-string1 = 1))"
     );
   }
-
+  @Test
+  public void test_nested_multiLevel_filters_unnested()
+  {
+    final Filter testQueryFilter = and(ImmutableList.of(
+        selector(OUTPUT_COLUMN_NAME, "3"),
+        or(ImmutableList.of(
+            or(ImmutableList.of(
+                selector("newcol", "2"),
+                selector(COLUMNNAME, "2"),
+                and(ImmutableList.of(
+                    selector("newcol", "3"),
+                    selector(COLUMNNAME, "7")
+                ))
+            )),
+            selector(OUTPUT_COLUMN_NAME, "1")
+        ))
+    ));
+    testComputeBaseAndPostUnnestFilters(
+        testQueryFilter,
+        "unnested-multi-string1 = 3",
+        "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
+    );
+  }
+  @Test
+  public void test_nested_multiLevel_filters_unnested5Level()
+  {
+    final Filter testQueryFilter = or(ImmutableList.of(
+        selector(OUTPUT_COLUMN_NAME, "3"),
+        or(ImmutableList.of(
+            or(ImmutableList.of(
+                selector("newcol", "2"),
+                selector(COLUMNNAME, "2"),
+                and(ImmutableList.of(
+                    selector("newcol", "3"),
+                    and(ImmutableList.of(
+                        selector(COLUMNNAME, "7"),
+                        selector("newcol_1", "10")
+                    ))
+                ))
+            )),
+            selector(OUTPUT_COLUMN_NAME, "1")
+        ))
+    ));
+    testComputeBaseAndPostUnnestFilters(
+        testQueryFilter,
+        "",
+        "(unnested-multi-string1 = 3 || newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7 && newcol_1 = 10) || unnested-multi-string1 = 1)"
+    );
+  }
   @Test
   public void test_nested_filters_unnested_and_topLevelORAnd3filtersInOR()
   {
     final Filter testQueryFilter = or(ImmutableList.of(
-        sdf(OUTPUT_COLUMN_NAME, "3", null),
+        selector(OUTPUT_COLUMN_NAME, "3"),
         and(ImmutableList.of(
-            sdf("newcol", "2", null),
-            sdf(COLUMNNAME, "2", null),
-            sdf(OUTPUT_COLUMN_NAME, "1", null)
+            selector("newcol", "2"),
+            selector(COLUMNNAME, "2"),
+            selector(OUTPUT_COLUMN_NAME, "1")
         ))
     ));
     testComputeBaseAndPostUnnestFilters(
@@ -415,15 +445,15 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   public void test_nested_filters_unnested_and_topLevelAND3filtersInORWithNestedOrs()
   {
     final Filter testQueryFilter = and(ImmutableList.of(
-        sdf(OUTPUT_COLUMN_NAME, "3", null),
+        selector(OUTPUT_COLUMN_NAME, "3"),
         or(ImmutableList.of(
-            sdf("newcol", "2", null),
-            sdf(COLUMNNAME, "2", null)
+            selector("newcol", "2"),
+            selector(COLUMNNAME, "2")
         )),
         or(ImmutableList.of(
-            sdf("newcol", "4", null),
-            sdf(COLUMNNAME, "8", null),
-            sdf(OUTPUT_COLUMN_NAME, "6", null)
+            selector("newcol", "4"),
+            selector(COLUMNNAME, "8"),
+            selector(OUTPUT_COLUMN_NAME, "6")
         ))
     ));
     testComputeBaseAndPostUnnestFilters(
@@ -437,8 +467,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   public void test_nested_filters_unnested_and_topLevelAND2sdf()
   {
     final Filter testQueryFilter = and(ImmutableList.of(
-        sdf(OUTPUT_COLUMN_NAME, "3", null),
-        sdf(COLUMNNAME, "2", null)
+        selector(OUTPUT_COLUMN_NAME, "3"),
+        selector(COLUMNNAME, "2")
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
@@ -452,7 +482,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(
         new TestStorageAdapter(INCREMENTAL_INDEX),
         new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
-         sdfd(OUTPUT_COLUMN_NAME, "1", null)
+         new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null)
     );
 
     final VirtualColumn vc = unnestStorageAdapter.getUnnestColumn();
@@ -460,7 +490,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
 
     final Filter expectedPushDownFilter =
-        sdf(inputColumn, "1", null);
+        selector(inputColumn, "1");
 
 
     final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
@@ -506,9 +536,9 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
 
     final Filter expectedPushDownFilter =
-        sdf(inputColumn, "1", null);
+        selector(inputColumn, "1");
 
-    final Filter queryFilter = sdf(OUTPUT_COLUMN_NAME, "1", null);
+    final Filter queryFilter = new SelectorFilter(OUTPUT_COLUMN_NAME, "1", null);
     final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
         queryFilter,
         unnestStorageAdapter.getInterval(),
@@ -537,47 +567,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     });
   }
 
-<<<<<<< HEAD
-  @Test
-  public void testAllowedFiltersForPushdown()
-  {
-    Filter[] allowed = new Filter[] {
-        new SelectorFilter("column", "value"),
-        new InDimFilter("column", ImmutableSet.of("a", "b")),
-        new LikeFilter("column", null, LikeDimFilter.LikeMatcher.from("hello%", null), null),
-        new BoundFilter(
-            new BoundDimFilter("column", "a", "b", true, true, null, null, null)
-        ),
-        NullFilter.forColumn("column"),
-        new EqualityFilter("column", ColumnType.LONG, 1234L, null),
-        new RangeFilter("column", ColumnType.LONG, 0L, 1234L, true, false, null)
-    };
-    // not exhaustive
-    Filter[] notAllowed = new Filter[] {
-        TrueFilter.instance(),
-        FalseFilter.instance(),
-        new ColumnComparisonFilter(ImmutableList.of(DefaultDimensionSpec.of("col1"), DefaultDimensionSpec.of("col2")))
-    };
-
-    for (Filter f : allowed) {
-      Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(f));
-    }
-    for (Filter f : notAllowed) {
-      Assert.assertFalse(UnnestStorageAdapter.filterMapsOverMultiValueStrings(f));
-    }
-
-    Filter notAnd = new NotFilter(
-        new AndFilter(
-            Arrays.asList(allowed)
-        )
-    );
-
-    Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(notAnd));
-    Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(new OrFilter(Arrays.asList(allowed))));
-    Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(new NotFilter(notAnd)));
-    Assert.assertFalse(
-        UnnestStorageAdapter.filterMapsOverMultiValueStrings(new NotFilter(new OrFilter(Arrays.asList(notAllowed))))
-=======
   public void testComputeBaseAndPostUnnestFilters(
       Filter testQueryFilter,
       String expectedBasePushDown,
@@ -604,7 +593,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         "Should have post unnest filter",
         expectedPostUnnest,
         actualPostUnnestFilter == null ? "" : actualPostUnnestFilter.toString()
->>>>>>> 27981e5e51 (Refactor logic for unnest filters/query filters and add tests)
     );
   }
 }

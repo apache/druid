@@ -368,7 +368,8 @@ public class UnnestStorageAdapter implements StorageAdapter
 
     public FilterSplitter(
         String inputColumn,
-        ColumnCapabilities inputColumnCapabilites, VirtualColumns queryVirtualColumns
+        ColumnCapabilities inputColumnCapabilites,
+        VirtualColumns queryVirtualColumns
     )
     {
       this.inputColumn = inputColumn;
