@@ -481,9 +481,22 @@ export class Execution {
   }
 
   public updateWithAsyncStatus(statusPayload: AsyncStatusResponse): Execution {
-    const destinationPages = statusPayload.result?.pages;
-    if (!destinationPages) return this;
-    return this.changeDestinationPages(destinationPages);
+    const value = this.valueOf();
+
+    const { pages, numTotalRows } = statusPayload.result || {};
+
+    if (!value.destinationPages && pages) {
+      value.destinationPages = pages;
+    }
+
+    if (typeof value.destination?.numTotalRows !== 'number' && typeof numTotalRows === 'number') {
+      value.destination = {
+        ...(value.destination || { type: 'taskReport' }),
+        numTotalRows,
+      };
+    }
+
+    return new Execution(value);
   }
 
   public markDestinationDatasourceLoaded(): Execution {
