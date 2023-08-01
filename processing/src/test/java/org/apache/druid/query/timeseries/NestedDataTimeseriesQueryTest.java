@@ -254,7 +254,9 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                         ),
                                         NullFilter.forColumn("long"),
                                         NullFilter.forColumn("v1"),
-                                        NullFilter.forColumn("v2")
+                                        NullFilter.forColumn("v2"),
+                                        NullFilter.forColumn("v3"),
+                                        NullFilter.forColumn("v4")
                                       )
                                   )
                                   .virtualColumns(
@@ -275,6 +277,18 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                           "$[1]",
                                           "v2",
                                           ColumnType.STRING
+                                      ),
+                                      new NestedFieldVirtualColumn(
+                                          "arrayLongNulls",
+                                          "$[1]",
+                                          "v3",
+                                          ColumnType.LONG
+                                      ),
+                                      new NestedFieldVirtualColumn(
+                                          "arrayStringNulls",
+                                          "$[1]",
+                                          "v4",
+                                          ColumnType.LONG
                                       )
                                   )
                                   .aggregators(new CountAggregatorFactory("count"))
@@ -286,7 +300,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
             new Result<>(
                 DateTimes.of("2023-01-01T00:00:00.000Z"),
                 new TimeseriesResultValue(
-                    ImmutableMap.of("count", 12L)
+                    ImmutableMap.of("count", 14L)
                 )
             )
         )

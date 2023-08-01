@@ -575,6 +575,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
     if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
+      final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(
+          arrayColumn.getLogicalType().getElementType()
+      );
+      final ExpressionType castTo = expectedType == null
+                                    ? ExpressionType.STRING
+                                    : ExpressionType.fromColumnTypeStrict(expectedType);
       VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -595,8 +601,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (maybeArray instanceof Object[]) {
                 Object[] anArray = (Object[]) maybeArray;
                 if (elementNumber < anArray.length) {
-                  // no one will ever ask for an object selector on primitive array elements unless asking for string types...
-                  elements[i] = Evals.asString(anArray[elementNumber]);
+                  elements[i] = ExprEval.ofType(elementType, elements[i]).castTo(castTo).value();
                 } else {
                   elements[i] = null;
                 }
