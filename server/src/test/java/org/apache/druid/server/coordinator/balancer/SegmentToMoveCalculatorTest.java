@@ -19,9 +19,12 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 public class SegmentToMoveCalculatorTest
 {
@@ -57,11 +60,44 @@ public class SegmentToMoveCalculatorTest
     Assert.assertEquals(1_000, computeMaxSegmentsToMove(20_000_000));
   }
 
+  @Test
+  public void testComputeMinSegmentsToMove()
+  {
+    Assert.assertEquals(100, computeMinSegmentsToMove(0));
+    Assert.assertEquals(100, computeMinSegmentsToMove(1_000));
+    Assert.assertEquals(100, computeMinSegmentsToMove(10_000));
+
+    Assert.assertEquals(500, computeMinSegmentsToMove(100_000));
+    Assert.assertEquals(1_000, computeMinSegmentsToMove(200_000));
+    Assert.assertEquals(1_500, computeMinSegmentsToMove(300_000));
+    Assert.assertEquals(2_500, computeMinSegmentsToMove(500_000));
+    Assert.assertEquals(5_000, computeMinSegmentsToMove(1_000_000));
+    Assert.assertEquals(10_000, computeMinSegmentsToMove(2_000_000));
+    Assert.assertEquals(50_000, computeMinSegmentsToMove(10_000_000));
+  }
+
+  @Test
+  public void testComputeNumSegmentsToMoveToFixSkew()
+  {
+
+  }
+
   private int computeMaxSegmentsToMove(int totalSegments)
   {
-    return SegmentToMoveCalculator.computeMaxSegmentsToMove(
+    return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(
         totalSegments,
         SegmentLoadingConfig.computeNumBalancerThreads(totalSegments)
     );
+  }
+
+  private int computeMinSegmentsToMove(int totalSegmentsInTier)
+  {
+    return SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(totalSegmentsInTier);
+  }
+
+  private int computeNumSegmentsToMove(ServerHolder... servers)
+  {
+    return SegmentToMoveCalculator
+        .computeSegmentsToMoveInTierToFixSkew("tier_1", Arrays.asList(servers));
   }
 }

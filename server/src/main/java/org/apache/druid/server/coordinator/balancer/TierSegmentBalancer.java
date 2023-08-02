@@ -221,33 +221,15 @@ public class TierSegmentBalancer
    */
   private int getNumActiveSegmentsToMove(int maxActiveSegmentsToMove)
   {
-    // If smartSegmentLoading is disabled, just use the configured value
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     if (activeServers.isEmpty()) {
       return 0;
-    } else if (!dynamicConfig.isSmartSegmentLoading()) {
+    } else if (dynamicConfig.isSmartSegmentLoading()) {
+      return SegmentToMoveCalculator.computeSegmentsToMoveInTier(tier, activeServers, maxActiveSegmentsToMove);
+    } else {
+      // If smartSegmentLoading is disabled, just use the configured value
       return maxActiveSegmentsToMove;
     }
-
-    final int totalSegments
-        = activeServers.stream()
-                       .mapToInt(server -> server.getProjectedSegments().getTotalSegmentCount())
-                       .sum();
-
-    // Move at least 1% segments to ensure that the cluster is always balancing itself
-    final int minSegmentsToMove = Math.max(
-        (int) (totalSegments * 0.01),
-        SegmentToMoveCalculator.MIN_SEGMENTS_TO_MOVE
-    );
-    final int segmentsToMoveToFixDeviation
-        = SegmentToMoveCalculator.computeNumSegmentsToMove(tier, activeServers);
-    log.info(
-        "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
-        segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxActiveSegmentsToMove
-    );
-
-    final int activeSegmentsToMove = Math.max(minSegmentsToMove, segmentsToMoveToFixDeviation);
-    return Math.min(activeSegmentsToMove, maxActiveSegmentsToMove);
   }
 
 }

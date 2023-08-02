@@ -84,7 +84,7 @@ public class BalanceSegments implements CoordinatorDuty
       final int totalSegmentsInCluster = getTotalSegmentsOnHistoricals(params.getDruidCluster());
       final int numHistoricals = getNumHistoricals(params.getDruidCluster());
       final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
-      final int maxSegmentsToMove = SegmentToMoveCalculator.computeMaxSegmentsToMove(
+      final int maxSegmentsToMove = SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(
           totalSegmentsInCluster,
           numBalancerThreads
       );

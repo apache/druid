@@ -28,19 +28,62 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
 
+/**
+ * Calculates the maximum, minimum and required number of segments to move in a
+ * Coordinator run for balancing.
+ */
 public class SegmentToMoveCalculator
 {
   /**
    * At least this number of segments must be picked for moving in every cycle
    * to keep the cluster well balanced.
    */
-  public static final int MIN_SEGMENTS_TO_MOVE = 100;
+  private static final int MIN_SEGMENTS_TO_MOVE = 100;
 
   private static final Logger log = new Logger(SegmentToMoveCalculator.class);
 
+  public static int computeSegmentsToMoveInTier(
+      String tier,
+      List<ServerHolder> servers,
+      int maxSegmentsToMoveInTier
+  )
+  {
+    final int totalSegments = servers.stream().mapToInt(
+        server -> server.getProjectedSegments().getTotalSegmentCount()
+    ).sum();
+
+    // Move at least some segments to ensure that the cluster is always balancing itself
+    final int minSegmentsToMove = SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(totalSegments);
+    final int segmentsToMoveToFixDeviation
+        = SegmentToMoveCalculator.computeSegmentsToMoveInTierToFixSkew(tier, servers);
+    log.info(
+        "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
+        segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxSegmentsToMoveInTier
+    );
+
+    final int activeSegmentsToMove = Math.max(minSegmentsToMove, segmentsToMoveToFixDeviation);
+    return Math.min(activeSegmentsToMove, maxSegmentsToMoveInTier);
+  }
+
+  /**
+   * Calculates the minimum number of segments that should be considered for
+   * moving in a tier, so that the tier is always balancing itself.
+   * <p>
+   * This value must be calculated separately for every tier.
+   *
+   * @param totalSegmentsInTier Total number of all replicas of all segments
+   *                            loaded or queued across all historicals in the tier.
+   * @return {@code minSegmentsToMove} in tier.
+   */
+  public static int computeMinSegmentsToMoveInTier(int totalSegmentsInTier)
+  {
+    return Math.max(MIN_SEGMENTS_TO_MOVE, (int) (totalSegmentsInTier * 0.005));
+  }
+
   /**
    * Calculates {@code maxSegmentsToMove} for the given number of segments in the
-   * cluster.
+   * cluster. This value must be calculated at the cluster level and then applied
+   * to every tier so that total computation time is estimated correctly.
    * <p>
    * Each balancer thread can perform 2 billion computations in every coordinator
    * cycle (see #14584). Therefore,
@@ -52,11 +95,15 @@ public class SegmentToMoveCalculator
    * </pre>
    *
    * @param totalSegmentsOnHistoricals Total number of all replicas of all segments
-   *                                   loaded or queued across all historicals.
+   *                                   loaded or queued across all historicals in
+   *                                   the cluster.
    * @return {@code maxSegmentsToMove} per tier in the range [100, 12.5% of totalSegments].
    * @see <a href="https://github.com/apache/druid/pull/14584">#14584</a>
    */
-  public static int computeMaxSegmentsToMove(int totalSegmentsOnHistoricals, int numBalancerThreads)
+  public static int computeMaxSegmentsToMovePerTier(
+      int totalSegmentsOnHistoricals,
+      int numBalancerThreads
+  )
   {
     // Each thread can do ~2B computations in one cycle = 2M * 1k = 2^21 * 1k
     final IntUnaryOperator totalComputationsOnThreads = threads -> threads << 21;
@@ -92,11 +139,14 @@ public class SegmentToMoveCalculator
   }
 
   /**
-   * Computes the number of segments that need to be moved across the given
-   * servers to attain balance in terms of disk usage and segment counts per
+   * Computes the number of segments that need to be moved across the servers
+   * in a tier to attain balance in terms of disk usage and segment counts per
    * data source.
+   *
+   * @param tier    Name of the tier used only for logging purposes
+   * @param servers List of servers in the tier
    */
-  static int computeNumSegmentsToMove(String tier, List<ServerHolder> servers)
+  public static int computeSegmentsToMoveInTierToFixSkew(String tier, List<ServerHolder> servers)
   {
     if (servers.isEmpty()) {
       return 0;
@@ -236,5 +286,10 @@ public class SegmentToMoveCalculator
         "Most unbalanced datasource[%s] in tier[%s] has counts[min=%,d, max=%,d].",
         mostSkewedDatasource, tier, minNumSegments, maxNumSegments
     );
+  }
+
+  private SegmentToMoveCalculator()
+  {
+    // no instantiation
   }
 }
