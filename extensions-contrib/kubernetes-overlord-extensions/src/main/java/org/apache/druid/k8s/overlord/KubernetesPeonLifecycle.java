@@ -324,7 +324,9 @@ public class KubernetesPeonLifecycle
 
   private void stopTask()
   {
-    updateState(new State[]{State.NOT_STARTED, State.PENDING, State.RUNNING}, State.STOPPED);
+    if (!State.STOPPED.equals(state.get())) {
+      updateState(new State[]{State.NOT_STARTED, State.PENDING, State.RUNNING}, State.STOPPED);
+    }
   }
 
   private void updateState(State[] acceptedStates, State targetState)
