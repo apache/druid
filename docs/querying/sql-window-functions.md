@@ -39,7 +39,7 @@ SELECT FLOOR(__time TO DAY) AS event_time,
     ABS(delta) AS change,
     RANK() OVER w AS rank_value
 FROM wikipedia
-WHERE channel in ('#kk.wikipedia', '#lt.wikipedia')
+WHERE channel in ('`#kk.wikipedia`', '#lt.wikipedia')
 AND '2016-06-28' > FLOOR(__time TO DAY) > '2016-06-26'
 GROUP BY channel, ABS(delta), __time
 WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
@@ -48,33 +48,33 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 <details>
 <summary> View results </summary>
 
-| event_time | channel | change | rank_value |
+| `event_time` | `channel` | `change`| `rank_value` |
 | -- | -- | -- | -- |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 1	| 1 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 1	| 1 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 7	| 3 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 56 | 4 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 56 | 4 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 63 | 6 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 91 | 7 |  
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 2440 | 8 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 2703 | 9 |
-| 2016-06-27T00:00:00.000Z	| #kk.wikipedia	| 6900 |10 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 1	| 1 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 2	| 2 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 13 | 3 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 28 | 4 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 53 | 5 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 56 | 6 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 59 | 7 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 391 | 8 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 894	| 9 |
-| 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 4358 | 10 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 1	| 1 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 1	| 1 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 7	| 3 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 56 | 4 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 56 | 4 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 63 | 6 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 91 | 7 |  
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 2440 | 8 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 2703 | 9 |
+| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 6900 |10 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 1	| 1 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 2	| 2 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 13 | 3 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 28 | 4 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 53 | 5 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 56 | 6 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 59 | 7 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 391 | 8 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 894	| 9 |
+| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 4358 | 10 |
 
 
 </details>
 
-Window functions are similar to [aggregation funtctions](./aggregations.md).  
+Window functions are similar to [aggregation functions](./aggregations.md).  
 
 You can use the OVER clause to treat other Druid aggregation functions as window functions. For example, the sum of a value for rows within a window.
 
@@ -86,7 +86,7 @@ When working with window functions, consider the following:
 
 The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
-- ORDER BY specifies the order of the rows within the windows.
+- ORDER BY specifies the order of the rows within the windows. Currently only ASC, ascending, order works.
 Sometimes windows are called partitions, but don't confuse them with the segment partitioning feature of Druid.
 
 
@@ -133,7 +133,7 @@ SELECT FLOOR(__time TO DAY) AS event_time,
     FIRST_VALUE(ABS(delta)) OVER w AS first_val,
     LAST_VALUE(ABS(delta)) OVER w AS last_val
 FROM wikipedia
-WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
+WHERE channel IN ('`#kk.wikipedia`', '#lt.wikipedia')
 GROUP BY channel, ABS(delta), FLOOR(__time TO DAY) 
 WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 ```
@@ -141,25 +141,25 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 <details>
 <summary> View results </summary>
 
-|event_time|channel|change|row_no|rank_no|dense_rank_no|pct_rank|cumulative_dist|ntile_val|lag_val|lead_val|first_val|last_val|
+|`event_time`|`channel`|`change`|`row_no`|`rank_no`|`dense_rank_no`|`pct_rank`|`cumulative_dist`|`ntile_val`|`lag_val`|`lead_val`|`first_val`|`last_val`|
 |------------|---------|--------|--------|---------|---------------|----------|----------------|-----------|---------|----------|-----------|----------|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|1|1|1|1|0|0.125|1|null|7|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|7|2|2|2|0.14285714285714285|0.25|1|1|56|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|56|3|3|3|0.2857142857142857|0.375|2|7|63|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|63|4|4|4|0.42857142857142855|0.5|2|56|91|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|91|5|5|5|0.5714285714285714|0.625|3|63|2440|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|2440|6|6|6|0.7142857142857143|0.75|3|91|2703|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|2703|7|7|7|0.8571428571428571|0.875|4|2440|6900|1|6900|
-|2016-06-27T00:00:00.000Z|#kk.wikipedia|6900|8|8|8|1|1|4|2703|null|1|6900|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|1|1|1|1|0|0.1|1|null|2|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|2|2|2|2|0.1111111111111111|0.2|1|1|13|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|13|3|3|3|0.2222222222222222|0.3|1|2|28|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|28|4|4|4|0.3333333333333333|0.4|2|13|53|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|53|5|5|5|0.4444444444444444|0.5|2|28|56|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|56|6|6|6|0.5555555555555556|0.6|2|53|59|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|59|7|7|7|0.6666666666666666|0.7|3|56|391|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|391|8|8|8|0.7777777777777778|0.8|3|59|894|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|894|9|9|9|0.8888888888888888|0.9|4|391|4358|1|4358|
-|2016-06-27T00:00:00.000Z|#lt.wikipedia|4358|10|10|10|1|1|4|894|null|1|4358|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|1|1|1|1|0|0.125|1|null|7|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|7|2|2|2|0.14285714285714285|0.25|1|1|56|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|56|3|3|3|0.2857142857142857|0.375|2|7|63|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|63|4|4|4|0.42857142857142855|0.5|2|56|91|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|91|5|5|5|0.5714285714285714|0.625|3|63|2440|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|2440|6|6|6|0.7142857142857143|0.75|3|91|2703|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|2703|7|7|7|0.8571428571428571|0.875|4|2440|6900|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|6900|8|8|8|1|1|4|2703|null|1|6900|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|1|1|1|1|0|0.1|1|null|2|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|2|2|2|2|0.1111111111111111|0.2|1|1|13|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|13|3|3|3|0.2222222222222222|0.3|1|2|28|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|28|4|4|4|0.3333333333333333|0.4|2|13|53|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|53|5|5|5|0.4444444444444444|0.5|2|28|56|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|56|6|6|6|0.5555555555555556|0.6|2|53|59|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|59|7|7|7|0.6666666666666666|0.7|3|56|391|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|391|8|8|8|0.7777777777777778|0.8|3|59|894|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|894|9|9|9|0.8888888888888888|0.9|4|391|4358|1|4358|
+|`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|4358|10|10|10|1|1|4|894|null|1|4358|
 
 </details>
