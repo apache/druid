@@ -42,7 +42,7 @@ FROM wikipedia
 WHERE channel in ('#kk.wikipedia', '#lt.wikipedia')
 AND '2016-06-28' > FLOOR(__time TO DAY) > '2016-06-26'
 GROUP BY channel, ABS(delta), __time
-WINDOW w AS (PARTITION BY channel ORDER BY abs(delta) ASC)
+WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 ```
 
 <details>
@@ -71,6 +71,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY abs(delta) ASC)
 | 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 894	| 9 |
 | 2016-06-27T00:00:00.000Z	| #lt.wikipedia	| 4358 | 10 |
 
+
 </details>
 
 Window functions are similar to [aggregation funtctions](./aggregations.md).  
@@ -89,11 +90,11 @@ The OVER clause defines the query windows for window functions as follows:
 Sometimes windows are called partitions, but don't confuse them with the segment partitioning feature of Druid.
 
 
-The PARTITIONED BY clause defines the dimenson to use for the window. For example, the following OVER clause sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
+The following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
 
 ```sql
 ...
-rank() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
+RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 ...
 ```
 
@@ -104,9 +105,9 @@ rank() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 | `ROW_NUMBER()`| Returns the number of the row within the window| None |
 |`RANK()`| Returns the rank for a row within a window | None | 
 |`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. | None |
-|`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total partition rows - 1)` | None |
-|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of partition rows preceding or peers with current row` / `total partition rows` | None |
-|`NTILE(tiles)`| Divides the results as evenly as possible into the number of tiles, also called buckets, and returns a value from 1 to the value of `tiles`  |None |
+|`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` | None |
+|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or lower than current row` / `total window rows` | None |
+|`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns a value from 1 to the value of `tiles`  |None |
 |`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window; if there is no such row, returns the given default value | None |
 |`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value | None |
 |`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window| None |
