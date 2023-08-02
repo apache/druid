@@ -31,15 +31,30 @@ public class ResultSetInformationTest
 {
   public static final ObjectMapper MAPPER = new ObjectMapper();
 
-  public static final ResultSetInformation RESULTS = new ResultSetInformation(ResultFormat.OBJECT, 1L, 1L, "ds",
-                                                                              ImmutableList.of(
-                                                                                  ImmutableList.of("1"),
-                                                                                  ImmutableList.of("2"),
-                                                                                  ImmutableList.of("3")
-                                                                              )
+  public static final ResultSetInformation RESULTS = new ResultSetInformation(
+      1L,
+      1L,
+      ResultFormat.OBJECT,
+      "ds",
+      null,
+      ImmutableList.of(new PageInformation(0, null, 1L))
   );
-  public static final String JSON_STRING = "{\"resultFormat\":\"object\",\"numRows\":1,\"sizeInBytes\":1,\"dataSource\":\"ds\",\"sampleRecords\":[[\"1\"],[\"2\"],[\"3\"]]}";
 
+
+  public static final ResultSetInformation RESULTS_1 = new ResultSetInformation(
+      1L,
+      1L,
+      ResultFormat.OBJECT,
+      "ds",
+      ImmutableList.of(
+          new String[]{"1"},
+          new String[]{"2"},
+          new String[]{"3"}
+      ),
+      ImmutableList.of(new PageInformation(0, 1L, 1L))
+  );
+  public static final String JSON_STRING = "{\"numTotalRows\":1,\"totalSizeInBytes\":1,\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"pages\":[{\"id\":0,\"sizeInBytes\":1}]}";
+  public static final String JSON_STRING_1 = "{\"numTotalRows\":1,\"totalSizeInBytes\":1,\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"sampleRecords\":[[\"1\"],[\"2\"],[\"3\"]],\"pages\":[{\"id\":0,\"numRows\":1,\"sizeInBytes\":1}]}";
 
   @Test
   public void sanityTest() throws JsonProcessingException
@@ -51,8 +66,16 @@ public class ResultSetInformationTest
         MAPPER.readValue(MAPPER.writeValueAsString(RESULTS), ResultSetInformation.class).hashCode()
     );
     Assert.assertEquals(
-        "ResultSetInformation{totalRows=1, totalSize=1, resultFormat=object, records=[[1], [2], [3]], dataSource='ds'}",
+        "ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=null, sizeInBytes=1}]}",
         RESULTS.toString()
     );
   }
+
+  @Test
+  public void resultsSanityTest() throws JsonProcessingException
+  {
+    // Since we have a List<Object[]> as a field, we cannot call equals method after deserialization.
+    Assert.assertEquals(JSON_STRING_1, MAPPER.writeValueAsString(RESULTS_1));
+  }
+
 }

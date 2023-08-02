@@ -26,6 +26,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -173,7 +174,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
                              + "  )\n"
-                             + ") PARTITIONED BY day")
+                             + ")\n"
+                             + "WHERE __time > TIMESTAMP '1999-01-01 00:00:00'\n"
+                             + "PARTITIONED BY day")
                      .setQueryContext(context)
                      .setExpectedResultRows(expectedRows)
                      .setExpectedDataSource("foo1")
@@ -405,6 +408,101 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertOnFoo1WithTimeAggregator()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT MILLIS_TO_TIMESTAMP((SUM(CAST(\"m1\" AS BIGINT)))) AS __time "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1970-01-01/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{21L}
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimeAggregatorAndMultipleWorkers()
+  {
+    Map<String, Object> localContext = new HashMap<>(context);
+    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.MAX.name());
+    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT MILLIS_TO_TIMESTAMP((SUM(CAST(\"m1\" AS BIGINT)))) AS __time "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(localContext)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1970-01-01/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{21L}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+
+  @Test
+  public void testInsertOnFoo1WithTimePostAggregator()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("sum_m1", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT DATE_TRUNC('DAY', TIMESTAMP '2000-01-01' - INTERVAL '1'DAY) AS __time, SUM(m1) AS sum_m1 "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1999-12-31T/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946598400000L, 21.0}
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
   public void testInsertOnFoo1WithTimeFunctionWithSequential()
   {
     List<Object[]> expectedRows = expectedFooRows();
@@ -583,12 +681,12 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedResultRows(
                          NullHandling.replaceWithDefault() ?
                          ImmutableList.of(
-                             new Object[]{0L, new Object[]{null}},
+                             new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{"b", "c"}},
                              new Object[]{0L, new Object[]{"d"}}
                          ) : ImmutableList.of(
-                             new Object[]{0L, new Object[]{null}},
+                             new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{""}},
                              new Object[]{0L, new Object[]{"b", "c"}},
@@ -961,11 +1059,13 @@ public class MSQInsertTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Field \"__time\" must be of type TIMESTAMP"))
-        ))
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.USER,
+                DruidException.Category.INVALID_INPUT,
+                "invalidInput"
+            ).expectMessageIs("Field [__time] was the wrong type [VARCHAR], expected TIMESTAMP")
+        )
         .verifyPlanningErrors();
   }
 
@@ -1043,11 +1143,13 @@ public class MSQInsertTest extends MSQTestBase
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(
-                         ThrowableMessageMatcher.hasMessage(
-                             CoreMatchers.startsWith(
-                                 MultiStageQueryContext.CTX_MAX_NUM_TASKS
-                                 + " cannot be less than 2 since at least 1 controller and 1 worker is necessary."
-                             )
+                         new DruidExceptionMatcher(
+                             DruidException.Persona.USER,
+                             DruidException.Category.INVALID_INPUT,
+                             "invalidInput"
+                         ).expectMessageIs(
+                             "MSQ context maxNumTasks [1] cannot be less than 2, since at least 1 controller "
+                             + "and 1 worker is necessary"
                          )
                      )
                      .verifyExecutionError();

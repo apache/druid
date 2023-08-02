@@ -759,15 +759,12 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
     );
 
@@ -779,14 +776,11 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoSqlTypesHeader.getStatus());
     Assert.assertEquals("yes", responseNoSqlTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoSqlTypesHeader.baos.toByteArray(), Object.class)
     );
 
@@ -798,14 +792,11 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoTypesHeader.getStatus());
     Assert.assertEquals("yes", responseNoTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoTypesHeader.baos.toByteArray(), Object.class)
     );
 
@@ -817,13 +808,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoTypes.getStatus());
     Assert.assertEquals("yes", responseNoTypes.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoTypes.baos.toByteArray(), Object.class)
     );
 
@@ -1589,28 +1577,22 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   /**
-   * There are various points where Calcite feels it is acceptable to throw an AssertionError when it receives bad
-   * input.  This is unfortunate as a java.lang.Error is very clearly documented to be something that nobody should
-   * try to catch.  But, we can editorialize all we want, we still have to deal with it.  So, this test reproduces
-   * the AssertionError behavior by using the substr() command.  At the time that this test was written, the
-   * SQL substr assumes a literal for the second argument.  The code ends up calling `RexLiteral.intValue` on the
-   * argument, which ends up calling a method that fails with an AssertionError, so this should generate the
-   * bad behavior for us.  This test is validating that our exception handling deals with this meaningfully.
+   * See class-level javadoc for {@link org.apache.druid.sql.calcite.util.testoperator.AssertionErrorOperatorConversion}
+   * for rationale as to why this test exists.
+   *
    * If this test starts failing, it could be indicative of us not handling the AssertionErrors well anymore,
    * OR it could be indicative of this specific code path not throwing an AssertionError anymore.  If we run
    * into the latter case, we should seek out a new code path that generates the error from Calcite.  In the best
    * world, this test starts failing because Calcite has moved all of its execptions away from AssertionErrors
    * and we can no longer reproduce the behavior through Calcite, in that world, we should remove our own handling
    * and this test at the same time.
-   *
-   * @throws Exception
    */
   @Test
   public void testAssertionErrorThrowsErrorWithFilterResponse() throws Exception
   {
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
-            "SELECT *, substr(dim2, strpos(dim2, 'hi')+2, 2) FROM foo LIMIT 2",
+            "SELECT assertion_error() FROM foo LIMIT 2",
             ResultFormat.OBJECT,
             false,
             false,
@@ -1625,7 +1607,7 @@ public class SqlResourceTest extends CalciteTestBase
         exception.getUnderlyingException(),
         DruidExceptionMatcher
             .invalidSqlInput()
-            .expectMessageIs("Calcite assertion violated: [not a literal: +(STRPOS($2, 'hi'), 2)]")
+            .expectMessageIs("Calcite assertion violated: [not a literal: assertion_error()]")
     );
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }

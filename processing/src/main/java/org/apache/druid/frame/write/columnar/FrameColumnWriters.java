@@ -41,6 +41,7 @@ public class FrameColumnWriters
   public static final byte TYPE_DOUBLE = 3;
   public static final byte TYPE_STRING = 4;
   public static final byte TYPE_COMPLEX = 5;
+  public static final byte TYPE_STRING_ARRAY = 6;
 
   private FrameColumnWriters()
   {
@@ -140,12 +141,8 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new StringArrayFrameColumnWriter(
-        selector,
-        allocator,
-        true
-    );
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new StringArrayFrameColumnWriterImpl(selector, allocator);
   }
 
   private static ComplexFrameColumnWriter makeComplexWriter(

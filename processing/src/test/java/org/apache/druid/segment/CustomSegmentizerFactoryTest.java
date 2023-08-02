@@ -27,6 +27,7 @@ import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -58,7 +59,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerModule(new SegmentizerModule());
     mapper.registerSubtypes(new NamedType(CustomSegmentizerFactory.class, "customSegmentFactory"));
-    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
+    final IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
 
     mapper.setInjectableValues(
         new InjectableValues.Std()

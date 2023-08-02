@@ -41,7 +41,7 @@ interface FilterRendererProps {
 
 export function GenericFilterInput({ column, filter, onChange, key }: FilterRendererProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [focused, setFocused] = useState(false);
+  const [focusedText, setFocusedText] = useState<string | undefined>();
 
   const enableComparisons = String(column.headerClassName).includes('enable-comparisons');
 
@@ -53,7 +53,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
   return (
     <InputGroup
       className={classNames('generic-filter-input', {
-        'hide-icon': !filter && !(menuOpen || focused),
+        'hide-icon': !filter && !(menuOpen || typeof focusedText === 'string'),
       })}
       key={key}
       leftElement={
@@ -79,14 +79,18 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
           <Button className="filter-mode-button" icon={filterModeToIcon(mode)} minimal />
         </Popover2>
       }
-      value={needle}
-      onChange={e => onChange(combineModeAndNeedle(mode, e.target.value))}
+      value={focusedText ?? needle}
+      onChange={e => {
+        const enteredText = e.target.value;
+        setFocusedText(enteredText);
+        onChange(combineModeAndNeedle(mode, enteredText));
+      }}
       rightElement={
         filter ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
       }
-      onFocus={() => setFocused(true)}
+      onFocus={() => setFocusedText(needle)}
       onBlur={e => {
-        setFocused(false);
+        setFocusedText(undefined);
         if (filter && !e.target.value) onChange('');
       }}
     />
@@ -94,19 +98,18 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
 }
 
 export function BooleanFilterInput({ filter, onChange, key }: FilterRendererProps) {
-  const filterValue = filter ? filter.value : '';
   return (
     <HTMLSelect
       className="boolean-filter-input"
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || 'all'}
+      value={filter?.value || ''}
       fill
     >
-      <option value="all">Show all</option>
-      <option value="true">true</option>
-      <option value="false">false</option>
+      <option value="">Show all</option>
+      <option value="=true">true</option>
+      <option value="=false">false</option>
     </HTMLSelect>
   );
 }

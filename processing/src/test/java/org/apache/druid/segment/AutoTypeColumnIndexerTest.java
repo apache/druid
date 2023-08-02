@@ -482,45 +482,36 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
 
     ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap("a"), valueSelector.getObject());
+    DimensionSelector dimensionSelector = cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals("a", valueSelector.getObject());
+    Assert.assertEquals("a", dimensionSelector.getObject());
 
     columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
+    dimensionSelector = cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals(2L, valueSelector.getObject());
     Assert.assertFalse(valueSelector.isNull());
+    Assert.assertEquals("2", dimensionSelector.getObject());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap(3.3), valueSelector.getObject());
+    dimensionSelector = cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals(3.3, valueSelector.getObject());
     Assert.assertFalse(valueSelector.isNull());
+    Assert.assertEquals("3.3", dimensionSelector.getObject());
+
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
+    dimensionSelector = cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
 
     columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
+    dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
   }
 
   @Test

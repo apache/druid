@@ -24,6 +24,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -32,6 +33,8 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+
+import java.util.regex.PatternSyntaxException;
 
 public class RegexpExtractOperatorConversion implements SqlOperatorConversion
 {
@@ -74,16 +77,29 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
           if (arg.isSimpleExtraction() && patternExpr.isLiteral() && (indexExpr == null || indexExpr.isLiteral())) {
             final String pattern = (String) patternExpr.getLiteralValue();
 
-            return arg.getSimpleExtraction().cascade(
-                new RegexDimExtractionFn(
-                    // Undo the empty-to-null conversion from patternExpr parsing (patterns cannot be null, even in
-                    // non-SQL-compliant null handling mode).
-                    StringUtils.nullToEmptyNonDruidDataString(pattern),
-                    indexExpr == null ? DEFAULT_INDEX : ((Number) indexExpr.getLiteralValue()).intValue(),
-                    true,
-                    null
-                )
-            );
+
+            try {
+              return arg.getSimpleExtraction().cascade(
+                  new RegexDimExtractionFn(
+                      // Undo the empty-to-null conversion from patternExpr parsing (patterns cannot be null, even in
+                      // non-SQL-compliant null handling mode).
+                      StringUtils.nullToEmptyNonDruidDataString(pattern),
+                      indexExpr == null ? DEFAULT_INDEX : ((Number) indexExpr.getLiteralValue()).intValue(),
+                      true,
+                      null
+                  )
+              );
+            }
+            catch (PatternSyntaxException e) {
+              throw InvalidSqlInput.exception(
+                  e,
+                  StringUtils.format(
+                      "An invalid pattern [%s] was provided for the REGEXP_EXTRACT function, error: [%s]",
+                      e.getPattern(),
+                      e.getMessage()
+                  )
+              );
+            }
           } else {
             return null;
           }

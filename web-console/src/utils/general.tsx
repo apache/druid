@@ -23,6 +23,7 @@ import copy from 'copy-to-clipboard';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { AppToaster } from '../singletons';
@@ -61,7 +62,7 @@ export function wait(ms: number): Promise<void> {
   });
 }
 
-export function clamp(n: number, min: number, max: number): number {
+export function clamp(n: number, min = -Infinity, max = Infinity): number {
   return Math.min(Math.max(n, min), max);
 }
 
@@ -89,14 +90,41 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
-export function oneOf<T>(thing: T, ...options: T[]): boolean {
-  return options.includes(thing);
+function validateKnown<T>(allKnownValues: T[], options: T[]): void {
+  options.forEach(o => {
+    if (!allKnownValues.includes(o)) {
+      throw new Error(`allKnownValues (${allKnownValues.join(', ')}) must include '${o}'`);
+    }
+  });
+}
+
+export function oneOf<T>(value: T, ...options: T[]): boolean {
+  return options.includes(value);
+}
+
+export function oneOfKnown<T>(value: T, allKnownValues: T[], ...options: T[]): boolean | undefined {
+  validateKnown(allKnownValues, options);
+  if (options.includes(value)) return true;
+  return allKnownValues.includes(value) ? false : undefined;
 }
 
 export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
   return x => {
     if (x.type == null) return false;
     return options.includes(x.type);
+  };
+}
+
+export function typeIsKnown<T extends { type?: S }, S = string>(
+  allKnownValues: S[],
+  ...options: S[]
+): (x: T) => boolean | undefined {
+  validateKnown(allKnownValues, options);
+  return x => {
+    const value = x.type;
+    if (value == null) return;
+    if (options.includes(value)) return true;
+    return allKnownValues.includes(value) ? false : undefined;
   };
 }
 
@@ -274,8 +302,21 @@ export function formatDurationHybrid(ms: NumberLike): string {
   }
 }
 
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
+  } else {
+    return word + 's';
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
@@ -306,7 +347,7 @@ export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
-  return xs.filter(Boolean) as T[];
+  return compact(xs);
 }
 
 export function moveToEnd<T>(
