@@ -535,7 +535,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         );
       }
       final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
-      if (leastRestrictiveType != null && leastRestrictiveType.isArray() && !expectedType.isArray()) {
+      if (leastRestrictiveType != null &&
+          leastRestrictiveType.isArray() &&
+          expectedType != null &&
+          !expectedType.isArray()
+      ) {
         final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
         final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
         return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
