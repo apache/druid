@@ -187,7 +187,7 @@ ORDER BY 1`,
         <JsonInput
           value={currentRules}
           onChange={setCurrentRules}
-          onError={setJsonError}
+          setError={setJsonError}
           height="100%"
         />
       )}

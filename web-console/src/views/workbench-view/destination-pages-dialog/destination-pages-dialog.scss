@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-export * from './complex-menu-items/complex-menu-items';
-export * from './number-menu-items/number-menu-items';
-export * from './string-menu-items/string-menu-items';
-export * from './time-menu-items/time-menu-items';
+@import '../../../variables';
+
+.destination-pages-dialog {
+  &.#{$bp-ns}-dialog {
+    min-width: 700px;
+    min-height: 480px;
+  }
+}
