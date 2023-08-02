@@ -60,6 +60,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
+  private final int parsingThreadCount;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -81,7 +82,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Period intermediateHandoffPeriod,
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
-      @Nullable Integer maxSavedParseExceptions
+      @Nullable Integer maxSavedParseExceptions,
+      @Nullable Integer parsingThreadCount
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -134,6 +136,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+    if (parsingThreadCount == null) {
+      this.parsingThreadCount = TuningConfig.DEFAULT_PARSING_THREAD_COUNT;
+    } else if (parsingThreadCount <= 0) {
+      this.parsingThreadCount = Runtime.getRuntime().availableProcessors();
+    } else { // parsingThreadCount > 0
+      this.parsingThreadCount = parsingThreadCount;
+    }
   }
 
   @Override
@@ -277,6 +286,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return skipSequenceNumberAvailabilityCheck;
   }
 
+  @JsonProperty
+  public int getParsingThreadCount()
+  {
+    return parsingThreadCount;
+  }
+
   @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
@@ -302,6 +317,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
+           parsingThreadCount == that.parsingThreadCount &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -333,7 +349,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         skipSequenceNumberAvailabilityCheck,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        parsingThreadCount
     );
   }
 

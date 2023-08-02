@@ -51,7 +51,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @Nullable Period intermediateHandoffPeriod,
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
-      @Nullable Integer maxSavedParseExceptions
+      @Nullable Integer maxSavedParseExceptions,
+      @Nullable Integer parsingThreadCount
   )
   {
     super(
@@ -74,7 +75,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        parsingThreadCount
     );
   }
 
@@ -97,7 +99,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("parsingThreadCount") @Nullable Integer parsingThreadCount
   )
   {
     this(
@@ -119,7 +122,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        parsingThreadCount
     );
   }
 
@@ -145,7 +149,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getParsingThreadCount()
     );
   }
 
@@ -171,6 +176,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
+           ", parsingThreadCount=" + getParsingThreadCount() +
            '}';
   }
 

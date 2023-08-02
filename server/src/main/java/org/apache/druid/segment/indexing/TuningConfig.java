@@ -38,6 +38,7 @@ public interface TuningConfig
   AppendableIndexSpec DEFAULT_APPENDABLE_INDEX = new OnheapIncrementalIndex.Spec();
   int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
   int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
+  int DEFAULT_PARSING_THREAD_COUNT = 1;
 
   /**
    * For batch ingestion, we want to maximize throughput by minimizing the number of incremental persists. The limit
