@@ -27,7 +27,7 @@ title: Window functions
 >
 > Window functions are an [experimental](../development/experimental.md) feature. Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
 > There are known issues where ORDER BY only works on ascending order and certain options may cause errors.
-> To use window functions, submit the context parameter `windowsAreForClosers: true` with your query.
+> Set the context parameter `windowsAreForClosers: true` to use window functions.
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
@@ -74,7 +74,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 </details>
 
-Window functions are similar to [aggregation functions](./aggregations.md).  
+Window functions are similar to [aggregation funtctions](./aggregations.md).  
 
 You can use the OVER clause to treat other Druid aggregation functions as window functions. For example, the sum of a value for rows within a window.
 
@@ -106,8 +106,8 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 |`RANK()`| Returns the rank for a row within a window | 
 |`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
 |`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` |
-|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or lower than current row` / `total window rows` |
-|`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns a value from 1 to the value of `tiles`  |None |
+|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows` |
+|`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into  |None |
 |`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window; if there is no such row, returns the given default value |
 |`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value |
 |`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window|
