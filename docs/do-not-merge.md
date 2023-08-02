@@ -379,9 +379,13 @@ The maximum input bytes for each worker for SQL-based ingestion is now 512 MiB (
 
 [#14307](https://github.com/apache/druid/pull/14307)
 
-### 
+### Parameter execution changes for Kafka
 
-TBD
+When using the built-in `FileConfigProvider` for Kafka, interpolations are now intercepted by the JsonConfigurator instead of being passed down to the Kafka provider. This breaks existing deployments.
+
+For more information, see [KIP-297](https://cwiki.apache.org/confluence/display/KAFKA/KIP-297%3A+Externalizing+Secrets+for+Connect+Configurations)
+
+[#13023](https://github.com/apache/druid/pull/13023)
 
 ### SQL compatibility mode
 
