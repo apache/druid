@@ -110,7 +110,7 @@ public abstract class NumericLastBufferAggregator implements BufferAggregator
       if (object instanceof SerializablePair) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
 
-        if (inPair != null && inPair.lhs >= lastTime) {
+        if (inPair.lhs >= lastTime) {
           if (inPair.rhs == null) {
             updateTimeWithNull(buf, position, inPair.lhs);
           } else {

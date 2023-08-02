@@ -54,7 +54,7 @@ public abstract class NumericLastAggregator implements Aggregator
   /**
    * Store the current primitive typed 'last' value
    */
-  abstract void setLastValue(ColumnValueSelector valueSelector);
+  abstract void setLastValue();
 
   abstract void setLastValue(Number lastValue);
 
@@ -70,7 +70,7 @@ public abstract class NumericLastAggregator implements Aggregator
       if (object instanceof SerializablePair) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
 
-        if (inPair != null && inPair.lhs >= lastTime) {
+        if (inPair.lhs >= lastTime) {
           lastTime = inPair.lhs;
 
           if (inPair.rhs == null) {
@@ -88,7 +88,7 @@ public abstract class NumericLastAggregator implements Aggregator
     if (time >= lastTime) {
       lastTime = time;
       if (useDefault || !valueSelector.isNull()) {
-        setLastValue(valueSelector);
+        setLastValue();
         rhsNull = false;
       } else {
         setLastValue(0);

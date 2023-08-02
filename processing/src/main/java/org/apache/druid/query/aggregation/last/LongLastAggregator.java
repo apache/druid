@@ -34,7 +34,7 @@ public class LongLastAggregator extends NumericLastAggregator
   }
 
   @Override
-  void setLastValue(ColumnValueSelector valueSelector)
+  void setLastValue()
   {
     lastValue = valueSelector.getLong();
   }

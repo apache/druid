@@ -238,7 +238,6 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getIntermediateType()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
     return TYPE;
   }
 

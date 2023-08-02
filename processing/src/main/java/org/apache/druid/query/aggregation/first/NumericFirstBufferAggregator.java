@@ -106,7 +106,7 @@ public abstract class NumericFirstBufferAggregator implements BufferAggregator
       final Object object = valueSelector.getObject();
       if (object instanceof SerializablePair) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
-        if (inPair != null && inPair.lhs < firstTime) {
+        if (inPair.lhs < firstTime) {
           if (inPair.rhs == null) {
             updateTimeWithNull(buf, position, inPair.lhs);
           } else {

@@ -34,7 +34,7 @@ public class LongFirstAggregator extends NumericFirstAggregator
   }
 
   @Override
-  void setFirstValue(ColumnValueSelector valueSelector)
+  void setFirstValue()
   {
     firstValue = valueSelector.getLong();
   }

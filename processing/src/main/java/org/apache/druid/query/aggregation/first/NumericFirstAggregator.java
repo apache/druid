@@ -52,7 +52,7 @@ public abstract class NumericFirstAggregator implements Aggregator
   /**
    * Store the current primitive typed 'first' value
    */
-  abstract void setFirstValue(ColumnValueSelector valueSelector);
+  abstract void setFirstValue();
 
   /**
    * Store a non-null first value
@@ -71,7 +71,7 @@ public abstract class NumericFirstAggregator implements Aggregator
       if (object instanceof SerializablePair) {
         SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
 
-        if (inPair != null && inPair.lhs < firstTime) {
+        if (inPair.lhs < firstTime) {
           firstTime = inPair.lhs;
           if (inPair.rhs == null) {
             rhsNull = true;
@@ -88,7 +88,7 @@ public abstract class NumericFirstAggregator implements Aggregator
     if (time < firstTime) {
       firstTime = time;
       if (useDefault || !valueSelector.isNull()) {
-        setFirstValue(valueSelector);
+        setFirstValue();
         rhsNull = false;
       } else {
         setFirstValue(0);

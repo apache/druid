@@ -34,7 +34,7 @@ public class FloatLastAggregator extends NumericLastAggregator
   }
 
   @Override
-  void setLastValue(ColumnValueSelector valueSelector)
+  void setLastValue()
   {
     lastValue = valueSelector.getFloat();
   }

@@ -34,7 +34,7 @@ public class DoubleLastAggregator extends NumericLastAggregator
   }
 
   @Override
-  void setLastValue(ColumnValueSelector valueSelector)
+  void setLastValue()
   {
     lastValue = valueSelector.getDouble();
   }

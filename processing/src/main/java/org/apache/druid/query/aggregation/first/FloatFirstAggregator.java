@@ -38,7 +38,7 @@ public class FloatFirstAggregator extends NumericFirstAggregator
   }
 
   @Override
-  void setFirstValue(ColumnValueSelector valueSelector)
+  void setFirstValue()
   {
     firstValue = valueSelector.getFloat();
   }
