@@ -23,7 +23,7 @@ search for TBD
 
 Apache Druid 27.0.0 contains over $NUMBER_FEATURES new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from $NUMBER_OF_CONTRIBUTORS contributors.
 
-[See the complete set of changes for additional details]($LINK_TO_RELEASE_MILESTONE).
+[See the complete set of changes for additional details](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A27.0+sort%3Aupdated-desc+), including [bug fixes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A27.0+sort%3Aupdated-desc+label%3ABug).
 
 Review the upgrade notes and incompatible changes before you upgrade to Druid 27.0.0.
 
