@@ -39,8 +39,14 @@ The following sections list the available aggregate functions. Unless otherwise 
 
 `count` computes the count of Druid rows that match the filters.
 
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "count". | Yes |
+| `name` | Output name of the aggregator | Yes |
+
+Example:
 ```json
-{ "type" : "count", "name" : <output_name> }
+{ "type" : "count", "name" : "count" }
 ```
 
 The `count` aggregator counts the number of Druid rows, which does not always reflect the number of raw events ingested.
@@ -50,93 +56,120 @@ query time.
 
 ### Sum aggregators
 
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "longSum", "doubleSum", or "floatSum". | Yes |
+| `name` | Output name for the summed value. | Yes |
+| `fieldName` | Name of the input column to sum over. At most one of `fieldName` or `expression` must be defined. | No |
+| `expression` | Alternative to `fieldName`, an inline [expression](./math-expr.md) can be specified instead. At most one of `fieldName` or `expression` can be defined. | No |
+
 #### `longSum` aggregator
 
 Computes the sum of values as a 64-bit, signed integer.
 
+Example:
 ```json
-{ "type" : "longSum", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "longSum", "name" : "sumLong", "fieldName" : "aLong" }
 ```
-
-The `longSum` aggregator takes the following properties:
-* `name`: Output name for the summed value
-* `fieldName`: Name of the metric column to sum over
 
 #### `doubleSum` aggregator
 
 Computes and stores the sum of values as a 64-bit floating point value. Similar to `longSum`.
 
+Example:
 ```json
-{ "type" : "doubleSum", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "doubleSum", "name" : "sumDouble", "fieldName" : "aDouble" }
 ```
 
 #### `floatSum` aggregator
 
 Computes and stores the sum of values as a 32-bit floating point value. Similar to `longSum` and `doubleSum`.
 
+Example:
 ```json
-{ "type" : "floatSum", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "floatSum", "name" : "sumFloat", "fieldName" : "aFloat" }
 ```
 
 ### Min and max aggregators
 
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "doubleMin", "doubleMax", "floatMin", "floatMax", "longMin", or "longMax". | Yes |
+| `name` | Output name for the min or max value. | Yes |
+| `fieldName` | Name of the input column to compute the minimum or maximum value over. At most one of `fieldName` or `expression` can be defined. | No |
+| `expression` | Alternative to `fieldName`, an inline [expression](./math-expr.md) can be specified instead. At most one of `fieldName` or `expression` can be defined. | No |
+
 #### `doubleMin` aggregator
 
-`doubleMin` computes the minimum of all metric values and Double.POSITIVE_INFINITY.
+`doubleMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Double.POSITIVE_INFINITY if true.
 
+Example:
 ```json
-{ "type" : "doubleMin", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "doubleMin", "name" : "maxDouble", "fieldName" : "aDouble" }
 ```
 
 #### `doubleMax` aggregator
 
-`doubleMax` computes the maximum of all metric values and Double.NEGATIVE_INFINITY.
+`doubleMax` computes the maximum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Double.NEGATIVE_INFINITY if true.
 
+Example:
 ```json
-{ "type" : "doubleMax", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "doubleMax", "name" : "minDouble", "fieldName" : "aDouble" }
 ```
 
 #### `floatMin` aggregator
 
-`floatMin` computes the minimum of all metric values and Float.POSITIVE_INFINITY.
+`floatMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Float.POSITIVE_INFINITY if true.
 
+Example:
 ```json
-{ "type" : "floatMin", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "floatMin", "name" : "minFloat", "fieldName" : "aFloat" }
 ```
 
 #### `floatMax` aggregator
 
-`floatMax` computes the maximum of all metric values and Float.NEGATIVE_INFINITY.
+`floatMax` computes the maximum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Float.NEGATIVE_INFINITY if true.
 
+Example:
 ```json
-{ "type" : "floatMax", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "floatMax", "name" : "maxFloat", "fieldName" : "aFloat" }
 ```
 
 #### `longMin` aggregator
 
-`longMin` computes the minimum of all metric values and Long.MAX_VALUE.
+`longMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Long.MAX_VALUE if true.
 
+Example:
 ```json
-{ "type" : "longMin", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "longMin", "name" : "minLong", "fieldName" : "aLong" }
 ```
 
 #### `longMax` aggregator
 
-`longMax` computes the maximum of all metric values and Long.MIN_VALUE.
+`longMax` computes the maximum of all metric values and null if `druid.generic.useDefaultValueForNull` is false or Long.MIN_VALUE if true.
 
+Example:
 ```json
-{ "type" : "longMax", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "longMax", "name" : "maxLong", "fieldName" : "aLong" }
 ```
 
 ### `doubleMean` aggregator
 
-Computes and returns the arithmetic mean of a column's values as a 64-bit floating point value. `doubleMean` is a query time aggregator only. It is not available for indexing.
+Computes and returns the arithmetic mean of a column's values as a 64-bit floating point value. 
 
-To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator](../development/extensions-core/datasketches-quantiles.md#aggregator) from the DataSketches extension.
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "doubleMean". | Yes |
+| `name` | Output name for the mean value. | Yes |
+| `fieldName` | Name of the input column to compute the arithmetic mean value over. | Yes |
 
+Example:
 ```json
-{ "type" : "doubleMean", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "doubleMean", "name" : "aMean", "fieldName" : "aDouble" }
 ```
+
+`doubleMean` is a query time aggregator only. It is not available for indexing. To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator](../development/extensions-core/datasketches-quantiles.md#aggregator) from the DataSketches extension.
+
 
 ### First and last aggregators
 
@@ -147,111 +180,131 @@ The string-typed aggregators, `stringFirst` and `stringLast`, are supported for 
 
 Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the raw ingested data.
 
-#### `doubleFirst` aggregator
+#### Numeric first and last aggregators
 
-`doubleFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "doubleFirst", "doubleLast", "floatFirst", "floatLast", "longFirst", "longLast". | Yes |
+| `name` | Output name for the first or last value. | Yes |
+| `fieldName` | Name of the input column to compute the first or last value over. | Yes |
+| `timeColumn` | Name of the input column to use for time values. Must be a LONG typed column. | No, defaults to `__time` |
 
+##### `doubleFirst` aggregator
+
+`doubleFirst` computes the input value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+
+Example:
 ```json
 {
   "type" : "doubleFirst",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "firstDouble",
+  "fieldName" : "aDouble"
 }
 ```
 
-#### `doubleLast` aggregator
+##### `doubleLast` aggregator
 
-`doubleLast` computes the metric value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`doubleLast` computes the input value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
+Example:
 ```json
 {
   "type" : "doubleLast",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "lastDouble",
+  "fieldName" : "aDouble",
+  "timeColumn" : "longTime"
 }
 ```
 
-#### `floatFirst` aggregator
+##### `floatFirst` aggregator
 
-`floatFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`floatFirst` computes the input value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
+Example:
 ```json
 {
   "type" : "floatFirst",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "firstFloat",
+  "fieldName" : "aFloat"
 }
 ```
 
-#### `floatLast` aggregator
+##### `floatLast` aggregator
 
 `floatLast` computes the metric value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
+Example:
 ```json
 {
   "type" : "floatLast",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "lastFloat",
+  "fieldName" : "aFloat"
 }
 ```
 
-#### `longFirst` aggregator
+##### `longFirst` aggregator
 
 `longFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
+Example:
 ```json
 {
   "type" : "longFirst",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "firstLong",
+  "fieldName" : "aLong"
 }
 ```
 
-#### `longLast` aggregator
+##### `longLast` aggregator
 
 `longLast` computes the metric value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
+Example:
 ```json
 {
   "type" : "longLast",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "lastLong",
+  "fieldName" : "aLong",
+  "timeColumn" : "longTime"
 }
 ```
+
+#### String first and last aggregators
+
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "stringFirst", "stringLast". | Yes |
+| `name` | Output name for the first or last value. | Yes |
+| `fieldName` | Name of the input column to compute the first or last value over. | Yes |
+| `timeColumn` | Name of the input column to use for time values. Must be a LONG typed column. | No, defaults to `__time` |
+| `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No, defaults to 1024 |
+
 
 #### `stringFirst` aggregator
 
 `stringFirst` computes the metric value with the minimum value for time column or `null` if no row exists.
 
+Example:
 ```json
 {
   "type" : "stringFirst",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "maxStringBytes" : <integer> # (optional, defaults to 1024)
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "firstString",
+  "fieldName" : "aString",
+  "maxStringBytes" : 2048,
+  "timeColumn" : "longTime"
 }
 ```
-
-
 
 #### `stringLast` aggregator
 
 `stringLast` computes the metric value with the maximum value for time column or `null` if no row exists.
 
+Example:
 ```json
 {
   "type" : "stringLast",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "maxStringBytes" : <integer> # (optional, defaults to 1024)
-  "timeColumn" : <time_column_name> # (optional, defaults to __time)
+  "name" : "lastString",
+  "fieldName" : "aString"
 }
 ```
 
@@ -261,52 +314,70 @@ Queries with first or last aggregators on a segment created with rollup return t
 
 Returns any value including null. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)
 
-#### `doubleAny` aggregator
+#### Numeric any aggregators
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "doubleAny", "floatAny", or "longAny". | Yes |
+| `name` | Output name for the value. | Yes |
+| `fieldName` | Name of the input column to compute the value over. | Yes |
+
+##### `doubleAny` aggregator
 
 `doubleAny` returns any double metric value.
 
+Example:
 ```json
 {
   "type" : "doubleAny",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "name" : "anyDouble",
+  "fieldName" : "aDouble"
 }
 ```
 
-#### `floatAny` aggregator
+##### `floatAny` aggregator
 
 `floatAny` returns any float metric value.
 
+Example:
 ```json
 {
   "type" : "floatAny",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "name" : "anyFloat",
+  "fieldName" : "aFloat"
 }
 ```
 
-#### `longAny` aggregator
+##### `longAny` aggregator
 
 `longAny` returns any long metric value.
 
+Example:
 ```json
 {
   "type" : "longAny",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
+  "name" : "anyLong",
+  "fieldName" : "aLong"
 }
 ```
 
 #### `stringAny` aggregator
 
-`stringAny` returns any string metric value.
+`stringAny` returns any string value present in the input.
 
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "stringAny". | Yes |
+| `name` | Output name for the value. | Yes |
+| `fieldName` | Name of the input column to compute the value over. | Yes |
+| `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No, defaults to 1024 |
+
+Example:
 ```json
 {
   "type" : "stringAny",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "name" : "anyString",
+  "fieldName" : "aString",
+  "maxStringBytes" : 2048
 }
 ```
 
@@ -390,28 +461,28 @@ It is not possible to determine a priori how well this aggregator will behave fo
 For these reasons, we have deprecated this aggregator and recommend using the DataSketches Quantiles aggregator instead for new and existing use cases, although we will continue to support Approximate Histogram for backwards compatibility.
 
 
-## Expression aggregators
+## Expression aggregations
 
 ### Expression aggregator
 
 Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom aggregator functions.
 
-| property | description | required |
+| Property | Description | Required |
 | --- | --- | --- |
-| `type` | must be `expression` | true |
-| `name` | aggregator output name | true |
-| `fields` | list of aggregator input columns | true |
-| `accumulatorIdentifier` | variable which identifies the accumulator value in the `fold` and `combine` expressions | false (default `__acc`)|
-| `fold` | expression to accumulate values from `fields`. The result of the expression will be stored in `accumulatorIdentifier` and available to the next computation. | true |
-| `combine` | expression to combine the results of various `fold` expressions of each segment when merging results. If not defined and `fold` has a single input column in `fields`, then the `fold` expression may be used, otherwise the input is available to the expression as the `name`| false (default to `fold` expression if and only if the expression has a single input in `fields`)|
-| `compare` | comparator expression which can only refer to 2 input variables, `o1` and `o2`, where `o1` and `o2` are the output of `fold` or `combine` expressions, and must adhere to the Java comparator contract. If not set, this will try to fall back to an output type appropriate comparator | false |
-| `finalize` | finalize expression which can only refer to a single input variable, `o`, and is used to perform any final transformation of the output of `fold` or `combine` expressions. If not set, then the value is not transformed | false |
-| `initialValue` | initial value of the accumulator for `fold` (and `combine`, if `InitialCombineValue` is null) expression | true |
-| `initialCombineValue` | initial value of the accumulator for `combine` expression | false (default `initialValue`) |
-| `isNullUnlessAggregated` | indicates that the default output value should be `null` if the aggregator does not process any rows. If true, the value is `null`, if false, the result of running the expressions with initial values is used instead. | false (defaults to value of `druid.generic.useDefaultValueForNull`)|
-| `shouldAggregateNullInputs` | indicates if the `fold` expression should operate on any `null` input values | false (default value is `true`) |
-| `shouldCombineAggregateNullInputs` | indicates if the `combine` expression should operate on any `null` input values | false (default value is `shouldAggregateNullInputs`) |
-| `maxSizeBytes` | maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow before the aggregation will fail. | false (8192 bytes) |
+| `type` | Must be "expression". | Yes |
+| `name` | The aggregator output name. | Yes |
+| `fields` | The list of aggregator input columns. | Yes |
+| `accumulatorIdentifier` | The variable which identifies the accumulator value in the `fold` and `combine` expressions. | No (default `__acc`)|
+| `fold` | The expression to accumulate values from `fields`. The result of the expression will be stored in `accumulatorIdentifier` and available to the next computation. | Yes |
+| `combine` | The expression to combine the results of various `fold` expressions of each segment when merging results. The input is available to the expression as a variable identified by the `name`. | No (default to `fold` expression if and only if the expression has a single input in `fields`)|
+| `compare` | The comparator expression which can only refer to two input variables, `o1` and `o2`, where `o1` and `o2` are the output of `fold` or `combine` expressions, and must adhere to the Java comparator contract. If not set, the aggregator will try to fall back to an output type appropriate comparator. | No |
+| `finalize` | The finalize expression which can only refer to a single input variable, `o`. This expression is used to perform any final transformation of the output of the `fold` or `combine` expressions. If not set, then the value is not transformed. | No |
+| `initialValue` | The initial value of the accumulator for the `fold` (and `combine`, if `InitialCombineValue` is null) expression. | Yes |
+| `initialCombineValue` | The initial value of the accumulator for the `combine` expression. | No (default `initialValue`) |
+| `isNullUnlessAggregated` | Indicates that the default output value should be `null` if the aggregator does not process any rows. If true, the value is `null`, if false, the result of running the expressions with initial values is used instead. | No (defaults to the value of `druid.generic.useDefaultValueForNull`)|
+| `shouldAggregateNullInputs` | Indicates if the `fold` expression should operate on any `null` input values. | No (defaults to `true`) |
+| `shouldCombineAggregateNullInputs` | Indicates if the `combine` expression should operate on any `null` input values. | No (defaults to the value of `shouldAggregateNullInputs`) |
+| `maxSizeBytes` | Maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow to before the aggregation fails. | No (8192 bytes) |
 
 #### Example: a "count" aggregator
 The initial value is `0` and adds `1` for each row processed.
@@ -475,20 +546,16 @@ Similar to the 'cardinality' aggregator, the default value is an empty hyperuniq
 Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your
 JavaScript functions are expected to return floating-point values.
 
-```json
-{ "type": "javascript",
-  "name": "<output_name>",
-  "fieldNames"  : [ <column1>, <column2>, ... ],
-  "fnAggregate" : "function(current, column1, column2, ...) {
-                     <updates partial aggregate (current) based on the current row values>
-                     return <updated partial aggregate>
-                   }",
-  "fnCombine"   : "function(partialA, partialB) { return <combined partial results>; }",
-  "fnReset"     : "function()                   { return <initial value>; }"
-}
-```
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "javascript". | Yes |
+| `name` | The aggregator output name. | Yes |
+| `fieldNames` | The list of aggregator input columns. | Yes |
+| `fnAggregate` | Javascript function that updates partial aggregate based on the current row values, and returns the updated partial aggregate. | Yes |
+| `fnCombine` | Javascript function to combine partial aggregates and return the combined result. | Yes |
+| `fnReset` | Javascript function that returns the 'initial' value. | Yes |
 
-**Example**
+#### Example
 
 ```json
 {
@@ -514,15 +581,28 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
 
 *Note:* If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
 
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "filtered". | Yes |
+| `name` | The aggregator output name. | No |
+| `aggregator` | Inline aggregator specification. | Yes |
+| `filter` | Inline [filter](./filters.md) specification. | Yes |
+
+Example:
 ```json
 {
-  "type" : "filtered",
-  "filter" : {
+  "type": "filtered",
+  "name": "filteredSumLong",
+  "filter": {
     "type" : "selector",
-    "dimension" : <dimension>,
-    "value" : <dimension value>
+    "dimension" : "someColumn",
+    "value" : "abcdef"
   },
-  "aggregator" : <aggregation>
+  "aggregator": {
+    "type": "longSum",
+    "name": "sumLong",
+    "fieldName": "aLong"
+  }
 }
 ```
 
@@ -532,7 +612,20 @@ A grouping aggregator can only be used as part of GroupBy queries which have a s
 each output row that lets you infer whether a particular dimension is included in the sub-grouping used for that row. You can pass
 a *non-empty* list of dimensions to this aggregator which *must* be a subset of dimensions that you are grouping on. 
 
-For example, if the aggregator has `["dim1", "dim2"]` as input dimensions and `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, the
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "grouping". | Yes |
+| `name` | The aggregator output name. | Yes |
+| `groupings` | The list of columns to use in the grouping set. | Yes |
+
+
+For example, if the aggregator has `["dim1", "dim2"]` as input dimensions:
+
+```json
+{ "type" : "grouping", "name" : "someGrouping", "groupings" : ["dim1", "dim2"] }
+```
+
+and used in a query with `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, the
 possible output of the aggregator is:
 
 | subtotal used in query | Output | (bits representation) |
@@ -545,6 +638,3 @@ possible output of the aggregator is:
 As the example illustrates, you can think of the output number as an unsigned _n_ bit number where _n_ is the number of dimensions passed to the aggregator. 
 Druid sets the bit at position X for the number to 0 if the sub-grouping includes a dimension at position X in the aggregator input. Otherwise, Druid sets this bit to 1.
 
-```json
-{ "type" : "grouping", "name" : <output_name>, "groupings" : [<dimension>] }
-```
