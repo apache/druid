@@ -24,8 +24,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 
-import java.util.function.BiConsumer;
-
 public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
 {
   private final KubernetesPeonClient client;
@@ -44,7 +42,7 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
   }
 
   @Override
-  public KubernetesPeonLifecycle build(Task task, BiConsumer<KubernetesPeonLifecycle.State, String> stateListener)
+  public KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener)
   {
     return new KubernetesPeonLifecycle(
         task,

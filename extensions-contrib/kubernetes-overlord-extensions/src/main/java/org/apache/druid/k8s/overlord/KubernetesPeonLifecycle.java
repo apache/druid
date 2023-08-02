@@ -45,9 +45,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 /**
  * This class is a wrapper per Druid task responsible for managing the task lifecycle
@@ -61,6 +61,12 @@ import java.util.function.BiConsumer;
  */
 public class KubernetesPeonLifecycle
 {
+  @FunctionalInterface
+  public interface TaskStateListener
+  {
+    void stateChanged(State state, String taskId);
+  }
+
   private static final EmittingLogger log = new EmittingLogger(KubernetesPeonLifecycle.class);
 
   protected enum State
@@ -80,7 +86,7 @@ public class KubernetesPeonLifecycle
   private final TaskLogs taskLogs;
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
-  private final BiConsumer<State, String> stateListener;
+  private final TaskStateListener stateListener;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -92,7 +98,7 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      BiConsumer<State, String> stateListener
+      TaskStateListener stateListener
   )
   {
     this.taskId = new K8sTaskId(task);
@@ -114,14 +120,7 @@ public class KubernetesPeonLifecycle
   protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout) throws IllegalStateException
   {
     try {
-      Preconditions.checkState(
-          state.compareAndSet(State.NOT_STARTED, State.PENDING),
-          "Task [%s] failed to run: invalid peon lifecycle state transition [%s]->[%s]",
-          taskId.getOriginalTaskId(),
-          state.get(),
-          State.PENDING
-      );
-      stateListener.accept(state.get(), taskId.getOriginalTaskId());
+      updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
@@ -139,10 +138,7 @@ public class KubernetesPeonLifecycle
       throw e;
     }
     finally {
-      if (!State.STOPPED.equals(state.get())) {
-        state.set(State.STOPPED);
-        stateListener.accept(state.get(), taskId.getOriginalTaskId());
-      }
+      stopTask();
     }
   }
 
@@ -156,17 +152,7 @@ public class KubernetesPeonLifecycle
   protected synchronized TaskStatus join(long timeout) throws IllegalStateException
   {
     try {
-      Preconditions.checkState(
-          (
-              state.compareAndSet(State.NOT_STARTED, State.RUNNING) ||
-              state.compareAndSet(State.PENDING, State.RUNNING)
-          ),
-          "Task [%s] failed to join: invalid peon lifecycle state transition [%s]->[%s]",
-          taskId.getOriginalTaskId(),
-          state.get(),
-          State.RUNNING
-      );
-      stateListener.accept(state.get(), taskId.getOriginalTaskId());
+      updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
@@ -185,10 +171,7 @@ public class KubernetesPeonLifecycle
         log.warn(e, "Task [%s] cleanup failed", taskId);
       }
 
-      if (!State.STOPPED.equals(state.get())) {
-        state.set(State.STOPPED);
-        stateListener.accept(state.get(), taskId.getOriginalTaskId());
-      }
+      stopTask();
     }
   }
 
@@ -337,5 +320,22 @@ public class KubernetesPeonLifecycle
     catch (IOException e) {
       log.warn(e, "Failed to manage temporary log file for task [%s]", taskId.getOriginalTaskId());
     }
+  }
+
+  private void stopTask()
+  {
+    updateState(new State[]{State.NOT_STARTED, State.PENDING, State.RUNNING}, State.STOPPED);
+  }
+
+  private void updateState(State[] acceptedStates, State targetState)
+  {
+    Preconditions.checkState(
+        Arrays.stream(acceptedStates).anyMatch(s -> state.compareAndSet(s, targetState)),
+        "Task [%s] failed to run: invalid peon lifecycle state transition [%s]->[%s]",
+        taskId.getOriginalTaskId(),
+        state.get(),
+        targetState
+    );
+    stateListener.stateChanged(state.get(), taskId.getOriginalTaskId());
   }
 }

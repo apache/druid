@@ -21,9 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.common.task.Task;
 
-import java.util.function.BiConsumer;
-
 public interface PeonLifecycleFactory
 {
-  KubernetesPeonLifecycle build(Task task, BiConsumer<KubernetesPeonLifecycle.State, String> stateListener);
+  KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener);
 }

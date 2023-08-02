@@ -172,7 +172,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     try {
       KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
           task,
-          (state, taskId) -> listenOnTaskState(state, taskId)
+          this::emitTaskStateMetrics
       );
 
       synchronized (tasks) {
@@ -218,7 +218,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   }
 
   @VisibleForTesting
-  protected void listenOnTaskState(KubernetesPeonLifecycle.State state, String taskId)
+  protected void emitTaskStateMetrics(KubernetesPeonLifecycle.State state, String taskId)
   {
     switch (state) {
       case RUNNING:
@@ -232,13 +232,15 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         }
         ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
         IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
-        emitter.emit(metricBuilder.build(
-                         "task/pending/time",
-                         new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
-                     )
+        emitter.emit(
+            metricBuilder.build(
+                "task/pending/time",
+                new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
+            )
         );
       default:
         // ignore other state transition now
+        return;
     }
   }
 

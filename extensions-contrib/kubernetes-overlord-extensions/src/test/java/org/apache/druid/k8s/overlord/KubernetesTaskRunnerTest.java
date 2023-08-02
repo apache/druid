@@ -623,7 +623,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     replayAll();
 
-    runner.listenOnTaskState(KubernetesPeonLifecycle.State.RUNNING, task.getId());
+    runner.emitTaskStateMetrics(KubernetesPeonLifecycle.State.RUNNING, task.getId());
 
     verifyAll();
   }
