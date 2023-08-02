@@ -21,31 +21,22 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.utils.CollectionUtils;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Completely removes information about unused segments who have an interval end that comes before
@@ -58,7 +49,6 @@ import java.util.concurrent.ExecutionException;
  */
 public class KillUnusedSegments implements CoordinatorDuty
 {
-  public static final String KILL_TASK_TYPE = "kill";
   private static final Logger log = new Logger(KillUnusedSegments.class);
 
   private final long period;
@@ -112,7 +102,6 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
-    final Double killTaskSlotRatio = params.getCoordinatorDynamicConfig().getKillTaskSlotRatio();
 
     // If no datasource has been specified, all are eligible for killing unused segments
     if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
@@ -127,20 +116,15 @@ public class KillUnusedSegments implements CoordinatorDuty
     } else {
       log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
       lastKillTime = currentTimeMillis;
-      killUnusedSegments(dataSourcesToKill, killTaskSlotRatio);
+      killUnusedSegments(dataSourcesToKill);
     }
 
     return params;
   }
 
-  private void killUnusedSegments(Collection<String> dataSourcesToKill, @Nullable Double killTaskSlotRatio)
+  private void killUnusedSegments(Collection<String> dataSourcesToKill)
   {
     int submittedTasks = 0;
-    int availableKillTaskSlots = getAvailableKillTaskSlots(killTaskSlotRatio);
-    if (0 == availableKillTaskSlots) {
-      log.warn("Not killing any unused segments because there are no available kill task slots at this time.");
-      return;
-    }
     for (String dataSource : dataSourcesToKill) {
       final Interval intervalToKill = findIntervalForKill(dataSource);
       if (intervalToKill == null) {
@@ -163,16 +147,9 @@ public class KillUnusedSegments implements CoordinatorDuty
           break;
         }
       }
-
-      if (submittedTasks >= availableKillTaskSlots) {
-        log.info(StringUtils.format(
-            "Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
-            + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
-        break;
-      }
     }
 
-    log.debug("Submitted [%d] kill tasks for [%d] datasources.", submittedTasks, dataSourcesToKill.size());
+    log.debug("Submitted kill tasks for [%d] datasources.", submittedTasks);
   }
 
   /**
@@ -197,75 +174,4 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
   }
 
-  private int getAvailableKillTaskSlots(@Nullable Double killTaskSlotRatio)
-  {
-    return Math.max(0, getKillTaskCapacity(killTaskSlotRatio) - getNumActiveKillTaskSlots());
-  }
-
-  private int getNumActiveKillTaskSlots()
-  {
-    final CloseableIterator<TaskStatusPlus> activeTasks =
-        FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 0), true);
-    // Fetch currently running kill tasks
-    int numActiveKillTasks = 0;
-
-    try (final Closer closer = Closer.create()) {
-      closer.register(activeTasks);
-      while (activeTasks.hasNext()) {
-        final TaskStatusPlus status = activeTasks.next();
-
-        // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
-        // the tasks of the unknown taskType as the killTask. This is because it's important to not run
-        // killTasks more than the configured limit at any time which might impact to the ingestion
-        // performance.
-        if (status.getType() == null || KILL_TASK_TYPE.equals(status.getType())) {
-          numActiveKillTasks++;
-        }
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    return numActiveKillTasks;
-  }
-
-  private int getKillTaskCapacity(@Nullable Double killTaskSlotRatio)
-  {
-    int totalWorkerCapacity;
-    try {
-      final IndexingTotalWorkerCapacityInfo workerCapacityInfo =
-          FutureUtils.get(overlordClient.getTotalWorkerCapacity(), true);
-      totalWorkerCapacity = workerCapacityInfo.getMaximumCapacityWithAutoScale();
-      if (totalWorkerCapacity < 0) {
-        totalWorkerCapacity = workerCapacityInfo.getCurrentClusterCapacity();
-      }
-    }
-    catch (ExecutionException e) {
-      // Call to getTotalWorkerCapacity may fail during a rolling upgrade: API was added in 0.23.0.
-      if (e.getCause() instanceof HttpResponseException
-          && ((HttpResponseException) e.getCause()).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-        log.noStackTrace().warn(e, "Call to getTotalWorkerCapacity failed. Falling back to getWorkers.");
-        totalWorkerCapacity =
-            FutureUtils.getUnchecked(overlordClient.getWorkers(), true)
-                .stream()
-                .mapToInt(worker -> worker.getWorker().getCapacity())
-                .sum();
-      } else {
-        throw new RuntimeException(e.getCause());
-      }
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-
-
-    return Math.max(
-        killTaskSlotRatio == null
-            ? totalWorkerCapacity
-            : (int) (totalWorkerCapacity * killTaskSlotRatio),
-        1
-    );
-  }
 }

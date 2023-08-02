@@ -79,7 +79,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         decommissioning,
@@ -100,7 +99,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -121,7 +119,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -142,7 +139,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -163,7 +159,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -184,7 +179,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -222,7 +216,6 @@ public class CoordinatorDynamicConfigTest
         null,
         null,
         null,
-        null,
         ImmutableSet.of("host1"),
         5,
         true,
@@ -248,7 +241,6 @@ public class CoordinatorDynamicConfigTest
         2,
         10,
         ImmutableSet.of("test1"),
-        null,
         null,
         null,
         ImmutableSet.of("host1"),
@@ -300,7 +292,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         decommissioning,
@@ -321,7 +312,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -342,7 +332,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -387,7 +376,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of("test1", "test2"),
-        1.0,
         false,
         1,
         ImmutableSet.of(),
@@ -447,7 +435,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
-        1.0,
         false,
         1,
         decommissioning,
@@ -490,7 +477,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of(),
-        1.0,
         true,
         1,
         ImmutableSet.of(),
@@ -544,7 +530,6 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of(),
-        1.0,
         true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
@@ -570,7 +555,6 @@ public class CoordinatorDynamicConfigTest
         500,
         1,
         emptyList,
-        1.0,
         true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
@@ -599,38 +583,7 @@ public class CoordinatorDynamicConfigTest
         500,
         1,
         ImmutableSet.of("DATASOURCE"),
-        1.0,
         false,
-        EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
-        ImmutableSet.of(),
-        70,
-        false,
-        false,
-        Integer.MAX_VALUE
-    );
-  }
-
-  @Test
-  public void testBuilderWithKillTaskSlotRatio()
-  {
-    double killTaskSlotRatio = 0.2;
-    CoordinatorDynamicConfig defaultConfig =
-        CoordinatorDynamicConfig.builder()
-            .withKillTaskSlotRatio(killTaskSlotRatio)
-            .build();
-    CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build(defaultConfig);
-    assertConfig(
-        config,
-        900000,
-        524288000,
-        100,
-        100,
-        15,
-        500,
-        1,
-        ImmutableSet.of(),
-        killTaskSlotRatio,
-        true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         70,
@@ -651,7 +604,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         current,
         new CoordinatorDynamicConfig.Builder(
-            null,
             null,
             null,
             null,
@@ -718,7 +670,6 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
-      Double expectedKillTaskSlotRatio,
       boolean expectedKillUnusedSegmentsInAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioningNodes,
@@ -741,10 +692,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         expectedSpecificDataSourcesToKillUnusedSegmentsIn,
         config.getSpecificDataSourcesToKillUnusedSegmentsIn()
-    );
-    Assert.assertEquals(
-        expectedKillTaskSlotRatio,
-        config.getKillTaskSlotRatio()
     );
     Assert.assertEquals(expectedKillUnusedSegmentsInAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
