@@ -101,6 +101,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
 
+
   public KubernetesTaskRunner(
       TaskAdapter adapter,
       KubernetesTaskRunnerConfig config,
@@ -189,7 +190,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
             config.getTaskTimeout().toStandardDuration().getMillis()
         );
       }
-      log.info("Finished task, status:" + taskStatus.toString());
+
       updateStatus(task, taskStatus);
 
       return taskStatus;
