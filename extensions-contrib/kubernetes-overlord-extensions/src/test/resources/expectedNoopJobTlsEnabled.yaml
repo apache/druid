@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "id"
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
   labels:
     druid.k8s.peons: "true"
     druid.task.id: "id"

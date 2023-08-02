@@ -38,7 +38,6 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
@@ -244,7 +243,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             bindRealtimeCache(binder);
-            bindCoordinatorHandoffNotiferAndClient(binder);
+            bindCoordinatorHandoffNotifer(binder);
 
             binder.bind(AppenderatorsManager.class)
                   .to(PeonAppenderatorsManager.class)
@@ -446,7 +445,7 @@ public class CliPeon extends GuiceRunnable
     binder.install(new CacheModule());
   }
 
-  static void bindCoordinatorHandoffNotiferAndClient(Binder binder)
+  static void bindCoordinatorHandoffNotifer(Binder binder)
   {
     JsonConfigProvider.bind(
         binder,
@@ -456,8 +455,6 @@ public class CliPeon extends GuiceRunnable
     binder.bind(SegmentHandoffNotifierFactory.class)
           .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
           .in(LazySingleton.class);
-
-    binder.bind(CoordinatorClient.class).in(LazySingleton.class);
   }
 
   static void configureIntermediaryData(Binder binder)

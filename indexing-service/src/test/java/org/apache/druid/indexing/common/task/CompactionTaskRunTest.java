@@ -25,7 +25,10 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.NoopOverlordClient;
@@ -111,7 +114,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -178,15 +180,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     testUtils = new TestUtils();
     overlordClient = new NoopOverlordClient();
-    coordinatorClient = new CoordinatorClient(null, null)
+    coordinatorClient = new NoopCoordinatorClient()
     {
       @Override
-      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+      public ListenableFuture<List<DataSegment>> fetchUsedSegments(
           String dataSource,
           List<Interval> intervals
       )
       {
-        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return Futures.immediateFuture(
+            ImmutableList.copyOf(
+                getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
+            )
+        );
       }
     };
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());

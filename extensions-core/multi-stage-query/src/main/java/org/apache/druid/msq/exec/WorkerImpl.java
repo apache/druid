@@ -132,6 +132,7 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
@@ -732,7 +733,7 @@ public class WorkerImpl implements Worker
     final int frameSize = frameContext.memoryParameters().getStandardFrameSize();
 
     if (durableStageStorageEnabled || (isFinalStage
-                                       && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))) {
+                                       && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           task().getWorkerNumber(),
@@ -741,7 +742,7 @@ public class WorkerImpl implements Worker
           frameSize,
           MSQTasks.makeStorageConnector(context.injector()),
           context.tempDir(),
-          (isFinalStage && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))
+          (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
       );
     } else {
       final File fileChannelDirectory =
@@ -850,7 +851,17 @@ public class WorkerImpl implements Worker
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
     if (controllerAlive && !snapshotsTree.isEmpty()) {
-      controllerClient.postCounters(id(), snapshotsTree);
+      try {
+        controllerClient.postCounters(id(), snapshotsTree);
+      }
+      catch (IOException e) {
+        if (e.getCause() instanceof ServiceClosedException) {
+          // Suppress. This can happen if the controller goes away while a postCounters call is in flight.
+          log.debug(e, "Ignoring failure on postCounters, because controller has gone away.");
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
@@ -1320,7 +1331,7 @@ public class WorkerImpl implements Worker
     {
       final DurableStorageOutputChannelFactory durableStorageOutputChannelFactory;
       if (durableStageStorageEnabled || (isFinalStage
-                                         && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))) {
+                                         && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))) {
         durableStorageOutputChannelFactory = DurableStorageOutputChannelFactory.createStandardImplementation(
             task.getControllerTaskId(),
             task().getWorkerNumber(),
@@ -1329,7 +1340,7 @@ public class WorkerImpl implements Worker
             frameContext.memoryParameters().getStandardFrameSize(),
             MSQTasks.makeStorageConnector(context.injector()),
             context.tempDir(),
-            (isFinalStage && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))
+            (isFinalStage && MSQSelectDestination.DURABLESTORAGE.equals(selectDestination))
         );
       } else {
         return;

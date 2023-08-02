@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
+import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -133,14 +134,13 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
-
-
 
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
@@ -504,7 +504,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                         .inputIntervals()
                                                         .isEmpty();
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getInputSource();
+      final InputSource inputSource = ingestionSchema.getIOConfig()
+                                                     .getNonNullInputSource(toolbox);
 
       final File tmpDir = toolbox.getIndexingTmpDir();
 
@@ -1149,6 +1150,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
+    private final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
     private final InputFormat inputFormat;
     private boolean appendToExisting;
     private boolean dropExisting;
@@ -1199,6 +1201,24 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputSource;
     }
 
+    public InputSource getNonNullInputSource()
+    {
+      return Preconditions.checkNotNull(inputSource, "inputSource");
+    }
+
+    public InputSource getNonNullInputSource(TaskToolbox toolbox)
+    {
+      Preconditions.checkNotNull(inputSource, "inputSource");
+      if (inputSourceWithToolbox.get() == null) {
+        if (inputSource instanceof TaskInputSource) {
+          inputSourceWithToolbox.set(((TaskInputSource) inputSource).withTaskToolbox(toolbox));
+        } else {
+          inputSourceWithToolbox.set(inputSource);
+        }
+      }
+      return inputSourceWithToolbox.get();
+    }
+
     /**
      * Returns {@link InputFormat}. Can be null if {@link DataSchema#parserMap} is specified.
      * Also can be null in {@link InputSourceSampler}.
@@ -1209,11 +1229,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public InputFormat getInputFormat()
     {
       return inputFormat;
-    }
-
-    public InputSource getNonNullInputSource()
-    {
-      return Preconditions.checkNotNull(inputSource, "inputSource");
     }
 
     public InputFormat getNonNullInputFormat()

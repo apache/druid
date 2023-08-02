@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>27.0.0-SNAPSHOT</version>
+    <version>28.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.4.0</apache.curator.version>
-        <apache.kafka.version>3.4.0</apache.kafka.version>
+        <apache.kafka.version>3.5.1</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.9</scala.library.version>
@@ -145,6 +145,8 @@
              ref: https://github.com/mapstruct/mapstruct/pull/1241
              -->
          <jacocoArgLine />
+         <!--  used to enable continuous profiling of jdk17 unit tests in github actions  -->
+         <jfrProfilerArgLine></jfrProfilerArgLine>
     </properties>
 
     <modules>
@@ -219,6 +221,7 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <module>extensions-contrib/druid-iceberg-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -257,7 +260,6 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
-
     <dependencyManagement>
         <dependencies>
             <!-- Compile Scope -->
@@ -786,7 +788,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.1</version>
+                <version>1.1.10.3</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1297,7 +1299,8 @@
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
 
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
-                  </excludes>
+                        <exclude>com/fasterxml/jackson/databind/*</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -1327,6 +1330,9 @@
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
+                    <excludes>
+                        *com/fasterxml/jackson/databind/*
+                    </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -1636,6 +1642,7 @@
                             -Ddruid.test.stupidPool.poison=true
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
+                            ${jfrProfilerArgLine}
                         </argLine>
                         <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
                              while its sister plugin, Failsafe, runs the "new" ITs. -->

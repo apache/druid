@@ -26,8 +26,8 @@ import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -48,7 +48,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
@@ -67,6 +66,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -76,10 +76,6 @@ import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
 {
-
-  private static final String DESTINATION_DATASOURCE = "dataSource";
-  private static final String DESTINATION_REPORT = "taskReport";
-
   public static final String USER_KEY = "__user";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
@@ -128,9 +124,6 @@ public class MSQTaskQueryMaker implements QueryMaker
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContext);
     }
 
-    final String ctxDestination =
-        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(sqlQueryContext));
-
     Object segmentGranularity;
     try {
       segmentGranularity = Optional.ofNullable(plannerContext.queryContext()
@@ -138,15 +131,24 @@ public class MSQTaskQueryMaker implements QueryMaker
                                    .orElse(jsonMapper.writeValueAsString(DEFAULT_SEGMENT_GRANULARITY));
     }
     catch (JsonProcessingException e) {
-      throw new IAE("Unable to deserialize the insert granularity. Please retry the query with a valid "
-                    + "segment graularity");
+      // This would only be thrown if we are unable to serialize the DEFAULT_SEGMENT_GRANULARITY, which we don't expect
+      // to happen
+      throw DruidException.defensive()
+                          .build(
+                              e,
+                              "Unable to deserialize the DEFAULT_SEGMENT_GRANULARITY in MSQTaskQueryMaker. "
+                              + "This shouldn't have happened since the DEFAULT_SEGMENT_GRANULARITY object is guaranteed to be "
+                              + "serializable. Please raise an issue in case you are seeing this message while executing a query."
+                          );
     }
 
     final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
 
     if (maxNumTasks < 2) {
-      throw new IAE(MultiStageQueryContext.CTX_MAX_NUM_TASKS
-                    + " cannot be less than 2 since at least 1 controller and 1 worker is necessary.");
+      throw InvalidInput.exception(
+          "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
+          maxNumTasks
+      );
     }
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
@@ -202,16 +204,19 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQDestination destination;
 
     if (targetDataSource != null) {
-      if (ctxDestination != null && !DESTINATION_DATASOURCE.equals(ctxDestination)) {
-        throw new IAE("Cannot INSERT with destination [%s]", ctxDestination);
-      }
-
       Granularity segmentGranularityObject;
       try {
         segmentGranularityObject = jsonMapper.readValue((String) segmentGranularity, Granularity.class);
       }
       catch (Exception e) {
-        throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
+        throw DruidException.defensive()
+                            .build(
+                                e,
+                                "Unable to deserialize the provided segmentGranularity [%s]. "
+                                + "This is populated internally by Druid and therefore should not occur. "
+                                + "Please contact the developers if you are seeing this error message.",
+                                segmentGranularity
+                            );
       }
 
       final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);
@@ -228,16 +233,20 @@ public class MSQTaskQueryMaker implements QueryMaker
           replaceTimeChunks
       );
     } else {
-      if (ctxDestination != null && !DESTINATION_REPORT.equals(ctxDestination)) {
-        throw new IAE("Cannot SELECT with destination [%s]", ctxDestination);
-      }
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
-      if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
+      if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {
         destination = TaskReportMSQDestination.instance();
-      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
+      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLESTORAGE)) {
         destination = DurableStorageMSQDestination.instance();
       } else {
-        throw new IAE("Cannot SELECT with destination [%s]", msqSelectDestination.name());
+        throw InvalidInput.exception(
+            "Unsupported select destination [%s] provided in the query context. MSQ can currently write the select results to "
+            + "[%s]",
+            msqSelectDestination.getName(),
+            Arrays.stream(MSQSelectDestination.values())
+                  .map(MSQSelectDestination::getName)
+                  .collect(Collectors.joining(","))
+        );
       }
     }
 

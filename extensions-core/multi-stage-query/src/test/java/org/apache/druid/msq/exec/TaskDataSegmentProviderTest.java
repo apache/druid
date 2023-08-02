@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
@@ -41,8 +42,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.rpc.CoordinatorServiceClient;
-import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -149,7 +148,7 @@ public class TaskDataSegmentProviderTest
     );
 
     provider = new TaskDataSegmentProvider(
-        new TestCoordinatorServiceClientImpl(),
+        new TestCoordinatorClientImpl(),
         cacheManager,
         indexIO
     );
@@ -229,7 +228,7 @@ public class TaskDataSegmentProviderTest
     Assert.assertArrayEquals(new String[]{}, cacheDir.list());
   }
 
-  private class TestCoordinatorServiceClientImpl implements CoordinatorServiceClient
+  private class TestCoordinatorClientImpl extends NoopCoordinatorClient
   {
     @Override
     public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
@@ -241,12 +240,6 @@ public class TaskDataSegmentProviderTest
       }
 
       return Futures.immediateFailedFuture(new ISE("No such segment[%s] for dataSource[%s]", segmentId, dataSource));
-    }
-
-    @Override
-    public CoordinatorServiceClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
-    {
-      return this;
     }
   }
 

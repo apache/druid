@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.IAE;
@@ -822,7 +823,23 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     String field = getField(path);
     int index = fields.indexOf(field);
     if (index < 0) {
-      return null;
+      if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
+        final String arrayField = getField(path.subList(0, path.size() - 1));
+        index = fields.indexOf(arrayField);
+      }
+      if (index < 0) {
+        return null;
+      }
+      Set<ColumnType> arrayTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+      Set<ColumnType> elementTypes = Sets.newHashSetWithExpectedSize(arrayTypes.size());
+      for (ColumnType type : arrayTypes) {
+        if (type.isArray()) {
+          elementTypes.add((ColumnType) type.getElementType());
+        } else {
+          elementTypes.add(type);
+        }
+      }
+      return elementTypes;
     }
     return FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
   }

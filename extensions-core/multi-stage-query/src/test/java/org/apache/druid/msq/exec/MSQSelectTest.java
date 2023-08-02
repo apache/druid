@@ -41,12 +41,14 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -58,8 +60,6 @@ import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -93,6 +93,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -110,7 +111,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
                   )
                   .build();
 
@@ -120,7 +121,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLE_STORAGE.name().toLowerCase(Locale.ENGLISH)
+                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
                   )
                   .build();
 
@@ -418,7 +419,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
-                           .filters(selector("dim2", "nonexistent", null))
+                           .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -452,7 +453,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
-                           .filters(selector("dim2", "nonexistent", null))
+                           .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
                            .build()
@@ -768,7 +769,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                                   .setDimFilter(not(selector("j0.v", "xa", null)))
+                                   .setDimFilter(not(equality("j0.v", "xa", ColumnType.STRING)))
                                    .setGranularity(Granularities.ALL)
                                    .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
                                    .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
@@ -955,7 +956,7 @@ public class MSQSelectTest extends MSQTestBase
                             new DoubleSumAggregatorFactory("a0:sum", "m2"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0:count"),
-                                not(selector("m2", null, null)),
+                                notNull("m2"),
 
                                 // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
                                 // May be due to JSON serialization: name is set on the serialized aggregator even
@@ -1499,9 +1500,9 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"[\"a\",\"b\"]", ImmutableList.of("a", "b")},
             new Object[]{"[\"b\",\"c\"]", ImmutableList.of("b", "c")},
             new Object[]{"d", ImmutableList.of("d")},
-            new Object[]{"", Collections.singletonList(useDefault ? null : "")},
-            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)},
-            new Object[]{NullHandling.defaultStringValue(), Collections.singletonList(null)}
+            new Object[]{"", useDefault ? null : Collections.singletonList("")},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null}
         )).verifyResults();
   }
 
@@ -1537,14 +1538,13 @@ public class MSQSelectTest extends MSQTestBase
                                      )
                                      .setHavingSpec(
                                          having(
-                                             bound(
+                                             range(
                                                  "a0",
-                                                 "1",
+                                                 ColumnType.LONG,
+                                                 1L,
                                                  null,
                                                  true,
-                                                 false,
-                                                 null,
-                                                 StringComparators.NUMERIC
+                                                 false
                                              )
                                          )
                                      )
@@ -1709,7 +1709,7 @@ public class MSQSelectTest extends MSQTestBase
                                             .build();
 
     ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{Collections.singletonList(null), !useDefault ? 2L : 3L});
+    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
     if (!useDefault) {
       expected.add(new Object[]{Collections.singletonList(""), 1L});
     }
@@ -1856,7 +1856,7 @@ public class MSQSelectTest extends MSQTestBase
                         aggregators(
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
-                                new NotDimFilter(new SelectorDimFilter("dim3", null, null)),
+                                notNull("dim3"),
                                 "a0"
                             )
                         )
@@ -2013,6 +2013,106 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
+  @Test
+  public void testJoinUsesDifferentAlgorithm()
+  {
+
+    // This test asserts that the join algorithnm used is a different one from that supplied. In sqlCompatible() mode
+    // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
+    // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
+    // here, hence ignoring in sqlCompatible() mode
+    if (NullHandling.sqlCompatible()) {
+      return;
+    }
+
+    RowSignature rowSignature = RowSignature.builder().add("cnt", ColumnType.LONG).build();
+
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE.toString());
+
+    Query<?> expectedQuery;
+
+    expectedQuery = GroupByQuery
+        .builder()
+        .setDataSource(
+            join(
+                new QueryDataSource(
+                    newScanQueryBuilder()
+                        .dataSource("foo")
+                        .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
+                        .columns("v0")
+                        .context(defaultScanQueryContext(
+                            queryContext,
+                            RowSignature.builder().add("v0", ColumnType.LONG).build()
+                        ))
+                        .intervals(querySegmentSpec(Intervals.ETERNITY))
+                        .build()
+                ),
+                new QueryDataSource(
+                    GroupByQuery.builder()
+                                .setDataSource("foo")
+                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                .setDimensions(
+                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                )
+                                .setContext(queryContext)
+                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                .setGranularity(Granularities.ALL)
+                                .build()
+
+                ),
+                "j0.",
+                "(floor(100) == \"j0.d0\")",
+                JoinType.LEFT
+            )
+        )
+        .setAggregatorSpecs(
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("a0"),
+                isNull("j0.d1"),
+                "a0"
+            )
+        )
+        .setContext(queryContext)
+        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    testSelectQuery()
+        .setSql(
+            "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) AS cnt "
+            + "FROM foo"
+        )
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("a0", "cnt")
+                    )
+                ))
+                .destination(isDurableStorageDestination()
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(queryContext)
+        .addAdhocReportAssertions(
+            msqTaskReportPayload -> msqTaskReportPayload.getStages().getStages().stream().noneMatch(
+                stage -> stage.getStageDefinition()
+                              .getProcessorFactory()
+                              .getClass()
+                              .equals(SortMergeJoinFrameProcessorFactory.class)
+            ),
+            "assert the query didn't use sort merge"
+        )
+        .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
+        .verifyResults();
+  }
+
   @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
@@ -2036,7 +2136,7 @@ public class MSQSelectTest extends MSQTestBase
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{Collections.singletonList(null), !useDefault ? 2L : 3L});
+    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
     if (!useDefault) {
       expected.add(new Object[]{Collections.singletonList(""), 1L});
     }

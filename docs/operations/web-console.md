@@ -52,14 +52,14 @@ The **Home** view displays the following cards:
 * __Status__. Click this card for information on the Druid version and any extensions loaded on the cluster.
 * [Datasources](#datasources)
 * [Segments](#segments)
-* [Supervisors](#supervisors-and-tasks)
-* [Tasks](#supervisors-and-tasks)
+* [Supervisors](#supervisors)
+* [Tasks](#tasks)
 * [Services](#services)
 * [Lookups](#lookups)
 
 You can access the [data loader](#data-loader) and [lookups view](#lookups) from the top-level navigation of the **Home** view.
 
-![home-view](../assets/web-console-01-home-view.png "home view")
+![Web console home view](../assets/web-console-01-home-view.png "home view")
 
 ## Query
 
@@ -107,7 +107,7 @@ After queries finish, you can access them by clicking on the query time indicato
 
 You can use the data loader to build an ingestion spec with a step-by-step wizard.
 
-![data-loader-1](../assets/web-console-02-data-loader-1.png)
+![Data loader tiles](../assets/web-console-02-data-loader-1.png)
 
 After selecting the location of your data, follow the series of steps displaying incremental previews of the data as it is ingested.
 After filling in the required details on every step you can navigate to the next step by clicking **Next**.
@@ -115,7 +115,7 @@ You can also freely navigate between the steps from the top navigation.
 
 Navigating with the top navigation leaves the underlying spec unmodified while clicking **Next** attempts to fill in the subsequent steps with appropriate defaults.
 
-![data-loader-2](../assets/web-console-03-data-loader-2.png)
+![Data loader ingestion](../assets/web-console-03-data-loader-2.png)
 
 ## Datasources
 
@@ -127,11 +127,11 @@ To display a timeline of segments, toggle the option for **Show segment timeline
 
 Like any view that is powered by a Druid SQL query, you can click **View SQL query for table** from the ellipsis menu to run the underlying SQL query directly.
 
-![datasources](../assets/web-console-04-datasources.png)
+![Datasources](../assets/web-console-04-datasources.png)
 
 You can view and edit retention rules to determine the general availability of a datasource.
 
-![retention](../assets/web-console-05-retention.png)
+![Retention](../assets/web-console-05-retention.png)
 
 ## Segments
 
@@ -139,38 +139,42 @@ The **Segments** view shows all the [segments](../design/segments.md) in the clu
 Each segment has a detail view that provides more information.
 The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
 
-![segments](../assets/web-console-06-segments.png)
+![Segments](../assets/web-console-06-segments.png)
 
-## Supervisors and tasks
+## Supervisors
 
 From this view, you can check the status of existing supervisors as well as suspend, resume, and reset them.
-The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained.
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. Submit a supervisor spec manually by clicking the ellipsis icon and selecting **Submit JSON supervisor**.
+
+![Supervisors](../assets/web-console-07-supervisors.png)
+
+Click the magnifying glass icon for any supervisor to see detailed reports of its progress.
+
+![Supervisors status](../assets/web-console-08-supervisor-status.png)
+
+## Tasks
 
 The tasks table allows you to see the currently running and recently completed tasks.
 To navigate your tasks more easily, you can group them by their **Type**, **Datasource**, or **Status**.
 Submit a task manually by clicking the ellipsis icon and selecting **Submit JSON task**.
 
-![supervisors](../assets/web-console-07-supervisors.png)
+![Tasks](../assets/web-console-0.7-tasks.png)
 
-Click on the magnifying glass for any supervisor to see detailed reports of its progress.
+Click the magnifying glass icon for any task to see more detail about it.
 
-![supervisor-status](../assets/web-console-08-supervisor-status.png)
-
-Click on the magnifying glass for any task to see more detail about it.
-
-![tasks-status](../assets/web-console-09-task-status.png)
+![Tasks status](../assets/web-console-09-task-status.png)
 
 ## Services
 
 The **Services** view lets you see the current status of the nodes making up your cluster.
-You can group the nodes by type or by tier to get meaningful summary statistics. 
+You can group the nodes by **Type** or by **Tier** to get meaningful summary statistics. 
 
-![servers](../assets/web-console-10-servers.png)
+![Services](../assets/web-console-10-servers.png)
 
 
 ## Lookups
 
-Access the **Lookups** view from the **Lookups** card in the home view or by clicking on the gear icon in the upper right corner.
+Access the **Lookups** view from the **Lookups** card in the home view or by clicking the ellipsis icon in the top-level navigation.
 Here you can create and edit query time [lookups](../querying/lookups.md).
 
-![lookups](../assets/web-console-13-lookups.png)
+![Lookups](../assets/web-console-13-lookups.png)
