@@ -41,25 +41,25 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String dataSource;
   private final Interval interval;
   private final Boolean markAsUnused;
-  @Nullable private final Integer maxSegmentsToKill;
+  @Nullable private final Integer limit;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("markAsUnused") Boolean markAsUnused,
-      @JsonProperty("maxSegmentsToKill") Integer maxSegmentsToKill
+      @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
+      @JsonProperty("limit") Integer limit
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
     this.interval = interval;
     this.markAsUnused = markAsUnused;
-    if (null != maxSegmentsToKill) {
-      Preconditions.checkArgument(maxSegmentsToKill > 0, "maxSegmentsToKill must be > 0");
+    if (null != limit) {
+      Preconditions.checkArgument(limit > 0, "limit must be > 0");
     }
-    this.maxSegmentsToKill = maxSegmentsToKill;
+    this.limit = limit;
   }
 
   @JsonProperty
@@ -97,9 +97,9 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 
   @JsonProperty
   @Nullable
-  public Integer getMaxSegmentsToKill()
+  public Integer getLimit()
   {
-    return maxSegmentsToKill;
+    return limit;
   }
 
 
@@ -117,12 +117,12 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
            && Objects.equals(dataSource, that.dataSource)
            && Objects.equals(interval, that.interval)
            && Objects.equals(markAsUnused, that.markAsUnused)
-           && Objects.equals(maxSegmentsToKill, that.maxSegmentsToKill);
+           && Objects.equals(limit, that.limit);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, markAsUnused, maxSegmentsToKill);
+    return Objects.hash(id, dataSource, interval, markAsUnused, limit);
   }
 }

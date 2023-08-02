@@ -65,7 +65,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
 
   private final boolean markAsUnused;
-  @Nullable private final Integer maxSegmentsToKill;
+  @Nullable private final Integer limit;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -73,8 +73,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("markAsUnused") Boolean markAsUnused,
-      @JsonProperty("maxSegmentsToKill") @Nullable Integer maxSegmentsToKill
+      @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
+      @JsonProperty("limit") @Nullable Integer limit
   )
   {
     super(
@@ -83,14 +83,20 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         interval,
         context
     );
-    if (null != maxSegmentsToKill && maxSegmentsToKill <= 0) {
+    if (null != limit && limit <= 0) {
       throw InvalidInput.exception(
-          "maxSegmentsToKill [%d] is invalid. It must be a positive integer.",
-          maxSegmentsToKill
+          "limit [%d] is invalid. It must be a positive integer.",
+          limit
+      );
+    }
+    if (limit != null && markAsUnused != null && markAsUnused) {
+      throw InvalidInput.exception(
+          "limit cannot be provided with markAsUnused.",
+          limit
       );
     }
     this.markAsUnused = markAsUnused != null && markAsUnused;
-    this.maxSegmentsToKill = maxSegmentsToKill;
+    this.limit = limit;
 
   }
 
@@ -103,9 +109,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
   @Nullable
   @JsonProperty
-  public Integer getMaxSegmentsToKill()
+  public Integer getLimit()
   {
-    return maxSegmentsToKill;
+    return limit;
   }
 
   @Override
@@ -137,7 +143,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     // List unused segments
     List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), maxSegmentsToKill));
+        .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), limit));
 
     if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
       throw new ISE(
@@ -149,9 +155,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     }
 
     // Kill segments
-    unusedSegments = maxSegmentsToKill == null
+    unusedSegments = limit == null
         ? unusedSegments
-        : unusedSegments.subList(0, Math.min(maxSegmentsToKill, unusedSegments.size()));
+        : unusedSegments.subList(0, Math.min(limit, unusedSegments.size()));
     toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
     for (DataSegment segment : unusedSegments) {
       toolbox.getDataSegmentKiller().kill(segment);

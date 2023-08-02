@@ -60,7 +60,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(taskQuery.getInterval(), fromJson.getInterval());
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
-    Assert.assertEquals(taskQuery.getMaxSegmentsToKill(), fromJson.getMaxSegmentsToKill());
+    Assert.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
   }
 
   @Test
@@ -83,6 +83,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
     Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
     Assert.assertEquals(task.isMarkAsUnused(), taskQuery.getMarkAsUnused());
-    Assert.assertNull(task.getMaxSegmentsToKill());
+    Assert.assertNull(task.getLimit());
   }
 }
