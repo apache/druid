@@ -114,8 +114,13 @@ Note that this endpoint will return an HTTP `200 OK` even if the datasource name
 ---
 #### Sample request
 
-The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. 
-* `wikipedia_hour` is a datasource with `hour` segment granularity.
+The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data.
+
+* `wikipedia_hour` is a datasource with `HOUR` segment granularity.
+* `skipOffsetFromLatest` is set to `PT0S`, meaning that no data is skipped. 
+* `partitionsSpec` is set to the default `dynamic`, allowing Druid to dynamically determine the optimal partioning strategy.
+* `type` is set to `index_parallel`, meaning that parallel indexing will be used.
+* `segmentGranularity` is set to `DAY`, meaning that each compacted segment will be a day of data.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -126,13 +131,10 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
 --header 'Content-Type: application/json' \
 --data '{
     "dataSource": "wikipedia_hour",
-    "taskPriority": 25,
-    "inputSegmentSizeBytes": 100000000000000,
     "skipOffsetFromLatest": "PT0S",
     "tuningConfig": {
         "partitionsSpec": {
-            "type": "dynamic",
-            "maxRowsPerSegment": 5000000
+            "type": "dynamic"
         },
         "type": "index_parallel"
     },
@@ -148,17 +150,14 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
 POST /druid/coordinator/v1/config/compaction HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
-Content-Length: 393
+Content-Length: 281
 
 {
     "dataSource": "wikipedia_hour",
-    "taskPriority": 25,
-    "inputSegmentSizeBytes": 100000000000000,
     "skipOffsetFromLatest": "PT0S",
     "tuningConfig": {
         "partitionsSpec": {
-            "type": "dynamic",
-            "maxRowsPerSegment": 5000000
+            "type": "dynamic"
         },
         "type": "index_parallel"
     },
@@ -175,9 +174,9 @@ Content-Length: 393
 A successful request returns an HTTP `200 OK` and an empty response body.
 
 
-### Remove datasource automatic compaction
+### Remove datasource automatic compaction configuration
 
-Removes the automatic compaction config for a datasource.
+Removes the automatic compaction configuration for a datasource. This updates the compaction status of the datasource to "Not enabled." 
 
 #### URL
 
@@ -227,7 +226,9 @@ A successful request returns an HTTP `200 OK` and an empty response body.
 
 ### Get all automatic compaction configuration
 
-Retrieves all automatic compaction configurations.
+Retrieves all automatic compaction configurations. Returns a `compactionConfigs` object containing the active automatic compaction configuration of all datasources.
+
+Additionally, use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompactionTaskSlots` values for managing resource allocation of compaction tasks.
 
 #### URL
 
@@ -471,9 +472,9 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Retrieves the history of the automatic compaction config for a datasource. Returns an empty list if the  datasource does not exist or there is no compaction history for the datasource.
 
 The response contains a list of objects with the following keys:
-* `globalConfig`: A json object containing automatic compaction config that applies to the entire cluster. 
-* `compactionConfig`: A json object containing the automatic compaction config for the datasource.
-* `auditInfo`: A json object that contains information about the change made - like `author`, `comment` and `ip`.
+* `globalConfig`: A JSON object containing automatic compaction config that applies to the entire cluster. 
+* `compactionConfig`: A JSON object containing the automatic compaction config for the datasource.
+* `auditInfo`: A JSON object that contains information about the change made - like `author`, `comment` and `ip`.
 * `auditTime`: The date and time when the change was made.
 
 #### URL
@@ -689,20 +690,20 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get compaction status and statistics
 
-Returns the status and statistics from the auto-compaction run of all datasources which have auto-compaction enabled in the latest run. The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource (which has/had auto-compaction enabled).
+Returns the status and statistics from the auto-compaction run of all datasources which have auto-compaction enabled in the latest run. The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource with automatic compaction enabled.
 
 The `latestStatus` object has the following keys:
-* `dataSource`: name of the datasource for this status information
-* `scheduleStatus`: auto-compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
-* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
-* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto-compaction config
-* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
-* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
-* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto-compaction config
-* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
-* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
-* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto-compaction config
-* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
+* `dataSource`: Name of the datasource for this status information.
+* `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
+* `bytesAwaitingCompaction`: Total bytes of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
+* `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction config.
+* `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction.
+* `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction).
+* `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the auto-compaction config.
+* `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction.
+* `intervalCountAwaitingCompaction`: Total number of intervals of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction).
+* `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the auto-compaction config.
+* `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction.
 
 #### URL
 
