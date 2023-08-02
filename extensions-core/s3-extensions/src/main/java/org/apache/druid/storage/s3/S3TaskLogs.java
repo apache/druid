@@ -23,7 +23,6 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -67,67 +66,66 @@ public class S3TaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "log");
-    // this is to satisfy CodeQL scan
-    Preconditions.checkArgument(
-        offset < Long.MAX_VALUE && offset > Long.MIN_VALUE,
-        "offset is out of range"
-    );
-    return streamTaskFile(offset, taskKey);
+    return streamTaskFileWithRetry(offset, taskKey);
   }
 
   @Override
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "report.json");
-    return streamTaskFile(0, taskKey);
+    return streamTaskFileWithRetry(0, taskKey);
   }
 
   @Override
   public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "status.json");
-    return streamTaskFile(0, taskKey);
+    return streamTaskFileWithRetry(0, taskKey);
   }
 
-  private Optional<InputStream> streamTaskFile(final long offset, String taskKey) throws IOException
+  /**
+   * Using the retry conditions defined in {@link S3Utils#S3RETRY}.
+   */
+  private Optional<InputStream> streamTaskFileWithRetry(final long offset, String taskKey) throws IOException
   {
     try {
-      return S3Utils.retryS3Operation(
-          () -> {
-            try {
-              final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
-
-              final long start;
-              final long end = objectMetadata.getContentLength() - 1;
-
-              if (offset > 0 && offset < objectMetadata.getContentLength()) {
-                start = offset;
-              } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
-                start = objectMetadata.getContentLength() + offset;
-              } else {
-                start = 0;
-              }
-
-              final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
-                  .withMatchingETagConstraint(ensureQuotated(objectMetadata.getETag()))
-                  .withRange(start, end);
-
-              return Optional.of(service.getObject(request).getObjectContent());
-            }
-            catch (AmazonS3Exception e) {
-              if (404 == e.getStatusCode()
-                  || "NoSuchKey".equals(e.getErrorCode())
-                  || "NoSuchBucket".equals(e.getErrorCode())) {
-                return Optional.absent();
-              } else {
-                throw e;
-              }
-            }
-          }
-      );
+      return S3Utils.retryS3Operation(() -> streamTaskFile(offset, taskKey));
     }
     catch (Exception e) {
       throw new IOE(e, "Failed to stream logs from: %s", taskKey);
+    }
+  }
+
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey)
+  {
+    try {
+      final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
+
+      final long start;
+      final long end = objectMetadata.getContentLength() - 1;
+
+      if (offset > 0 && offset < objectMetadata.getContentLength()) {
+        start = offset;
+      } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
+        start = objectMetadata.getContentLength() + offset;
+      } else {
+        start = 0;
+      }
+
+      final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
+          .withMatchingETagConstraint(ensureQuotated(objectMetadata.getETag()))
+          .withRange(start, end);
+
+      return Optional.of(service.getObject(request).getObjectContent());
+    }
+    catch (AmazonS3Exception e) {
+      if (404 == e.getStatusCode()
+          || "NoSuchKey".equals(e.getErrorCode())
+          || "NoSuchBucket".equals(e.getErrorCode())) {
+        return Optional.absent();
+      } else {
+        throw e;
+      }
     }
   }
 
