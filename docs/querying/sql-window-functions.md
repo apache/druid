@@ -27,7 +27,7 @@ title: Window functions
 >
 > Window functions are an [experimental](../development/experimental.md) feature. Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
 > There are known issues where ORDER BY only works on ascending order and certain options may cause errors.
-> Set the context parameter `windowsAreForClosers: true` to use window functions.
+> To use window functions, submit the context parameter `windowsAreForClosers: true` with your query.
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
