@@ -9,8 +9,6 @@
 search for TBD 
 
 * Caveats for array column types
-* More info about Hadoop 2 deprecation
-* Info for parameter execution highlight
 * Caching cost for upgrade notes - is it this? [#14484](https://github.com/apache/druid/pull/14484)
 * User impact of https://github.com/apache/druid/pull/14048 for highlights
 * https://github.com/apache/druid/pull/14476 seems to only be documented here in release notes and the PR?
@@ -102,6 +100,8 @@ Druid now fully supports Java 17.
 ## Hadoop 2 deprecated
 
 Support for Hadoop 2 is now deprecated. It will be removed in a future release.
+
+For more information, see the [upgrade notes](#hadoop-2-deprecated-1)
 
 ## Parameter execution
 
@@ -393,7 +393,9 @@ TBD
 
 ### Hadoop 2 deprecated
 
-Support for Hadoop 2 has been deprecated. It will be removed in a future release.
+Many of the important dependent libraries that Druid uses no longer support Hadoop 2. In order for Druid to stay current and have pathways to mitigate security vulnerabilities, the community has decided to deprecate support for Hadoop 2.x releases starting this release. Starting with Druid 28.x, Hadoop 3.x is the only supported Hadoop version.
+
+Consider migrating to SQL-based ingestion or native ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid ingestion is not possible, plan to upgrade your Hadoop infrastructure before upgrading to the next Druid release.
 
 ### GroupBy v1 deprecated
 
