@@ -25,7 +25,7 @@ sidebar_label: Automatic compaction
 
 This document describes status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. Automatic compaction can be configured in the Druid web console or API. 
 
-In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Manage automatic compaction
 
@@ -48,7 +48,7 @@ The max and min number of compaction tasks is derived from this equation `clamp(
 * `max` (optional)
   * Type: Int
   * Default: 2147483647
-  * Limit the maximum number of task slots for compation tasks.
+  * Limit the maximum number of task slots for compaction tasks.
 
 #### Responses
 
@@ -118,7 +118,7 @@ The following example creates an automatic compaction configuration for datasour
 
 * `wikipedia_hour` is a datasource with `HOUR` segment granularity.
 * `skipOffsetFromLatest` is set to `PT0S`, meaning that no data is skipped. 
-* `partitionsSpec` is set to the default `dynamic`, allowing Druid to dynamically determine the optimal partioning strategy.
+* `partitionsSpec` is set to the default `dynamic`, allowing Druid to dynamically determine the optimal partitioning strategy.
 * `type` is set to `index_parallel`, meaning that parallel indexing will be used.
 * `segmentGranularity` is set to `DAY`, meaning that each compacted segment will be a day of data.
 
@@ -228,7 +228,7 @@ A successful request returns an HTTP `200 OK` and an empty response body.
 
 Retrieves all automatic compaction configurations. Returns a `compactionConfigs` object containing the active automatic compaction configuration of all datasources.
 
-Additionally, use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompactionTaskSlots` values for managing resource allocation of compaction tasks.
+You can use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompactionTaskSlots` values for managing resource allocation of compaction tasks.
 
 #### URL
 
@@ -694,16 +694,16 @@ Retrieves the status and statistics from the automatic compaction run of all dat
 
 The `latestStatus` object has the following keys:
 * `dataSource`: Name of the datasource for this status information.
-* `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
+* `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active automatic compaction config submitted. Otherwise, returns `NOT_ENABLED`.
 * `bytesAwaitingCompaction`: Total bytes of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction config.
-* `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction.
-* `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction).
-* `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the auto-compaction config.
-* `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction.
-* `intervalCountAwaitingCompaction`: Total number of intervals of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction).
-* `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the auto-compaction config.
-* `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction.
+* `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
+* `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the automatic compaction config.
+* `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `intervalCountAwaitingCompaction`: Total number of intervals of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
+* `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the automatic compaction config.
+* `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
 
 #### URL
 
