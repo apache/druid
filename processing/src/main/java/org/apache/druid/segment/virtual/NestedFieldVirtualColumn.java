@@ -576,7 +576,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
       final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(
-          arrayColumn.getLogicalType().getElementType()
+          arrayColumn.getLogicalType().isArray() ? arrayColumn.getLogicalType().getElementType() : arrayColumn.getLogicalType()
       );
       final ExpressionType castTo = expectedType == null
                                     ? ExpressionType.STRING
@@ -601,7 +601,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (maybeArray instanceof Object[]) {
                 Object[] anArray = (Object[]) maybeArray;
                 if (elementNumber < anArray.length) {
-                  elements[i] = ExprEval.ofType(elementType, elements[i]).castTo(castTo).value();
+                  elements[i] = ExprEval.ofType(elementType, anArray[elementNumber]).castTo(castTo).value();
                 } else {
                   elements[i] = null;
                 }
