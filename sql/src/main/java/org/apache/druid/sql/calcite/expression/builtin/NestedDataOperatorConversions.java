@@ -557,7 +557,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayBigIntOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_BIGINT", SqlTypeName.BIGINT);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_BIGINT", SqlTypeName.BIGINT);
 
     public JsonValueReturningArrayBigIntOperatorConversion()
     {
@@ -567,7 +567,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayDoubleOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
 
     public JsonValueReturningArrayDoubleOperatorConversion()
     {
@@ -577,7 +577,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayVarcharOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
 
     public JsonValueReturningArrayVarcharOperatorConversion()
     {
