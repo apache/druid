@@ -74,7 +74,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 </details>
 
-Window functions are similar to [aggregation funtctions](./aggregations.md).  
+Window functions are similar to [aggregation functions](./aggregations.md).  
 
 You can use the OVER clause to treat other Druid aggregation functions as window functions. For example, the sum of a value for rows within a window.
 
