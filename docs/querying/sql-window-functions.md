@@ -100,8 +100,8 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 ## Window function reference
 
-|Function|Notes|Default|
-|--------|-----|-------|
+|Function|Notes|
+|--------|-----|
 | `ROW_NUMBER()`| Returns the number of the row within the window|
 |`RANK()`| Returns the rank for a row within a window | 
 |`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
