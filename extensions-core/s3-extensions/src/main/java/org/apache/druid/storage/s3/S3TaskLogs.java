@@ -23,6 +23,7 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -66,6 +67,11 @@ public class S3TaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "log");
+    // this is to satisfy CodeQL scan
+    Preconditions.checkArgument(
+        offset <= Long.MAX_VALUE && offset >= Long.MIN_VALUE,
+        "offset is out of range"
+    );
     return streamTaskFileWithRetry(offset, taskKey);
   }
 
