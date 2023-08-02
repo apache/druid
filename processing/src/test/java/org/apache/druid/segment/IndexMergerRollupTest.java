@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
@@ -72,26 +73,22 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   ) throws Exception
   {
     List<Map<String, Object>> eventsList = Arrays.asList(
-        new HashMap<String, Object>()
-        {
-          {
-            put("d", "d1");
-            put("m", "m1");
-            put("l", 123L);
-            put("f", 123.0F);
-            put("dl", 123.5D);
-          }
-        },
-        new HashMap<String, Object>()
-        {
-          {
-            put("d", "d1");
-            put("m", "m2");
-            put("l", 124L);
-            put("f", 124.0F);
-            put("dl", 124.5D);
-          }
-        }
+        new HashMap<>(
+            ImmutableMap.of(
+                "d", "d1",
+                "m", "m2",
+                "l", 124L,
+                "f", 124.0F,
+                "dl", 124.5D
+            )),
+        new HashMap<>(
+            ImmutableMap.of(
+                "d", "d1",
+                "m", "m2",
+                "l", 124L,
+                "f", 124.0F,
+                "dl", 124.5D
+            ))
     );
 
     final File tempDir = temporaryFolder.newFolder();
