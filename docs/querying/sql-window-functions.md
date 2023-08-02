@@ -31,7 +31,7 @@ title: Window functions
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
-The following example returns the rank of each row in ascending order based upon its `delta` value as related to other rows with the same `channel` value.
+The following example groups results with the same `channel` value into windows. For each window, the query returns the rank of each row in ascending order based upon its `delta` value.
 
 ```sql
 SELECT FLOOR(__time TO DAY) AS event_time,
@@ -75,7 +75,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY abs(delta) ASC)
 
 Window functions are similar to [aggregation funtctions](./aggregations.md).  
 
-You can use the OVER clause treat other Druid aggretation functions as window functions. For example, the sum of a value for rows within a window.
+You can use the OVER clause to treat other Druid aggregation functions as window functions. For example, the sum of a value for rows within a window.
 
 When working with window functions, consider the following:
 - Window functions only work on GROUP BY queries.
@@ -103,14 +103,14 @@ rank() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 |--------|-----|-------|
 | `ROW_NUMBER()`| Returns the number of the row within the window| None |
 |`RANK()`| Returns the rank for a row within a window | None | 
-|`DENSE_RANK()`| Returns the ranks for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. | None |
+|`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. | None |
 |`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total partition rows - 1)` | None |
 |`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of partition rows preceding or peers with current row` / `total partition rows` | None |
 |`NTILE(tiles)`| Divides the results as evenly as possible into the number of tiles, also called buckets, and returns a value from 1 to the value of `tiles`  |None |
-|`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window. If there is no such row, returns the default. | None |
-|`LEAD(expr, offset, default)`| Returns the value evaluated at the row that followsthe current row by the offset number within the window; if there is no such row, returns the default | None |
+|`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window; if there is no such row, returns the given default value | None |
+|`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value | None |
 |`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window| None |
-|`LAST_VALUE(expr)`| Returns the value for the expression for the first row within the window | None |
+|`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window | None |
 
 
 ## Example
@@ -125,7 +125,7 @@ SELECT FLOOR(__time TO DAY) AS event_time,
     RANK() OVER w AS rank_no,
     DENSE_RANK() OVER w AS dense_rank_no,
     PERCENT_RANK() OVER w AS pct_rank,
-    CUME_DIST() OVER w AS cumlative_dist,
+    CUME_DIST() OVER w AS cumulative_dist,
     NTILE(4) OVER w AS ntile_val,
     LAG(ABS(delta), 1, 0) OVER w AS lag_val,
     LEAD(ABS(delta), 1, 0) OVER w AS lead_val,
@@ -140,7 +140,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 <details>
 <summary> View results </summary>
 
-|event_time|channel|change|row_no|rank_no|dense_rank_no|pct_rank|cumlative_dist|ntile_val|lag_val|lead_val|first_val|last_val|
+|event_time|channel|change|row_no|rank_no|dense_rank_no|pct_rank|cumulative_dist|ntile_val|lag_val|lead_val|first_val|last_val|
 |------------|---------|--------|--------|---------|---------------|----------|----------------|-----------|---------|----------|-----------|----------|
 |2016-06-27T00:00:00.000Z|#kk.wikipedia|1|1|1|1|0|0.125|1|null|7|1|6900|
 |2016-06-27T00:00:00.000Z|#kk.wikipedia|7|2|2|2|0.14285714285714285|0.25|1|1|56|1|6900|
