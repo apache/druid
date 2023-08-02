@@ -34,7 +34,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 Update the capacity for compaction tasks. Maximum number of compaction tasks is limited by `ratio` and `max`.
 `ratio` is ratio of the total task slots to the compaction task slots and the `max` is the number of task slots for compaction tasks.
 
-The max and min number of compaction tasks is derived from this equation `clamp(floor(compaction_task_slot_ratio * total_task_slots), 1, 2147483652)`, where the minimum number of compaction tasks is 1 and maximum is 2147483652.
+The minimum number of compaction tasks is 1 and the maximum is 2147483652.
 
 #### URL
 
