@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.indexing.destination;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Determines the destination for results of select queries.
  */
@@ -27,12 +29,13 @@ public enum MSQSelectDestination
   /**
    * Writes all the results directly to the report.
    */
-  TASK_REPORT(false),
+  TASKREPORT("taskReport", false),
   /**
    * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
    */
-  DURABLE_STORAGE(true);
+  DURABLESTORAGE("durableStorage", true);
 
+  private final String name;
   private final boolean shouldTruncateResultsInTaskReport;
 
   public boolean shouldTruncateResultsInTaskReport()
@@ -40,8 +43,24 @@ public enum MSQSelectDestination
     return shouldTruncateResultsInTaskReport;
   }
 
-  MSQSelectDestination(boolean shouldTruncateResultsInTaskReport)
+  MSQSelectDestination(String name, boolean shouldTruncateResultsInTaskReport)
   {
+    this.name = name;
     this.shouldTruncateResultsInTaskReport = shouldTruncateResultsInTaskReport;
+  }
+
+  @JsonValue
+  public String getName()
+  {
+    return name;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MSQSelectDestination{" +
+           "name='" + name + '\'' +
+           ", shouldTruncateResultsInTaskReport=" + shouldTruncateResultsInTaskReport +
+           '}';
   }
 }

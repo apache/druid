@@ -350,9 +350,15 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
-                                       .castTo(ExpressionType.fromColumnTypeStrict(logicalType));
-      final Object[] arrayToMatch = eval.asArray();
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType)
+      );
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
+      final Object[] arrayToMatch = castForComparison.asArray();
       Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
@@ -425,9 +431,14 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value)
-                                       .castTo(ExpressionType.fromColumnTypeStrict(logicalType.getElementType()));
-
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
+      );
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
       Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
@@ -475,12 +486,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
         private int getElementId()
         {
-          if (eval.value() == null) {
+          if (castForComparison.value() == null) {
             return 0;
-          } else if (eval.type().is(ExprType.STRING)) {
-            return elements.indexOf(StringUtils.toUtf8ByteBuffer(eval.asString()));
+          } else if (castForComparison.type().is(ExprType.STRING)) {
+            return elements.indexOf(StringUtils.toUtf8ByteBuffer(castForComparison.asString()));
           } else {
-            return elements.indexOf(eval.value()) + elementOffset;
+            return elements.indexOf(castForComparison.value()) + elementOffset;
           }
         }
       };

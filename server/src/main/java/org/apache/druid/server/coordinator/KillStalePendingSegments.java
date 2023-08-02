@@ -20,14 +20,17 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import java.util.ArrayList;
@@ -38,28 +41,37 @@ public class KillStalePendingSegments implements CoordinatorDuty
   private static final Logger log = new Logger(KillStalePendingSegments.class);
   private static final Period KEEP_PENDING_SEGMENTS_OFFSET = new Period("P1D");
 
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
 
   @Inject
-  public KillStalePendingSegments(IndexingServiceClient indexingServiceClient)
+  public KillStalePendingSegments(OverlordClient overlordClient)
   {
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final List<DateTime> createdTimes = new ArrayList<>();
+
+    // Include one complete status so we can get the time of the last-created complete task. (The Overlord API returns
+    // complete tasks in descending order of created_date.)
+    final List<TaskStatusPlus> statuses =
+        ImmutableList.copyOf(FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 1), true));
     createdTimes.add(
-        indexingServiceClient
-            .getActiveTasks()
+        statuses
             .stream()
+            .filter(status -> status.getStatusCode() == null || !status.getStatusCode().isComplete())
             .map(TaskStatusPlus::getCreatedTime)
             .min(Comparators.naturalNullsFirst())
             .orElse(DateTimes.nowUtc()) // If there are no active tasks, this returns the current time.
     );
 
-    final TaskStatusPlus completeTaskStatus = indexingServiceClient.getLastCompleteTask();
+    final TaskStatusPlus completeTaskStatus =
+        statuses.stream()
+                .filter(status -> status != null && status.getStatusCode().isComplete())
+                .findFirst()
+                .orElse(null);
     if (completeTaskStatus != null) {
       createdTimes.add(completeTaskStatus.getCreatedTime());
     }
@@ -74,9 +86,16 @@ public class KillStalePendingSegments implements CoordinatorDuty
     final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
     for (String dataSource : params.getUsedSegmentsTimelinesPerDataSource().keySet()) {
       if (!params.getCoordinatorDynamicConfig().getDataSourcesToNotKillStalePendingSegmentsIn().contains(dataSource)) {
+        final int pendingSegmentsKilled = FutureUtils.getUnchecked(
+            overlordClient.killPendingSegments(
+                dataSource,
+                new Interval(DateTimes.MIN, stalePendingSegmentsCutoffCreationTime)
+            ),
+            true
+        );
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
-            indexingServiceClient.killPendingSegments(dataSource, stalePendingSegmentsCutoffCreationTime),
+            pendingSegmentsKilled,
             stalePendingSegmentsCutoffCreationTime,
             dataSource
         );

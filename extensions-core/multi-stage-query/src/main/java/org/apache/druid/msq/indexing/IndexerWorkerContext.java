@@ -43,7 +43,6 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.rpc.CoordinatorServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
@@ -95,8 +94,6 @@ public class IndexerWorkerContext implements WorkerContext
   public static IndexerWorkerContext createProductionInstance(final TaskToolbox toolbox, final Injector injector)
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
-    final CoordinatorServiceClient coordinatorServiceClient =
-        injector.getInstance(CoordinatorServiceClient.class).withRetryPolicy(StandardRetryPolicy.unlimited());
     final SegmentCacheManager segmentCacheManager =
         injector.getInstance(SegmentCacheManagerFactory.class)
                 .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"));
@@ -107,7 +104,7 @@ public class IndexerWorkerContext implements WorkerContext
         toolbox,
         injector,
         indexIO,
-        new TaskDataSegmentProvider(coordinatorServiceClient, segmentCacheManager, indexIO),
+        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager, indexIO),
         serviceClientFactory
     );
   }

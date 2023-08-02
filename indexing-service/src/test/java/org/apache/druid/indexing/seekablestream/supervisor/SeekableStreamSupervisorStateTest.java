@@ -1185,18 +1185,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       }
 
       @Override
-      public boolean getChatAsync()
-      {
-        return false;
-      }
-
-      @Override
-      public Integer getChatThreads()
-      {
-        return 1;
-      }
-
-      @Override
       public Long getChatRetries()
       {
         return 1L;

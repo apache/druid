@@ -213,6 +213,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return isDecommissioning;
   }
 
+  public boolean isLoadQueueFull()
+  {
+    return totalAssignmentsInRun >= maxAssignmentsInRun;
+  }
+
   public long getAvailableSize()
   {
     return getMaxSize() - getSizeUsed();
