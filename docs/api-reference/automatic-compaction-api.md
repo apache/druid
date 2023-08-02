@@ -35,7 +35,7 @@ Returns the total size of segments awaiting compaction for the given datasource.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/progress?dataSource=:datasource</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/progress?dataSource=:dataSource</code>
 
 #### Query parameter
 * `dataSource` (required)
@@ -116,7 +116,7 @@ The `latestStatus` object has the following keys:
 #### Query parameters
 * `dataSource` (optional)
   * Type: String
-  * Filter the result by name of specific datasource
+  * Filter the result by name of specific datasource.
 
 #### Responses
 
@@ -339,7 +339,7 @@ Retrieves the automatic compaction configuration of a datasource.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/:datasource</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/:dataSource</code>
 
 #### Responses
 
@@ -443,7 +443,7 @@ The response contains a list of objects with the following keys:
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/:datasource/history</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/:dataSource/history</code>
 
 #### Query parameters
 * `interval` (optional)
@@ -589,23 +589,177 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Update the capacity for compaction tasks
 
+Update the capacity for compaction tasks. Maximum number of compaction tasks is limited by `ratio` and `max`.
+`ratio` is ratio of the total task slots to the compaction task slots and the `max` is the number of task slots for compaction tasks.
+
+The max and min number of compaction tasks is derived from this equation `clamp(floor(compaction_task_slot_ratio * total_task_slots), 1, 2147483652)`, where the minimum number of compaction tasks is 1 and maximum is 2147483652.
+
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots?ratio={someRatio}&max={someMaxSlots}</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
 
-Update the capacity for compaction tasks. `ratio` and `max` are used to limit the max number of compaction tasks.
-They mean the ratio of the total task slots to the compaction task slots and the maximum number of task slots for compaction tasks, respectively. The actual max number of compaction tasks is `min(max, ratio * total task slots)`.
-Note that `ratio` and `max` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
-will be set for them.
+#### Query parameters
+* `ratio` (optional)
+  * Type: Float
+  * Default: 0.1
+  * Limit the ratio of the total task slots to compaction task slots.
+* `max` (optional)
+  * Type: Int
+  * Default: 2147483647
+  * Limit the maximum number of task slots for compation tasks.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully updated compaction configuration* 
+
+<!--404 NOT FOUND-->
+
+*Invalid `max` value* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000"
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` and an empty response body.
 
 ### Create or update datasource automatic compaction configuration
+
+Creates or updates the automatic compaction config for a datasource. The automatic compaction can be submitted as a JSON object in the request body. 
+
+Automatic compaction configuration require only the `dataSource` property. All others will be filled with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
+
+Note that this endpoint will return an HTTP `200 OK` even if the datasource name does not exist.
 
 #### URL 
 
 <code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction</code>
 
-Creates or updates the [automatic compaction](../data-management/automatic-compaction.md) config for a dataSource. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
+#### Responses
 
-`DELETE /druid/coordinator/v1/config/compaction/{dataSource}`
+<!--DOCUSAURUS_CODE_TABS-->
 
-Removes the automatic compaction config for a dataSource.
+<!--200 SUCCESS-->
+
+*Successfully submitted auto compaction configuration* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
+--header 'Content-Type: application/json' \
+--data '{
+  "dataSource": "wikipedia_hour_segGran",
+  "tuningConfig": {
+    "partitionsSpec": {
+      "type": "dynamic"
+    }
+  },
+  "skipOffsetFromLatest": "PT0H"
+}'
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/coordinator/v1/config/compaction HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Content-Length: 157
+
+{
+  "dataSource": "wikipedia_hour_segGran",
+  "tuningConfig": {
+    "partitionsSpec": {
+      "type": "dynamic"
+    }
+  },
+  "skipOffsetFromLatest": "PT0H"
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` and an empty response body.
+
+
+### Remove datasource automatic compaction
+
+Removes the automatic compaction config for a datasource.
+
+#### URL
+
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/config/compaction/:dataSource</code>
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully deleted automatic compaction configuration* 
+
+<!--404 NOT FOUND-->
+
+*Datasource does not have automatic compaction or invalid datasource name* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/wikipedia_hour_segGran"
+```
+
+<!--HTTP-->
+
+```HTTP
+DELETE /druid/coordinator/v1/config/compaction/wikipedia_hour_segGran HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` and an empty response body.
