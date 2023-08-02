@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -160,7 +161,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       List<AggregatorFactory> aggregatorFactoryList
   )
   {
-    this.runner = runner;
+    this.runner = FluentQueryRunnerBuilder.newBob(new TimeseriesQueryQueryToolChest())
+        .create(runner)
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration();
+
     this.descending = descending;
     this.vectorize = vectorize;
     this.aggregatorFactoryList = aggregatorFactoryList;
@@ -2965,16 +2971,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    // Must create a toolChest so we can run mergeResults.
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
-
-    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
-    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
-        toolChest.mergeResults(runner),
-        toolChest
-    );
-
-    final List list = finalRunner.run(QueryPlus.wrap(query)).toList();
+    final List list = runner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(10, list.size());
   }
 

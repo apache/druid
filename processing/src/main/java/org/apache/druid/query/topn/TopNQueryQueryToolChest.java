@@ -64,15 +64,13 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BinaryOperator;
 
 /**
  *
@@ -141,7 +139,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       final TopNQuery query = (TopNQuery) queryPlus.getQuery();
       final List<PostAggregator> prunedPostAggs = prunePostAggregators(query);
 
-      return delegateRunner.run(
+      //noinspection unchecked
+      return (Sequence) delegateRunner.run(
           // Rewrite to prune the post aggs for downstream queries to only the minimum required.  That is, if
           // the topN query sorts by the PostAgg, then it must be pushed down, otherwise, it can be pruned.
           queryPlus.withQuery(query.withPostAggregatorSpecs(prunedPostAggs)),
@@ -156,30 +155,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   (BySegmentResultValue<Result<TopNResultValue>>) result.getValue();
 
               final List<Result<TopNResultValue>> results = bySeg.getResults();
+              final List<Result<TopNResultValue>> resultValues = new ArrayList<>(results.size());
               for (Result<TopNResultValue> bySegResult : results) {
-                mutateWithPostAggs(postAggs, bySegResult);
+                resultValues.add(resultWithPostAggs(postAggs, bySegResult));
               }
+              return new Result<>(
+                  result.getTimestamp(),
+                  new BySegmentTopNResultValue(resultValues, bySeg.getSegmentId(), bySeg.getInterval())
+              );
             } else {
-              mutateWithPostAggs(postAggs, result);
+              return resultWithPostAggs(postAggs, result);
             }
-
-            return result;
           }
       );
     };
-  }
-
-  @Nullable
-  @Override
-  public BinaryOperator<Result<TopNResultValue>> createMergeFn(Query<Result<TopNResultValue>> query)
-  {
-    throw DruidException.defensive("should never be called as mergeResults should do stuff");
-  }
-
-  @Override
-  public Comparator<Result<TopNResultValue>> createResultComparator(Query<Result<TopNResultValue>> query)
-  {
-    throw DruidException.defensive("should never be called as mergeResults should do stuff");
   }
 
   @Override
@@ -211,17 +200,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
       {
         final List<DimensionAndMetricValueExtractor> values = result.getValue().getValue();
+        final List<DimensionAndMetricValueExtractor> newValues = new ArrayList<>(values.size());
 
         for (DimensionAndMetricValueExtractor input : values) {
-          final Map<String, Object> map = input.getBaseObject();
+          final Map<String, Object> map = new LinkedHashMap<>(input.getBaseObject());
 
           for (int i = 0; i < aggregatorFactories.length; ++i) {
             final String aggName = aggFactoryNames[i];
             map.put(aggName, aggregatorFactories[i].deserialize(map.get(aggName)));
           }
+
+          newValues.add(new DimensionAndMetricValueExtractor(map));
         }
 
-        return result;
+        return new Result<>(result.getTimestamp(), new TopNResultValue(newValues));
       }
     };
   }
@@ -229,7 +221,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @SuppressWarnings("ObjectEquality")
   @Override
   public Function<Result<TopNResultValue>, Result<TopNResultValue>> makePostComputeManipulatorFn(
-      TopNQuery query, MetricManipulationFn fn
+      TopNQuery query,
+      MetricManipulationFn fn
   )
   {
     if (MetricManipulatorFns.identity() == fn) {
@@ -247,17 +240,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         public Result<TopNResultValue> apply(Result<TopNResultValue> result)
         {
           final List<DimensionAndMetricValueExtractor> values = result.getValue().getValue();
+          final List<DimensionAndMetricValueExtractor> newValues = new ArrayList<>(values.size());
 
           for (DimensionAndMetricValueExtractor input : values) {
-            final Map<String, Object> map = input.getBaseObject();
+            final Map<String, Object> map = new LinkedHashMap<>(input.getBaseObject());
 
             for (int i = 0; i < aggregatorFactories.length; ++i) {
               final String aggName = aggFactoryNames[i];
               map.put(aggName, aggregatorFactories[i].finalizeComputation(map.get(aggName)));
             }
+
+            newValues.add(new DimensionAndMetricValueExtractor(map));
           }
 
-          return result;
+          return new Result<>(result.getTimestamp(), new TopNResultValue(newValues));
         }
       };
     }
@@ -582,17 +578,22 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
-  private void mutateWithPostAggs(List<PostAggregator> postAggs, Result<TopNResultValue> bySegResult)
+  private Result<TopNResultValue> resultWithPostAggs(List<PostAggregator> postAggs, Result<TopNResultValue> result)
   {
-    final List<DimensionAndMetricValueExtractor> values = bySegResult.getValue().getValue();
+    final List<DimensionAndMetricValueExtractor> values = result.getValue().getValue();
+    final List<DimensionAndMetricValueExtractor> newValues = new ArrayList<>(values.size());
 
     for (DimensionAndMetricValueExtractor input : values) {
-      final Map<String, Object> map = input.getBaseObject();
+      final Map<String, Object> map = new LinkedHashMap<>(input.getBaseObject());
 
       for (PostAggregator postAgg : postAggs) {
         map.put(postAgg.getName(), postAgg.compute(map));
       }
+
+      newValues.add(new DimensionAndMetricValueExtractor(map));
     }
+
+    return new Result<>(result.getTimestamp(), new TopNResultValue(newValues));
   }
 
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
@@ -139,7 +140,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    */
   public Comparator<ResultType> createResultComparator(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't provide a result comparator", query.getClass().getName());
+    throw DruidException.defensive("%s doesn't provide a result comparator", query.getClass().getName());
   }
 
   /**

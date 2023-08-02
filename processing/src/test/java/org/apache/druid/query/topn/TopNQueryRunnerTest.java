@@ -42,7 +42,7 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
-import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -265,12 +265,12 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
-    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
-        chest.mergeResults(runner),
-        chest
-    );
-    return mergeRunner.run(QueryPlus.wrap(query), context);
+    return FluentQueryRunnerBuilder.newBob(new TopNQueryQueryToolChest(new TopNQueryConfig()))
+        .create(runner)
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration()
+        .run(QueryPlus.wrap(query), context);
   }
 
   @Test

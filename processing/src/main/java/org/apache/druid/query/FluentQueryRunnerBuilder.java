@@ -28,16 +28,22 @@ import java.util.function.Function;
 
 public class FluentQueryRunnerBuilder<T>
 {
-  final QueryToolChest<T, Query<T>> toolChest;
-
-  public FluentQueryRunner create(QueryRunner<T> baseRunner)
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static <K, J extends Query<K>> FluentQueryRunnerBuilder<K> newBob(QueryToolChest<K, J> toolchest)
   {
-    return new FluentQueryRunner(baseRunner);
+    return new FluentQueryRunnerBuilder<K>((QueryToolChest) toolchest);
   }
+
+  final QueryToolChest<T, Query<T>> toolChest;
 
   public FluentQueryRunnerBuilder(QueryToolChest<T, Query<T>> toolChest)
   {
     this.toolChest = toolChest;
+  }
+
+  public FluentQueryRunner create(QueryRunner<T> baseRunner)
+  {
+    return new FluentQueryRunner(baseRunner);
   }
 
   public class FluentQueryRunner implements QueryRunner<T>

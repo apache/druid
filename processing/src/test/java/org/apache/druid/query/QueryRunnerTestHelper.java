@@ -149,12 +149,30 @@ public class QueryRunnerTestHelper
       "index",
       INDEX_METRIC
   );
-  public static final LongMinAggregatorFactory INDEX_LONG_MIN = new LongMinAggregatorFactory(LONG_MIN_INDEX_METRIC, INDEX_METRIC);
-  public static final LongMaxAggregatorFactory INDEX_LONG_MAX = new LongMaxAggregatorFactory(LONG_MAX_INDEX_METRIC, INDEX_METRIC);
-  public static final DoubleMinAggregatorFactory INDEX_DOUBLE_MIN = new DoubleMinAggregatorFactory(DOUBLE_MIN_INDEX_METRIC, INDEX_METRIC);
-  public static final DoubleMaxAggregatorFactory INDEX_DOUBLE_MAX = new DoubleMaxAggregatorFactory(DOUBLE_MAX_INDEX_METRIC, INDEX_METRIC);
-  public static final FloatMinAggregatorFactory INDEX_FLOAT_MIN = new FloatMinAggregatorFactory(FLOAT_MIN_INDEX_METRIC, INDEX_METRIC);
-  public static final FloatMaxAggregatorFactory INDEX_FLOAT_MAX = new FloatMaxAggregatorFactory(FLOAT_MAX_INDEX_METRIC, INDEX_METRIC);
+  public static final LongMinAggregatorFactory INDEX_LONG_MIN = new LongMinAggregatorFactory(
+      LONG_MIN_INDEX_METRIC,
+      INDEX_METRIC
+  );
+  public static final LongMaxAggregatorFactory INDEX_LONG_MAX = new LongMaxAggregatorFactory(
+      LONG_MAX_INDEX_METRIC,
+      INDEX_METRIC
+  );
+  public static final DoubleMinAggregatorFactory INDEX_DOUBLE_MIN = new DoubleMinAggregatorFactory(
+      DOUBLE_MIN_INDEX_METRIC,
+      INDEX_METRIC
+  );
+  public static final DoubleMaxAggregatorFactory INDEX_DOUBLE_MAX = new DoubleMaxAggregatorFactory(
+      DOUBLE_MAX_INDEX_METRIC,
+      INDEX_METRIC
+  );
+  public static final FloatMinAggregatorFactory INDEX_FLOAT_MIN = new FloatMinAggregatorFactory(
+      FLOAT_MIN_INDEX_METRIC,
+      INDEX_METRIC
+  );
+  public static final FloatMaxAggregatorFactory INDEX_FLOAT_MAX = new FloatMaxAggregatorFactory(
+      FLOAT_MAX_INDEX_METRIC,
+      INDEX_METRIC
+  );
   public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
   public static final String JS_RESET_0 = "function reset() { return 0; }";
   public static final JavaScriptAggregatorFactory JS_INDEX_SUM_IF_PLACEMENTISH_A = new JavaScriptAggregatorFactory(
@@ -390,7 +408,11 @@ public class QueryRunnerTestHelper
             "noRollupMMappedTestIndex"
         ),
         makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex"),
-        makeQueryRunner(factory, new QueryableIndexSegment(frontCodedMappedTestIndex, SEGMENT_ID), "frontCodedMMappedTestIndex")
+        makeQueryRunner(
+            factory,
+            new QueryableIndexSegment(frontCodedMappedTestIndex, SEGMENT_ID),
+            "frontCodedMMappedTestIndex"
+        )
     );
   }
 
@@ -443,14 +465,20 @@ public class QueryRunnerTestHelper
       final String runnerName
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
-        (QueryToolChest<T, Query<T>>) factory.getToolchest()
+    //noinspection
+    return new BySegmentQueryRunner<T>(
+        segmentId,
+        adapter.getDataInterval().getStart(),
+        factory.createRunner(adapter)
     )
     {
       @Override
       public String toString()
       {
+        // Tests that use these QueryRunners directly are parameterized and use the toString of their QueryRunner as
+        // the name of the test.  It would be better if the usages were adjusted to actually parameterize with an extra
+        // name parameter, or use a different object or something like that, but for now, we have to overload toString
+        // to name it so that the parameterization continues to work.
         return runnerName;
       }
     };
@@ -496,8 +524,8 @@ public class QueryRunnerTestHelper
     final DataSource base = query.getDataSource();
 
     final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
-                                                        .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
-                                                            adapter));
+                                                  .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
+                                                      adapter));
     return makeQueryRunner(factory, segmentReference, runnerName);
   }
 

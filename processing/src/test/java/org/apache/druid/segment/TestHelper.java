@@ -261,7 +261,7 @@ public class TestHelper
       final Object next = resultsIter.next();
       final Object next2 = resultsIter2.next();
 
-      String failMsg = msg + "-" + index++;
+      String failMsg = msg + "[" + index++ + "]";
       String failMsg2 = StringUtils.format(
           "%s: Second iterator bad, multiple calls to iterator() should be safe",
           failMsg
@@ -366,9 +366,14 @@ public class TestHelper
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();
 
-    Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
     for (final String key : expectedMap.keySet()) {
       final Object expectedValue = expectedMap.get(key);
+      if (!actualMap.containsKey(key)) {
+        Assert.fail(
+            StringUtils.format("%s: Expected key [%s] to exist, but it did not [%s]", msg, key, actualMap.keySet())
+        );
+      }
+
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue != null && expectedValue.getClass().isArray()) {
@@ -388,6 +393,9 @@ public class TestHelper
         );
       }
     }
+    // Given that we iterated through all of the keys in one, checking that the key exists in the other, then if they
+    // have the same size, they must have the same keyset.
+    Assert.assertEquals(expectedMap.size(), actualMap.size());
   }
 
   public static void assertRow(String msg, ResultRow expected, ResultRow actual)

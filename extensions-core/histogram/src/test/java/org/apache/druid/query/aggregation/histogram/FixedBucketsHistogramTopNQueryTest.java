@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -74,22 +75,19 @@ public class FixedBucketsHistogramTopNQueryTest extends InitializedNullHandlingT
     RESOURCE_CLOSER.register(defaultPool);
     RESOURCE_CLOSER.register(customPool);
 
+    final TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+    final FluentQueryRunnerBuilder<Result<TopNResultValue>> bob = FluentQueryRunnerBuilder.newBob(toolchest);
     return QueryRunnerTestHelper.transformToConstructionFeeder(
-        Iterables.concat(
-            QueryRunnerTestHelper.makeQueryRunners(
-                new TopNQueryRunnerFactory(
-                    defaultPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        Iterables.transform(
+            Iterables.concat(
+                QueryRunnerTestHelper.makeQueryRunners(
+                    new TopNQueryRunnerFactory(defaultPool, toolchest, QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+                ),
+                QueryRunnerTestHelper.makeQueryRunners(
+                    new TopNQueryRunnerFactory(customPool, toolchest, QueryRunnerTestHelper.NOOP_QUERYWATCHER)
                 )
             ),
-            QueryRunnerTestHelper.makeQueryRunners(
-                new TopNQueryRunnerFactory(
-                    customPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
+            input -> bob.create(input).applyPreMergeDecoration().mergeResults().applyPostMergeDecoration()
         )
     );
   }
