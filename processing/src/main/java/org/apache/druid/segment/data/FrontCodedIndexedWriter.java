@@ -217,7 +217,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       bucketBuffer.clear();
       final ByteBuffer valueBuffer = version == FrontCodedIndexed.V1
                                      ? getFromBucketV1(bucketBuffer, relativeIndex, bucketSize)
-                                     : getFromBucketV0(bucketBuffer, relativeIndex);
+                                     : FrontCodedIndexed.FrontCodedV0.getValueFromBucket(bucketBuffer, relativeIndex);
       final byte[] valueBytes = new byte[valueBuffer.limit() - valueBuffer.position()];
       valueBuffer.get(valueBytes);
       return valueBytes;
@@ -411,53 +411,6 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     }
 
     return StringUtils.compareUtf8UsingJavaStringOrdering(b1, b2);
-  }
-
-  /**
-   * Copy of instance method {@link FrontCodedIndexed.FrontCodedV0#getFromBucket(ByteBuffer, int)}
-   */
-  static ByteBuffer getFromBucketV0(ByteBuffer buffer, int offset)
-  {
-    int prefixPosition;
-    if (offset == 0) {
-      final int length = VByte.readInt(buffer);
-      final ByteBuffer firstValue = buffer.asReadOnlyBuffer();
-      firstValue.limit(firstValue.position() + length);
-      return firstValue;
-    } else {
-      final int firstLength = VByte.readInt(buffer);
-      prefixPosition = buffer.position();
-      buffer.position(buffer.position() + firstLength);
-    }
-    int pos = 0;
-    int prefixLength;
-    int fragmentLength;
-    int fragmentPosition;
-    // scan through bucket values until we reach offset
-    do {
-      prefixLength = VByte.readInt(buffer);
-      if (++pos < offset) {
-        // not there yet, no need to read anything other than the length to skip ahead
-        final int skipLength = VByte.readInt(buffer);
-        buffer.position(buffer.position() + skipLength);
-      } else {
-        // we've reached our destination
-        fragmentLength = VByte.readInt(buffer);
-        fragmentPosition = buffer.position();
-        break;
-      }
-    } while (true);
-    final int valueLength = prefixLength + fragmentLength;
-    ByteBuffer value = ByteBuffer.allocate(valueLength);
-    for (int i = 0; i < valueLength; i++) {
-      if (i < prefixLength) {
-        value.put(buffer.get(prefixPosition + i));
-      } else {
-        value.put(buffer.get(fragmentPosition + i - prefixLength));
-      }
-    }
-    value.flip();
-    return value;
   }
 
   /**

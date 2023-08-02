@@ -437,7 +437,7 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     return comparison;
   }
 
-  private static final class FrontCodedV0 extends FrontCodedIndexed
+  public static final class FrontCodedV0 extends FrontCodedIndexed
   {
     private FrontCodedV0(
         ByteBuffer buffer,
@@ -453,6 +453,11 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
 
     @Override
     ByteBuffer getFromBucket(ByteBuffer buffer, int offset)
+    {
+      return getValueFromBucket(buffer, offset);
+    }
+
+    public static ByteBuffer getValueFromBucket(ByteBuffer buffer, int offset)
     {
       int prefixPosition;
       if (offset == 0) {
@@ -568,7 +573,7 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     }
   }
 
-  private static final class FrontCodedV1 extends FrontCodedIndexed
+  public static final class FrontCodedV1 extends FrontCodedIndexed
   {
     private final int[] unwindPrefixLength;
     private final int[] unwindBufferPosition;
