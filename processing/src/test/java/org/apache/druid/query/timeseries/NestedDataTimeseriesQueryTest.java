@@ -21,6 +21,7 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -253,10 +254,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                             new EqualityFilter("v0", ColumnType.LONG, 2L, null)
                                         ),
                                         NullFilter.forColumn("long"),
-                                        NullFilter.forColumn("v1"),
-                                        NullFilter.forColumn("v2"),
-                                        NullFilter.forColumn("v3"),
-                                        NullFilter.forColumn("v4")
+                                        NullFilter.forColumn("v1")
                                       )
                                   )
                                   .virtualColumns(
@@ -271,23 +269,54 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                           "$.b.z[1]",
                                           "v1",
                                           ColumnType.STRING
-                                      ),
+                                      )
+                                  )
+                                  .aggregators(new CountAggregatorFactory("count"))
+                                  .context(getContext())
+                                  .build();
+    runResults(
+        query,
+        ImmutableList.of(
+            new Result<>(
+                DateTimes.of("2023-01-01T00:00:00.000Z"),
+                new TimeseriesResultValue(
+                    ImmutableMap.of("count", NullHandling.replaceWithDefault() ? 6L : 8L)
+                )
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testFilterLongArrayElementFilters()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test_datasource")
+                                  .intervals(Collections.singletonList(Intervals.ETERNITY))
+                                  .filters(
+                                      new AndDimFilter(
+                                          NullFilter.forColumn("v0"),
+                                          NullFilter.forColumn("v1"),
+                                          NullFilter.forColumn("v2")
+                                      )
+                                  )
+                                  .virtualColumns(
                                       new NestedFieldVirtualColumn(
                                           "arrayLongNulls",
                                           "$[1]",
-                                          "v2",
+                                          "v0",
                                           ColumnType.STRING
                                       ),
                                       new NestedFieldVirtualColumn(
                                           "arrayLongNulls",
                                           "$[1]",
-                                          "v3",
+                                          "v1",
                                           ColumnType.LONG
                                       ),
                                       new NestedFieldVirtualColumn(
                                           "arrayStringNulls",
                                           "$[1]",
-                                          "v4",
+                                          "v2",
                                           ColumnType.LONG
                                       )
                                   )
@@ -300,7 +329,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
             new Result<>(
                 DateTimes.of("2023-01-01T00:00:00.000Z"),
                 new TimeseriesResultValue(
-                    ImmutableMap.of("count", 14L)
+                    ImmutableMap.of("count", 8L)
                 )
             )
         )
