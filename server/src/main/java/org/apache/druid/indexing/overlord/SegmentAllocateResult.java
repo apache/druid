@@ -24,22 +24,29 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 public class SegmentAllocateResult
 {
-  private final SegmentIdWithShardSpec segmentId;
+  private final AllocateErrorCode errorCode;
   private final String errorMessage;
+  private final SegmentIdWithShardSpec segmentId;
 
   public static SegmentAllocateResult success(SegmentIdWithShardSpec segmentId)
   {
-    return new SegmentAllocateResult(segmentId, null);
+    return new SegmentAllocateResult(segmentId, null, null);
   }
 
   public static SegmentAllocateResult failure(String errorMsgFormat, Object... args)
   {
-    return new SegmentAllocateResult(null, StringUtils.format(errorMsgFormat, args));
+    return new SegmentAllocateResult(null, null, StringUtils.format(errorMsgFormat, args));
   }
 
-  public SegmentAllocateResult(SegmentIdWithShardSpec segmentId, String errorMessage)
+  public static SegmentAllocateResult failure(AllocateErrorCode code, Object... args)
+  {
+    return new SegmentAllocateResult(null, code, code.formatMsg(args));
+  }
+
+  private SegmentAllocateResult(SegmentIdWithShardSpec segmentId, AllocateErrorCode errorCode, String errorMessage)
   {
     this.segmentId = segmentId;
+    this.errorCode = errorCode;
     this.errorMessage = errorMessage;
   }
 
@@ -51,6 +58,11 @@ public class SegmentAllocateResult
   public String getErrorMessage()
   {
     return errorMessage;
+  }
+
+  public AllocateErrorCode getErrorCode()
+  {
+    return errorCode;
   }
 
   public boolean isSuccess()

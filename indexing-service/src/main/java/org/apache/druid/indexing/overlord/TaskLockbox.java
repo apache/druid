@@ -1673,7 +1673,7 @@ public class TaskLockbox
     void markSucceeded()
     {
       list.markCompleted(this);
-      result = new SegmentAllocateResult(allocatedSegment, null);
+      result = SegmentAllocateResult.success(allocatedSegment);
     }
 
     void setAllocatedSegment(SegmentIdWithShardSpec segmentId)
