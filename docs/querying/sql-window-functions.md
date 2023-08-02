@@ -102,16 +102,16 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 |Function|Notes|Default|
 |--------|-----|-------|
-| `ROW_NUMBER()`| Returns the number of the row within the window| None |
-|`RANK()`| Returns the rank for a row within a window | None | 
-|`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. | None |
-|`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` | None |
-|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or lower than current row` / `total window rows` | None |
+| `ROW_NUMBER()`| Returns the number of the row within the window|
+|`RANK()`| Returns the rank for a row within a window | 
+|`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
+|`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` |
+|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or lower than current row` / `total window rows` |
 |`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns a value from 1 to the value of `tiles`  |None |
-|`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window; if there is no such row, returns the given default value | None |
-|`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value | None |
-|`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window| None |
-|`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window | None |
+|`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window; if there is no such row, returns the given default value |
+|`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value |
+|`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window|
+|`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window |
 
 
 ## Example
