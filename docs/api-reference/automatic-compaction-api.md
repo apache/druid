@@ -27,20 +27,28 @@ This document describes status and configuration API endpoints for [automatic co
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
-## Automatic compaction status
+## Manage automatic compaction
 
-### Get segments awaiting compaction
+### Update capacity for compaction tasks
 
-Returns the total size of segments awaiting compaction for the given datasource. The specified datasource must have automatic compaction enabled.
+Update the capacity for compaction tasks. Maximum number of compaction tasks is limited by `ratio` and `max`.
+`ratio` is ratio of the total task slots to the compaction task slots and the `max` is the number of task slots for compaction tasks.
+
+The max and min number of compaction tasks is derived from this equation `clamp(floor(compaction_task_slot_ratio * total_task_slots), 1, 2147483652)`, where the minimum number of compaction tasks is 1 and maximum is 2147483652.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/progress?dataSource=:dataSource</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
 
-#### Query parameter
-* `dataSource` (required)
-  * Type: String
-  * Name of the datasource for this status information
+#### Query parameters
+* `ratio` (optional)
+  * Type: Float
+  * Default: 0.1
+  * Limit the ratio of the total task slots to compaction task slots.
+* `max` (optional)
+  * Type: Int
+  * Default: 2147483647
+  * Limit the maximum number of task slots for compation tasks.
 
 #### Responses
 
@@ -48,11 +56,11 @@ Returns the total size of segments awaiting compaction for the given datasource.
 
 <!--200 SUCCESS-->
 
-*Successfully retrieved segment size awaiting compaction* 
+*Successfully updated compaction configuration* 
 
 <!--404 NOT FOUND-->
 
-*Unknown datasource name or datasource does not have automatic compaction enabled* 
+*Invalid `max` value* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -60,20 +68,18 @@ Returns the total size of segments awaiting compaction for the given datasource.
 
 #### Sample request
 
-The following example retrieves the remaining segments to be compacted for datasource `wikipedia_hour`.
-
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/progress?dataSource=wikipedia_hour"
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000"
 ```
 
 <!--HTTP-->
 
 ```HTTP
-GET /druid/coordinator/v1/compaction/progress?dataSource=wikipedia_hour HTTP/1.1
+POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -81,42 +87,19 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-<details>
-  <summary>Click to show sample response</summary>
+A successful request returns an HTTP `200 OK` and an empty response body.
 
-```json
-{
-    "remainingSegmentSize": 0
-}
-```
-</details>
+### Create or update datasource automatic compaction configuration
 
+Creates or updates the automatic compaction config for a datasource. The automatic compaction can be submitted as a JSON object in the request body. 
 
-### Get compaction status and statistics
+Automatic compaction configuration require only the `dataSource` property. All others will be filled with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
-Returns the status and statistics from the auto-compaction run of all datasources which have auto-compaction enabled in the latest run. The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource (which has/had auto-compaction enabled).
+Note that this endpoint will return an HTTP `200 OK` even if the datasource name does not exist.
 
-The `latestStatus` object has the following keys:
-* `dataSource`: name of the datasource for this status information
-* `scheduleStatus`: auto-compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
-* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
-* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto-compaction config
-* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
-* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
-* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto-compaction config
-* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
-* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
-* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto-compaction config
-* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
+#### URL 
 
-#### URL
-
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/status</code>
-
-#### Query parameters
-* `dataSource` (optional)
-  * Type: String
-  * Filter the result by name of specific datasource.
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction</code>
 
 #### Responses
 
@@ -124,11 +107,99 @@ The `latestStatus` object has the following keys:
 
 <!--200 SUCCESS-->
 
-*Successfully retrieved `latestStatus` object* 
+*Successfully submitted auto compaction configuration* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
+#### Sample request
+
+The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. 
+* `wikipedia_hour` is a datasource with `hour` segment granularity.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
+--header 'Content-Type: application/json' \
+--data '{
+    "dataSource": "wikipedia_hour",
+    "taskPriority": 25,
+    "inputSegmentSizeBytes": 100000000000000,
+    "skipOffsetFromLatest": "PT0S",
+    "tuningConfig": {
+        "partitionsSpec": {
+            "type": "dynamic",
+            "maxRowsPerSegment": 5000000
+        },
+        "type": "index_parallel"
+    },
+    "granularitySpec": {
+        "segmentGranularity": "DAY"
+    }
+}'
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/coordinator/v1/config/compaction HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Content-Length: 393
+
+{
+    "dataSource": "wikipedia_hour",
+    "taskPriority": 25,
+    "inputSegmentSizeBytes": 100000000000000,
+    "skipOffsetFromLatest": "PT0S",
+    "tuningConfig": {
+        "partitionsSpec": {
+            "type": "dynamic",
+            "maxRowsPerSegment": 5000000
+        },
+        "type": "index_parallel"
+    },
+    "granularitySpec": {
+        "segmentGranularity": "DAY"
+    }
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` and an empty response body.
+
+
+### Remove datasource automatic compaction
+
+Removes the automatic compaction config for a datasource.
+
+#### URL
+
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/config/compaction/:dataSource</code>
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully deleted automatic compaction configuration* 
+
+<!--404 NOT FOUND-->
+
+*Datasource does not have automatic compaction or invalid datasource name* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -136,13 +207,13 @@ The `latestStatus` object has the following keys:
 <!--cURL-->
 
 ```shell
-curl "hhttp://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/status"
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/wikipedia_hour"
 ```
 
 <!--HTTP-->
 
 ```HTTP
-GET /druid/coordinator/v1/compaction/status HTTP/1.1
+DELETE /druid/coordinator/v1/config/compaction/wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -150,43 +221,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-<details>
-  <summary>Click to show sample response</summary>
-
-```json
-{
-    "latestStatus": [
-        {
-            "dataSource": "wikipedia_api",
-            "scheduleStatus": "RUNNING",
-            "bytesAwaitingCompaction": 0,
-            "bytesCompacted": 0,
-            "bytesSkipped": 64133616,
-            "segmentCountAwaitingCompaction": 0,
-            "segmentCountCompacted": 0,
-            "segmentCountSkipped": 8,
-            "intervalCountAwaitingCompaction": 0,
-            "intervalCountCompacted": 0,
-            "intervalCountSkipped": 1
-        },
-        {
-            "dataSource": "wikipedia_hour",
-            "scheduleStatus": "RUNNING",
-            "bytesAwaitingCompaction": 0,
-            "bytesCompacted": 5998634,
-            "bytesSkipped": 0,
-            "segmentCountAwaitingCompaction": 0,
-            "segmentCountCompacted": 1,
-            "segmentCountSkipped": 0,
-            "intervalCountAwaitingCompaction": 0,
-            "intervalCountCompacted": 1,
-            "intervalCountSkipped": 0
-        }
-    ]
-}
-```
-</details>
-
+A successful request returns an HTTP `200 OK` and an empty response body.
 
 ## Automatic compaction configuration
 
@@ -587,26 +622,20 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-### Update the capacity for compaction tasks
+## Automatic compaction status
 
-Update the capacity for compaction tasks. Maximum number of compaction tasks is limited by `ratio` and `max`.
-`ratio` is ratio of the total task slots to the compaction task slots and the `max` is the number of task slots for compaction tasks.
+### Get segments awaiting compaction
 
-The max and min number of compaction tasks is derived from this equation `clamp(floor(compaction_task_slot_ratio * total_task_slots), 1, 2147483652)`, where the minimum number of compaction tasks is 1 and maximum is 2147483652.
+Returns the total size of segments awaiting compaction for the given datasource. The specified datasource must have automatic compaction enabled.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/progress?dataSource=:dataSource</code>
 
-#### Query parameters
-* `ratio` (optional)
-  * Type: Float
-  * Default: 0.1
-  * Limit the ratio of the total task slots to compaction task slots.
-* `max` (optional)
-  * Type: Int
-  * Default: 2147483647
-  * Limit the maximum number of task slots for compation tasks.
+#### Query parameter
+* `dataSource` (required)
+  * Type: String
+  * Name of the datasource for this status information
 
 #### Responses
 
@@ -614,11 +643,11 @@ The max and min number of compaction tasks is derived from this equation `clamp(
 
 <!--200 SUCCESS-->
 
-*Successfully updated compaction configuration* 
+*Successfully retrieved segment size awaiting compaction* 
 
 <!--404 NOT FOUND-->
 
-*Invalid `max` value* 
+*Unknown datasource name or datasource does not have automatic compaction enabled* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -626,18 +655,20 @@ The max and min number of compaction tasks is derived from this equation `clamp(
 
 #### Sample request
 
+The following example retrieves the remaining segments to be compacted for datasource `wikipedia_hour`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 
 ```shell
-curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/progress?dataSource=wikipedia_hour"
 ```
 
 <!--HTTP-->
 
 ```HTTP
-POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
+GET /druid/coordinator/v1/compaction/progress?dataSource=wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -645,84 +676,42 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+<details>
+  <summary>Click to show sample response</summary>
 
-### Create or update datasource automatic compaction configuration
-
-Creates or updates the automatic compaction config for a datasource. The automatic compaction can be submitted as a JSON object in the request body. 
-
-Automatic compaction configuration require only the `dataSource` property. All others will be filled with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
-
-Note that this endpoint will return an HTTP `200 OK` even if the datasource name does not exist.
-
-#### URL 
-
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction</code>
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully submitted auto compaction configuration* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-#### Sample request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
---header 'Content-Type: application/json' \
---data '{
-  "dataSource": "wikipedia_hour_segGran",
-  "tuningConfig": {
-    "partitionsSpec": {
-      "type": "dynamic"
-    }
-  },
-  "skipOffsetFromLatest": "PT0H"
-}'
-```
-
-<!--HTTP-->
-
-```HTTP
-POST /druid/coordinator/v1/config/compaction HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-Content-Type: application/json
-Content-Length: 157
-
+```json
 {
-  "dataSource": "wikipedia_hour_segGran",
-  "tuningConfig": {
-    "partitionsSpec": {
-      "type": "dynamic"
-    }
-  },
-  "skipOffsetFromLatest": "PT0H"
+    "remainingSegmentSize": 7615837
 }
 ```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-A successful request returns an HTTP `200 OK` and an empty response body.
+</details>
 
 
-### Remove datasource automatic compaction
+### Get compaction status and statistics
 
-Removes the automatic compaction config for a datasource.
+Returns the status and statistics from the auto-compaction run of all datasources which have auto-compaction enabled in the latest run. The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource (which has/had auto-compaction enabled).
+
+The `latestStatus` object has the following keys:
+* `dataSource`: name of the datasource for this status information
+* `scheduleStatus`: auto-compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
+* `bytesAwaitingCompaction`: total bytes of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
+* `bytesCompacted`: total bytes of this datasource that are already compacted with the spec set in the auto-compaction config
+* `bytesSkipped`: total bytes of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
+* `segmentCountAwaitingCompaction`: total number of segments of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
+* `segmentCountCompacted`: total number of segments of this datasource that are already compacted with the spec set in the auto-compaction config
+* `segmentCountSkipped`: total number of segments of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
+* `intervalCountAwaitingCompaction`: total number of intervals of this datasource waiting to be compacted by the auto-compaction (only consider intervals/segments that are eligible for auto-compaction)
+* `intervalCountCompacted`: total number of intervals of this datasource that are already compacted with the spec set in the auto-compaction config
+* `intervalCountSkipped`: total number of intervals of this datasource that are skipped (not eligible for auto-compaction) by the auto-compaction
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/config/compaction/:dataSource</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/status</code>
+
+#### Query parameters
+* `dataSource` (optional)
+  * Type: String
+  * Filter the result by name of specific datasource.
 
 #### Responses
 
@@ -730,17 +719,11 @@ Removes the automatic compaction config for a datasource.
 
 <!--200 SUCCESS-->
 
-*Successfully deleted automatic compaction configuration* 
-
-<!--404 NOT FOUND-->
-
-*Datasource does not have automatic compaction or invalid datasource name* 
+*Successfully retrieved `latestStatus` object* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
-
-
 #### Sample request
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -748,13 +731,13 @@ Removes the automatic compaction config for a datasource.
 <!--cURL-->
 
 ```shell
-curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/wikipedia_hour_segGran"
+curl "hhttp://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/status"
 ```
 
 <!--HTTP-->
 
 ```HTTP
-DELETE /druid/coordinator/v1/config/compaction/wikipedia_hour_segGran HTTP/1.1
+GET /druid/coordinator/v1/compaction/status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -762,4 +745,39 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+<details>
+  <summary>Click to show sample response</summary>
+
+```json
+{
+    "latestStatus": [
+        {
+            "dataSource": "wikipedia_api",
+            "scheduleStatus": "RUNNING",
+            "bytesAwaitingCompaction": 0,
+            "bytesCompacted": 0,
+            "bytesSkipped": 64133616,
+            "segmentCountAwaitingCompaction": 0,
+            "segmentCountCompacted": 0,
+            "segmentCountSkipped": 8,
+            "intervalCountAwaitingCompaction": 0,
+            "intervalCountCompacted": 0,
+            "intervalCountSkipped": 1
+        },
+        {
+            "dataSource": "wikipedia_hour",
+            "scheduleStatus": "RUNNING",
+            "bytesAwaitingCompaction": 0,
+            "bytesCompacted": 5998634,
+            "bytesSkipped": 0,
+            "segmentCountAwaitingCompaction": 0,
+            "segmentCountCompacted": 1,
+            "segmentCountSkipped": 0,
+            "intervalCountAwaitingCompaction": 0,
+            "intervalCountCompacted": 1,
+            "intervalCountSkipped": 0
+        }
+    ]
+}
+```
+</details>
