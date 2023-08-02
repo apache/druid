@@ -275,9 +275,9 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlInsert.OPERATOR.getName(),
-          sqlNode.getTargetTable(),
-          sqlNode.getPartitionedBy(),
-          sqlNode.getClusteredBy(),
+          targetDatasource,
+          ingestionGranularity,
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), rootQueryRel.fields),
           null
       );
     }
@@ -289,7 +289,7 @@ public abstract class IngestHandler extends QueryHandler
   protected static class ReplaceHandler extends IngestHandler
   {
     private final DruidSqlReplace sqlNode;
-    private List<String> replaceIntervals;
+    private String replaceIntervals;
 
     public ReplaceHandler(
         SqlStatementHandler.HandlerContext handlerContext,
@@ -329,16 +329,17 @@ public abstract class IngestHandler extends QueryHandler
         );
       }
 
-      replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
+      List<String> replaceIntervalsList = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
           replaceTimeQuery,
           ingestionGranularity,
           handlerContext.timeZone()
       );
       super.validate();
-      if (replaceIntervals != null) {
+      if (replaceIntervalsList != null) {
+        replaceIntervals = String.join(",", replaceIntervalsList);
         handlerContext.queryContextMap().put(
             DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-            String.join(",", replaceIntervals)
+            replaceIntervals
         );
       }
     }
@@ -348,10 +349,10 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlReplace.OPERATOR.getName(),
-          sqlNode.getTargetTable(),
-          sqlNode.getPartitionedBy(),
-          sqlNode.getClusteredBy(),
-          sqlNode.getReplaceTimeQuery()
+          targetDatasource,
+          ingestionGranularity,
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), rootQueryRel.fields),
+          replaceIntervals
       );
     }
   }

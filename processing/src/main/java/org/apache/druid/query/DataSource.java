@@ -96,7 +96,7 @@ public interface DataSource
    * query stack. For example, {@link QueryDataSource} must be executed first and substituted with its results.
    *
    * @see DataSourceAnalysis#isConcreteBased() which uses this
-   * @see DataSourceAnalysis#isConcreteTableBased() which uses this
+   * @see DataSourceAnalysis#isConcreteAndTableBased() which uses this
    */
   boolean isConcrete();
 

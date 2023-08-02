@@ -34,6 +34,45 @@ public class NestedPathFinder
   public static final String JSON_PATH_ROOT = "$";
   public static final String JQ_PATH_ROOT = ".";
 
+  /**
+   * Dig through a thing to find stuff
+   */
+  @Nullable
+  public static Object find(@Nullable Object data, List<NestedPathPart> path)
+  {
+    Object currentObject = data;
+    for (NestedPathPart pathPart : path) {
+      Object objectAtPath = pathPart.find(currentObject);
+      if (objectAtPath == null) {
+        return null;
+      }
+      currentObject = objectAtPath;
+    }
+    return currentObject;
+  }
+
+  /**
+   * find the list of 'keys' at some path.
+   * - if the thing at a path is an object (map), return the fields
+   * - if the thing at a path is an array (list or array), return the 0 based element numbers
+   * - if the thing is a simple value, return null
+   */
+  @Nullable
+  public static Object[] findKeys(@Nullable Object data, List<NestedPathPart> path)
+  {
+    Object currentObject = find(data, path);
+    if (currentObject instanceof Map) {
+      return ((Map) currentObject).keySet().toArray();
+    }
+    if (currentObject instanceof List) {
+      return IntStream.range(0, ((List) currentObject).size()).mapToObj(Integer::toString).toArray();
+    }
+    if (currentObject instanceof Object[]) {
+      return IntStream.range(0, ((Object[]) currentObject).length).mapToObj(Integer::toString).toArray();
+    }
+    return null;
+  }
+
   public static String toNormalizedJsonPath(List<NestedPathPart> paths)
   {
     if (paths.isEmpty()) {
@@ -305,71 +344,4 @@ public class NestedPathFinder
   {
     throw InvalidInput.exception("JSONPath [%s] is invalid, %s", path, StringUtils.format(message, args));
   }
-
-  /**
-   * Dig through a thing to find stuff, if that stuff is a not nested itself
-   */
-  @Nullable
-  public static String findStringLiteral(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = find(data, path);
-    if (currentObject instanceof Map || currentObject instanceof List || currentObject instanceof Object[]) {
-      return null;
-    } else {
-      // a literal of some sort, huzzah!
-      if (currentObject == null) {
-        return null;
-      }
-      return String.valueOf(currentObject);
-    }
-  }
-
-  @Nullable
-  public static Object findLiteral(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = find(data, path);
-    if (currentObject instanceof Map || currentObject instanceof List || currentObject instanceof Object[]) {
-      return null;
-    } else {
-      // a literal of some sort, huzzah!
-      if (currentObject == null) {
-        return null;
-      }
-      return currentObject;
-    }
-  }
-
-  @Nullable
-  public static Object[] findKeys(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = find(data, path);
-    if (currentObject instanceof Map) {
-      return ((Map) currentObject).keySet().toArray();
-    }
-    if (currentObject instanceof List) {
-      return IntStream.range(0, ((List) currentObject).size()).mapToObj(Integer::toString).toArray();
-    }
-    if (currentObject instanceof Object[]) {
-      return IntStream.range(0, ((Object[]) currentObject).length).mapToObj(Integer::toString).toArray();
-    }
-    return null;
-  }
-
-  /**
-   * Dig through a thing to find stuff
-   */
-  @Nullable
-  public static Object find(@Nullable Object data, List<NestedPathPart> path)
-  {
-    Object currentObject = data;
-    for (NestedPathPart pathPart : path) {
-      Object objectAtPath = pathPart.find(currentObject);
-      if (objectAtPath == null) {
-        return null;
-      }
-      currentObject = objectAtPath;
-    }
-    return currentObject;
-  }
-
 }

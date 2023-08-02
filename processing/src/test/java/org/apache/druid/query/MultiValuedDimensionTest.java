@@ -1164,19 +1164,16 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
           null
       );
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
+
+      final Map<String, Object> thirdMap = new HashMap<>();
+      thirdMap.put("texpr", NullHandling.sqlCompatible() ? "foo" : null);
+      thirdMap.put("count", 1L);
+
       List<Map<String, Object>> expected =
           ImmutableList.<Map<String, Object>>builder()
                        .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
                        .add(ImmutableMap.of("texpr", "t5foo", "count", 2L))
-                       .add(
-                           new HashMap<String, Object>()
-                           {
-                             {
-                               put("texpr", NullHandling.sqlCompatible() ? "foo" : null);
-                               put("count", 1L);
-                             }
-                           }
-                       )
+                       .add(thirdMap)
                        .add(ImmutableMap.of("texpr", "t1foo", "count", 1L))
                        .add(ImmutableMap.of("texpr", "t2foo", "count", 1L))
                        .add(ImmutableMap.of("texpr", "t4foo", "count", 1L))
@@ -1185,7 +1182,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
                        .build();
 
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-          new Result<TopNResultValue>(
+          new Result<>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
               new TopNResultValue(
                   expected

@@ -134,19 +134,6 @@ Java runtime itself.
 This file is not rotated, but it is generally small due to the low volume of messages.
 If necessary, you can truncate it using the Linux command `truncate --size 0 log/historical.stdout.log`.
 
-## Avoid reflective access warnings in logs
-
-On Java 11, you may see warnings like the following in the logs:
-
-```
-WARNING: An illegal reflective access operation has occurred
-WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
-WARNING: All illegal access operations will be denied in a future release
-```
-
-To avoid these, add the `--add-exports` and `--add-opens` command line parameters described in the documentation section
-about [Java strong encapsulation](../operations/java.md#strong-encapsulation).
-
 ## Set the logs to asynchronously write
 
 If your logs are really chatty, you can set them to write asynchronously.

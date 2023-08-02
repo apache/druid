@@ -38,23 +38,9 @@ import java.util.List;
 
 public class ArrayDoubleGroupByColumnSelectorStrategyTest
 {
-  protected final List<List<Double>> dictionary = new ArrayList<List<Double>>()
-  {
-    {
-      add(ImmutableList.of(1.0, 2.0));
-      add(ImmutableList.of(2.0, 3.0));
-      add(ImmutableList.of(1.0));
-    }
-  };
+  protected final List<List<Double>> dictionary = new ArrayList<>();
 
-  protected final Object2IntOpenHashMap<List<Double>> reverseDictionary = new Object2IntOpenHashMap<List<Double>>()
-  {
-    {
-      put(ImmutableList.of(1.0, 2.0), 0);
-      put(ImmutableList.of(2.0, 3.0), 1);
-      put(ImmutableList.of(1.0), 2);
-    }
-  };
+  protected final Object2IntOpenHashMap<List<Double>> reverseDictionary = new Object2IntOpenHashMap<>();
 
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
@@ -64,7 +50,15 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
   @Before
   public void setup()
   {
+    dictionary.add(ImmutableList.of(1.0, 2.0));
+    dictionary.add(ImmutableList.of(2.0, 3.0));
+    dictionary.add(ImmutableList.of(1.0));
+
     reverseDictionary.defaultReturnValue(-1);
+    reverseDictionary.put(ImmutableList.of(1.0, 2.0), 0);
+    reverseDictionary.put(ImmutableList.of(2.0, 3.0), 1);
+    reverseDictionary.put(ImmutableList.of(1.0), 2);
+
     strategy = new ArrayDoubleGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
   }
 

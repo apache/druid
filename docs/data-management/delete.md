@@ -38,7 +38,7 @@ Deletion by time range happens in two steps:
    you have a backup.
 
 For documentation on disabling segments using the Coordinator API, see the
-[Coordinator API reference](../api-reference/api-reference.md#coordinator-datasources).
+[Legacy metadata API reference](../api-reference/legacy-metadata-api.md#datasources).
 
 A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/tutorial-delete-data.md).
 
@@ -95,9 +95,17 @@ The available grammar is:
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
-    "context": <task context>
+    "context": <task context>,
+    "batchSize": <optional_batch size>
 }
 ```
 
+Some of the parameters used in the task payload are further explained below:
+
+| Parameter    |Default| Explanation                                                                                            |
+|--------------|-------|--------------------------------------------------------------------------------------------------------|
+| `batchSize`    |100    | Maximum number of segments that are deleted in one kill batch. Some operations on the Overlord may get stuck while a `kill` task is in progress due to concurrency constraints (such as in `TaskLockbox`). Thus, a `kill` task splits the list of unused segments to be deleted into smaller batches to yield the Overlord resources intermittently to other task operations.|
+
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
+

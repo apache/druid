@@ -46,7 +46,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedPathFinder;
@@ -191,7 +190,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -371,7 +370,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -493,7 +492,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -558,7 +557,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayBigIntOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_BIGINT", SqlTypeName.BIGINT);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_BIGINT", SqlTypeName.BIGINT);
 
     public JsonValueReturningArrayBigIntOperatorConversion()
     {
@@ -568,7 +567,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayDoubleOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
 
     public JsonValueReturningArrayDoubleOperatorConversion()
     {
@@ -578,7 +577,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayVarcharOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
 
     public JsonValueReturningArrayVarcharOperatorConversion()
     {
@@ -661,7 +660,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = Parser.parse(druidExpressions.get(1).getExpression(), plannerContext.getExprMacroTable());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -686,7 +685,7 @@ public class NestedDataOperatorConversions
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
                 name,
-                outputType,
+                null,
                 parts,
                 false,
                 null,

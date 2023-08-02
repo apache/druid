@@ -42,7 +42,8 @@ public abstract class DruidSqlIngest extends SqlInsert
   @Nullable
   protected final SqlNodeList clusteredBy;
 
-  public DruidSqlIngest(SqlParserPos pos,
+  public DruidSqlIngest(
+      SqlParserPos pos,
       SqlNodeList keywords,
       SqlNode targetTable,
       SqlNode source,

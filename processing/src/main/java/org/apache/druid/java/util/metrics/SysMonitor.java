@@ -46,6 +46,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+
+/**
+ * Deprecated, SysMonitor will now be maintained in {@link OshiSysMonitor}
+ *
+ * Sys monitor was implemented using @link org.hyperic.sigar which is no longer maintained.
+ * {@link oshi} based SysMonitor will be maintained and used from now on, and is implemented in org.apache.druid.java.util.metrics.OshiSysMonitor
+ */
+@Deprecated
 public class SysMonitor extends FeedDefiningMonitor
 {
   private static final Logger log = new Logger(SysMonitor.class);

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
@@ -151,11 +152,9 @@ public class CoordinatorSimulationBuilder
   /**
    * Specifies the CoordinatorDynamicConfig to be used in the simulation.
    * <p>
-   * Default values: {@code useBatchedSegmentSampler = true}, other params as
-   * specified in {@link CoordinatorDynamicConfig.Builder}.
+   * Default values: as specified in {@link CoordinatorDynamicConfig.Builder}.
    * <p>
-   * Tests that verify balancing behaviour must set
-   * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
+   * Tests that verify balancing behaviour use batched segment sampling.
    * Otherwise, the segment sampling is random and can produce repeated values
    * leading to flakiness in the tests. The simulation sets this field to true by
    * default.
@@ -330,6 +329,16 @@ public class CoordinatorSimulationBuilder
     public void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
     {
       env.setDynamicConfig(dynamicConfig);
+    }
+
+    @Override
+    public void setRetentionRules(String datasource, Rule... rules)
+    {
+      env.ruleManager.overrideRule(
+          datasource,
+          Arrays.asList(rules),
+          new AuditInfo("sim", "sim", "localhost")
+      );
     }
 
     @Override

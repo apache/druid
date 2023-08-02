@@ -25,10 +25,6 @@ public class TestNullableDoubleColumnSelector extends TestDoubleColumnSelector
 {
   private final Double[] doubles;
 
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private int index = 0;
 
   public TestNullableDoubleColumnSelector(Double[] doubles)

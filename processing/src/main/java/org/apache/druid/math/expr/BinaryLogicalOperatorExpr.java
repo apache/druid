@@ -51,6 +51,14 @@ class BinLtExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
+    ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
+    // type cannot be null here because ExprEval type is not nullable
+    return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) < 0;
+  }
+
+  @Override
   protected final boolean evalLong(long left, long right)
   {
     return left < right;
@@ -61,12 +69,6 @@ class BinLtExpr extends BinaryBooleanOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Double.compare(left, right) < 0;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -97,6 +99,14 @@ class BinLeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
+    ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
+    // type cannot be null here because ExprEval type is not nullable
+    return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) <= 0;
+  }
+
+  @Override
   protected final boolean evalLong(long left, long right)
   {
     return left <= right;
@@ -107,12 +117,6 @@ class BinLeqExpr extends BinaryBooleanOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Double.compare(left, right) <= 0;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -143,6 +147,14 @@ class BinGtExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
+    ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
+    // type cannot be null here because ExprEval type is not nullable
+    return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) > 0;
+  }
+
+  @Override
   protected final boolean evalLong(long left, long right)
   {
     return left > right;
@@ -153,12 +165,6 @@ class BinGtExpr extends BinaryBooleanOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Double.compare(left, right) > 0;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -189,6 +195,14 @@ class BinGeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
+    ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
+    // type cannot be null here because ExprEval type is not nullable
+    return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) >= 0;
+  }
+
+  @Override
   protected final boolean evalLong(long left, long right)
   {
     return left >= right;
@@ -199,12 +213,6 @@ class BinGeqExpr extends BinaryBooleanOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Double.compare(left, right) >= 0;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -235,6 +243,14 @@ class BinEqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
+    ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
+    // type cannot be null here because ExprEval type is not nullable
+    return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) == 0;
+  }
+
+  @Override
   protected final boolean evalLong(long left, long right)
   {
     return left == right;
@@ -244,12 +260,6 @@ class BinEqExpr extends BinaryBooleanOpExprBase
   protected final boolean evalDouble(double left, double right)
   {
     return left == right;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return inspector.canVectorize(left, right);
   }
 
   @Override
@@ -280,6 +290,14 @@ class BinNeqExpr extends BinaryBooleanOpExprBase
   }
 
   @Override
+  protected boolean evalArray(ExprEval left, ExprEval right)
+  {
+    ExpressionType type = ExpressionTypeConversion.leastRestrictiveType(left.type(), right.type());
+    // type cannot be null here because ExprEval type is not nullable
+    return type.getNullableStrategy().compare(left.castTo(type).asArray(), right.castTo(type).asArray()) != 0;
+  }
+
+  @Override
   protected final boolean evalLong(long left, long right)
   {
     return left != right;
@@ -289,12 +307,6 @@ class BinNeqExpr extends BinaryBooleanOpExprBase
   protected final boolean evalDouble(double left, double right)
   {
     return left != right;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return inspector.canVectorize(left, right);
   }
 
   @Override

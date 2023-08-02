@@ -25,7 +25,11 @@ import org.apache.druid.java.util.common.StringUtils;
 /**
  * A non-transient Druid metadata exception thrown when trying to insert a
  * duplicate entry in the metadata.
+ *
+ * @deprecated Usages of this exception will be replaced by the new
+ * {@link org.apache.druid.error.DruidException} in a future release.
  */
+@Deprecated
 public class EntryExistsException extends DruidException
 {
 

@@ -30,12 +30,12 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>27.0.0-SNAPSHOT</version>
+    <version>28.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <kubernetes.client.version>11.0.1</kubernetes.client.version>
+    <kubernetes.client.version>11.0.4</kubernetes.client.version>
   </properties>
 
   <dependencies>
@@ -84,13 +84,11 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.69</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-ext-jdk15on</artifactId>
-      <version>1.68</version>
       <scope>runtime</scope>
     </dependency>
 

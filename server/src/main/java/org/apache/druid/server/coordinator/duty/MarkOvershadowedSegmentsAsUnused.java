@@ -24,10 +24,11 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -40,15 +41,21 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Marks segments that are overshadowed by currently served segments as unused.
+ * This duty runs only if the Coordinator has been running long enough to have a
+ * refreshed metadata view. This duration is controlled by the dynamic config
+ * {@code millisToWaitBeforeDeleting}.
+ */
 public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
 {
   private static final Logger log = new Logger(MarkOvershadowedSegmentsAsUnused.class);
 
-  private final DruidCoordinator coordinator;
+  private final SegmentDeleteHandler deleteHandler;
 
-  public MarkOvershadowedSegmentsAsUnused(DruidCoordinator coordinator)
+  public MarkOvershadowedSegmentsAsUnused(SegmentDeleteHandler deleteHandler)
   {
-    this.coordinator = coordinator;
+    this.deleteHandler = deleteHandler;
   }
 
   @Override
@@ -100,8 +107,11 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
     final CoordinatorRunStats stats = params.getCoordinatorStats();
     datasourceToUnusedSegments.forEach(
         (datasource, unusedSegments) -> {
-          stats.addToDatasourceStat(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
-          coordinator.markSegmentsAsUnused(datasource, unusedSegments);
+          RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
+          stats.add(Stats.Segments.OVERSHADOWED, datasourceKey, unusedSegments.size());
+
+          int updatedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
+          log.info("Successfully marked [%d] segments of datasource[%s] as unused.", updatedCount, datasource);
         }
     );
 
