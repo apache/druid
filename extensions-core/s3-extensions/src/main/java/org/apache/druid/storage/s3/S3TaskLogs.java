@@ -23,7 +23,6 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -67,11 +66,6 @@ public class S3TaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "log");
-    // this is to satisfy CodeQL scan
-    Preconditions.checkArgument(
-        offset <= Long.MAX_VALUE && offset >= Long.MIN_VALUE,
-        "offset is out of range"
-    );
     return streamTaskFileWithRetry(offset, taskKey);
   }
 
@@ -110,12 +104,11 @@ public class S3TaskLogs implements TaskLogs
       final long start;
       final long end = objectMetadata.getContentLength() - 1;
 
-      if (offset > 0 && offset < objectMetadata.getContentLength()) {
-        start = offset;
-      } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
-        start = objectMetadata.getContentLength() + offset;
-      } else {
+      long contentLength = objectMetadata.getContentLength();
+      if (offset >= contentLength || offset <= -contentLength) {
         start = 0;
+      } else {
+        start = offset >= 0 ? offset : contentLength + offset;
       }
 
       final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
