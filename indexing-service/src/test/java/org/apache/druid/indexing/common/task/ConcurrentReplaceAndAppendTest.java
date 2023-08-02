@@ -41,6 +41,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -83,7 +84,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     );
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, new Period(0L), null, null),
+        new TaskQueueConfig(null, new Period(0L), null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -1309,7 +1310,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
           null,
           null,
           null,
-          new IndexIO(getObjectMapper(), () -> 0),
+          new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT),
           null,
           null,
           null,
