@@ -169,7 +169,9 @@ public class KubernetesPeonLifecycle
     }
     finally {
       try {
+        log.info("Finished task, pushing logs");
         saveLogs();
+        log.info("Finished task, shutting down");
         shutdown();
       }
       catch (Exception e) {

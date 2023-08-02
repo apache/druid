@@ -142,7 +142,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @GuardedBy("statusLock")
   private final ConcurrentMap<String, HttpRemoteTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
-  // This is the list of pending tasks in the order they arrived, exclusively manipulated/used by thread that
+  // This is the list of pending tasklifecycleLocks in the order they arrived, exclusively manipulated/used by thread that
   // gives a new task to this class and threads in pendingTasksExec that are responsible for assigning tasks to
   // workers.
   @GuardedBy("statusLock")

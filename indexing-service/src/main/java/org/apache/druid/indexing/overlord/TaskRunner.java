@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -142,6 +143,11 @@ public interface TaskRunner
   default boolean isK8sTaskRunner()
   {
     return false;
+  }
+
+  default List<TaskRunner> getSubTaskRunners()
+  {
+    return new ArrayList<>();
   }
 
   default void updateStatus(Task task, TaskStatus status)

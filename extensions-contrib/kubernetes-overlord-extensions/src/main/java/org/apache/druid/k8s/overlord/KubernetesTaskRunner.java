@@ -189,7 +189,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
             config.getTaskTimeout().toStandardDuration().getMillis()
         );
       }
-
+      log.info("Finished task, status:" + taskStatus.toString());
       updateStatus(task, taskStatus);
 
       return taskStatus;

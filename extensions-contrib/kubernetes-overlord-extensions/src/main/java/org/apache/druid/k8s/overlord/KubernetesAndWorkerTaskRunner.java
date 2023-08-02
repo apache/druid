@@ -21,11 +21,14 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.vavr.collection.Iterator;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
+import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
@@ -36,8 +39,10 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -73,7 +78,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   public void start()
   {
     kubernetesTaskRunner.start();
-    workerTaskRunner.start();
   }
 
   @Override
@@ -93,7 +97,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (sendTasksToWorkerTaskRunner) {
+    if (sendTasksToWorkerTaskRunner || task.getDataSource().startsWith("worker")) {
       return workerTaskRunner.run(task);
     } else {
       return kubernetesTaskRunner.run(task);
@@ -131,6 +135,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
+    log.info("known tasks from runner");
     log.info(kubernetesTaskRunner.getKnownTasks().toString());
     log.info(workerTaskRunner.getKnownTasks().toString());
     log.info(Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList()).toString());
@@ -229,5 +234,30 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
       return ((TaskLogStreamer) workerTaskRunner).streamTaskLog(taskid, offset);
     }
     return Optional.absent();
+  }
+
+
+  @Override
+  public boolean isK8sTaskRunner()
+  {
+    return true;
+  }
+
+  @Nullable
+  @Override
+  public RunnerTaskState getRunnerTaskState(String taskId)
+  {
+    RunnerTaskState runnerTaskState = kubernetesTaskRunner.getRunnerTaskState(taskId);
+    if (runnerTaskState == null) {
+      return workerTaskRunner.getRunnerTaskState(taskId);
+    }
+
+    return runnerTaskState;
+  }
+
+  @Override
+  public List<TaskRunner> getSubTaskRunners()
+  {
+    return ImmutableList.of(workerTaskRunner);
   }
 }
