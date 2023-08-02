@@ -690,7 +690,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get compaction status and statistics
 
-Returns the status and statistics from the auto-compaction run of all datasources which have auto-compaction enabled in the latest run. The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource with automatic compaction enabled.
+Retrieves the status and statistics from the automatic compaction run of all datasources which have automatic compaction enabled in the latest run. Returns a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource with automatic compaction enabled.
 
 The `latestStatus` object has the following keys:
 * `dataSource`: Name of the datasource for this status information.
