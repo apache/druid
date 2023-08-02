@@ -51,7 +51,7 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
     throw new UnsupportedOperationException(
         "Vectorized matcher cannot make object matcher for ARRAY types"

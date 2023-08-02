@@ -115,6 +115,7 @@ public interface OverlordClient
         dataSource,
         interval,
         false,
+        null,
         maxSegmentsToKill
     );
     return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);

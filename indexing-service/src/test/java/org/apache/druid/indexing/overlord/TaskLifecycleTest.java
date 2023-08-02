@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
@@ -693,7 +694,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
         new NoopOverlordClient(),
-        null,
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
@@ -948,6 +949,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             false,
+            null,
             null
         );
 
@@ -956,6 +958,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 3, mdc.getNuked().size());
+    Assert.assertEquals("delete segment batch call count", 1, mdc.getDeleteSegmentsCount());
     Assert.assertTrue(
         "expected unused segments get killed",
         expectedUnusedSegments.containsAll(mdc.getNuked()) && mdc.getNuked().containsAll(
@@ -1037,6 +1040,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             false,
+            null,
             maxSegmentsToKill
         );
 

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.error.InvalidInput;
@@ -64,8 +66,28 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public static final String TYPE = "kill";
   private static final Logger LOG = new Logger(KillUnusedSegmentsTask.class);
 
+  /**
+   * Default nuke batch size. This is a small enough size that we still get value from batching, while
+   * yielding as quickly as possible. In one real cluster environment backed with mysql, ~2000rows/sec,
+   * with batch size of 100, means a batch should only less than a second for the task lock, and depending
+   * on the segment store latency, unoptimised S3 cleanups typically take 5-10 seconds per 100. Over time
+   * we expect the S3 cleanup to get quicker, so this should be < 1 second, which means we'll be yielding
+   * the task lockbox every 1-2 seconds.
+   */
+  private static final int DEFAULT_SEGMENT_NUKE_BATCH_SIZE = 100;
+
   private final boolean markAsUnused;
+  /**
+   * Split processing to try and keep each nuke operation relatively short, in the case that either
+   * the database or the storage layer is particularly slow.
+   */
+  private final int batchSize;
   @Nullable private final Integer limit;
+
+
+  // counters included primarily for testing
+  private int numSegmentsKilled = 0;
+  private long numBatchesProcessed = 0;
 
   @JsonCreator
   public KillUnusedSegmentsTask(
@@ -74,6 +96,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
+      @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("limit") @Nullable Integer limit
   )
   {
@@ -83,6 +106,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         interval,
         context
     );
+    this.markAsUnused = markAsUnused != null && markAsUnused;
+    this.batchSize = (batchSize != null) ? batchSize : DEFAULT_SEGMENT_NUKE_BATCH_SIZE;
+    Preconditions.checkArgument(this.batchSize > 0, "batchSize should be greater than zero");
     if (null != limit && limit <= 0) {
       throw InvalidInput.exception(
           "limit [%d] is invalid. It must be a positive integer.",
@@ -95,9 +121,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
           limit
       );
     }
-    this.markAsUnused = markAsUnused != null && markAsUnused;
     this.limit = limit;
-
   }
 
   @JsonProperty
@@ -105,6 +129,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public boolean isMarkAsUnused()
   {
     return markAsUnused;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getBatchSize()
+  {
+    return batchSize;
   }
 
   @Nullable
@@ -117,7 +148,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   @Override
   public String getType()
   {
-    return "kill";
+    return TYPE;
   }
 
   @Nonnull
@@ -126,6 +157,20 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public Set<ResourceAction> getInputSourceResources()
   {
     return ImmutableSet.of();
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  long getNumBatchesProcessed()
+  {
+    return numBatchesProcessed;
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  long getNumSegmentsKilled()
+  {
+    return numSegmentsKilled;
   }
 
   @Override
@@ -141,29 +186,72 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     }
 
     // List unused segments
-    List<DataSegment> unusedSegments = toolbox
-        .getTaskActionClient()
-        .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), limit));
+    int nextBatchSize = computeNextBatchSize(numSegmentsKilled);
+    @Nullable Integer numTotalBatches = getNumTotalBatches();
+    List<DataSegment> unusedSegments;
+    do {
+      unusedSegments = toolbox
+          .getTaskActionClient()
+          .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), nextBatchSize));
 
-    if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
-      throw new ISE(
-          "Locks[%s] for task[%s] can't cover segments[%s]",
-          taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
-          getId(),
-          unusedSegments
-      );
-    }
+      if (!TaskLocks.isLockCoversSegments(taskLockMap, unusedSegments)) {
+        throw new ISE(
+            "Locks[%s] for task[%s] can't cover segments[%s]",
+            taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
+            getId(),
+            unusedSegments
+        );
+      }
 
-    // Kill segments
-    unusedSegments = limit == null
-        ? unusedSegments
-        : unusedSegments.subList(0, Math.min(limit, unusedSegments.size()));
-    toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-    for (DataSegment segment : unusedSegments) {
-      toolbox.getDataSegmentKiller().kill(segment);
-    }
+      // Kill segments
+      // Order is important here: we want the nuke action to clean up the metadata records _before_ the
+      // segments are removed from storage, this helps maintain that we will always have a storage segment if
+      // the metadata segment is present. If the segment nuke throws an exception, then the segment cleanup is
+      // abandoned.
+
+      toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
+      toolbox.getDataSegmentKiller().kill(unusedSegments);
+      numBatchesProcessed++;
+      numSegmentsKilled += unusedSegments.size();
+
+      if (numBatchesProcessed % 10 == 0) {
+        if (null != numTotalBatches) {
+          LOG.info("Processed [%d/%d] batches for kill task[%s].",
+              numBatchesProcessed, numTotalBatches, getId()
+          );
+        } else {
+          LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
+        }
+      }
+
+      nextBatchSize = computeNextBatchSize(numSegmentsKilled);
+    } while (unusedSegments.size() != 0 && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));
+
+    LOG.info("Finished kill task[%s] for dataSource[%s] and interval[%s]. Deleted total [%d] unused segments "
+             + "in [%d] batches.",
+        getId(),
+        getDataSource(),
+        getInterval(),
+        numSegmentsKilled,
+        numBatchesProcessed
+    );
 
     return TaskStatus.success(getId());
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  @Nullable
+  Integer getNumTotalBatches()
+  {
+    return null != limit ? (int) Math.ceil((double) limit / batchSize) : null;
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  int computeNextBatchSize(int numSegmentsKilled)
+  {
+    return null != limit ? Math.min(limit - numSegmentsKilled, batchSize) : batchSize;
   }
 
   private NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(TaskActionClient client) throws IOException

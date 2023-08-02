@@ -338,10 +338,26 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 765.432, null), ImmutableList.of("5"));
       assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 765.431, null), ImmutableList.of());
 
+      // different type matcher
+      assertFilterMatches(
+          new EqualityFilter("d0", ColumnType.LONG, 0L, null),
+          canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2") : ImmutableList.of("0")
+      );
+      assertFilterMatches(new EqualityFilter("d0", ColumnType.LONG, 60L, null), ImmutableList.of("4"));
+
       assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 100L, null), ImmutableList.of("1"));
       assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 40L, null), ImmutableList.of("2"));
       assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 9001L, null), ImmutableList.of("4"));
       assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 9000L, null), ImmutableList.of());
+
+      // test loss of precision
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.DOUBLE, 100.1, null), ImmutableList.of());
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.DOUBLE, 100.0, null), ImmutableList.of("1"));
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.DOUBLE, 40.1, null), ImmutableList.of());
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.DOUBLE, 40.0, null), ImmutableList.of("2"));
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.DOUBLE, 9001.1, null), ImmutableList.of());
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.DOUBLE, 9001.0, null), ImmutableList.of("4"));
+
       if (!isAutoSchema()) {
         // auto schema doesn't store float columns as floats, rather they are stored as doubles... the predicate matcher
         // matches fine, but the string value set index does not match correctly if we expect the input float values
@@ -430,6 +446,8 @@ public class EqualityFilterTests
             ),
             ImmutableList.of()
         );
+
+
         assertFilterMatches(
             new EqualityFilter(
                 "arrayLong",
@@ -475,6 +493,37 @@ public class EqualityFilterTests
             ),
             ImmutableList.of()
         );
+
+        // test loss of precision matching long arrays with double array match values
+        assertFilterMatches(
+            new EqualityFilter(
+                "arrayLong",
+                ColumnType.DOUBLE_ARRAY,
+                new Object[]{1.0, 2.0, 3.0},
+                null
+            ),
+            ImmutableList.of("0", "2")
+        );
+        assertFilterMatches(
+            new EqualityFilter(
+                "arrayLong",
+                ColumnType.DOUBLE_ARRAY,
+                new Object[]{1.1, 2.2, 3.3},
+                null
+            ),
+            ImmutableList.of()
+        );
+        assertFilterMatches(
+            new EqualityFilter(
+                "arrayLong",
+                ColumnType.DOUBLE_ARRAY,
+                new Object[]{null},
+                null
+            ),
+            ImmutableList.of("4")
+        );
+
+
         assertFilterMatches(
             new EqualityFilter(
                 "arrayDouble",
@@ -522,6 +571,73 @@ public class EqualityFilterTests
         );
       }
     }
+
+    @Test
+    public void testVariant()
+    {
+      /*
+      dim0 .. variant
+      "0", .. "abc"
+      "1", .. 100L
+      "2", .. "100"
+      "3", .. [1.1, 2.2, 3.3]
+      "4", .. 12.34
+      "5", .. [100, 200, 300]
+      
+       */
+      if (isAutoSchema()) {
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.STRING_ARRAY,
+                ImmutableList.of("a", "b", "c"),
+                null
+            ),
+            ImmutableList.of()
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.STRING,
+                "abc",
+                null
+            ),
+            ImmutableList.of("0")
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.LONG,
+                100L,
+                null
+            ),
+            ImmutableList.of("1", "2")
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.STRING,
+                "100",
+                null
+            ),
+            ImmutableList.of("1", "2")
+        );
+
+        assertFilterMatches(
+            new EqualityFilter(
+                "variant",
+                ColumnType.LONG_ARRAY,
+                Arrays.asList(100, 200, 300),
+                null
+            ),
+            ImmutableList.of("5")
+        );
+      }
+    }
+
   }
 
   public static class EqualityFilterNonParameterizedTests extends InitializedNullHandlingTest

@@ -34,6 +34,8 @@ public class ClientKillUnusedSegmentsTaskQueryTest
   public static final DateTime START = DateTimes.nowUtc();
   private static final Interval INTERVAL = new Interval(START, START.plus(1));
   private static final Boolean MARK_UNUSED = true;
+  private static final Integer BATCH_SIZE = 999;
+  private static final Integer LIMIT = 1000;
 
   ClientKillUnusedSegmentsTaskQuery clientKillUnusedSegmentsQuery;
 
@@ -45,7 +47,8 @@ public class ClientKillUnusedSegmentsTaskQueryTest
         DATA_SOURCE,
         INTERVAL,
         true,
-        null
+        BATCH_SIZE,
+        LIMIT
     );
   }
 
@@ -80,11 +83,23 @@ public class ClientKillUnusedSegmentsTaskQueryTest
   }
 
   @Test
+  public void testGetBatchSize()
+  {
+    Assert.assertEquals(BATCH_SIZE, clientKillUnusedSegmentsQuery.getBatchSize());
+  }
+
+  @Test
+  public void testGetLimit()
+  {
+    Assert.assertEquals(LIMIT, clientKillUnusedSegmentsQuery.getLimit());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(ClientKillUnusedSegmentsTaskQuery.class)
                   .usingGetClass()
-                  .withNonnullFields("id", "dataSource", "interval")
+                  .withNonnullFields("id", "dataSource", "interval", "batchSize", "limit")
                   .verify();
   }
 }
