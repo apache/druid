@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -91,8 +90,7 @@ public class MetadataResourceTest
         segmentsMetadataManager,
         Mockito.mock(IndexerMetadataStorageCoordinator.class),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        coordinator,
-        new ObjectMapper()
+        coordinator
     );
   }
 
