@@ -1958,7 +1958,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderThenLimitThenFilter12()
+  public void testCountDistinctNonApproximateEmptySet()
   {
     cannotVectorize();
     testQuery(
@@ -1967,32 +1967,19 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) from druid.foo where m1 < -1.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
-        // "select count(*) from druid.foo ",
         ImmutableList.of(
             GroupByQuery.builder()
-            .setDataSource(
-                GroupByQuery.builder()
-                .setDataSource(CalciteTests.DATASOURCE1)
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-//                .setVirtualColumns(
-//                    expressionVirtualColumn(
-//                        "v0",
-//                        "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-//                        ColumnType.LONG))
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
-//                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
-//                    "cnt")))
-//                .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
-//                    0, Granularities.MONTH))
                         .setDimFilter(
-                            range("m1", ColumnType.LONG, null, -1.0, true, true))
-
-//                            equality("m1", -1.0, ColumnType.DOUBLE))
-                .build()
-                )
+                            range("m1", ColumnType.LONG, null, -1.0, false, true))
+                        .build())
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
