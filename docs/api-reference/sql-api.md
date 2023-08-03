@@ -949,7 +949,7 @@ Cancels a running or accepted query.
 
 <!--200 OK-->
 
-*Unsuccessfully canceled query, query is already complete* 
+*A no op operation since the query is not in a state to be cancelled* 
 
 <!--202 ACCEPTED-->
 
