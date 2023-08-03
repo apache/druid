@@ -40,6 +40,8 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -287,6 +289,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
     cleanupExecutor.scheduleAtFixedRate(
@@ -304,6 +307,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
 
   @Override
+  @LifecycleStop
   public void stop()
   {
     log.debug("Stopping KubernetesTaskRunner");

@@ -36,6 +36,8 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
@@ -75,9 +77,9 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
-    kubernetesTaskRunner.start();
   }
 
   @Override
@@ -113,10 +115,9 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
+  @LifecycleStop
   public void stop()
   {
-    kubernetesTaskRunner.stop();
-    workerTaskRunner.stop();
   }
 
   @Override
@@ -258,6 +259,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public List<TaskRunner> getSubTaskRunners()
   {
-    return ImmutableList.of(workerTaskRunner);
+    return ImmutableList.of(kubernetesTaskRunner, workerTaskRunner);
   }
 }
