@@ -97,16 +97,16 @@ The available grammar is:
     "interval" : <all_unused_segments_in_this_interval_will_die!>,
     "context": <task context>,
     "batchSize": <optional_batch size>,
-    "maxSegmentsToKill": <the maximum number of segments to delete>
+    "limit": <the maximum number of segments to delete>
 }
 ```
 
 Some of the parameters used in the task payload are further explained below:
 
-| Parameter   | Default         | Explanation                                                                                                                                                                                                                                                                                                                                                                   |
-|-------------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Parameter   | Default         | Explanation                                                                                                                                                                                                                                                                                                                                                                 |
+|-------------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `batchSize`    |100    | Maximum number of segments that are deleted in one kill batch. Some operations on the Overlord may get stuck while a `kill` task is in progress due to concurrency constraints (such as in `TaskLockbox`). Thus, a `kill` task splits the list of unused segments to be deleted into smaller batches to yield the Overlord resources intermittently to other task operations.|
-| `limit`     | null - no limit | Maximum number of segments that are deleted in the kill task. This property may not be combined with `markAsUnused: true`                                                                                                                                                                                                                                                     |
+| `limit`     | null - no limit | Maximum number of segments for the kill task to delete.|
 
 
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
