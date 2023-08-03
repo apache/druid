@@ -133,7 +133,7 @@ SELECT FLOOR(__time TO DAY) AS event_time,
     FIRST_VALUE(ABS(delta)) OVER w AS first_val,
     LAST_VALUE(ABS(delta)) OVER w AS last_val
 FROM wikipedia
-WHERE channel IN ('`#kk.wikipedia`', '#lt.wikipedia')
+WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
 GROUP BY channel, ABS(delta), FLOOR(__time TO DAY) 
 WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 ```
@@ -165,9 +165,9 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 </details>
 
 
-The following example demonstrates applying a window to the SUM() function to calcualte the cumulative changes to a channel over time:
+The following example demonstrates applying a window to the SUM() function to calculate the cumulative changes to a channel over time:
 
-```
+```sql
 SELECT
     FLOOR(__time TO MINUTE) as "time",
     channel,
