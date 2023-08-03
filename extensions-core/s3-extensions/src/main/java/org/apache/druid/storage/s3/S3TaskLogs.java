@@ -92,7 +92,7 @@ public class S3TaskLogs implements TaskLogs
       return S3Utils.retryS3Operation(() -> streamTaskFile(offset, taskKey));
     }
     catch (Exception e) {
-      throw new IOE(e, "Failed to stream logs from: %s", taskKey);
+      throw new IOE(e, "Failed to stream logs for task[%s] starting at offset[%d]", taskKey, offset);
     }
   }
 
