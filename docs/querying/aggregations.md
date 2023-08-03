@@ -465,7 +465,7 @@ For these reasons, we have deprecated this aggregator and recommend using the Da
 
 ### Expression aggregator
 
-Query time only aggregator that can aggregate results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
+Aggregator applicable only at query time. Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
 
 | Property | Description | Required |
 | --- | --- | --- |
@@ -485,7 +485,7 @@ Query time only aggregator that can aggregate results using [Druid expressions](
 | `maxSizeBytes` | Maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow to before the aggregation fails. | No (8192 bytes) |
 
 #### Example: a "count" aggregator
-The initial value is `0` and adds `1` for each row processed.
+The initial value is `0`. `fold` adds `1` for each row processed.
 
 ```json
 {
@@ -499,7 +499,7 @@ The initial value is `0` and adds `1` for each row processed.
 ```
 
 #### Example: a "sum" aggregator
-The initial value is `0`, adds the numeric value `column_a` for each row processed.
+The initial value is `0`. `fold` adds the numeric value `column_a` for each row processed.
 
 ```json
 {
@@ -512,7 +512,7 @@ The initial value is `0`, adds the numeric value `column_a` for each row process
 ```
 
 #### Example: a "distinct array element" aggregator, sorted by array_length
-The initial value is an empty array, `fold` adds the elements of `column_a` to the accumulator using set semantics, `combine` merges the sets, and `compare` orders the values by `array_length`.
+The initial value is an empty array. `fold` adds the elements of `column_a` to the accumulator using set semantics, `combine` merges the sets, and `compare` orders the values by `array_length`.
 
 ```json
 {
@@ -527,7 +527,7 @@ The initial value is an empty array, `fold` adds the elements of `column_a` to t
 ```
 
 #### Example: an "approximate count" aggregator using the built-in hyper-unique
-Similar to the 'cardinality' aggregator, the default value is an empty hyper-unique sketch, `fold` adds the value of `column_a` to the sketch, `combine` merges the sketches, and `finalize` gets the estimated count from the accumulated sketch.
+Similar to the cardinality aggregator, the default value is an empty hyper-unique sketch, `fold` adds the value of `column_a` to the sketch, `combine` merges the sketches, and `finalize` gets the estimated count from the accumulated sketch.
 
 ```json
 {
@@ -551,9 +551,9 @@ JavaScript functions are expected to return floating-point values.
 | `type` | Must be "javascript". | Yes |
 | `name` | The aggregator output name. | Yes |
 | `fieldNames` | The list of aggregator input columns. | Yes |
-| `fnAggregate` | Javascript function that updates partial aggregate based on the current row values, and returns the updated partial aggregate. | Yes |
-| `fnCombine` | Javascript function to combine partial aggregates and return the combined result. | Yes |
-| `fnReset` | Javascript function that returns the 'initial' value. | Yes |
+| `fnAggregate` | JavaScript function that updates partial aggregate based on the current row values, and returns the updated partial aggregate. | Yes |
+| `fnCombine` | JavaScript function to combine partial aggregates and return the combined result. | Yes |
+| `fnReset` | JavaScript function that returns the 'initial' value. | Yes |
 
 #### Example
 
@@ -568,7 +568,7 @@ JavaScript functions are expected to return floating-point values.
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+> JavaScript functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
 
 ## Miscellaneous aggregations
@@ -579,7 +579,7 @@ A filtered aggregator wraps any given aggregator, but only aggregates the values
 
 This makes it possible to compute the results of a filtered and an unfiltered aggregation simultaneously, without having to issue multiple queries, and use both results as part of post-aggregations.
 
-*Note:* If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
+If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
 
 | Property | Description | Required |
 | --- | --- | --- |
@@ -619,13 +619,13 @@ a *non-empty* list of dimensions to this aggregator which *must* be a subset of 
 | `groupings` | The list of columns to use in the grouping set. | Yes |
 
 
-For example, if the aggregator has `["dim1", "dim2"]` as input dimensions:
+For example, the following aggregator has `["dim1", "dim2"]` as input dimensions:
 
 ```json
 { "type" : "grouping", "name" : "someGrouping", "groupings" : ["dim1", "dim2"] }
 ```
 
-and used in a query with `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, the
+and used in a grouping query with `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, the
 possible output of the aggregator is:
 
 | subtotal used in query | Output | (bits representation) |
