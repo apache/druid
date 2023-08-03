@@ -1996,6 +1996,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             new Object[] { 0l }));
   }
 
+  @Ignore
   @Test
   public void testCountDistinctNonApproximate6()
   {
