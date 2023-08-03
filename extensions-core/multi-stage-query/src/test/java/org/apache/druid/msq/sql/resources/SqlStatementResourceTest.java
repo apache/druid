@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.msq.sql.resources;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -57,11 +57,12 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
+import org.apache.druid.msq.sql.MSQTaskQueryMaker;
+import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
-import org.apache.druid.msq.sql.resources.SqlStatementResource;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -78,6 +79,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlResourceTest;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -742,7 +744,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         null
     )), objectMapper.writeValueAsString(response.getEntity()));
 
-    Response resultsResponse = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, null, makeOkRequest());
+    Response resultsResponse = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, ResultFormat.OBJECTLINES.name(), makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
 
     String expectedResult = "{\"_time\":123,\"alias\":\"foo\",\"market\":\"bar\"}\n"
@@ -760,7 +762,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         resource.doGetResults(
             FINISHED_SELECT_MSQ_QUERY,
             0L,
-            null,
+            ResultFormat.OBJECTLINES.name(),
             makeOkRequest()
         )
     );
@@ -770,7 +772,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         resource.doGetResults(
             FINISHED_SELECT_MSQ_QUERY,
             null,
-            null,
+            ResultFormat.OBJECTLINES.name(),
             makeOkRequest()
         )
     );

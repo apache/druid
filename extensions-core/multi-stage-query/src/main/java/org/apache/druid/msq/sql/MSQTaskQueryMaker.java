@@ -76,7 +76,6 @@ import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
 {
-  public static final String RESULT_FORMAT = "resultFormat";
   public static final String USER_KEY = "__user";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;

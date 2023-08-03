@@ -17,24 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.msq.sql.resources;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
-import org.apache.druid.msq.sql.resources.SqlStatementResource;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -150,16 +153,13 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             false,
             false,
             false,
-            new HashMap<>(),
+            ImmutableMap.of(),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
         "Execution mode is not provided to the sql statement api. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
-
-    Map<String, Object> syncModeContext = new HashMap<>();
-    syncModeContext.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name());
 
     SqlStatementResourceTest.assertExceptionMessage(
         resource.doPost(new SqlQuery(
@@ -168,7 +168,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             false,
             false,
             false,
-            syncModeContext,
+            ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name()),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
         "The sql statement api currently does not support the provided execution mode [SYNC]. "
@@ -332,7 +332,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
             null,
-            null,
+            ResultFormat.OBJECTLINES.name(),
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper);
@@ -348,14 +348,14 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
             0L,
-            null,
+            ResultFormat.OBJECTLINES.name(),
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper);
   }
 
   @Test
-  public void testResultFormat() throws IOException
+  public void testResultFormat() throws Exception
   {
     Map<String, Object> context = defaultAsyncContext();
     context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
@@ -363,7 +363,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
             "select cnt,dim1 from foo",
-            ResultFormat.ARRAY,
+            null,
             false,
             false,
             false,
@@ -373,28 +373,45 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     ).getEntity();
 
+    final List<ColumnNameAndTypes> columnNameAndTypes = ImmutableList.of(
+        new ColumnNameAndTypes("cnt", "cnt", "cnt"),
+        new ColumnNameAndTypes("dim1", "dim1", "dim1")
+    );
 
-    List<List<Object>> rows = new ArrayList<>();
-    rows.add(ImmutableList.of(1, ""));
-    rows.add(ImmutableList.of(1, "10.1"));
-    rows.add(ImmutableList.of(1, "2"));
-    rows.add(ImmutableList.of(1, "1"));
-    rows.add(ImmutableList.of(1, "def"));
-    rows.add(ImmutableList.of(1, "abc"));
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{1, ""},
+        new Object[]{1, "10.1"},
+        new Object[]{1, "2"},
+        new Object[]{1, "1"},
+        new Object[]{1, "def"},
+        new Object[]{1, "abc"}
+    );
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
-        sqlStatementResult.getQueryId(),
-        null,
-        null,
-        SqlStatementResourceTest.makeOkRequest()
-    )));
+    for (ResultFormat resultFormat : ResultFormat.values()) {
+      Assert.assertArrayEquals(
+          createExpectedResultsInFormat(resultFormat, expectedRows, columnNameAndTypes, objectMapper),
+          responseToByteArray(
+              resource.doGetResults(
+                  sqlStatementResult.getQueryId(),
+                  null,
+                  resultFormat.name(),
+                  SqlStatementResourceTest.makeOkRequest()
+              ), objectMapper
+          )
+      );
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
-        sqlStatementResult.getQueryId(),
-        0L,
-        null,
-        SqlStatementResourceTest.makeOkRequest()
-    )));
+      Assert.assertArrayEquals(
+          createExpectedResultsInFormat(resultFormat, expectedRows, columnNameAndTypes, objectMapper),
+          responseToByteArray(
+              resource.doGetResults(
+                  sqlStatementResult.getQueryId(),
+                  0L,
+                  resultFormat.name(),
+                  SqlStatementResourceTest.makeOkRequest()
+              ), objectMapper
+          )
+      );
+    }
   }
 
   @Test
@@ -438,6 +455,15 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         ResultFormat.ARRAY.name(),
         SqlStatementResourceTest.makeOkRequest()
     )));
+  }
+
+  private byte[] createExpectedResultsInFormat(ResultFormat resultFormat, List<Object[]> resultsList, List<ColumnNameAndTypes> rowSignature, ObjectMapper jsonMapper) throws Exception
+  {
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    try (final ResultFormat.Writer writer = resultFormat.createFormatter(os, jsonMapper)) {
+      SqlStatementResource.resultPusherInternal(writer, Yielders.each(Sequences.simple(resultsList)), rowSignature);
+    }
+    return os.toByteArray();
   }
 
   private void assertExpectedResults(String expectedResult, Response resultsResponse, ObjectMapper objectMapper) throws IOException
@@ -545,7 +571,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
   private static Map<String, Object> defaultAsyncContext()
   {
-    Map<String, Object> context = new HashMap<String, Object>();
+    Map<String, Object> context = new HashMap<>();
     context.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
     return context;
   }
