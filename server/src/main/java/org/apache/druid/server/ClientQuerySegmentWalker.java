@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -489,18 +489,18 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    return new FluentQueryRunnerBuilder<>(toolChest)
-        .create(
-            new SetAndVerifyContextQueryRunner<>(
-                serverConfig,
-                new RetryQueryRunner<>(
-                    baseClusterRunner,
-                    clusterClient::getQueryRunnerForSegments,
-                    retryConfig,
-                    objectMapper
-                )
-            )
+    final SetAndVerifyContextQueryRunner<T> baseRunner = new SetAndVerifyContextQueryRunner<>(
+        serverConfig,
+        new RetryQueryRunner<>(
+            baseClusterRunner,
+            clusterClient::getQueryRunnerForSegments,
+            retryConfig,
+            objectMapper
         )
+    );
+
+    return FluentQueryRunner
+        .create(baseRunner, toolChest)
         .applyPreMergeDecoration()
         .mergeResults()
         .applyPostMergeDecoration()
