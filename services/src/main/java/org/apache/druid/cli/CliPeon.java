@@ -24,8 +24,11 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -33,6 +36,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -124,12 +128,14 @@ import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.eclipse.jetty.server.Server;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -257,6 +263,21 @@ public class CliPeon extends GuiceRunnable
             if ("true".equals(loadBroadcastSegments)) {
               binder.install(new BroadcastSegmentLoadingModule());
             }
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(ServiceStatusMonitor.TAGS_BINDING)
+          public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
+          {
+            return Suppliers.ofInstance(
+                ImmutableMap.of(
+                    "taskId", task.getId(),
+                    "dataSource", task.getDataSource(),
+                    "taskType", task.getType(),
+                    "groupId", task.getGroupId()
+                )
+            );
           }
 
           @Provides
