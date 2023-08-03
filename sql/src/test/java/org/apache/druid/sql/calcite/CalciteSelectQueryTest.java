@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -1959,8 +1958,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        ImmutableList.of(
-            new Object[] { 0l }));
+        ImmutableList.of(new Object[] {0l}));
   }
 
   @Test
@@ -1992,11 +1990,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        ImmutableList.of(
-            new Object[] { 0l }));
+        ImmutableList.of(new Object[] {0l}));
   }
 
-  @Ignore
   @Test
   public void testCountDistinctNonApproximate6()
   {
@@ -2008,7 +2004,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "select count(distinct m1) from druid.foo where m1 < 111.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2020,14 +2016,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(
                             range("m1", ColumnType.LONG, null, 111.0, false, true))
                         .build())
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .build()
 
         ),
-        ImmutableList.of(
-            new Object[] { 6l }));
+        ImmutableList.of(new Object[] {6l}));
   }
 }
 
