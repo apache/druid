@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
@@ -189,7 +190,16 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     int nextBatchSize = computeNextBatchSize(numSegmentsKilled);
     @Nullable Integer numTotalBatches = getNumTotalBatches();
     List<DataSegment> unusedSegments;
+    LOG.info(
+        "Starting kill with batchSize[%d], up to limit[%d] segments will be deleted%s",
+        batchSize,
+        limit,
+        numTotalBatches != null ? StringUtils.format(" in([%d] batches]).", numTotalBatches) : "."
+    );
     do {
+      if (nextBatchSize <= 0) {
+        break;
+      }
       unusedSegments = toolbox
           .getTaskActionClient()
           .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), nextBatchSize));
@@ -214,15 +224,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       numBatchesProcessed++;
       numSegmentsKilled += unusedSegments.size();
 
-      if (numBatchesProcessed % 10 == 0) {
-        if (null != numTotalBatches) {
-          LOG.info("Processed [%d/%d] batches for kill task[%s].",
-              numBatchesProcessed, numTotalBatches, getId()
-          );
-        } else {
-          LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
-        }
-      }
+      LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
       nextBatchSize = computeNextBatchSize(numSegmentsKilled);
     } while (unusedSegments.size() != 0 && (null == numTotalBatches || numBatchesProcessed < numTotalBatches));

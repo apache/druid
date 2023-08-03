@@ -59,9 +59,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.interval = interval;
     this.markAsUnused = markAsUnused;
     this.batchSize = batchSize;
-    if (null != limit) {
-      Preconditions.checkArgument(limit > 0, "limit must be > 0");
-    }
+    Preconditions.checkArgument(limit == null || limit > 0, "limit must be > 0");
     this.limit = limit;
   }
 
