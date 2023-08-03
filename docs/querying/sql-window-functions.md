@@ -50,26 +50,26 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 | `event_time` | `channel` | `change`| `rank_value` |
 | -- | -- | -- | -- |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 1	| 1 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 1	| 1 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 7	| 3 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 56 | 4 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 56 | 4 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 63 | 6 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 91 | 7 |  
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 2440 | 8 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 2703 | 9 |
-| `2016-06-27T00:00:00.000Z`	| `#kk.wikipedia`	| 6900 |10 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 1	| 1 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 2	| 2 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 13 | 3 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 28 | 4 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 53 | 5 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 56 | 6 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 59 | 7 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 391 | 8 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 894	| 9 |
-| `2016-06-27T00:00:00.000Z`	| `#lt.wikipedia`| 4358 | 10 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 1	| 1 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 1	| 1 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 7	| 3 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 56 | 4 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 56 | 4 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 63 | 6 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 91 | 7 |  
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 2440 | 8 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 2703 | 9 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 6900 |10 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 1	| 1 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 2	| 2 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 13 | 3 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 28 | 4 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 53 | 5 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 56 | 6 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 59 | 7 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 391 | 8 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 894	| 9 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 4358 | 10 |
 
 
 </details>
@@ -163,3 +163,52 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 |`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|4358|10|10|10|1|1|4|894|null|1|4358|
 
 </details>
+
+
+The following example demonstrates applying a window to the SUM() function to calcualte the cumulative changes to a channel over time:
+
+```
+SELECT
+    FLOOR(__time TO MINUTE) as "time",
+    channel,
+    ABS(delta) AS changes,
+    sum(ABS(delta)) OVER (PARTITION BY channel ORDER BY FLOOR(__time TO HOUR) ASC) AS cum_changes
+FROM wikipedia
+WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
+GROUP BY channel, __time, delta
+```
+
+<details>
+<summary> View results </summary>
+
+|`time`|`channel`|`changes`|`cum_changes`|
+|------|---------|---------|-------------|
+|`2016-06-27T04:20:00.000Z`|`#kk.wikipedia`|56|56|
+|`2016-06-27T04:35:00.000Z`|`#kk.wikipedia`|2440|2496|
+|`2016-06-27T06:15:00.000Z`|`#kk.wikipedia`|91|2587|
+|`2016-06-27T07:32:00.000Z`|`#kk.wikipedia`|1|2588|
+|`2016-06-27T09:00:00.000Z`|`#kk.wikipedia`|2703|5291|
+|`2016-06-27T09:24:00.000Z`|`#kk.wikipedia`|1|5292|
+|`2016-06-27T11:00:00.000Z`|`#kk.wikipedia`|63|5355|
+|`2016-06-27T11:05:00.000Z`|`#kk.wikipedia`|7|5362|
+|`2016-06-27T11:32:00.000Z`|`#kk.wikipedia`|56|5418|
+|`2016-06-27T15:21:00.000Z`|`#kk.wikipedia`|6900|12318|
+|`2016-06-27T06:17:00.000Z`|`#lt.wikipedia`|2|2|
+|`2016-06-27T07:55:00.000Z`|`#lt.wikipedia`|13|15|
+|`2016-06-27T09:05:00.000Z`|`#lt.wikipedia`|894|909|
+|`2016-06-27T09:12:00.000Z`|`#lt.wikipedia`|391|1300|
+|`2016-06-27T09:23:00.000Z`|`#lt.wikipedia`|56|1356|
+|`2016-06-27T10:59:00.000Z`|`#lt.wikipedia`|1|1357|
+|`2016-06-27T11:49:00.000Z`|`#lt.wikipedia`|59|1416|
+|`2016-06-27T12:41:00.000Z`|`#lt.wikipedia`|53|1469|
+|`2016-06-27T12:58:00.000Z`|`#lt.wikipedia`|28|1497|
+|`2016-06-27T19:03:00.000Z`|`#lt.wikipedia`|4358|5855|
+
+</details>
+
+## Known issues
+
+The following are known issues with window functions:
+
+- Descending order, DESC, in the ORDER BY clause in the window definition causes a Null Pointer Exception.
+- Druid throws an exception if you do not include the offset and default for LEAD() and LAG() functions.
