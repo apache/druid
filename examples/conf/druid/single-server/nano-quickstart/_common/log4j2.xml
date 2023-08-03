@@ -45,12 +45,32 @@
       </DefaultRolloverStrategy>
     </RollingRandomAccessFile>
 
+    <RollingRandomAccessFile name="EmitterAppender"
+                             fileName="${sys:druid.log.path}/events.log"
+                             filePattern="${sys:druid.log.path}/events.%d{yyyyMMdd}.log">
+      <PatternLayout pattern="%m%n"/>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+      </Policies>
+      <DefaultRolloverStrategy>
+        <Delete basePath="${sys:druid.log.path}/" maxDepth="1">
+          <IfFileName glob="*.log" />
+          <IfLastModified age="7d" />
+        </Delete>
+      </DefaultRolloverStrategy>
+    </RollingRandomAccessFile>
+
   </Appenders>
 
   <Loggers>
     <Root level="info">
       <AppenderRef ref="FileAppender"/>
     </Root>
+
+    <!-- Events via the LoggingEmitter are logged to it's own location for easy processing. -->
+    <Logger name="org.apache.druid.java.util.emitter.core.LoggingEmitter" level="info" additivity="false">
+      <Appender-ref ref="EmitterAppender"/>
+    </Logger>
 
     <!-- Set level="debug" to see stack traces for query errors -->
     <Logger name="org.apache.druid.server.QueryResource" level="info" additivity="false">
