@@ -327,7 +327,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
         )
         : ImmutableList.of(
             new Object[]{timestamp("2001-01-01"), "abc", 1L},
-                new Object[] { timestamp("2000-01-01"), "a", 1L },
+            new Object[]{timestamp("2000-01-01"), "a", 1L},
             new Object[]{timestamp("2001-01-01"), "a", 1L},
             new Object[]{timestamp("2000-01-01"), "", 1L},
             new Object[]{timestamp("2000-01-01"), null, 1L},

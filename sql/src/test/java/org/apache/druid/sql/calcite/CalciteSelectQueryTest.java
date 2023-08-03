@@ -1927,36 +1927,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
-  @Test
-  public void testOrderThenLimitThenFilter1()
-  {
-    testQuery(
-        "select count(*) from sys.supervisors",
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(
-                    new QueryDataSource(
-                        newScanQueryBuilder()
-                            .dataSource(CalciteTests.DATASOURCE1)
-                            .intervals(querySegmentSpec(Filtration.eternity()))
-                            .columns(ImmutableList.of("__time", "dim1"))
-                            .limit(4)
-                            .order(ScanQuery.Order.DESCENDING)
-                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                            .context(QUERY_CONTEXT_DEFAULT)
-                            .build()))
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("dim1"))
-                .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()),
-        ImmutableList.of(
-            new Object[] { "abc" },
-            new Object[] { "def" }));
-  }
-
   @Test
   public void testCountDistinctNonApproximateEmptySet()
   {
@@ -1989,78 +1959,5 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] { 0l }));
-  }
-
-  @Test
-  public void testOrderThenLimitThenFilter12A()
-  {
-    cannotVectorize();
-    testQuery(
-        PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        "select count(*) from \n"
-            + "  (select * from \n"
-            + "    (select * from druid.foo where m2 = 4.0) \n"
-            + "  where m1 > 0) \n"
-            + "where m2 != 4.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        // "select count(*) from druid.foo ",
-        ImmutableList.of(
-        // GroupByQuery.builder()
-        // .setDataSource(CalciteTests.DATASOURCE1)
-        // .setInterval(querySegmentSpec(Filtration.eternity()))
-        // .setGranularity(Granularities.ALL)
-        // .setVirtualColumns(
-        // expressionVirtualColumn(
-        // "v0",
-        // "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-        // ColumnType.LONG))
-        // .setDimensions(
-        // dimensions(
-        // new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-        // new DefaultDimensionSpec("dim2", "d1")))
-        // .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
-        // "cnt")))
-        // .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
-        // 0, Granularities.MONTH))
-        // .build()
-        //
-        ),
-        ImmutableList.of(
-            new Object[] { 0l }));
-  }
-
-  @Test
-  public void testOrderThenLimitThenFilter123()
-  {
-    testQuery(
-        "select count(*) from \n"
-            + "  (select * from \n"
-            + "    (select * from druid.foo where dim1 = 'abc') \n"
-            + "  where m1 > 0) \n"
-            + "where dim1 != 'abc'",
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(
-                    new QueryDataSource(
-                        newScanQueryBuilder()
-                            .dataSource(CalciteTests.DATASOURCE1)
-                            .intervals(querySegmentSpec(Filtration.eternity()))
-                            .columns(ImmutableList.of("__time", "dim1"))
-                            .limit(4)
-                            .order(ScanQuery.Order.DESCENDING)
-                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                            .context(QUERY_CONTEXT_DEFAULT)
-                            .build()))
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("dim1"))
-                .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()),
-        ImmutableList.of(
-            new Object[] { "abc" },
-            new Object[] { "def" }));
   }
 }
