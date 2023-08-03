@@ -1969,25 +1969,34 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         // "select count(*) from druid.foo ",
         ImmutableList.of(
-        // GroupByQuery.builder()
-        // .setDataSource(CalciteTests.DATASOURCE1)
-        // .setInterval(querySegmentSpec(Filtration.eternity()))
-        // .setGranularity(Granularities.ALL)
-        // .setVirtualColumns(
-        // expressionVirtualColumn(
-        // "v0",
-        // "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-        // ColumnType.LONG))
-        // .setDimensions(
-        // dimensions(
-        // new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-        // new DefaultDimensionSpec("dim2", "d1")))
-        // .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
-        // "cnt")))
-        // .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
-        // 0, Granularities.MONTH))
-        // .build()
-        //
+            GroupByQuery.builder()
+            .setDataSource(
+                GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+//                .setVirtualColumns(
+//                    expressionVirtualColumn(
+//                        "v0",
+//                        "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+//                        ColumnType.LONG))
+//                .setDimensions(
+//                    dimensions(
+//                        new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+//                        new DefaultDimensionSpec("dim2", "d1")))
+//                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
+//                    "cnt")))
+//                .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
+//                    0, Granularities.MONTH))
+                        .setDimFilter(
+                            equality("m1", -1.0, ColumnType.DOUBLE))
+                .build()
+                )
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+
+                .build()
+
         ),
         ImmutableList.of(
             new Object[] { 0l }));
