@@ -19,8 +19,8 @@
 
 package org.apache.druid.storage.azure.output;
 
-import com.google.api.client.util.Lists;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.storage.StorageConnector;
