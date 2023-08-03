@@ -17,10 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -35,6 +33,7 @@ import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,7 +53,6 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -67,27 +65,12 @@ import java.util.function.Function;
  * Begins running by acquiring an APPEND lock and immediately allocates pending segments.
  *
  * Task ends after publishing these pending segments and relevant metadata entries in a transaction
- * Replace lock exists with version V3
- * V0 -> PS0 -> append task begins
- * V1 -> (S1-0) -> replace task begins and published and completed
- * V2 -> (S2-0) -> replace task begins and published and completed
- * V3 -> Replace acquired lock
- *
- * append task publishes PS0 -> S0-0, S1-1, S2-1 ; (S0-0, V3); Append task has completed
- *
- *
- * (S3-0, 1) today
- * (S3-0, 2), (S3-1, 2) needs to happen
- * V3 replace task finishes -> (S3-0, S0-0 == S3-1)
- *
- * segment metadata -> Publish all pending segments and also create copies for greater versions for which used segments exist
- * forward metadata -> Publish mapping of the original segments to the EXCLUSIVE lock held for the same interval when present
  */
 public class AppendTask extends AbstractTask
 {
   private final Interval interval;
   private final Granularity segmentGranularity;
-  private final String lockType;
+  private final TaskLockType lockType;
   private final int priority;
   private final int numPartitions;
   private final CountDownLatch readyLatch = new CountDownLatch(1);
@@ -102,24 +85,25 @@ public class AppendTask extends AbstractTask
   private final AtomicInteger sequenceId = new AtomicInteger(0);
 
   public AppendTask(
-      @JsonProperty("id") String id,
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("context") Map<String, Object> context
+      String id,
+      String dataSource,
+      Interval interval,
+      Granularity segmentGranularity,
+      Integer priority,
+      Integer numPartitions
   )
   {
     super(
         id == null ? StringUtils.format("replace_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
         dataSource == null ? "none" : dataSource,
-        context,
+        null,
         IngestionMode.APPEND
     );
     this.interval = interval;
     this.segmentGranularity = segmentGranularity;
-    this.lockType = getContextValue(Tasks.TASK_LOCK_TYPE, "EXCLUSIVE");
-    this.priority = getContextValue(Tasks.PRIORITY_KEY, 0);
-    this.numPartitions = getContextValue("numPartitions", 0);
+    this.lockType = TaskLockType.APPEND;
+    this.priority = priority == null ? 50 : priority;
+    this.numPartitions = numPartitions == null ? 1 : numPartitions;
   }
 
   @Override
@@ -129,7 +113,6 @@ public class AppendTask extends AbstractTask
   }
 
   @Nonnull
-  @JsonIgnore
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
@@ -143,7 +126,7 @@ public class AppendTask extends AbstractTask
     return tryTimeChunkLockSingleInterval(
         new SurrogateTaskActionClient(getId(), taskActionClient),
         interval,
-        TaskLockType.valueOf(lockType)
+        lockType
     );
   }
 
@@ -219,7 +202,7 @@ public class AppendTask extends AbstractTask
           false,
           NumberedPartialShardSpec.instance(),
           LockGranularity.TIME_CHUNK,
-          TaskLockType.valueOf(lockType)
+          lockType
       );
       final SegmentIdWithShardSpec id = toolbox.getTaskActionClient().submit(allocateAction);
       pendingSegments.add(id);
@@ -249,7 +232,7 @@ public class AppendTask extends AbstractTask
             false,
             NumberedPartialShardSpec.instance(),
             LockGranularity.TIME_CHUNK,
-            TaskLockType.valueOf(lockType)
+            lockType
         );
         final SegmentIdWithShardSpec id = toolbox.getTaskActionClient().submit(allocateAction);
         pendingSegments.add(

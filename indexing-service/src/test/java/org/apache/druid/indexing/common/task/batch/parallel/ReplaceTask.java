@@ -17,11 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -35,6 +32,7 @@ import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -52,7 +50,6 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -70,7 +67,7 @@ public class ReplaceTask extends AbstractTask
 {
   private final Interval interval;
   private final Granularity segmentGranularity;
-  private final String lockType;
+  private final TaskLockType lockType;
   private final int priority;
   private final int numCorePartitions;
   private final CountDownLatch readyLatch = new CountDownLatch(1);
@@ -79,26 +76,26 @@ public class ReplaceTask extends AbstractTask
   private final CountDownLatch runComplete = new CountDownLatch(1);
   private String version;
 
-  @JsonCreator
   public ReplaceTask(
-      @JsonProperty("id") String id,
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("context") Map<String, Object> context
+      String id,
+      String dataSource,
+      Interval interval,
+      Granularity segmentGranularity,
+      Integer priority,
+      Integer numCorePartitions
   )
   {
     super(
         id == null ? StringUtils.format("replace_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
         dataSource == null ? "none" : dataSource,
-        context,
+        null,
         IngestionMode.REPLACE
     );
     this.interval = interval;
     this.segmentGranularity = segmentGranularity;
-    this.lockType = getContextValue(Tasks.TASK_LOCK_TYPE, "EXCLUSIVE");
-    this.priority = getContextValue(Tasks.PRIORITY_KEY, 0);
-    this.numCorePartitions = getContextValue("numCorePartitions", 0);
+    this.lockType = TaskLockType.REPLACE;
+    this.priority = priority == null ? 50 : priority;
+    this.numCorePartitions = numCorePartitions == null ? 1 : numCorePartitions;
   }
 
   @Override
@@ -108,7 +105,6 @@ public class ReplaceTask extends AbstractTask
   }
 
   @Nonnull
-  @JsonIgnore
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
@@ -131,7 +127,7 @@ public class ReplaceTask extends AbstractTask
     return tryTimeChunkLockSingleInterval(
         new SurrogateTaskActionClient(getId(), taskActionClient),
         interval,
-        TaskLockType.valueOf(lockType)
+        lockType
     );
   }
 

@@ -123,7 +123,6 @@ public class TaskLocks
     final Set<TaskLock> found = new HashSet<>();
     final Set<TaskLock> locks = taskLockbox.getAllReplaceLocksForDatasource(datasource);
     segments.forEach(segment -> {
-
       locks.forEach(lock -> {
         if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {
           final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;

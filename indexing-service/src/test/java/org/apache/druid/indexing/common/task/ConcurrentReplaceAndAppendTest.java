@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -30,6 +29,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
+import org.apache.druid.indexing.common.task.batch.parallel.AppendTask;
+import org.apache.druid.indexing.common.task.batch.parallel.ReplaceTask;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -103,10 +104,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -114,10 +113,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     ReplaceTask replaceTask1 = new ReplaceTask(
@@ -125,10 +122,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     ReplaceTask replaceTask2 = new ReplaceTask(
@@ -136,10 +131,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     // Create a set of initial segments
@@ -188,10 +181,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -199,10 +190,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -237,10 +226,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -248,10 +235,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -287,10 +272,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -298,10 +281,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -339,10 +320,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -350,10 +329,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -388,10 +365,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -399,10 +374,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -439,10 +412,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -450,10 +421,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -489,10 +458,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -500,10 +467,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -538,10 +503,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -549,10 +512,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -588,10 +549,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -599,10 +558,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -640,10 +597,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -651,10 +606,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -689,10 +642,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -700,10 +651,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -740,10 +689,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -751,10 +698,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -790,10 +735,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -801,10 +744,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -839,10 +780,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -850,10 +789,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -889,10 +826,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -900,10 +835,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(replaceTask0);
@@ -941,10 +874,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -952,10 +883,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -990,10 +919,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -1001,10 +928,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -1041,10 +966,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -1052,10 +975,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -1089,10 +1010,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -1100,10 +1019,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask1 = new AppendTask(
@@ -1111,10 +1028,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);
@@ -1157,10 +1072,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "REPLACE",
-            "numCorePartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask0 = new AppendTask(
@@ -1168,10 +1081,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask1 = new AppendTask(
@@ -1179,10 +1090,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-07-01/2024-01-01"),
         Granularities.QUARTER,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     AppendTask appendTask2 = new AppendTask(
@@ -1190,10 +1099,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-12-01/2024-01-01"),
         Granularities.MONTH,
-        ImmutableMap.of(
-            Tasks.TASK_LOCK_TYPE, "APPEND",
-            "numPartitions", 1
-        )
+        null,
+        null
     );
 
     taskQueue.add(appendTask0);

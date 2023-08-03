@@ -1245,17 +1245,17 @@ public class TaskLockbox
   {
     giant.lock();
     try {
-      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> dsRunning = running.get(datasource);
-      if (dsRunning == null) {
+      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> activeLocks = running.get(datasource);
+      if (activeLocks == null) {
         return ImmutableSet.of();
       }
-      return dsRunning.values()
-                      .stream()
-                      .flatMap(map -> map.values().stream())
-                      .flatMap(Collection::stream)
-                      .map(TaskLockPosse::getTaskLock)
-                      .filter(taskLock -> taskLock.getType().equals(TaskLockType.REPLACE))
-                      .collect(Collectors.toSet());
+      return activeLocks.values()
+                        .stream()
+                        .flatMap(map -> map.values().stream())
+                        .flatMap(Collection::stream)
+                        .map(TaskLockPosse::getTaskLock)
+                        .filter(taskLock -> !taskLock.isRevoked() && taskLock.getType().equals(TaskLockType.REPLACE))
+                        .collect(Collectors.toSet());
     }
     finally {
       giant.unlock();
