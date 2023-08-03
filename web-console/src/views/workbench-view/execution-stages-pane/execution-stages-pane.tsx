@@ -49,6 +49,7 @@ import {
   formatInteger,
   formatPercent,
   oneOf,
+  prettyFormatIsoDate,
   twoLines,
 } from '../../../utils';
 
@@ -685,7 +686,7 @@ ${title} uncompressed size: ${formatBytesCompact(
             if (!value) return null;
             return (
               <div title={value + (duration ? `/${formatDurationWithMs(duration)}` : '')}>
-                <div>{value.replace('T', ' ').replace(/\.\d\d\dZ$/, '')}</div>
+                <div>{prettyFormatIsoDate(value)}</div>
                 <div>{duration ? formatDurationDynamic(duration) : ''}</div>
               </div>
             );

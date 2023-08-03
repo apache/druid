@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -53,6 +54,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
@@ -508,14 +510,42 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     BaseColumn column = holder.getColumn();
 
-    // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
-    // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
+
     if (column instanceof NestedDataComplexColumn) {
       final NestedDataComplexColumn complexColumn = (NestedDataComplexColumn) column;
       if (processFromRaw) {
+        // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
+        // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
         return new RawFieldVectorObjectSelector(complexColumn.makeVectorObjectSelector(offset), parts);
       }
-      return complexColumn.makeVectorObjectSelector(parts, offset);
+      Set<ColumnType> types = complexColumn.getColumnTypes(parts);
+      ColumnType leastRestrictiveType = null;
+      if (types != null) {
+        for (ColumnType type : types) {
+          leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
+        }
+      }
+      if (leastRestrictiveType != null && leastRestrictiveType.isNumeric() && !Types.isNumeric(expectedType)) {
+        return ExpressionVectorSelectors.castValueSelectorToObject(
+            offset,
+            columnName,
+            complexColumn.makeVectorValueSelector(parts, offset),
+            leastRestrictiveType,
+            expectedType == null ? ColumnType.STRING : expectedType
+        );
+      }
+      final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
+      if (leastRestrictiveType != null &&
+          leastRestrictiveType.isArray() &&
+          expectedType != null &&
+          !expectedType.isArray()
+      ) {
+        final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
+        final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
+        return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
+      }
+
+      return objectSelector;
     }
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
     if (parts.isEmpty()) {
@@ -535,11 +565,26 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             expectedType
         );
       }
+      // if the underlying column is array typed, the vector object selector it spits out will homogenize stuff to
+      // make all of the objects a consistent type, which is typically a good thing, but if we are doing mixed type
+      // stuff and expect the output type to be scalar typed, then we should coerce things to only extract the scalars
+      if (capabilities.isArray() && !expectedType.isArray()) {
+        final VectorObjectSelector delegate = column.makeVectorObjectSelector(offset);
+        final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(capabilities.getElementType());
+        final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
+        return makeVectorArrayToScalarObjectSelector(offset, delegate, elementType, castTo);
+      }
       return column.makeVectorObjectSelector(offset);
     }
 
     if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
+      final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(
+          arrayColumn.getLogicalType().isArray() ? arrayColumn.getLogicalType().getElementType() : arrayColumn.getLogicalType()
+      );
+      final ExpressionType castTo = expectedType == null
+                                    ? ExpressionType.STRING
+                                    : ExpressionType.fromColumnTypeStrict(expectedType);
       VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -560,7 +605,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (maybeArray instanceof Object[]) {
                 Object[] anArray = (Object[]) maybeArray;
                 if (elementNumber < anArray.length) {
-                  elements[i] = anArray[elementNumber];
+                  elements[i] = ExprEval.ofType(elementType, anArray[elementNumber]).castTo(castTo).value();
                 } else {
                   elements[i] = null;
                 }
@@ -590,6 +635,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
     return NilVectorSelector.create(offset);
   }
+
 
   @Nullable
   @Override
@@ -1273,6 +1319,61 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   /**
+   * Create a {@link VectorObjectSelector} from a base selector which may return ARRAY types, coercing to some scalar
+   * value. Single element arrays will be unwrapped, while multi-element arrays will become null values. Non-arrays
+   * will be best effort cast to the castTo type.
+   */
+  private static VectorObjectSelector makeVectorArrayToScalarObjectSelector(
+      ReadableVectorOffset offset,
+      VectorObjectSelector delegate,
+      ExpressionType elementType,
+      ExpressionType castTo
+  )
+  {
+    return new VectorObjectSelector()
+    {
+      final Object[] scalars = new Object[offset.getMaxVectorSize()];
+      private int id = ReadableVectorInspector.NULL_ID;
+
+      @Override
+      public Object[] getObjectVector()
+      {
+        if (offset.getId() != id) {
+          Object[] result = delegate.getObjectVector();
+          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+            if (result[i] instanceof Object[]) {
+              Object[] o = (Object[]) result[i];
+              if (o == null || o.length != 1) {
+                scalars[i] = null;
+              } else {
+                ExprEval<?> element = ExprEval.ofType(elementType, o[0]);
+                scalars[i] = element.castTo(castTo).value();
+              }
+            } else {
+              ExprEval<?> element = ExprEval.bestEffortOf(result[i]);
+              scalars[i] = element.castTo(castTo).value();
+            }
+          }
+          id = offset.getId();
+        }
+        return scalars;
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return offset.getMaxVectorSize();
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return offset.getCurrentVectorSize();
+      }
+    };
+  }
+
+  /**
    * Process the "raw" data to extract non-complex values. Like {@link RawFieldColumnSelector} but does not return
    * complex nested objects and does not wrap the results in {@link StructuredData}.
    * <p>
@@ -1320,7 +1421,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public boolean isNull()
     {
       final Object o = getObject();
-      return !(o instanceof Number || (o instanceof String && Doubles.tryParse((String) o) != null));
+      if (o instanceof Number) {
+        return false;
+      }
+      if (o instanceof String) {
+        return GuavaUtils.tryParseLong((String) o) == null && Doubles.tryParse((String) o) == null;
+      }
+      return true;
     }
 
     @Nullable

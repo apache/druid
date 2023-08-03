@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -46,6 +45,9 @@ import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
+import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -66,7 +68,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -101,7 +102,7 @@ public class RunRulesTest
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules();
+    ruleRunner = new RunRules(Set::size);
     loadQueueManager = new SegmentLoadQueueManager(null, segmentsMetadataManager, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
@@ -508,20 +509,22 @@ public class RunRulesTest
         .add(createServerHolder("serverNorm", "normal", mockPeon))
         .build();
 
-    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster).build();
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
+        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
 
     runDutyAndGetStats(params);
 
-    final List<Event> events = emitter.getEvents();
+    final List<AlertEvent> events = emitter.getAlerts();
     Assert.assertEquals(1, events.size());
 
-    AlertEvent alertEvent = (AlertEvent) events.get(0);
+    AlertEvent alertEvent = events.get(0);
     EventMap eventMap = alertEvent.toMap();
-    Assert.assertEquals("Unable to find matching rules!", eventMap.get("description"));
-
-    Map<String, Object> dataMap = alertEvent.getDataMap();
-    Assert.assertEquals(usedSegments.size(), dataMap.get("segmentsWithMissingRulesCount"));
-
+    Assert.assertEquals(
+        "No matching retention rule for [24] segments in datasource[test]",
+        eventMap.get("description")
+    );
     EasyMock.verify(mockPeon);
   }
 
@@ -1260,6 +1263,39 @@ public class RunRulesTest
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
+  }
+
+  @Test
+  public void testSegmentWithZeroRequiredReplicasHasZeroReplicationFactor()
+  {
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(Collections.emptyMap(), false)
+        )
+    ).anyTimes();
+    EasyMock.replay(databaseRuleManager);
+
+    final DruidCluster cluster = DruidCluster
+        .builder()
+        .add(createServerHolder("server", "normal", new TestLoadQueuePeon()))
+        .build();
+
+    final DataSegment segment = usedSegments.get(0);
+    DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(cluster, segment)
+        .withBalancerStrategy(new RandomBalancerStrategy())
+        .withSegmentAssignerUsing(loadQueueManager)
+        .build();
+    params = ruleRunner.run(params);
+
+    Assert.assertNotNull(params);
+    SegmentReplicationStatus replicationStatus = params.getSegmentReplicationStatus();
+    Assert.assertNotNull(replicationStatus);
+
+    SegmentReplicaCount replicaCounts = replicationStatus.getReplicaCountsInCluster(segment.getId());
+    Assert.assertNotNull(replicaCounts);
+    Assert.assertEquals(0, replicaCounts.required());
+    Assert.assertEquals(0, replicaCounts.totalLoaded());
+    Assert.assertEquals(0, replicaCounts.requiredAndLoadable());
   }
 
   private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)

@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.4.0</apache.curator.version>
-        <apache.kafka.version>3.4.0</apache.kafka.version>
+        <apache.kafka.version>3.5.1</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.9</scala.library.version>
@@ -788,7 +788,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.1</version>
+                <version>1.1.10.3</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1299,7 +1299,8 @@
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
 
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
-                  </excludes>
+                        <exclude>com/fasterxml/jackson/databind/*</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -1329,6 +1330,9 @@
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
+                    <excludes>
+                        *com/fasterxml/jackson/databind/*
+                    </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
