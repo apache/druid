@@ -101,7 +101,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 X-Druid-Author: doc intern
 X-Druid-Comment: submitted via api
 Content-Type: application/json
-Content-Length: 192
+Content-Length: 273
 
 [
     {
@@ -110,7 +110,7 @@ Content-Length: 192
     {
         "type": "loadForever",
         "tieredReplicants": {
-            "_default_tier": 2
+            "_default_tier": 1
         },
         "useDefaultTierForNull": true
     },
@@ -164,7 +164,7 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 ### Sample request
 
-The following example updates the default retention rule for all datasources with two new rules, `dropByPeriod` and `broadcastByPeriod`.
+The following example updates the default retention rule for all datasources with a `loadByInterval` rule.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -175,14 +175,12 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
 --header 'Content-Type: application/json' \
 --data '[
     {
-        "type": "dropByPeriod",
-        "period": "P1M",
-        "includeFuture": true
-    },
-    {
-        "type": "broadcastByPeriod",
-        "period": "P1M",
-        "includeFuture": true
+        "type": "loadByInterval",
+        "tieredReplicants": {
+            "_default_tier": 2
+        },
+        "useDefaultTierForNull": false,
+        "interval": "2010-01-01/2020-01-01"
     }
 ]'
 ```
@@ -193,18 +191,16 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
 POST /druid/coordinator/v1/rules/_default HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
-Content-Length: 207
+Content-Length: 205
 
 [
     {
-        "type": "dropByPeriod",
-        "period": "P1M",
-        "includeFuture": true
-    },
-    {
-        "type": "broadcastByPeriod",
-        "period": "P1M",
-        "includeFuture": true
+        "type": "loadByInterval",
+        "tieredReplicants": {
+            "_default_tier": 2
+        },
+        "useDefaultTierForNull": false,
+        "interval": "2010-01-01/2020-01-01"
     }
 ]
 ```
