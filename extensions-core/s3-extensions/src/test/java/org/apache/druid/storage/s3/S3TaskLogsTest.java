@@ -492,11 +492,13 @@ public class S3TaskLogsTest extends EasyMockSupport
   public void test_retryStatusFetch_whenExceptionThrown() throws IOException
   {
     EasyMock.reset(s3Client);
+    // throw exception on first call
     AmazonS3Exception awsError = new AmazonS3Exception("AWS Error");
     awsError.setErrorCode("503");
     awsError.setStatusCode(503);
     EasyMock.expect(s3Client.getObjectMetadata(EasyMock.anyString(), EasyMock.anyString())).andThrow(awsError);
     EasyMock.expectLastCall().once();
+
     String logPath = TEST_PREFIX + "/" + KEY_1 + "/status.json";
     ObjectMetadata objectMetadata = new ObjectMetadata();
     objectMetadata.setContentLength(STATUS_CONTENTS.length());
@@ -508,6 +510,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
     EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
     EasyMock.expectLastCall().once();
+
     replayAll();
 
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
