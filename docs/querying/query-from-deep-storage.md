@@ -89,8 +89,8 @@ Generally, the request body fields are the same between the `sql` and `sql/state
 
 There are additional context parameters for `sql/statements` specifically: 
 
-   - `executionMode`  determines how query results are fetched. The currently supported mode is `ASYNC`. 
-   - `selectDestination` set to `DURABLESTORAGE` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
+   - `executionMode`  (required) determines how query results are fetched. Set this to `ASYNC`. 
+   - `selectDestination` (optional) set to `durableStorage` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 The following sample query includes the two additional context parameters that querying from deep storage supports:
 
@@ -101,7 +101,7 @@ curl --location 'http://localhost:8888/druid/v2/sql/statements' \
     "query":"SELECT * FROM \"YOUR_DATASOURCE\" where \"__time\" >TIMESTAMP'\''2017-09-01'\'' and \"__time\" <= TIMESTAMP'\''2017-09-02'\''",
     "context":{
         "executionMode":"ASYNC",
-        "selectDestination": "DURABLE_STORAGE"
+        "selectDestination": "durableStorage"
 
     }  
 }'

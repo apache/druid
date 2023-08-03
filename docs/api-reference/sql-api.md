@@ -218,9 +218,9 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 - There are additional context parameters  for `sql/statements`: 
 
    - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. You must manually retrieve your results after the query completes.
-   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `DURABLESTORAGE` Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets.. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
+   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
-- The only supported value for `resultFormat` is JSON.
+- The only supported value for `resultFormat` is JSON LINES.
 
 #### Responses
 
@@ -407,11 +407,11 @@ Content-Length: 134
 
 Retrieves information about the query associated with the given query ID. The response matches the response from the POST API if the query is accepted or running and the execution mode is  `ASYNC`. In addition to the fields that this endpoint shares with `POST /sql/statements`, a completed query's status includes the following:
 
-- A `result` object that summarizes information about your results, such as the total number of rows and a sample record
+- A `result` object that summarizes information about your results, such as the total number of rows and sample records.
 - A `pages` object that includes the following information for each page of results:
-  -  `numRows`: the number of rows in that page of results
-  - `sizeInBytes`: the size of the page
-  - `id`: the page number that you can use to reference a specific page when you get query results
+  -  `numRows`: the number of rows in that page of results.
+  - `sizeInBytes`: the size of the page.
+  - `id`: the page number that you can use to reference a specific page when you get query results.
 
 #### URL
 
@@ -953,9 +953,9 @@ Cancels a running or accepted query.
 
 <!--202 ACCEPTED-->
 
-*Successfully cancelled query* 
+*Successfully accepted query for cancellation* 
 
-<!--500 SERVER ERROR-->
+<!--404 SERVER ERROR-->
 
 *Invalid query ID. Returns a JSON object detailing the error with the following format:* 
 
