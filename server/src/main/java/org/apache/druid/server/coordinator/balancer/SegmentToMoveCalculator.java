@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -26,7 +27,6 @@ import org.apache.druid.server.coordinator.SegmentCountsPerInterval;
 import org.apache.druid.server.coordinator.ServerHolder;
 
 import java.util.List;
-import java.util.function.IntUnaryOperator;
 
 /**
  * Calculates the maximum, minimum and required number of segments to move in a
@@ -92,7 +92,9 @@ public class SegmentToMoveCalculator
   {
     // Divide by 2^14 and multiply by 100 so that the value increases
     // in steps of 100 for every 2^14 = ~16k segments
-    return Math.max(MIN_SEGMENTS_TO_MOVE, (totalSegmentsInTier >> 14) * 100);
+    int upperBound = (totalSegmentsInTier >> 14) * 100;
+    int lowerBound = Math.min(MIN_SEGMENTS_TO_MOVE, totalSegmentsInTier);
+    return Math.max(lowerBound, upperBound);
   }
 
   /**
@@ -124,39 +126,27 @@ public class SegmentToMoveCalculator
       int numBalancerThreads
   )
   {
-    // Each thread can do ~2B computations in one cycle = 2M * 1k = 2^21 * 1k
-    final IntUnaryOperator totalComputationsOnThreads = threads -> threads << 21;
-
-    // Integer overflows here only if numThreads > 1000, but handle it all the same
-    final int computationsInThousands = Math.max(
-        totalComputationsOnThreads.applyAsInt(1),
-        totalComputationsOnThreads.applyAsInt(numBalancerThreads)
+    Preconditions.checkArgument(
+        numBalancerThreads > 0 && numBalancerThreads <= 100,
+        "Number of balancer threads must be in range (0, 100]."
     );
-
-    // Perform an approx bit-wise division so that maxSegmentsToMove increases
-    // only in steps and the values are nice whole numbers
-    int divisor = totalSegments;
-    int quotient = computationsInThousands;
-    while (divisor > 1) {
-      divisor = divisor >> 1;
-      quotient = quotient >> 1;
+    if (totalSegments <= 0) {
+      return 0;
     }
-
-    // maxSegmentsToMove(in k) = computations(in k) / totalSegments
-    final int maxSegmentsToMove = quotient * 1000;
-
-    // Define the bounds for maxSegmentsToMove
-    final int lowerBound = MIN_SEGMENTS_TO_MOVE;
 
     // Divide by 2^9 and multiply by 100 so that the upperBound
     // increases in steps of 100 for every 2^9 = 512 segments (~20%)
     final int upperBound = (totalSegments >> 9) * 100;
+    final int lowerBound = MIN_SEGMENTS_TO_MOVE;
 
-    // Integer overflow is unlikely here but handle it all the same
-    if (maxSegmentsToMove < 0 || maxSegmentsToMove > upperBound) {
-      return Math.max(lowerBound, upperBound);
+    // Each thread can do ~2B computations in one cycle = 2M * 1k = 2^21 * 1k
+    int maxComputationsInThousands = numBalancerThreads << 21;
+    int maxSegmentsToMove = (maxComputationsInThousands / totalSegments) * 1000;
+
+    if (upperBound < lowerBound) {
+      return Math.min(lowerBound, totalSegments);
     } else {
-      return Math.max(lowerBound, maxSegmentsToMove);
+      return Math.min(maxSegmentsToMove, upperBound);
     }
   }
 
