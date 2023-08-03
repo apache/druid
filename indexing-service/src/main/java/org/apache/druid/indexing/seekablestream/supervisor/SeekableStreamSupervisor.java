@@ -1413,34 +1413,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   @VisibleForTesting
   public void addTaskGroupToActivelyReadingTaskGroup(
-          int taskGroupId,
-          ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
-          Optional<DateTime> minMsgTime,
-          Optional<DateTime> maxMsgTime,
-          Set<String> tasks,
-          Set<PartitionIdType> exclusiveStartingSequencePartitions
-  )
-  {
-    addTaskGroupToActivelyReadingTaskGroup(
-            taskGroupId,
-            partitionOffsets,
-            minMsgTime,
-            maxMsgTime,
-            tasks,
-            exclusiveStartingSequencePartitions,
-            null
-    );
-  }
-
-  @VisibleForTesting
-  public void addTaskGroupToActivelyReadingTaskGroup(
       int taskGroupId,
       ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
       Optional<DateTime> minMsgTime,
       Optional<DateTime> maxMsgTime,
       Set<String> tasks,
-      Set<PartitionIdType> exclusiveStartingSequencePartitions,
-      @Nullable DateTime taskStartTime
+      Set<PartitionIdType> exclusiveStartingSequencePartitions
   )
   {
     TaskGroup group = new TaskGroup(
@@ -1452,13 +1430,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         exclusiveStartingSequencePartitions
     );
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
-    if (taskStartTime != null) {
-      int i =0;
-      for (TaskData td : group.tasks.values()) {
-        td.startTime = taskStartTime.minusSeconds(i);
-        i++;
-      }
-    }
     if (activelyReadingTaskGroups.putIfAbsent(taskGroupId, group) != null) {
       throw new ISE(
           "trying to add taskGroup with id [%s] to actively reading task groups, but group already exists.",
