@@ -22,6 +22,23 @@ import * as JSONBig from 'json-bigint-native';
 
 import { stringifyValue } from './general';
 
+export function downloadUrl(url: string, filename: string) {
+  // Create a link and set the URL using `createObjectURL`
+  const link = document.createElement('a');
+  link.style.display = 'none';
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+
+  // To make this work on Firefox we need to wait
+  // a little while before removing it.
+  setTimeout(() => {
+    if (!link.parentNode) return;
+    link.parentNode.removeChild(link);
+  }, 0);
+}
+
 export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
   // stringify and remove line break
   const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');

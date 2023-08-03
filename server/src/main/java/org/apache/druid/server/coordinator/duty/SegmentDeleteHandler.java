@@ -17,13 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.indexing.common.IndexTaskClient;
-import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.joda.time.Duration;
+import org.apache.druid.timeline.SegmentId;
 
-public interface IndexTaskClientFactory<T extends IndexTaskClient>
+import java.util.Set;
+
+public interface SegmentDeleteHandler
 {
-  T build(TaskInfoProvider taskInfoProvider, String callerId, int numThreads, Duration httpTimeout, long numRetries);
+
+  int markSegmentsAsUnused(Set<SegmentId> segmentIds);
+
 }

@@ -27,7 +27,6 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -59,9 +58,6 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     params.getDruidCluster().getHistoricals()
           .forEach(this::logHistoricalTierStats);
     collectSegmentStats(params);
-
-    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
-    segmentAssigner.makeAlerts();
 
     return params;
   }

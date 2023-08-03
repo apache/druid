@@ -26,7 +26,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
@@ -79,7 +79,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     // available size of 100
@@ -90,7 +90,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     // available size of 10
@@ -101,7 +101,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     // available size of 50
@@ -112,7 +112,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     Assert.assertEquals(0, h1.compareTo(h2));
@@ -130,7 +130,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     final ServerHolder h2 = new ServerHolder(
@@ -140,7 +140,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     final ServerHolder h3 = new ServerHolder(
@@ -150,7 +150,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     final ServerHolder h4 = new ServerHolder(
@@ -160,7 +160,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     final ServerHolder h5 = new ServerHolder(
@@ -170,7 +170,7 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     Assert.assertEquals(h1, h2);
@@ -189,11 +189,12 @@ public class ServerHolderTest
             ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
             1
         ),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
     Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0)));
     Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1)));
     Assert.assertTrue(h1.hasSegmentLoaded(SEGMENTS.get(0).getId()));
     Assert.assertFalse(h1.hasSegmentLoaded(SEGMENTS.get(1).getId()));
+    Assert.assertFalse(h1.isLoadQueueFull());
   }
 }

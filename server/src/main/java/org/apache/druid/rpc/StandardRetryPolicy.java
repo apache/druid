@@ -37,7 +37,15 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   private static final long DEFAULT_MIN_WAIT_MS = 100;
   private static final long DEFAULT_MAX_WAIT_MS = 30_000;
 
+  /**
+   * Number of attempts that leads to about an hour of total waiting, assuming wait time is determined
+   * by the function in {@link ServiceClientImpl#computeBackoffMs(ServiceRetryPolicy, long)}.
+   */
+  private static final int MAX_ATTEMPTS_ABOUT_AN_HOUR = 125;
+
   private static final StandardRetryPolicy DEFAULT_UNLIMITED_POLICY = new Builder().maxAttempts(UNLIMITED).build();
+  private static final StandardRetryPolicy DEFAULT_ABOUT_AN_HOUR_POLICY =
+      new Builder().maxAttempts(MAX_ATTEMPTS_ABOUT_AN_HOUR).build();
   private static final StandardRetryPolicy DEFAULT_NO_RETRIES_POLICY = new Builder().maxAttempts(1).build();
 
   private final long maxAttempts;
@@ -62,11 +70,27 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
     return new Builder();
   }
 
+  /**
+   * Standard unlimited retry policy. Never stops retrying as long as errors remain retryable.
+   * See {@link ServiceClient} documentation for details on what errors are retryable.
+   */
   public static StandardRetryPolicy unlimited()
   {
     return DEFAULT_UNLIMITED_POLICY;
   }
 
+  /**
+   * Retry policy that uses up to about an hour of total wait time. Note that this is just the total waiting time
+   * between attempts. It does not include the time that each attempt takes to execute.
+   */
+  public static StandardRetryPolicy aboutAnHour()
+  {
+    return DEFAULT_ABOUT_AN_HOUR_POLICY;
+  }
+
+  /**
+   * Retry policy that never retries.
+   */
   public static StandardRetryPolicy noRetries()
   {
     return DEFAULT_NO_RETRIES_POLICY;

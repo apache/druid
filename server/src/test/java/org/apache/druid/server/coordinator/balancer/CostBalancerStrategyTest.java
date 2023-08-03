@@ -29,7 +29,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -283,7 +283,7 @@ public class CostBalancerStrategyTest
 
     // Create ServerHolder for each server
     final List<ServerHolder> serverHolders = historicals.stream().map(
-        server -> new ServerHolder(server.toImmutableDruidServer(), new LoadQueuePeonTester())
+        server -> new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon())
     ).collect(Collectors.toList());
 
     final ServerHolder serverA = serverHolders.get(0);
@@ -321,11 +321,11 @@ public class CostBalancerStrategyTest
   {
     final ServerHolder serverA = new ServerHolder(
         createHistorical().toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
     final ServerHolder serverB = new ServerHolder(
         createHistorical().toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     final DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI).eachOfSizeInMb(100).get(0);
@@ -356,7 +356,7 @@ public class CostBalancerStrategyTest
                                             .startingAt("2012-10-24")
                                             .eachOfSizeInMb(100).get(0);
 
-    final LoadQueuePeonTester peon = new LoadQueuePeonTester();
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
     ServerHolder serverA = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
     ServerHolder serverB = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
 

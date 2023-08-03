@@ -494,8 +494,6 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         return NullHandling.defaultFloatValue();
       case DOUBLE:
         return NullHandling.defaultDoubleValue();
-      case ARRAY:
-        return Collections.emptyList();
       default:
         return null;
     }

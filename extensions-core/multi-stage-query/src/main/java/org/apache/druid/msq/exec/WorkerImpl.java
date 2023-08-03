@@ -132,6 +132,7 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
@@ -850,7 +851,17 @@ public class WorkerImpl implements Worker
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
     if (controllerAlive && !snapshotsTree.isEmpty()) {
-      controllerClient.postCounters(id(), snapshotsTree);
+      try {
+        controllerClient.postCounters(id(), snapshotsTree);
+      }
+      catch (IOException e) {
+        if (e.getCause() instanceof ServiceClosedException) {
+          // Suppress. This can happen if the controller goes away while a postCounters call is in flight.
+          log.debug(e, "Ignoring failure on postCounters, because controller has gone away.");
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
