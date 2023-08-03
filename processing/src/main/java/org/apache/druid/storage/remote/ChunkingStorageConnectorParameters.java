@@ -242,6 +242,7 @@ public class ChunkingStorageConnectorParameters<T>
     {
       Preconditions.checkArgument(start >= 0, "'start' not provided or an incorrect value [%s] passed", start);
       Preconditions.checkArgument(end >= 0, "'end' not provided or an incorrect value [%s] passed", end);
+      Preconditions.checkArgument(start <= end, "'start' should not be greater than 'end'");
       Preconditions.checkArgument(maxRetry >= 0, "'maxRetry' not provided or an incorrect value [%s] passed", maxRetry);
       return new ChunkingStorageConnectorParameters(
           start,

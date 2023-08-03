@@ -50,11 +50,6 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
   private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 100_000_000;
 
-  public ChunkingStorageConnector()
-  {
-
-  }
-
   @Override
   public InputStream read(String path) throws IOException
   {

@@ -22,6 +22,7 @@ package org.apache.druid.storage.azure.output;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,7 +55,9 @@ public class AzureOutputConfigTest
   public void testTempDirectoryNotWritable() throws IOException
   {
     File tempDir = temporaryFolder.newFolder();
-    tempDir.setWritable(false);
+    if (!tempDir.setWritable(false)) {
+      throw new ISE("Unable to change the permission of temp folder for %s", this.getClass().getName());
+    }
     Assert.assertThrows(
         DruidException.class,
         () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT)

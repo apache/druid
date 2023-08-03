@@ -26,9 +26,7 @@ import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,10 +35,6 @@ public class AzureOutputSerdeTest
 {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
 
   @Test
   public void sanity() throws IOException

@@ -19,7 +19,10 @@
 
 package org.apache.druid.storage.azure.output;
 
+import com.google.api.client.util.Lists;
+import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.easymock.Capture;
@@ -31,7 +34,11 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 
 public class AzureStorageConnectorTest
 {
@@ -71,20 +78,6 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testPathExistsErrors() throws URISyntaxException, StorageException, IOException
-  {
-    final Capture<String> bucket = Capture.newInstance();
-    final Capture<String> path = Capture.newInstance();
-    EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path))).andReturn(true);
-    EasyMock.replay(azureStorage);
-    Assert.assertTrue(storageConnector.pathExists(TEST_FILE));
-    Assert.assertEquals(CONTAINER, bucket.getValue());
-    Assert.assertEquals(PREFIX + "/" + TEST_FILE, path.getValue());
-    EasyMock.verify(azureStorage);
-  }
-
-  @Test
   public void testPathExistsNotFound() throws URISyntaxException, StorageException, IOException
   {
     final Capture<String> bucket = Capture.newInstance();
@@ -99,23 +92,103 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testRead() {}
-
-  @Test
-  public void testReadRange() {}
-
-  @Test
-  public void testDeleteSinglePath() {}
-
-  @Test
-  public void testDeleteMultiplePaths() {}
-
-  @Test
-  public void testDeleteRecursive()
+  public void testRead() throws URISyntaxException, StorageException, IOException
   {
+    EasyMock.reset(azureStorage);
 
+    String data = "test";
+    EasyMock.expect(azureStorage.getBlobLength(EasyMock.anyString(), EasyMock.anyString()))
+            .andReturn(4L);
+    EasyMock.expect(
+        azureStorage.getBlobInputStream(
+            EasyMock.anyLong(),
+            EasyMock.anyLong(),
+            EasyMock.anyString(),
+            EasyMock.anyString()
+        )
+    ).andReturn(IOUtils.toInputStream(data, StandardCharsets.UTF_8));
+
+    EasyMock.replay(azureStorage);
+    InputStream is = storageConnector.read(TEST_FILE);
+    byte[] dataBytes = new byte[data.length()];
+    Assert.assertEquals(data.length(), is.read(dataBytes));
+    Assert.assertEquals(-1, is.read());
+    Assert.assertEquals(data, new String(dataBytes, StandardCharsets.UTF_8));
+
+    EasyMock.reset(azureStorage);
   }
 
   @Test
-  public void testListDir() {}
+  public void testReadRange() throws URISyntaxException, StorageException, IOException
+  {
+    String data = "test";
+
+    for (int start = 0; start < data.length(); ++start) {
+      for (long length = 1; length <= data.length() - start; ++length) {
+        String dataQueried = data.substring(start, start + ((Long) length).intValue());
+        EasyMock.reset(azureStorage);
+        EasyMock.expect(azureStorage.getBlobInputStream(
+                    EasyMock.anyLong(),
+                    EasyMock.anyLong(),
+                    EasyMock.anyString(),
+                    EasyMock.anyString()
+                ))
+                .andReturn(IOUtils.toInputStream(dataQueried, StandardCharsets.UTF_8));
+        EasyMock.replay(azureStorage);
+
+        InputStream is = storageConnector.readRange(TEST_FILE, start, length);
+        byte[] dataBytes = new byte[((Long) length).intValue()];
+        Assert.assertEquals(length, is.read(dataBytes));
+        Assert.assertEquals(-1, is.read());
+        Assert.assertEquals(dataQueried, new String(dataBytes, StandardCharsets.UTF_8));
+        EasyMock.reset(azureStorage);
+      }
+    }
+  }
+
+  @Test
+  public void testDeleteSinglePath() throws URISyntaxException, StorageException, IOException
+  {
+    EasyMock.reset(azureStorage);
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.replay(azureStorage);
+    storageConnector.deleteFile(TEST_FILE);
+    Assert.assertEquals(CONTAINER, containerCapture.getValue());
+    Assert.assertEquals(Collections.singletonList(PREFIX + "/" + TEST_FILE), pathsCapture.getValue());
+    EasyMock.reset(azureStorage);
+  }
+
+  @Test
+  public void testDeleteMultiplePaths() throws URISyntaxException, StorageException, IOException
+  {
+    EasyMock.reset(azureStorage);
+    Capture<String> containerCapture = EasyMock.newCapture();
+    Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
+    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    EasyMock.replay(azureStorage);
+    storageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.part"));
+    Assert.assertEquals(CONTAINER, containerCapture.getValue());
+    Assert.assertEquals(
+        ImmutableList.of(
+            PREFIX + "/" + TEST_FILE + "_1.part",
+            PREFIX + "/" + TEST_FILE + "_2.part"
+        ),
+        Lists.newArrayList(pathsCapture.getValue())
+    );
+    EasyMock.reset(azureStorage);
+  }
+
+  @Test
+  public void testListDir() throws URISyntaxException, StorageException, IOException
+  {
+    EasyMock.reset(azureStorage);
+    EasyMock.expect(azureStorage.listDir(EasyMock.anyString(), EasyMock.anyString()))
+            .andReturn(ImmutableList.of(PREFIX + "/x/y/z/" + TEST_FILE, PREFIX + "/p/q/r/" + TEST_FILE));
+    EasyMock.replay(azureStorage);
+    List<String> ret = Lists.newArrayList(storageConnector.listDir(""));
+    Assert.assertEquals(ImmutableList.of("x/y/z/" + TEST_FILE, "p/q/r/" + TEST_FILE), ret);
+    EasyMock.reset(azureStorage);
+  }
 }

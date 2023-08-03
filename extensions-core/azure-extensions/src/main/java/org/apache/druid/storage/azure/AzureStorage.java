@@ -162,7 +162,7 @@ public class AzureStorage
     CloudBlobContainer cloudBlobContainer = getOrCreateCloudBlobContainer(containerName);
     BlobDeleteBatchOperation blobDeleteBatchOperation = new BlobDeleteBatchOperation();
     for (String path : paths) {
-      CloudBlob blobReference = getOrCreateCloudBlobContainer(containerName).getBlockBlobReference(path);
+      CloudBlob blobReference = cloudBlobContainer.getBlockBlobReference(path);
       blobDeleteBatchOperation.addSubOperation(blobReference);
     }
     cloudBlobClient.get().executeBatch(blobDeleteBatchOperation);
