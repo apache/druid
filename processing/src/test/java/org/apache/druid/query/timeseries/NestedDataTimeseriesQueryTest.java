@@ -288,6 +288,55 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testFilterLongArrayElementFilters()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test_datasource")
+                                  .intervals(Collections.singletonList(Intervals.ETERNITY))
+                                  .filters(
+                                      new AndDimFilter(
+                                          NullFilter.forColumn("v0"),
+                                          NullFilter.forColumn("v1"),
+                                          NullFilter.forColumn("v2")
+                                      )
+                                  )
+                                  .virtualColumns(
+                                      new NestedFieldVirtualColumn(
+                                          "arrayLongNulls",
+                                          "$[1]",
+                                          "v0",
+                                          ColumnType.STRING
+                                      ),
+                                      new NestedFieldVirtualColumn(
+                                          "arrayLongNulls",
+                                          "$[1]",
+                                          "v1",
+                                          ColumnType.LONG
+                                      ),
+                                      new NestedFieldVirtualColumn(
+                                          "arrayStringNulls",
+                                          "$[1]",
+                                          "v2",
+                                          ColumnType.LONG
+                                      )
+                                  )
+                                  .aggregators(new CountAggregatorFactory("count"))
+                                  .context(getContext())
+                                  .build();
+    runResults(
+        query,
+        ImmutableList.of(
+            new Result<>(
+                DateTimes.of("2023-01-01T00:00:00.000Z"),
+                new TimeseriesResultValue(
+                    ImmutableMap.of("count", 8L)
+                )
+            )
+        )
+    );
+  }
+
+  @Test
   public void testFilterVariantAsString()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
