@@ -91,8 +91,7 @@ public class MetadataResourceTest
         segmentsMetadataManager,
         Mockito.mock(IndexerMetadataStorageCoordinator.class),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        coordinator,
-        new ObjectMapper()
+        coordinator
     );
   }
 
