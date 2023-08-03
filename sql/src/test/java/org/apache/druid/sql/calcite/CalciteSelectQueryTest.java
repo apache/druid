@@ -1975,7 +1975,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                // GroupByQuery.builder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
