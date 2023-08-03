@@ -27,6 +27,7 @@ volumes:
   coordinator_var: {}
   router_var: {}
   druid_shared: {}
+  datagen_data: {}
 
 
 services:
@@ -173,3 +174,12 @@ services:
       - "${JUPYTER_PORT:-8889}:8888"
     volumes:
       - ../notebooks:/home/jovyan/notebooks
+
+  datagen:
+    image: imply/datagen:latest
+    container_name: datagen
+    profiles: ["jupyter", "kafka-jupyter", "druid-jupyter", "all-services"]
+    ports:
+      - "${DATAGEN_PORT:-9999}:9999"
+    volumes:
+      - datagen_data:/files
