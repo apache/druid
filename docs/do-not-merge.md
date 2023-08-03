@@ -29,6 +29,18 @@ Review the upgrade notes and incompatible changes before you upgrade to Druid 27
 
 <!-- HIGHLIGHTS H2. FOR EACH MAJOR FEATURE FOR THE RELEASE -->
 
+## New Explore view in the web console (experimental)
+
+The Explore view is a simple, stateless, SQL backed, data exploration view to the web console. It lets users explore data in Druid with point-and-click interaction and visualizations (instead of writing SQL and looking at a table). This can provide faster time-to-value for a user new to Druid and can allow a Druid veteran to quickly chart some data that they care about.
+
+![Alt text](image-4.png)
+
+The **Explore** view is accessible from the **More (...)** menu in the header:
+
+![Alt text](image-5.png)
+
+[#14540](https://github.com/pull/14540)
+
 ## Query from deep storage (experimental)
 
 Druid now supports querying segments that are stored only in deep storage. When you query from deep storage, you can query larger  data available for queries without necessarily having to scale your Historical processes to accommodate more data. To take advantage of the potential storage savings, make sure you configure your load rules to not load all your segments onto Historical processes. 
@@ -60,11 +72,12 @@ For more information about this feature, see the following:
 
 ## Smart segment loading
 
-The Coordinator is now more stable and user-friendly and has the following behavior updates:
+The Coordinator is now much more stable and user-friendly. In the new smartSegmentLoading mode, it dynamically computes values for several configs which maximize performance.
 
-- New segments that are underreplicated are now prioritized when you use the new `smartSegmentLoading` mode, which is enabled by default. Previously, it prioritized segments equally.
-- Items in segment load queues can be prioritized or canceled, improving reaction time for changes in the cluster and segment assignment decisions.
-- Leadership changes have less impact now, and the Coordinator doesn't get stuck even if re-election happens while a Coordinator run is in progress.
+The Coordinator can now prioritize load of more recent segments and segments that are completely unavailable over load of segments that already have some replicas loaded in the cluster. It can also re-evaluate decisions taken in previous runs and cancel operations that are not needed anymore. Moreoever, move operations started by segment balancing do not compete with the load of unavailable segments thus reducing the reaction time for changes in the cluster and speeding up segment assignment decisions.
+
+
+Additionally, leadership changes have less impact now, and the Coordinator doesn't get stuck even if re-election happens while a Coordinator run is in progress.
 
 Lastly, the `cost` balancer strategy performs much better now and is capable of moving more segments in a single Coordinator run. These improvements were made by borrowing ideas from the `cachingCost` strategy.
 
@@ -317,19 +330,43 @@ New metrics are available to monitor the sync status of `HttpServerInventoryView
 
 ## Web console
 
-### Supervisors and Tasks
+### Console now uses the new statements API for all MSQ interaction
 
-Replaced the **Ingestion** view with two views: **Supervisors** and **Tasks**.
+The console uses the new `async` statements API for all **sql-msq-task** engine queries.
+While this has relatively few impacts on the UX of the query view, you are invited to peek under the hood and check out the new network requests being sent as working examples of the new API.
 
-[#14395](https://github.com/apache/druid/pull/14395)
+You can now specify `durableStorage` as the result destination for SELECT queries (when durable storage is configured):
 
-### Added replication factor column
+![Choose to write the results for SELECT queries to durable storage](image.png)
 
-Added a new virtual column `replication_factor` to the `sys.segments` table. This returns the total number of replicants of the segment across all tiers. The column is set to -1 if the information is not available.
 
-[#14403](https://github.com/apache/druid/pull/14403)
+After running a SELECT query that wrote its results to `durableStorage`, download the full, unlimited result set directly from the Broker:
+
+![](image-1.png)
+
+[#14540](https://github.com/apache/druid/pull/14540) [#14669](https://github.com/apache/druid/pull/14669) [#14712](https://github.com/apache/druid/pull/14712)
+
+### Added UI around data source with zero replica segments
+
+This release of Druid supports having datasources with segments that are not replicated on any Historicals. These datasources appear in the console like so: 
+
+![](image-2.png)
+
+[#14540](https://github.com//pull/14540)
+
+### Added a dialog for viewing and setting the dynamic compaction config
+
+There's now a dialog for managing your dynamic compaction config:
+
+![Alt text](image-3.png)
 
 ### Other web console improvements
+
+* Replaced the **Ingestion** view with two views: **Supervisors** and **Tasks**. [#14395](https://github.com/apache/druid/pull/14395)
+* Added a new virtual column `replication_factor` to the `sys.segments` table. This returns the total number of replicants of the segment across all tiers. The column is set to -1 if the information is not available. [#14403](https://github.com/apache/druid/pull/14403)
+* Added stateful filter URLs for all views. [#14395](https://github.com/apache/druid/pull/14395)
+
+
 
 ## Extensions
 
@@ -345,10 +382,15 @@ druid.emitter.kafka.segmentMetadata.topic=foo
 
 [#14281](https://github.com/apache/druid/pull/14281)
 
-### CONTRIBUTOR EXTENSIONS
+### Contributor extensions
 
-TBD
+#### Apache® Iceberg integration
 
+You can now ingest data stored in Iceberg and query that data directly by [querying from deep storage](#query-from-deep-storage-experimental). Support for Iceberg is available through the new community extension. 
+
+For more information, see [Iceberg extension](https://druid.apache.org/docs/latest/development/extensions-contrib/ice-berg.html)
+
+[#14329](https://github.com/apache/druid/pull/14329)
 
 ## Dependency updates
 
@@ -413,7 +455,7 @@ The `cachingCost` strategy has been deprecated and will be removed in future rel
 
 ### Segment loading config changes
 
-The following segment related configs are now deprecated and will be removed in future releses: 
+The following segment related configs are now deprecated and will be removed in future releases: 
 
 * `maxSegmentsInNodeLoadingQueue`
 * `maxSegmentsToMove`
