@@ -1924,13 +1924,45 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
   @Test
   public void testOrderThenLimitThenFilter1()
   {
     testQuery(
-        "SELECT dim1 FROM "
-            + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
-            + "WHERE dim1 IN ('abc', 'def')",
+        "select count(*) from sys.supervisors",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    new QueryDataSource(
+                        newScanQueryBuilder()
+                            .dataSource(CalciteTests.DATASOURCE1)
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .columns(ImmutableList.of("__time", "dim1"))
+                            .limit(4)
+                            .order(ScanQuery.Order.DESCENDING)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .context(QUERY_CONTEXT_DEFAULT)
+                            .build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("dim1"))
+                .filters(in("dim1", Arrays.asList("abc", "def"), null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(
+            new Object[] { "abc" },
+            new Object[] { "def" }));
+  }
+
+  @Test
+  public void testOrderThenLimitThenFilter12()
+  {
+    testQuery(
+        "select count(*) from \n"
+            + "  (select * from \n"
+            + "    (select * from druid.foo where dim1 = 'abc') \n"
+            + "  where m1 > 0) \n"
+            + "where dim1 != 'abc'",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(

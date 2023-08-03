@@ -14180,4 +14180,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testOrderThenLimitThenFilter1()
+  {
+    testQuery(
+        "select count(*) from sys.supervisors",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    new QueryDataSource(
+                        newScanQueryBuilder()
+                            .dataSource(CalciteTests.DATASOURCE1)
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .columns(ImmutableList.of("__time", "dim1"))
+                            .limit(4)
+                            .order(ScanQuery.Order.DESCENDING)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .context(QUERY_CONTEXT_DEFAULT)
+                            .build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("dim1"))
+                .filters(in("dim1", Arrays.asList("abc", "def"), null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(
+            new Object[] { "abc" },
+            new Object[] { "def" }));
+  }
+
 }
