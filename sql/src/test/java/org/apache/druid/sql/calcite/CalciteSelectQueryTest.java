@@ -52,6 +52,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -1928,13 +1929,14 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctNonApproximateEmptySet()
+  @Ignore
+  public void testCountDistinctApproximateEmptySet()
   {
     cannotVectorize();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true)),
         "select count(distinct m1) from druid.foo where m1 < -1.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -1960,4 +1962,71 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[] { 0l }));
   }
+
+  @Test
+  public void testCountDistinctNonApproximateEmptySet()
+  {
+    cannotVectorize();
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) from druid.foo where m1 < -1.0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
+                        .setDimFilter(
+                            range("m1", ColumnType.LONG, null, -1.0, false, true))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .build()
+
+        ),
+        ImmutableList.of(
+            new Object[] { 0l }));
+  }
+
+  @Test
+  public void testCountDistinctNonApproximate6()
+  {
+    cannotVectorize();
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) from druid.foo where m1 < 111.0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
+                        .setDimFilter(
+                            range("m1", ColumnType.LONG, null, 111.0, false, true))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .build()
+
+        ),
+        ImmutableList.of(
+            new Object[] { 6l }));
+  }
 }
+
