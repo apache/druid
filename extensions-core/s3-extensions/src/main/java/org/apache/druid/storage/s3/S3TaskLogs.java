@@ -107,8 +107,10 @@ public class S3TaskLogs implements TaskLogs
       long contentLength = objectMetadata.getContentLength();
       if (offset >= contentLength || offset <= -contentLength) {
         start = 0;
+      } else if (offset >= 0) {
+        start = offset;
       } else {
-        start = offset >= 0 ? offset : contentLength + offset;
+        start = contentLength + offset;
       }
 
       final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
