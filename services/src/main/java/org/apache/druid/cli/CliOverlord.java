@@ -362,7 +362,7 @@ public class CliOverlord extends ServerRunnable
 
               @Provides
               @LazySingleton
-              @Named(ServiceStatusMonitor.TAGS_BINDING)
+              @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
               public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster)
               {
                 return () -> {

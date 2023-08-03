@@ -333,7 +333,7 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
               // Bind HeartbeatSupplier only when the service operates independently of Overlord.
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
-                  .annotatedWith(Names.named(ServiceStatusMonitor.TAGS_BINDING))
+                  .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
                   .toProvider(HeartbeatSupplier.class);
             }
 

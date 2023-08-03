@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -54,7 +53,6 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
@@ -204,12 +202,12 @@ public class CliMiddleManager extends ServerRunnable
 
           @Provides
           @LazySingleton
-          @Named(ServiceStatusMonitor.TAGS_BINDING)
+          @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(WorkerConfig workerConfig, WorkerTaskManager workerTaskManager)
           {
             return () -> ImmutableMap.of(
                 "workerVersion", workerConfig.getVersion(),
-                "workerCapacity", workerConfig.getCapacity(),
+                "workerCategory", workerConfig.getCategory(),
                 "workerEnabled", workerTaskManager.isWorkerEnabled() ? 1 : 0
             );
           }

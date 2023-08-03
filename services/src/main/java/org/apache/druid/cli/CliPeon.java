@@ -36,7 +36,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -268,7 +267,7 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(ServiceStatusMonitor.TAGS_BINDING)
+          @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
             return Suppliers.ofInstance(

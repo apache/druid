@@ -36,9 +36,9 @@ public class ServiceStatusMonitor extends AbstractMonitor
   /**
    * The named binding for tags that should be reported with the `service/heartbeat` metric.
    */
-  public static final String TAGS_BINDING = "heartbeat";
+  public static final String HEARTBEAT_TAGS_BINDING = "heartbeat";
 
-  @Named(TAGS_BINDING)
+  @Named(HEARTBEAT_TAGS_BINDING)
   @Inject(optional = true)
   Supplier<Map<String, Object>> heartbeatTagsSupplier = null;
 
