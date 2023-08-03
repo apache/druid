@@ -1943,20 +1943,15 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                             .order(ScanQuery.Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .context(QUERY_CONTEXT_DEFAULT)
-                            .build()
-                    )
-                )
+                            .build()))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns(ImmutableList.of("dim1"))
                 .filters(in("dim1", Arrays.asList("abc", "def"), null))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
+                .build()),
         ImmutableList.of(
-            new Object[]{"abc"},
-            new Object[]{"def"}
-        )
-    );
+            new Object[] { "abc" },
+            new Object[] { "def" }));
   }
 }
