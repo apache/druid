@@ -22,22 +22,17 @@ package org.apache.druid.query.aggregation.histogram;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.topn.TopNQueryQueryToolChest;
-import org.apache.druid.query.topn.TopNQueryRunnerFactory;
+import org.apache.druid.query.topn.TopNQueryRunnerTest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -47,7 +42,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -67,29 +61,7 @@ public class FixedBucketsHistogramTopNQueryTest extends InitializedNullHandlingT
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
-    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
-        "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(2000)
-    );
-    RESOURCE_CLOSER.register(defaultPool);
-    RESOURCE_CLOSER.register(customPool);
-
-    final TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
-    final FluentQueryRunnerBuilder<Result<TopNResultValue>> bob = FluentQueryRunnerBuilder.newBob(toolchest);
-    return QueryRunnerTestHelper.transformToConstructionFeeder(
-        Iterables.transform(
-            Iterables.concat(
-                QueryRunnerTestHelper.makeQueryRunners(
-                    new TopNQueryRunnerFactory(defaultPool, toolchest, QueryRunnerTestHelper.NOOP_QUERYWATCHER)
-                ),
-                QueryRunnerTestHelper.makeQueryRunners(
-                    new TopNQueryRunnerFactory(customPool, toolchest, QueryRunnerTestHelper.NOOP_QUERYWATCHER)
-                )
-            ),
-            input -> bob.create(input).applyPreMergeDecoration().mergeResults().applyPostMergeDecoration()
-        )
-    );
+    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
   }
 
   private final QueryRunner runner;

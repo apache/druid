@@ -71,7 +71,7 @@ import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -1074,10 +1074,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  private FluentQueryRunnerBuilder.FluentQueryRunner makeTopNQueryRunner()
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private FluentQueryRunner makeTopNQueryRunner()
   {
-    return new FluentQueryRunnerBuilder(new TopNQueryQueryToolChest(new TopNQueryConfig()))
-        .create(getDefaultQueryRunner())
+    return FluentQueryRunner
+        .create(getDefaultQueryRunner(), new TopNQueryQueryToolChest(new TopNQueryConfig()))
         .applyPreMergeDecoration()
         .mergeResults()
         .applyPostMergeDecoration();

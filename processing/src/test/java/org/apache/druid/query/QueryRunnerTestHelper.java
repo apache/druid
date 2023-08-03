@@ -51,7 +51,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -60,13 +59,11 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -76,13 +73,13 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -392,48 +389,63 @@ public class QueryRunnerTestHelper
       QueryRunnerFactory<T, QueryType> factory
   )
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final IncrementalIndex noRollupRtIndex = TestIndex.getNoRollupIncrementalTestIndex();
-    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
-    final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
-    final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
-    final QueryableIndex frontCodedMappedTestIndex = TestIndex.getFrontCodedMMappedTestIndex();
+    BiFunction<String, Segment, QueryRunner<T>> maker = (name, seg) -> makeQueryRunner(factory, seg, name);
+
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, SEGMENT_ID), ("rtIndex")),
-        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, SEGMENT_ID), "noRollupRtIndex"),
-        makeQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, SEGMENT_ID), "mMappedTestIndex"),
-        makeQueryRunner(
-            factory,
-            new QueryableIndexSegment(noRollupMMappedTestIndex, SEGMENT_ID),
-            "noRollupMMappedTestIndex"
+        maker.apply(
+            "rtIndex",
+            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
         ),
-        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID), "mergedRealtimeIndex"),
-        makeQueryRunner(
-            factory,
-            new QueryableIndexSegment(frontCodedMappedTestIndex, SEGMENT_ID),
-            "frontCodedMMappedTestIndex"
+        maker.apply(
+            "noRollupRtIndex",
+            new IncrementalIndexSegment(TestIndex.getNoRollupIncrementalTestIndex(), SEGMENT_ID)
+        ),
+        maker.apply(
+            "mMappedTestIndex",
+            new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID)
+        ),
+        maker.apply(
+            "noRollupMMappedTestIndex",
+            new QueryableIndexSegment(TestIndex.getNoRollupMMappedTestIndex(), SEGMENT_ID)
+        ),
+        maker.apply(
+            "mergedRealtimeIndex",
+            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID)
+        ),
+        maker.apply(
+            "frontCodedMMappedTestIndex",
+            new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
         )
     );
   }
 
-  @SuppressWarnings("unchecked")
-  public static Collection<?> makeUnionQueryRunners(QueryRunnerFactory factory)
+  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunnersToMerge(
+      QueryRunnerFactory<T, QueryType> factory
+  )
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
-    final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
-
-    return Arrays.asList(
-        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, SEGMENT_ID), "rtIndex"),
-        makeUnionQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, SEGMENT_ID), "mMappedTestIndex"),
-        makeUnionQueryRunner(
-            factory,
-            new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID),
-            "mergedRealtimeIndex"
-        )
-    );
+    return mapQueryRunnersToMerge(factory, makeQueryRunners(factory));
   }
 
+  public static <T, QueryType extends Query<T>> ArrayList<QueryRunner<T>> mapQueryRunnersToMerge(
+      QueryRunnerFactory<T, QueryType> factory,
+      List<QueryRunner<T>> runners
+  )
+  {
+    final ArrayList<QueryRunner<T>> retVal = new ArrayList<>(runners.size());
+
+    final QueryToolChest<T, QueryType> toolchest = factory.getToolchest();
+    for (QueryRunner<T> baseRunner : runners) {
+      retVal.add(
+          FluentQueryRunner.create(baseRunner, toolchest)
+                           .applyPreMergeDecoration()
+                           .mergeResults()
+                           .applyPostMergeDecoration()
+                           .setToString(baseRunner.toString())
+      );
+    }
+
+    return retVal;
+  }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
@@ -484,35 +496,6 @@ public class QueryRunnerTestHelper
     };
   }
 
-  public static <T> QueryRunner<T> makeUnionQueryRunner(
-      QueryRunnerFactory<T, Query<T>> factory,
-      Segment adapter,
-      final String runnerName
-  )
-  {
-    BySegmentQueryRunner<T> bySegmentQueryRunner =
-        new BySegmentQueryRunner<>(SEGMENT_ID, adapter.getDataInterval().getStart(), factory.createRunner(adapter));
-    final QueryRunner<T> runner = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
-        .create(new UnionQueryRunner<>(bySegmentQueryRunner))
-        .mergeResults()
-        .applyPostMergeDecoration();
-
-    return new QueryRunner<T>()
-    {
-      @Override
-      public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-      {
-        return runner.run(queryPlus, responseContext);
-      }
-
-      @Override
-      public String toString()
-      {
-        return runnerName;
-      }
-    };
-  }
-
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerWithSegmentMapFn(
       QueryRunnerFactory<T, QueryType> factory,
@@ -529,46 +512,43 @@ public class QueryRunnerTestHelper
     return makeQueryRunner(factory, segmentReference, runnerName);
   }
 
+  @SuppressWarnings({"rawtypes", "unchecked"})
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
       final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    return new FluentQueryRunnerBuilder<T>(toolChest)
+    return FluentQueryRunner
         .create(
-            new QueryRunner<T>()
-            {
-              @Override
-              public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-              {
-                Query<T> query = queryPlus.getQuery();
-                List<TimelineObjectHolder> segments = new ArrayList<>();
-                for (Interval interval : query.getIntervals()) {
-                  segments.addAll(timeline.lookup(interval));
-                }
-                List<Sequence<T>> sequences = new ArrayList<>();
-                for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(
-                    query,
-                    segments
-                )) {
-                  Segment segment = holder.getObject().getChunk(0).getObject();
-                  QueryPlus queryPlusRunning = queryPlus.withQuery(
-                      queryPlus.getQuery().withQuerySegmentSpec(
-                          new SpecificSegmentSpec(
-                              new SegmentDescriptor(
-                                  holder.getInterval(),
-                                  holder.getVersion(),
-                                  0
-                              )
-                          )
-                      )
-                  );
-                  sequences.add(factory.createRunner(segment).run(queryPlusRunning, responseContext));
-                }
-                return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+            (queryPlus, responseContext) -> {
+              Query<T> query = queryPlus.getQuery();
+              List<TimelineObjectHolder> segments = new ArrayList<>();
+              for (Interval interval : query.getIntervals()) {
+                segments.addAll(timeline.lookup(interval));
               }
-            }
+              List<Sequence<T>> sequences = new ArrayList<>();
+              for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(
+                  query,
+                  segments
+              )) {
+                Segment segment = holder.getObject().getChunk(0).getObject();
+                QueryPlus queryPlusRunning = queryPlus.withQuery(
+                    queryPlus.getQuery().withQuerySegmentSpec(
+                        new SpecificSegmentSpec(
+                            new SegmentDescriptor(
+                                holder.getInterval(),
+                                holder.getVersion(),
+                                0
+                            )
+                        )
+                    )
+                );
+                sequences.add(factory.createRunner(segment).run(queryPlusRunning, responseContext));
+              }
+              return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+            },
+            toolChest
         )
         .applyPreMergeDecoration()
         .mergeResults()

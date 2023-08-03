@@ -42,7 +42,6 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -127,14 +126,14 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     RESOURCE_CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{7}")
   public static Iterable<Object[]> constructorFeeder()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
     List<Object[]> parameters = new ArrayList<>();
     for (int i = 0; i < 32; i++) {
       for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
-        Object[] params = new Object[7];
+        Object[] params = new Object[8];
         params[0] = firstParameter;
         params[1] = (i & 1) != 0;
         params[2] = (i & 2) != 0;
@@ -142,8 +141,10 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         params[4] = (i & 8) != 0;
         params[5] = (i & 16) != 0;
         params[6] = QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS;
-        Object[] params2 = Arrays.copyOf(params, 7);
+        params[7] = firstParameter + " double aggs";
+        Object[] params2 = Arrays.copyOf(params, 8);
         params2[6] = QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS;
+        params2[7] = firstParameter + " float aggs";
         parameters.add(params);
         parameters.add(params2);
       }
@@ -161,7 +162,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
     List<QueryRunner<Result<TopNResultValue>>> retVal = new ArrayList<>();
     retVal.addAll(
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TopNQueryRunnerFactory(
                 defaultPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
@@ -170,7 +171,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     retVal.addAll(
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TopNQueryRunnerFactory(
                 customPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
@@ -198,6 +199,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  @SuppressWarnings("unused")
   public TopNQueryRunnerTest(
       QueryRunner<Result<TopNResultValue>> runner,
       boolean specializeGeneric1AggPooledTopN,
@@ -205,7 +207,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
       boolean specializeHistorical1SimpleDoubleAggPooledTopN,
       boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN,
       boolean duplicateSingleAggregatorQueries,
-      List<AggregatorFactory> commonAggregators
+      List<AggregatorFactory> commonAggregators,
+      String testName
   )
   {
     this.runner = runner;
@@ -265,12 +268,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
-    return FluentQueryRunnerBuilder.newBob(new TopNQueryQueryToolChest(new TopNQueryConfig()))
-        .create(runner)
-        .applyPreMergeDecoration()
-        .mergeResults()
-        .applyPostMergeDecoration()
-        .run(QueryPlus.wrap(query), context);
+    return runner.run(QueryPlus.wrap(query), context);
   }
 
   @Test

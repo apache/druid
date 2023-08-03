@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -111,7 +110,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   {
     final Iterable<Object[]> baseConstructors = QueryRunnerTestHelper.cartesian(
         // runners
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
@@ -149,24 +148,19 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
-  protected final QueryRunner runner;
+  protected final QueryRunner<Result<TimeseriesResultValue>> runner;
   protected final boolean descending;
   protected final boolean vectorize;
   private final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
-      QueryRunner runner,
+      QueryRunner<Result<TimeseriesResultValue>> runner,
       boolean descending,
       boolean vectorize,
       List<AggregatorFactory> aggregatorFactoryList
   )
   {
-    this.runner = FluentQueryRunnerBuilder.newBob(new TimeseriesQueryQueryToolChest())
-        .create(runner)
-        .applyPreMergeDecoration()
-        .mergeResults()
-        .applyPostMergeDecoration();
-
+    this.runner = runner;
     this.descending = descending;
     this.vectorize = vectorize;
     this.aggregatorFactoryList = aggregatorFactoryList;
