@@ -51,8 +51,6 @@ The request body takes the following properties:
   * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`. 
   * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP header `Content-Type: text/csv`. 
 * `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. 
-
-    If working with an older version of Druid, set `header` to `true` to verify compatibility. Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes` when the client connects to an older Druid version with support for the `typesHeader` and `sqlTypesHeader` parameters. Additionally, Druid returns a `X-Druid-SQL-Query-Id` HTTP header with the value of `sqlQueryId` from the [query context parameters](../querying/sql-query-context.md) if specified, else Druid will generate a SQL query ID.
 * `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed. 
 * `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
@@ -100,6 +98,8 @@ The request body takes the following properties:
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+Older versions of Druid that support  the `typesHeader` and `sqlTypesHeader` parameters return the HTTP header `X-Druid-SQL-Header-Included: yes` when you set `header` to `true`. Druid returns the HTTP response header for compatibility, regardless of whether `typesHeader` and `sqlTypesHeader` are set.
 
 ---
 
