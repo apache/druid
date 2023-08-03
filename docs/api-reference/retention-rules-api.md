@@ -27,7 +27,7 @@ This topic describes the API endpoints for managing retention rules in Apache Dr
 
 Druid uses retention rules to determine what data is retained in the cluster. Druid supports load, drop, and broadcast rules. See [using rules to drop and retain data](../operations/rule-configuration.md) for more information. 
 
-In this topic, `http://ROUTER_IP:ROUTER_PORT` is a place holder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Update retention rules for a datasource
 
@@ -64,7 +64,7 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 ### Sample request
 
-The following example updates the retention rules for a datasource with the name `kttm1`.
+The following example sets a set of broadcast, load, and drop retention rules for the `kttm1` datasource.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
