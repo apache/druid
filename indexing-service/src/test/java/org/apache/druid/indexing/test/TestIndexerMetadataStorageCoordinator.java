@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
@@ -114,11 +115,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer maxSegments
+      @Nullable Integer limit
   )
   {
     synchronized (unusedSegments) {
-      return unusedSegments.subList(0, maxSegments);
+      return unusedSegments.stream().limit(limit).collect(Collectors.toList());
     }
   }
 

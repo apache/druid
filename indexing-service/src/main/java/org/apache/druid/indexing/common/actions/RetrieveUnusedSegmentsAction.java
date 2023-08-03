@@ -40,18 +40,18 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   private final Interval interval;
 
   @JsonIgnore
-  private final Integer maxSegments;
+  private final Integer limit;
 
   @JsonCreator
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("maxSegments") @Nullable Integer maxSegments
+      @JsonProperty("limit") @Nullable Integer limit
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
-    this.maxSegments = maxSegments;
+    this.limit = limit;
   }
 
   @JsonProperty
@@ -68,9 +68,9 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
 
   @Nullable
   @JsonProperty
-  public Integer getMaxSegments()
+  public Integer getLimit()
   {
-    return maxSegments;
+    return limit;
   }
 
   @Override
@@ -83,7 +83,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-        .retrieveUnusedSegmentsForInterval(dataSource, interval, maxSegments);
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit);
   }
 
   @Override
@@ -98,6 +98,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
+           ", limit=" + limit +
            '}';
   }
 }

@@ -134,7 +134,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
-   * @param maxSegments The maximum number of unused segments to retreive. If null, no limit is applied.
+   * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
    *
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval
@@ -142,7 +142,7 @@ public interface IndexerMetadataStorageCoordinator
   default List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer maxSegments
+      @Nullable Integer limit
   )
   {
     return retrieveUnusedSegmentsForInterval(dataSource, interval);

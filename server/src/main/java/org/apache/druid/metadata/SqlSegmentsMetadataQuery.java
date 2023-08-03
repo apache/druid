@@ -121,10 +121,10 @@ public class SqlSegmentsMetadataQuery
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final Integer maxSegments
+      @Nullable final Integer limit
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, maxSegments);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit);
   }
 
   /**
@@ -217,7 +217,7 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
       final boolean used,
-      @Nullable final Integer maxSegments
+      @Nullable final Integer limit
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -258,13 +258,13 @@ public class SqlSegmentsMetadataQuery
       sb.append(")");
     }
 
-    Query<Map<String, Object>> sql = handle
+    final Query<Map<String, Object>> sql = handle
         .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)
         .bind("dataSource", dataSource);
-    if (null != maxSegments) {
-      sql = sql.setMaxRows(maxSegments);
+    if (null != limit) {
+      sql.setMaxRows(limit);
     }
 
     if (compareAsString) {

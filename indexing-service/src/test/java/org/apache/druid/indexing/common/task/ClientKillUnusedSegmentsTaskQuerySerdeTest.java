@@ -51,7 +51,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         "killTaskId",
         "datasource",
         Intervals.of("2020-01-01/P1D"),
-        true,
+        false,
         99,
         5
     );
