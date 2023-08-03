@@ -176,9 +176,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
 --data '[
     {
         "type": "loadByInterval",
-        "tieredReplicants": {
-            "_default_tier": 2
-        },
+        "tieredReplicants": {},
         "useDefaultTierForNull": false,
         "interval": "2010-01-01/2020-01-01"
     }
@@ -196,9 +194,7 @@ Content-Length: 205
 [
     {
         "type": "loadByInterval",
-        "tieredReplicants": {
-            "_default_tier": 2
-        },
+        "tieredReplicants": {},
         "useDefaultTierForNull": false,
         "interval": "2010-01-01/2020-01-01"
     }
