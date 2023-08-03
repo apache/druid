@@ -100,6 +100,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierConfig;
@@ -272,10 +273,10 @@ public class CliPeon extends GuiceRunnable
           {
             return Suppliers.ofInstance(
                 ImmutableMap.of(
-                    "taskId", task.getId(),
-                    "dataSource", task.getDataSource(),
-                    "taskType", task.getType(),
-                    "groupId", task.getGroupId()
+                    DruidMetrics.TASK_ID, task.getId(),
+                    DruidMetrics.DATASOURCE, task.getDataSource(),
+                    DruidMetrics.TASK_TYPE, task.getType(),
+                    DruidMetrics.GROUP_ID, task.getGroupId()
                 )
             );
           }
