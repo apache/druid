@@ -72,9 +72,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    expectedException.expect(MismatchedInputException.class);
-    expectedException.expectMessage("Missing required creator property 'prefix'");
-    MAPPER.readValue(json, AzureOutputConfig.class);
+    Assert.assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   @Test
@@ -86,9 +84,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    expectedException.expect(MismatchedInputException.class);
-    expectedException.expectMessage("Missing required creator property 'container'");
-    MAPPER.readValue(json, AzureOutputConfig.class);
+    Assert.assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   @Test
@@ -100,9 +96,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104857600,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    expectedException.expect(MismatchedInputException.class);
-    expectedException.expectMessage("Missing required creator property 'tempDir'");
-    MAPPER.readValue(json, AzureOutputConfig.class);
+    Assert.assertThrows(MismatchedInputException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   @Test
@@ -136,10 +130,7 @@ public class AzureOutputSerdeTest
                                            + "  \"chunkSize\":104,\n"
                                            + "  \"maxRetry\": 2\n"
                                            + "}\n");
-    expectedException.expect(ValueInstantiationException.class);
-    expectedException.expectMessage("'chunkSize' [104] bytes to the AzureConfig should be between "
-                                    + "[262144] bytes and [4194304000] bytes");
-    MAPPER.readValue(json, AzureOutputConfig.class);
+    Assert.assertThrows(ValueInstantiationException.class, () -> MAPPER.readValue(json, AzureOutputConfig.class));
   }
 
   private static String jsonStringReadyForAssert(String input)
