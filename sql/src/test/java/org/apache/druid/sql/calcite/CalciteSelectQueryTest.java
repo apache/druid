@@ -20,6 +20,8 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -45,6 +47,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -1956,6 +1959,82 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
   @Test
   public void testOrderThenLimitThenFilter12()
+  {
+    cannotVectorize();
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) from druid.foo where m1 < -1.0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        // "select count(*) from druid.foo ",
+        ImmutableList.of(
+        // GroupByQuery.builder()
+        // .setDataSource(CalciteTests.DATASOURCE1)
+        // .setInterval(querySegmentSpec(Filtration.eternity()))
+        // .setGranularity(Granularities.ALL)
+        // .setVirtualColumns(
+        // expressionVirtualColumn(
+        // "v0",
+        // "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+        // ColumnType.LONG))
+        // .setDimensions(
+        // dimensions(
+        // new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+        // new DefaultDimensionSpec("dim2", "d1")))
+        // .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
+        // "cnt")))
+        // .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
+        // 0, Granularities.MONTH))
+        // .build()
+        //
+        ),
+        ImmutableList.of(
+            new Object[] { 0l }));
+  }
+
+  @Test
+  public void testOrderThenLimitThenFilter12A()
+  {
+    cannotVectorize();
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(*) from \n"
+            + "  (select * from \n"
+            + "    (select * from druid.foo where m2 = 4.0) \n"
+            + "  where m1 > 0) \n"
+            + "where m2 != 4.0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        // "select count(*) from druid.foo ",
+        ImmutableList.of(
+        // GroupByQuery.builder()
+        // .setDataSource(CalciteTests.DATASOURCE1)
+        // .setInterval(querySegmentSpec(Filtration.eternity()))
+        // .setGranularity(Granularities.ALL)
+        // .setVirtualColumns(
+        // expressionVirtualColumn(
+        // "v0",
+        // "timestamp_floor(\"__time\",'P1M',null,'UTC')",
+        // ColumnType.LONG))
+        // .setDimensions(
+        // dimensions(
+        // new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+        // new DefaultDimensionSpec("dim2", "d1")))
+        // .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
+        // "cnt")))
+        // .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
+        // 0, Granularities.MONTH))
+        // .build()
+        //
+        ),
+        ImmutableList.of(
+            new Object[] { 0l }));
+  }
+
+  @Test
+  public void testOrderThenLimitThenFilter123()
   {
     testQuery(
         "select count(*) from \n"
