@@ -33,7 +33,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
-Each query can be identified with the SQL context parameter `sqlQueryId`. The `sqlQueryId` can be set manually in the request payload. If not set, Druid automatically generates a `sqlQueryId` and returns it in the response header. Note that the `sqlQueryId` is required to use the [cancel a query](#cancel-a-query) endpoint. 
+Each query can be identified with the SQL context parameter `sqlQueryId`. The `sqlQueryId` can be set manually in the request payload with the `sqlQueryId` context parameter. If not set, Druid automatically generates a `sqlQueryId` and returns it in the response header. Note that the `sqlQueryId` is required to use the [cancel a query](#cancel-a-query) endpoint. 
 
 #### URL
 
