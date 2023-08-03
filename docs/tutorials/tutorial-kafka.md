@@ -76,8 +76,7 @@ In this section, you download sample data to the tutorial's directory and send t
 2. Download the sample data to your new directory and extract it:
 
    ```bash
-   cd sample-data
-   curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz
+   (cd sample-data && curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz)
    ```
 
 3. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic:
