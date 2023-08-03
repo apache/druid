@@ -927,7 +927,7 @@ public class DruidQuery
       // requiring the Broker to inline results.)
       final GroupByQuery outerQuery = toGroupByQuery();
 
-      if (outerQuery != null) {
+      if (outerQuery != null && false) {
         return outerQuery;
       }
     }

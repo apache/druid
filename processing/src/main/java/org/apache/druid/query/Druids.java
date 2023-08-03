@@ -285,6 +285,11 @@ public class Druids
       limit = lim;
       return this;
     }
+
+    public TimeseriesQueryBuilder setDataSource(Query query)
+    {
+      return dataSource(new QueryDataSource(query));
+    }
   }
 
   public static TimeseriesQueryBuilder newTimeseriesQueryBuilder()
