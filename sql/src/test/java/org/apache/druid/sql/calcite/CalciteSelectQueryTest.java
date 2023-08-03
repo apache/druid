@@ -1980,20 +1980,22 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 //                        "v0",
 //                        "timestamp_floor(\"__time\",'P1M',null,'UTC')",
 //                        ColumnType.LONG))
-//                .setDimensions(
-//                    dimensions(
-//                        new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-//                        new DefaultDimensionSpec("dim2", "d1")))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
 //                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0",
 //                    "cnt")))
 //                .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0",
 //                    0, Granularities.MONTH))
                         .setDimFilter(
-                            equality("m1", -1.0, ColumnType.DOUBLE))
+                            range("m1", ColumnType.LONG, null, -1.0, true, true))
+
+//                            equality("m1", -1.0, ColumnType.DOUBLE))
                 .build()
                 )
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
 
                 .build()
 
