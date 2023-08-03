@@ -232,7 +232,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test(timeout = 60000L)
-  public void testComputedMaxSegmentsToMove()
+  public void testMaxSegmentsAreMovedWhenClusterIsSkewed()
   {
     // Add 10 historicals of size 1 TB each
     final long size1TB = 1_000_000;
@@ -255,7 +255,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
     verifyValue(Metric.MOVE_SKIPPED, 100L);
-    verifyValue(Metric.MAX_TO_MOVE, 100L);
+    verifyValue(Metric.PICKED_FOR_MOVE, 100L);
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {
@@ -263,8 +263,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     }
 
     runCoordinatorCycle();
-    verifyValue(Metric.MAX_TO_MOVE, 1250L);
-    verifyValue(Metric.MOVED_COUNT, 1250L);
+    verifyValue(Metric.PICKED_FOR_MOVE, 1900L);
+    verifyValue(Metric.MOVED_COUNT, 1900L);
   }
 
 }

@@ -42,20 +42,32 @@ public class SegmentToMoveCalculator
 
   private static final Logger log = new Logger(SegmentToMoveCalculator.class);
 
-  public static int computeSegmentsToMoveInTier(
+  /**
+   * Calculates the number of segments to be picked for moving in the given tier,
+   * based on the level of skew between the historicals in the tier.
+   *
+   * @param tier                    Name of tier used for logging purposes
+   * @param historicals             Active historicals in tier
+   * @param maxSegmentsToMoveInTier Maximum number of segments allowed to be moved
+   *                                in the tier.
+   * @return Number of segments to move in the tier in the range
+   * [{@link #MIN_SEGMENTS_TO_MOVE}, {@code maxSegmentsToMoveInTier}].
+   */
+  public static int computeNumSegmentsToMoveInTier(
       String tier,
-      List<ServerHolder> servers,
+      List<ServerHolder> historicals,
       int maxSegmentsToMoveInTier
   )
   {
-    final int totalSegments = servers.stream().mapToInt(
+    final int totalSegments = historicals.stream().mapToInt(
         server -> server.getProjectedSegments().getTotalSegmentCount()
     ).sum();
 
     // Move at least some segments to ensure that the cluster is always balancing itself
-    final int minSegmentsToMove = SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(totalSegments);
-    final int segmentsToMoveToFixDeviation
-        = SegmentToMoveCalculator.computeSegmentsToMoveInTierToFixSkew(tier, servers);
+    final int minSegmentsToMove = SegmentToMoveCalculator
+        .computeMinSegmentsToMoveInTier(totalSegments);
+    final int segmentsToMoveToFixDeviation = SegmentToMoveCalculator
+        .computeNumSegmentsToMoveInTierToFixSkew(tier, historicals);
     log.info(
         "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
         segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxSegmentsToMoveInTier
@@ -67,26 +79,33 @@ public class SegmentToMoveCalculator
 
   /**
    * Calculates the minimum number of segments that should be considered for
-   * moving in a tier, so that the tier is always balancing itself.
+   * moving in a tier, so that the cluster is always balancing itself.
    * <p>
    * This value must be calculated separately for every tier.
    *
    * @param totalSegmentsInTier Total number of all replicas of all segments
    *                            loaded or queued across all historicals in the tier.
-   * @return {@code minSegmentsToMove} in tier.
+   * @return {@code minSegmentsToMoveInTier} in the range
+   * [{@link #MIN_SEGMENTS_TO_MOVE}, {@code ~0.6% of totalSegmentsInTier}].
    */
   public static int computeMinSegmentsToMoveInTier(int totalSegmentsInTier)
   {
-    return Math.max(MIN_SEGMENTS_TO_MOVE, (int) (totalSegmentsInTier * 0.005));
+    // Divide by 2^14 and multiply by 100 so that the value increases
+    // in steps of 100 for every 2^14 = ~16k segments
+    return Math.max(MIN_SEGMENTS_TO_MOVE, (totalSegmentsInTier >> 14) * 100);
   }
 
   /**
-   * Calculates {@code maxSegmentsToMove} for the given number of segments in the
-   * cluster. This value must be calculated at the cluster level and then applied
-   * to every tier so that total computation time is estimated correctly.
+   * Calculates the maximum number of segments that can be picked for moving in
+   * the cluster in a single coordinator run, assuming that the run must finish
+   * within 40s. A typical coordinator run period is 1 minute and there should
+   * be a buffer of 20s for other coordinator duties.
    * <p>
-   * Each balancer thread can perform 2 billion computations in every coordinator
-   * cycle (see #14584). Therefore,
+   * This value must be calculated at the cluster level and then applied
+   * to every tier so that the total computation time is estimated correctly.
+   * <p>
+   * Each balancer thread can perform 2 billion computations in 40s (see #14584).
+   * Therefore,
    * <pre>
    * numComputations = maxSegmentsToMove * totalSegments
    *
@@ -94,14 +113,14 @@ public class SegmentToMoveCalculator
    *                   = (nThreads * 2B) / totalSegments
    * </pre>
    *
-   * @param totalSegmentsOnHistoricals Total number of all replicas of all segments
-   *                                   loaded or queued across all historicals in
-   *                                   the cluster.
-   * @return {@code maxSegmentsToMove} per tier in the range [100, 12.5% of totalSegments].
+   * @param totalSegments Total number of all replicas of all segments loaded or
+   *                      queued across all historicals in the cluster.
+   * @return {@code maxSegmentsToMove} per tier in the range
+   * [{@link #MIN_SEGMENTS_TO_MOVE}, ~20% of totalSegments].
    * @see <a href="https://github.com/apache/druid/pull/14584">#14584</a>
    */
   public static int computeMaxSegmentsToMovePerTier(
-      int totalSegmentsOnHistoricals,
+      int totalSegments,
       int numBalancerThreads
   )
   {
@@ -116,7 +135,7 @@ public class SegmentToMoveCalculator
 
     // Perform an approx bit-wise division so that maxSegmentsToMove increases
     // only in steps and the values are nice whole numbers
-    int divisor = totalSegmentsOnHistoricals;
+    int divisor = totalSegments;
     int quotient = computationsInThousands;
     while (divisor > 1) {
       divisor = divisor >> 1;
@@ -128,7 +147,10 @@ public class SegmentToMoveCalculator
 
     // Define the bounds for maxSegmentsToMove
     final int lowerBound = MIN_SEGMENTS_TO_MOVE;
-    final int upperBound = totalSegmentsOnHistoricals >> 3;
+
+    // Divide by 2^9 and multiply by 100 so that the upperBound
+    // increases in steps of 100 for every 2^9 = 512 segments (~20%)
+    final int upperBound = (totalSegments >> 9) * 100;
 
     // Integer overflow is unlikely here but handle it all the same
     if (maxSegmentsToMove < 0 || maxSegmentsToMove > upperBound) {
@@ -139,21 +161,21 @@ public class SegmentToMoveCalculator
   }
 
   /**
-   * Computes the number of segments that need to be moved across the servers
+   * Computes the number of segments that need to be moved across the historicals
    * in a tier to attain balance in terms of disk usage and segment counts per
    * data source.
    *
-   * @param tier    Name of the tier used only for logging purposes
-   * @param servers List of servers in the tier
+   * @param tier        Name of the tier used only for logging purposes
+   * @param historicals List of historicals in the tier
    */
-  public static int computeSegmentsToMoveInTierToFixSkew(String tier, List<ServerHolder> servers)
+  public static int computeNumSegmentsToMoveInTierToFixSkew(String tier, List<ServerHolder> historicals)
   {
-    if (servers.isEmpty()) {
+    if (historicals.isEmpty()) {
       return 0;
     }
 
-    final long totalUsageBytes = getTotalUsageBytes(servers);
-    final Object2IntMap<String> datasourceToTotalSegments = getTotalSegmentsPerDatasource(servers);
+    final long totalUsageBytes = getTotalUsageBytes(historicals);
+    final Object2IntMap<String> datasourceToTotalSegments = getTotalSegmentsPerDatasource(historicals);
 
     final int totalSegments = datasourceToTotalSegments.values().intStream().sum();
     if (totalSegments <= 0) {
@@ -161,13 +183,13 @@ public class SegmentToMoveCalculator
     }
 
     final Object2IntMap<String> datasourceToTotalDeviation
-        = computeDatasourceToTotalDeviation(servers, datasourceToTotalSegments);
-    findAndLogMostSkewedDatasource(tier, servers, datasourceToTotalDeviation);
+        = computeDatasourceToTotalDeviation(historicals, datasourceToTotalSegments);
+    findAndLogMostSkewedDatasource(tier, historicals, datasourceToTotalDeviation);
 
     final int totalDeviationByCounts = datasourceToTotalDeviation.values().intStream().sum();
 
     final int totalDeviationByUsage
-        = computeTotalDeviationBasedOnDiskUsage(tier, servers, totalUsageBytes, totalSegments);
+        = computeTotalDeviationBasedOnDiskUsage(tier, historicals, totalUsageBytes, totalSegments);
 
     // Move half of the total absolute deviation
     return Math.max(totalDeviationByCounts, totalDeviationByUsage) / 2;

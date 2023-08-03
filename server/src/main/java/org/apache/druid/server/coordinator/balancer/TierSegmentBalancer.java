@@ -101,7 +101,7 @@ public class TierSegmentBalancer
       final String sourceServerType
   )
   {
-    runStats.add(Stats.Segments.MAX_TO_MOVE, RowKey.of(Dimension.TIER, tier), numSegmentsToMove);
+    runStats.add(Stats.Segments.PICKED_FOR_MOVE, RowKey.of(Dimension.TIER, tier), numSegmentsToMove);
     if (numSegmentsToMove <= 0 || sourceServers.isEmpty() || activeServers.isEmpty()) {
       return;
     }
@@ -225,7 +225,7 @@ public class TierSegmentBalancer
     if (activeServers.isEmpty()) {
       return 0;
     } else if (dynamicConfig.isSmartSegmentLoading()) {
-      return SegmentToMoveCalculator.computeSegmentsToMoveInTier(tier, activeServers, maxActiveSegmentsToMove);
+      return SegmentToMoveCalculator.computeNumSegmentsToMoveInTier(tier, activeServers, maxActiveSegmentsToMove);
     } else {
       // If smartSegmentLoading is disabled, just use the configured value
       return maxActiveSegmentsToMove;
