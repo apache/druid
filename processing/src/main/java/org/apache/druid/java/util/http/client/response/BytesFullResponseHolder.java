@@ -21,6 +21,7 @@ package org.apache.druid.java.util.http.client.response;
 
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,13 +43,16 @@ public class BytesFullResponseHolder extends FullResponseHolder<byte[]>
   }
 
   @Override
-  public byte[] getContent()
+  public byte[] getContent() throws BufferOverflowException
   {
-    int size = 0;
+    long size = 0L;
     for (byte[] chunk : chunks) {
       size += chunk.length;
+      if (size > Integer.MAX_VALUE) {
+        throw new BufferOverflowException();
+      }
     }
-    ByteBuffer buf = ByteBuffer.wrap(new byte[size]);
+    ByteBuffer buf = ByteBuffer.wrap(new byte[(int) size]);
 
     for (byte[] chunk : chunks) {
       buf.put(chunk);
