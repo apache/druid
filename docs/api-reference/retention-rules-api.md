@@ -33,7 +33,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 Update one or more retention rules for a datasource. Retention rules can be submitted as an array of rule objects in the request body and overwrite any existing rules for the datasource. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
 
-Note that this endpoint returns an `HTTP 200 Success` code message even if the datasource does not exist.
+Note that this endpoint returns an `HTTP 200` even if the datasource does not exist.
 
 ### URL
 
@@ -76,19 +76,20 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/kttm1" \
 --header 'X-Druid-Comment: submitted via api' \
 --header 'Content-Type: application/json' \
 --data '[
-  {
-    "type": "broadcastForever"
-  },
-  {
-    "type": "loadForever",
-    "tieredReplicants": {
-      "_default_tier": 2
+    {
+        "type": "broadcastForever"
+    },
+    {
+        "type": "loadForever",
+        "tieredReplicants": {
+            "_default_tier": 2
+        },
+        "useDefaultTierForNull": true
+    },
+    {
+        "type": "dropByPeriod",
+        "period": "P1M"
     }
-  },
-  {
-    "type": "dropByPeriod",
-    "period": "P1M"
-  }
 ]'
 ```
 
@@ -103,19 +104,20 @@ Content-Type: application/json
 Content-Length: 192
 
 [
-  {
-    "type": "broadcastForever"
-  },
-  {
-    "type": "loadForever",
-    "tieredReplicants": {
-      "_default_tier": 2
+    {
+        "type": "broadcastForever"
+    },
+    {
+        "type": "loadForever",
+        "tieredReplicants": {
+            "_default_tier": 2
+        },
+        "useDefaultTierForNull": true
+    },
+    {
+        "type": "dropByPeriod",
+        "period": "P1M"
     }
-  },
-  {
-    "type": "dropByPeriod",
-    "period": "P1M"
-  }
 ]
 ```
 
@@ -280,9 +282,9 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ## Get an array of retention rules for a datasource
 
-Retrieves an array of rule objects for a single datasource. If there are no retention rules, it returns an empty array. 
+Retrieves an array of rule objects for a single datasource. Returns an empty array if there are no retention rules.
 
-Note that this endpoint returns an `HTTP 200 Success` code message even if the datasource does not exist.
+Note that this endpoint returns an `HTTP 200` even if the datasource does not exist.
 
 ### URL
 
