@@ -26,6 +26,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.indexer.TaskLocation;
@@ -61,7 +62,6 @@ import org.apache.druid.sql.calcite.run.SqlResults;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -105,17 +105,11 @@ public class SqlStatementResourceHelper
   public static void isMSQPayload(TaskPayloadResponse taskPayloadResponse, String queryId) throws DruidException
   {
     if (taskPayloadResponse == null || taskPayloadResponse.getPayload() == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Query[%s] not found", queryId);
+      throw NotFound.exception("Query[%s] not found", queryId);
     }
 
     if (MSQControllerTask.class != taskPayloadResponse.getPayload().getClass()) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Query[%s] not found", queryId);
+      throw NotFound.exception("Query[%s] not found", queryId);
     }
   }
 
@@ -142,27 +136,6 @@ public class SqlStatementResourceHelper
     }
   }
 
-  @SuppressWarnings("unchecked")
-
-
-  public static long getLastIndex(Long numberOfRows, long start)
-  {
-    final long last;
-    if (numberOfRows == null) {
-      last = Long.MAX_VALUE;
-    } else {
-      long finalIndex;
-      try {
-        finalIndex = Math.addExact(start, numberOfRows);
-      }
-      catch (ArithmeticException e) {
-        finalIndex = Long.MAX_VALUE;
-      }
-      last = finalIndex;
-    }
-    return last;
-  }
-
   /**
    * Populates pages list from the {@link CounterSnapshotsTree}.
    * <br>
@@ -170,7 +143,7 @@ public class SqlStatementResourceHelper
    * <ol>
    *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
    *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
-   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker which has generated output rows.
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker which has generated output rows. The list is sorted on page Id.
    *   If the worker generated 0 rows, we do no populated a page for it. {@link PageInformation#id} is equal to the worker number</li>
    * </ol>
    */
@@ -183,8 +156,9 @@ public class SqlStatementResourceHelper
       return Optional.empty();
     }
     int finalStage = msqTaskReportPayload.getStages().getStages().size() - 1;
-    Map<Integer, CounterSnapshots> workerCounters = msqTaskReportPayload.getCounters().snapshotForStage(finalStage);
-    if (workerCounters == null) {
+    CounterSnapshotsTree counterSnapshotsTree = msqTaskReportPayload.getCounters();
+    Map<Integer, CounterSnapshots> workerCounters = counterSnapshotsTree.snapshotForStage(finalStage);
+    if (workerCounters == null || workerCounters.isEmpty()) {
       return Optional.empty();
     }
 
@@ -198,7 +172,7 @@ public class SqlStatementResourceHelper
         }
       }
       if (rows != 0L) {
-        return Optional.of(ImmutableList.of(new PageInformation(rows, null, 0)));
+        return Optional.of(ImmutableList.of(new PageInformation(0, rows, null)));
       } else {
         return Optional.empty();
       }
@@ -213,7 +187,7 @@ public class SqlStatementResourceHelper
         }
       }
       if (rows != 0L) {
-        return Optional.of(ImmutableList.of(new PageInformation(rows, size, 0)));
+        return Optional.of(ImmutableList.of(new PageInformation(0, rows, size)));
       } else {
         return Optional.empty();
       }
@@ -230,10 +204,10 @@ public class SqlStatementResourceHelper
         }
         // do not populate a page if the worker generated 0 rows.
         if (rows != 0L) {
-          pageList.add(new PageInformation(rows, size, counterSnapshots.getKey()));
+          pageList.add(new PageInformation(counterSnapshots.getKey(), rows, size));
         }
       }
-      Collections.sort(pageList, PageInformation.getIDComparator());
+      pageList.sort(PageInformation.getIDComparator());
       return Optional.of(pageList);
     } else {
       return Optional.empty();
@@ -378,7 +352,6 @@ public class SqlStatementResourceHelper
   public static Map<String, Object> getPayload(Map<String, Object> results)
   {
     Map<String, Object> msqReport = getMap(results, "multiStageQuery");
-    Map<String, Object> payload = getMap(msqReport, "payload");
-    return payload;
+    return getMap(msqReport, "payload");
   }
 }

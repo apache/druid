@@ -983,6 +983,10 @@ Task logs are automatically retrieved from the Middle Manager/Indexer or in long
 
 <code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
 
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
+
 #### Query parameters
 
 * `offset` (optional)

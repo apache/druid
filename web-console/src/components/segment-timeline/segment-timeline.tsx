@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import type { IResizeEntry } from '@blueprintjs/core';
 import { FormGroup, HTMLSelect, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
@@ -428,7 +427,7 @@ ORDER BY "start" DESC`;
     }
   };
 
-  private readonly handleResize = (entries: IResizeEntry[]) => {
+  private readonly handleResize = (entries: ResizeObserverEntry[]) => {
     const chartRect = entries[0].contentRect;
     this.setState({
       chartWidth: chartRect.width,

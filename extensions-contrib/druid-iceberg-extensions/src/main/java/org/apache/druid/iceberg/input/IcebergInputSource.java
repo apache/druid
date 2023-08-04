@@ -22,19 +22,25 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.AbstractInputSourceBuilder;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -60,7 +66,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   private IcebergFilter icebergFilter;
 
   @JsonProperty
-  private AbstractInputSourceBuilder warehouseSource;
+  private InputSourceFactory warehouseSource;
 
   private boolean isLoaded = false;
 
@@ -72,7 +78,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("namespace") String namespace,
       @JsonProperty("icebergFilter") @Nullable IcebergFilter icebergFilter,
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
-      @JsonProperty("warehouseSource") AbstractInputSourceBuilder warehouseSource
+      @JsonProperty("warehouseSource") InputSourceFactory warehouseSource
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -170,7 +176,77 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         getTableName(),
         getIcebergFilter()
     );
-    delegateInputSource = warehouseSource.setupInputSource(snapshotDataFiles);
+    if (snapshotDataFiles.isEmpty()) {
+      delegateInputSource = new EmptyInputSource();
+    } else {
+      delegateInputSource = warehouseSource.create(snapshotDataFiles);
+    }
     isLoaded = true;
+  }
+
+  /**
+   * This input source is used in place of a delegate input source if there are no input file paths.
+   * Certain input sources cannot be instantiated with an empty input file list and so composing input sources such as IcebergInputSource
+   * may use this input source as delegate in such cases.
+   */
+  private static class EmptyInputSource implements SplittableInputSource
+  {
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public InputSourceReader reader(
+        InputRowSchema inputRowSchema,
+        @Nullable InputFormat inputFormat,
+        File temporaryDirectory
+    )
+    {
+      return new InputSourceReader()
+      {
+        @Override
+        public CloseableIterator<InputRow> read(InputStats inputStats)
+        {
+          return CloseableIterators.wrap(Collections.emptyIterator(), () -> {
+          });
+        }
+
+        @Override
+        public CloseableIterator<InputRowListPlusRawValues> sample()
+        {
+          return CloseableIterators.wrap(Collections.emptyIterator(), () -> {
+          });
+        }
+      };
+    }
+
+    @Override
+    public Stream<InputSplit> createSplits(
+        InputFormat inputFormat,
+        @Nullable SplitHintSpec splitHintSpec
+    )
+    {
+      return Stream.empty();
+    }
+
+    @Override
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    {
+      return 0;
+    }
+
+    @Override
+    public InputSource withSplit(InputSplit split)
+    {
+      return null;
+    }
   }
 }

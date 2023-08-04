@@ -20,6 +20,7 @@
 package org.apache.druid.msq.sql;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -49,8 +50,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,7 +127,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    results,
-                                   ImmutableList.of(new PageInformation(6L, 316L, 0))
+                                   ImmutableList.of(new PageInformation(0, 6L, 316L))
                                ),
                                null
         );
@@ -150,7 +153,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             ImmutableMap.of(),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
-        "Execution mode is not provided to the SQL statement API. "
+        "Execution mode is not provided to the sql statement api. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
@@ -165,7 +168,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name()),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
-        "The SQL statement API currently does not support the provided execution mode [SYNC]. "
+        "The sql statement api currently does not support the provided execution mode [SYNC]. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
     );
@@ -273,12 +276,12 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         NilStorageConnector.getInstance()
     );
 
-    String errorMessage = "The SQL Statement API cannot read from the select destination [DURABLE_STORAGE] provided in "
-                          + "the query context [selectDestination] since it is not configured. It is recommended to "
-                          + "configure the durable storage as it allows the user to fetch large result sets. "
+    String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "
+                          + "the query context [selectDestination] since it is not configured on the broker. It is recommended to "
+                          + "configure durable storage as it allows the user to fetch large result sets. "
                           + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
                                                         new SqlQuery(
@@ -300,7 +303,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testWithDurableStorage() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -315,26 +318,52 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     ).getEntity();
 
+    assertExpectedResults(
+        "{\"cnt\":1,\"dim1\":\"\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"2\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"def\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
+        + "\n",
+        resource.doGetResults(
+            sqlStatementResult.getQueryId(),
+            null,
+            SqlStatementResourceTest.makeOkRequest()
+        ),
+        objectMapper);
 
-    List<Map<String, Object>> rows = new ArrayList<>();
-    rows.add(ImmutableMap.of("cnt", 1, "dim1", ""));
-    rows.add(ImmutableMap.of("cnt", 1, "dim1", "10.1"));
-    rows.add(ImmutableMap.of("cnt", 1, "dim1", "2"));
-    rows.add(ImmutableMap.of("cnt", 1, "dim1", "1"));
-    rows.add(ImmutableMap.of("cnt", 1, "dim1", "def"));
-    rows.add(ImmutableMap.of("cnt", 1, "dim1", "abc"));
+    assertExpectedResults(
+        "{\"cnt\":1,\"dim1\":\"\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"2\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"def\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
+        + "\n",
+        resource.doGetResults(
+            sqlStatementResult.getQueryId(),
+            0L,
+            SqlStatementResourceTest.makeOkRequest()
+        ),
+        objectMapper);
+  }
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
-        sqlStatementResult.getQueryId(),
-        null,
-        SqlStatementResourceTest.makeOkRequest()
-    )));
+  private void assertExpectedResults(String expectedResult, Response resultsResponse, ObjectMapper objectMapper) throws IOException
+  {
+    byte[] bytes = responseToByteArray(resultsResponse, objectMapper);
+    Assert.assertEquals(expectedResult, new String(bytes, StandardCharsets.UTF_8));
+  }
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
-        sqlStatementResult.getQueryId(),
-        0L,
-        SqlStatementResourceTest.makeOkRequest()
-    )));
+  public static byte[] responseToByteArray(Response resp, ObjectMapper objectMapper) throws IOException
+  {
+    if (resp.getEntity() instanceof StreamingOutput) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ((StreamingOutput) resp.getEntity()).write(baos);
+      return baos.toByteArray();
+    } else {
+      return objectMapper.writeValueAsBytes(resp.getEntity());
+    }
   }
 
   @Test

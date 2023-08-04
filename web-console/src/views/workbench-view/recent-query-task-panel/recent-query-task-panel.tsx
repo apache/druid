@@ -28,11 +28,16 @@ import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
 import type { TaskStatusWithCanceled } from '../../../druid-models';
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import { Execution, TASK_CANCELED_PREDICATE, WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
-import { downloadQueryDetailArchive, formatDuration, queryDruidSql } from '../../../utils';
+import {
+  downloadQueryDetailArchive,
+  formatDuration,
+  prettyFormatIsoDate,
+  queryDruidSql,
+} from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
 import { workStateStore } from '../work-state-store';
 
@@ -100,7 +105,7 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
     processQuery: async _ => {
       return await queryDruidSql<RecentQueryEntry>({
         query: `SELECT
-  CASE WHEN "error_msg" = 'Shutdown request from user' THEN 'CANCELED' ELSE "status" END AS "taskStatus",
+  CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' ELSE "status" END AS "taskStatus",
   "task_id" AS "taskId",
   "datasource",
   "created_time" AS "createdTime",
@@ -231,7 +236,7 @@ LIMIT 100`,
                       style={{ color }}
                     />
                     <div className="timing">
-                      {w.createdTime.replace('T', ' ').replace(/\.\d\d\dZ$/, '') +
+                      {prettyFormatIsoDate(w.createdTime) +
                         (duration > 0 ? ` (${formatDuration(duration)})` : '')}
                     </div>
                   </div>
@@ -250,7 +255,7 @@ LIMIT 100`,
                       })}
                     >
                       {w.datasource === Execution.INLINE_DATASOURCE_MARKER
-                        ? 'data in report'
+                        ? 'select query'
                         : w.datasource}
                     </div>
                   </div>

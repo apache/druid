@@ -100,7 +100,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   }
 
   @Override
-  protected KinesisRecordSupplier newTaskRecordSupplier()
+  protected KinesisRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
       throws RuntimeException
   {
     KinesisIndexTaskIOConfig ioConfig = ((KinesisIndexTaskIOConfig) super.ioConfig);

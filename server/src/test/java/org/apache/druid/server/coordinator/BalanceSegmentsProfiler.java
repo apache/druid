@@ -31,8 +31,8 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * TODO convert benchmarks to JMH
@@ -117,7 +118,7 @@ public class BalanceSegmentsProfiler
       EasyMock.expect(server.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
 
-      LoadQueuePeon peon = new LoadQueuePeonTester();
+      LoadQueuePeon peon = new TestLoadQueuePeon();
       serverHolderList.add(new ServerHolder(server, peon));
     }
 
@@ -143,7 +144,7 @@ public class BalanceSegmentsProfiler
         .build();
 
     BalanceSegments tester = new BalanceSegments();
-    RunRules runner = new RunRules();
+    RunRules runner = new RunRules(Set::size);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
@@ -154,8 +155,8 @@ public class BalanceSegmentsProfiler
   public void profileRun()
   {
     Stopwatch watch = Stopwatch.createUnstarted();
-    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-    LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
+    TestLoadQueuePeon fromPeon = new TestLoadQueuePeon();
+    TestLoadQueuePeon toPeon = new TestLoadQueuePeon();
 
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();

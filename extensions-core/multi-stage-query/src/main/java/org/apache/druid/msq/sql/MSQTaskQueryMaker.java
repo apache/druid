@@ -66,6 +66,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -233,17 +234,18 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
     } else {
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
-      if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
+      if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {
         destination = TaskReportMSQDestination.instance();
-      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
+      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLESTORAGE)) {
         destination = DurableStorageMSQDestination.instance();
       } else {
         throw InvalidInput.exception(
             "Unsupported select destination [%s] provided in the query context. MSQ can currently write the select results to "
-            + "[%s] and [%s]",
-            msqSelectDestination.name(),
-            MSQSelectDestination.TASK_REPORT.toString(),
-            MSQSelectDestination.DURABLE_STORAGE.toString()
+            + "[%s]",
+            msqSelectDestination.getName(),
+            Arrays.stream(MSQSelectDestination.values())
+                  .map(MSQSelectDestination::getName)
+                  .collect(Collectors.joining(","))
         );
       }
     }

@@ -3913,7 +3913,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.4.0
+version: 3.5.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4850,7 +4850,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.4.0
+version: 3.5.1
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -5364,6 +5364,24 @@ module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
 version: 0.20.5
+
+---
+
+name: "@druid-toolkit/visuals-core"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Imply Data
+version: 0.3.3
+
+---
+
+name: "@druid-toolkit/visuals-react"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Imply Data
+version: 0.3.3
 
 ---
 
@@ -5932,6 +5950,15 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 3.0.4
 license_file_path: licenses/bin/dot-case.MIT
+
+---
+
+name: "echarts"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Apache Software Foundation
+version: 5.4.2
 
 ---
 
@@ -6809,7 +6836,7 @@ license_category: binary
 module: web-console
 license_name: Zero-Clause BSD
 copyright: Microsoft Corp.
-version: 2.5.3
+version: 2.3.0
 license_file_path: licenses/bin/tslib.0BSD
 
 ---
@@ -6841,6 +6868,16 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 2.0.2
 license_file_path: licenses/bin/upper-case.MIT
+
+---
+
+name: "use-resize-observer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Viktor Hubert
+version: 9.1.0
+license_file_path: licenses/bin/use-resize-observer.MIT
 
 ---
 
@@ -6881,6 +6918,16 @@ license_name: ISC License
 copyright: Eemeli Aro
 version: 1.10.2
 license_file_path: licenses/bin/yaml.ISC
+
+---
+
+name: "zrender"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Baidu Inc.
+version: 5.4.3
+license_file_path: licenses/bin/zrender.BSD3
 
 ---
 
