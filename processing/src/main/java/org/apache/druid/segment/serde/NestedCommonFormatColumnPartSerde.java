@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
 import org.apache.druid.segment.nested.NestedDataColumnSupplier;
@@ -194,7 +195,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-      builder.setFilterable(true);
     }
   }
 
@@ -211,14 +211,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
+      // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-      builder.setFilterable(true);
     }
   }
 
@@ -235,14 +233,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
+      // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-      builder.setFilterable(true);
     }
   }
 
@@ -260,13 +256,20 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      // if we are a mixed type, don't call ourself dictionary encoded for now so we don't end up doing the wrong thing
+      // in places. technically we could probably get by with indicating that our dictionary ids are not unique/sorted
+      // but just in case that still causes problems, skip it all...
+      if (supplier.getVariantTypeSetByte() == null) {
+        capabilitiesBuilder.setDictionaryEncoded(true);
+        capabilitiesBuilder.setDictionaryValuesSorted(true);
+        capabilitiesBuilder.setDictionaryValuesUnique(true);
+      }
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-      builder.setFilterable(true);
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue()
+      ));
     }
   }
 
@@ -293,17 +296,16 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls));
-      builder.setFilterable(true);
     }
   }
 
   public static class SerializerBuilder
   {
-    private ColumnType logicalType;
+    private ColumnType logicalType = ColumnType.NESTED_DATA;
     private boolean hasNulls;
     private boolean isVariantType;
     private ByteOrder byteOrder = ByteOrder.nativeOrder();
-    BitmapSerdeFactory bitmapSerdeFactory;
+    BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
     @Nullable
     private Serializer serializer = null;
 

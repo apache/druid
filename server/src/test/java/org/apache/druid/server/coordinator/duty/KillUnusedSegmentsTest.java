@@ -20,9 +20,9 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -64,7 +64,7 @@ public class KillUnusedSegmentsTest
   @Mock
   private SegmentsMetadataManager segmentsMetadataManager;
   @Mock
-  private IndexingServiceClient indexingServiceClient;
+  private OverlordClient overlordClient;
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
   private DruidCoordinatorConfig config;
 
@@ -131,7 +131,7 @@ public class KillUnusedSegmentsTest
       return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
     });
 
-    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
   }
 
   @Test
@@ -144,8 +144,8 @@ public class KillUnusedSegmentsTest
     );
 
     target.run(params);
-    Mockito.verify(indexingServiceClient, Mockito.never())
-           .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+    Mockito.verify(overlordClient, Mockito.never())
+           .runKillTask(anyString(), anyString(), any(Interval.class));
   }
 
   @Test
@@ -153,12 +153,12 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(Duration.standardDays(400))
            .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // No unused segment is older than the retention period
     target.run(params);
-    Mockito.verify(indexingServiceClient, Mockito.never())
-           .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+    Mockito.verify(overlordClient, Mockito.never())
+           .runKillTask(anyString(), anyString(), any(Interval.class));
   }
 
   @Test
@@ -178,7 +178,7 @@ public class KillUnusedSegmentsTest
     // Duration to retain = -1 day, reinit target for config to take effect
     Mockito.doReturn(DURATION_TO_RETAIN.negated())
            .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // Segments upto 1 day in the future are killed
     Interval expectedKillInterval = new Interval(
@@ -193,7 +193,7 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(true)
            .when(config).getCoordinatorKillIgnoreDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // All future and past unused segments are killed
     Interval expectedKillInterval = new Interval(
@@ -208,7 +208,7 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(1)
            .when(config).getCoordinatorKillMaxSegments();
-    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // Only 1 unused segment is killed
     runAndVerifyKillInterval(yearOldSegment.getInterval());
@@ -216,11 +216,13 @@ public class KillUnusedSegmentsTest
 
   private void runAndVerifyKillInterval(Interval expectedKillInterval)
   {
+    int limit = config.getCoordinatorKillMaxSegments();
     target.run(params);
-    Mockito.verify(indexingServiceClient, Mockito.times(1)).killUnusedSegments(
+    Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("DS1"),
-        ArgumentMatchers.eq(expectedKillInterval)
+        ArgumentMatchers.eq(expectedKillInterval),
+        ArgumentMatchers.eq(limit)
     );
   }
 

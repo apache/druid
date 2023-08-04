@@ -35,9 +35,9 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
-import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -57,12 +57,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
+  private final KafkaConsumerMonitor monitor;
   private boolean closed;
 
   private boolean multiTopic;
@@ -89,6 +89,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   {
     this.consumer = consumer;
     this.multiTopic = false;
+    this.monitor = new KafkaConsumerMonitor(consumer);
   }
 
   @Override
@@ -225,6 +226,14 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
     });
   }
 
+  /**
+   * Returns a Monitor that emits Kafka consumer metrics.
+   */
+  public Monitor monitor()
+  {
+    return monitor;
+  }
+
   @Override
   public void close()
   {
@@ -232,6 +241,8 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       return;
     }
     closed = true;
+
+    monitor.stopAfterNextEmit();
     consumer.close();
   }
 

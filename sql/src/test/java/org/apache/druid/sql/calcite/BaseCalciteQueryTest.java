@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -55,10 +56,13 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
@@ -119,6 +123,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -185,18 +190,27 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final String DUMMY_SQL_ID = "dummy";
 
   public static final String PRETEND_CURRENT_TIME = "2000-01-01T00:00:00Z";
-  private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
+
+  public static final Map<String, Object> QUERY_CONTEXT_DEFAULT =
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
                   .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-                  .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
-  public static final Map<String, Object> QUERY_CONTEXT_DEFAULT = DEFAULT_QUERY_CONTEXT_BUILDER.build();
+                  .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+                  .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
-      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                                   .put(PlannerContext.CTX_ENABLE_UNNEST, true)
-                                   .build();
+      ImmutableMap.<String, Object>builder()
+                  .putAll(QUERY_CONTEXT_DEFAULT)
+                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
+                  .put(PlannerContext.CTX_ENABLE_UNNEST, true)
+                  .build();
+
+  public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                  .put(PlannerContext.CTX_SQL_USE_BOUNDS_AND_SELECTORS, false)
+                  .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
@@ -240,8 +254,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
-      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
-                                   .build();
+      ImmutableMap.<String, Object>builder()
+                  .putAll(QUERY_CONTEXT_DEFAULT)
+                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .build();
 
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
@@ -343,11 +359,54 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new NotDimFilter(filter);
   }
 
-  public static InDimFilter in(String dimension, List<String> values, ExtractionFn extractionFn)
+  public static InDimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
   {
     return new InDimFilter(dimension, values, extractionFn);
   }
 
+  public static DimFilter isNull(final String fieldName)
+  {
+    return isNull(fieldName, null);
+  }
+
+  public static DimFilter isNull(final String fieldName, final ExtractionFn extractionFn)
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new NullFilter(fieldName, null);
+    }
+    return selector(fieldName, NullHandling.defaultStringValue(), extractionFn);
+  }
+
+  public static DimFilter notNull(final String fieldName)
+  {
+    return not(isNull(fieldName));
+  }
+
+  public static DimFilter equality(final String fieldName, final Object matchValue, final ColumnType matchValueType)
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new EqualityFilter(fieldName, matchValueType, matchValue, null);
+    }
+    return selector(fieldName, Evals.asString(matchValue), null);
+  }
+
+  /**
+   * Callers should use {@link #equality(String, Object, ColumnType)} instead of this method, since they will correctly
+   * use either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
+   * {@link NullHandling#sqlCompatible()}, which determines the default of
+   * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
+  public static SelectorDimFilter selector(final String fieldName, final String value)
+  {
+    return selector(fieldName, value, null);
+  }
+
+  /**
+   * Callers should use {@link #equality(String, Object, ColumnType)} instead of this method, since they will correctly
+   * use either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
+   * {@link NullHandling#sqlCompatible()}, which determines the default of
+   * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static SelectorDimFilter selector(final String fieldName, final String value, final ExtractionFn extractionFn)
   {
     return new SelectorDimFilter(fieldName, value, extractionFn);
@@ -358,16 +417,40 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionDimFilter(expression, CalciteTests.createExprMacroTable());
   }
 
+  /**
+   * This method should be used instead of {@link #equality(String, Object, ColumnType)} when the match value type
+   * does not match the column type. If {@link NullHandling#sqlCompatible()} is true, this method is equivalent to
+   * {@link #equality(String, Object, ColumnType)}. When false, this method uses
+   * {@link #numericSelector(String, String)} so that the equality comparison uses a bound filter to correctly match
+   * numerical types.
+   */
+  public static DimFilter numericEquality(
+      final String fieldName,
+      final Object value,
+      final ColumnType matchValueType
+  )
+  {
+    if (NullHandling.sqlCompatible()) {
+      return equality(fieldName, value, matchValueType);
+    }
+    return numericSelector(fieldName, String.valueOf(value));
+  }
+
   public static DimFilter numericSelector(
       final String fieldName,
-      final String value,
-      final ExtractionFn extractionFn
+      final String value
   )
   {
     // We use Bound filters for numeric equality to achieve "10.0" = "10"
-    return bound(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
+    return bound(fieldName, value, value, false, false, null, StringComparators.NUMERIC);
   }
 
+  /**
+   * Callers should use {@link #range(String, ColumnType, Object, Object, boolean, boolean)} instead of this method,
+   * since they will correctly use either a {@link RangeFilter} or {@link BoundDimFilter} depending on the value of
+   * {@link NullHandling#sqlCompatible()}, which determines the default of
+   * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static BoundDimFilter bound(
       final String fieldName,
       final String lower,
@@ -381,6 +464,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new BoundDimFilter(fieldName, lower, upper, lowerStrict, upperStrict, null, extractionFn, comparator);
   }
 
+  /**
+   * Callers should use {@link #timeRange(Object)} instead of this method, since it will correctly use either a
+   * {@link RangeFilter} or {@link BoundDimFilter} depending on the value of {@link NullHandling#sqlCompatible()},
+   * which determines the default of {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static BoundDimFilter timeBound(final Object intervalObj)
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
@@ -394,6 +482,46 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         null,
         StringComparators.NUMERIC
     );
+  }
+
+  public static DimFilter range(
+      final String fieldName,
+      final ColumnType matchValueType,
+      final Object lower,
+      final Object upper,
+      final boolean lowerStrict,
+      final boolean upperStrict
+  )
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new RangeFilter(fieldName, matchValueType, lower, upper, lowerStrict, upperStrict, null);
+    }
+    return new BoundDimFilter(
+        fieldName,
+        Evals.asString(lower),
+        Evals.asString(upper),
+        lowerStrict,
+        upperStrict,
+        false,
+        null,
+        matchValueType.isNumeric() ? StringComparators.NUMERIC : StringComparators.LEXICOGRAPHIC
+    );
+  }
+
+  public static DimFilter timeRange(final Object intervalObj)
+  {
+    final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
+    if (NullHandling.sqlCompatible()) {
+      return range(
+          ColumnHolder.TIME_COLUMN_NAME,
+          ColumnType.LONG,
+          interval.getStartMillis(),
+          interval.getEndMillis(),
+          false,
+          true
+      );
+    }
+    return timeBound(intervalObj);
   }
 
   public static CascadeExtractionFn cascade(final ExtractionFn... fns)

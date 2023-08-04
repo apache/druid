@@ -19,13 +19,16 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -223,10 +226,13 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   )
   {
     final int dimIndex = desc.getIndex();
+    if (fieldIndexers.size() == 0 && isConstant && !hasNestedData) {
+      return DimensionSelector.constant(null, spec.getExtractionFn());
+    }
     final ColumnValueSelector<?> rootLiteralSelector = getRootLiteralValueSelector(currEntry, dimIndex);
     if (rootLiteralSelector != null) {
       final FieldIndexer root = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      final ColumnType rootType = root.getTypes().getSingleType();
+      final ColumnType rootType = root.isSingleType() ? root.getTypes().getSingleType() : getLogicalType();
       if (rootType.isArray()) {
         throw new UOE(
             "makeDimensionSelector is not supported, column [%s] is [%s] typed and should only use makeColumnValueSelector",
@@ -234,17 +240,31 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
             rootType
         );
       }
+      if (spec.getExtractionFn() == null) {
+        return new BaseSingleValueDimensionSelector()
+        {
+          @Nullable
+          @Override
+          protected String getValue()
+          {
+            return Evals.asString(rootLiteralSelector.getObject());
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+
+          }
+        };
+      }
       return new BaseSingleValueDimensionSelector()
       {
         @Nullable
         @Override
         protected String getValue()
         {
-          final Object o = rootLiteralSelector.getObject();
-          if (o == null) {
-            return null;
-          }
-          return o.toString();
+          final String s = Evals.asString(rootLiteralSelector.getObject());
+          return spec.getExtractionFn().apply(s);
         }
 
         @Override
@@ -457,51 +477,51 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       int dimIndex
   )
   {
-    if (fieldIndexers.size() > 1) {
+    if (fieldIndexers.size() > 1 || hasNestedData) {
       return null;
     }
     final FieldIndexer root = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-    if (root == null || !root.isSingleType()) {
+    if (root == null) {
       return null;
     }
-    final Object defaultValue = getDefaultValueForType(root.getTypes().getSingleType());
+    final Object defaultValue = getDefaultValueForType(getLogicalType());
     return new ColumnValueSelector<Object>()
     {
       @Override
       public boolean isNull()
       {
         final Object o = getObject();
-        return !(o instanceof Number);
+        return computeNumber(o) == null;
       }
 
       @Override
       public float getFloat()
       {
-        Object value = getObject();
+        Number value = computeNumber(getObject());
         if (value == null) {
           return 0;
         }
-        return ((Number) value).floatValue();
+        return value.floatValue();
       }
 
       @Override
       public double getDouble()
       {
-        Object value = getObject();
+        Number value = computeNumber(getObject());
         if (value == null) {
           return 0;
         }
-        return ((Number) value).doubleValue();
+        return value.doubleValue();
       }
 
       @Override
       public long getLong()
       {
-        Object value = getObject();
+        Number value = computeNumber(getObject());
         if (value == null) {
           return 0;
         }
-        return ((Number) value).longValue();
+        return value.longValue();
       }
 
       @Override
@@ -524,6 +544,22 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         }
 
         return defaultValue;
+      }
+
+      @Nullable
+      private Number computeNumber(@Nullable Object o)
+      {
+        if (o instanceof Number) {
+          return (Number) o;
+        }
+        if (o instanceof String) {
+          Long l = GuavaUtils.tryParseLong((String) o);
+          if (l != null) {
+            return l;
+          }
+          return Doubles.tryParse((String) o);
+        }
+        return null;
       }
 
       @Override

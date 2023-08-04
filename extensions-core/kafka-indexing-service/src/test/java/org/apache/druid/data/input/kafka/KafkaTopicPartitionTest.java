@@ -21,11 +21,26 @@ package org.apache.druid.data.input.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class KafkaTopicPartitionTest
 {
+  private ObjectMapper objectMapper;
+  
+  @Before
+  public void setUp()
+  {
+    objectMapper = new ObjectMapper();
+    objectMapper.registerSubtypes(KafkaTopicPartition.class);
+    SimpleModule simpleModule = new SimpleModule();
+    simpleModule.addKeySerializer(KafkaTopicPartition.class,
+                                  new KafkaTopicPartition.KafkaTopicPartitionKeySerializer());
+    objectMapper.registerModule(simpleModule);
+  }
+
   @Test
   public void testEquals()
   {
@@ -71,7 +86,6 @@ public class KafkaTopicPartitionTest
   @Test
   public void testMultiTopicDeserialization() throws JsonProcessingException
   {
-    ObjectMapper objectMapper = new ObjectMapper();
     KafkaTopicPartition partition = objectMapper.readerFor(KafkaTopicPartition.class).readValue("\"topic:0\"");
     Assert.assertEquals(0, partition.partition());
     Assert.assertEquals("topic", partition.topic().orElse(null));
@@ -81,7 +95,6 @@ public class KafkaTopicPartitionTest
   @Test
   public void testSingleTopicDeserialization() throws JsonProcessingException
   {
-    ObjectMapper objectMapper = new ObjectMapper();
     KafkaTopicPartition partition = objectMapper.readerFor(KafkaTopicPartition.class).readValue("0");
     Assert.assertEquals(0, partition.partition());
     Assert.assertNull(partition.topic().orElse(null));
@@ -91,7 +104,6 @@ public class KafkaTopicPartitionTest
   @Test
   public void testMultiTopicSerialization() throws JsonProcessingException
   {
-    ObjectMapper objectMapper = new ObjectMapper();
     KafkaTopicPartition partition = new KafkaTopicPartition(true, "topic", 0);
     KafkaTopicPartition reincarnated = objectMapper.readerFor(KafkaTopicPartition.class).readValue(objectMapper.writeValueAsString(partition));
     Assert.assertEquals(partition, reincarnated);
@@ -100,7 +112,6 @@ public class KafkaTopicPartitionTest
   @Test
   public void testSingleTopicSerialization() throws JsonProcessingException
   {
-    ObjectMapper objectMapper = new ObjectMapper();
     KafkaTopicPartition partition = new KafkaTopicPartition(false, null, 0);
     KafkaTopicPartition reincarnated = objectMapper.readerFor(KafkaTopicPartition.class).readValue(objectMapper.writeValueAsString(partition));
     Assert.assertEquals(partition, reincarnated);

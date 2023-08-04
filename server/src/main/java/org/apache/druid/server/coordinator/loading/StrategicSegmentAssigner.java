@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -32,7 +33,9 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,6 +53,7 @@ import java.util.stream.Collectors;
  * <p>
  * An instance of this class is freshly created for each coordinator run.
  */
+@NotThreadSafe
 public class StrategicSegmentAssigner implements SegmentActionHandler
 {
   private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
@@ -64,8 +68,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private final boolean useRoundRobinAssignment;
 
-  private final Set<String> tiersWithNoServer = new HashSet<>();
+  private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
+  private final Map<String, Set<SegmentId>> segmentsToDelete = new HashMap<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -99,11 +104,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return replicaCountMap.toReplicationStatus();
   }
 
-  public void makeAlerts()
+  public Map<String, Set<SegmentId>> getSegmentsToDelete()
   {
-    if (!tiersWithNoServer.isEmpty()) {
-      log.makeAlert("Tiers [%s] have no servers! Check your cluster configuration.", tiersWithNoServer).emit();
-    }
+    return segmentsToDelete;
+  }
+
+  public Map<String, Set<String>> getDatasourceToInvalidLoadTiers()
+  {
+    return datasourceToInvalidLoadTiers;
   }
 
   /**
@@ -194,18 +202,25 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   @Override
   public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
-    // Identify empty tiers and determine total required replicas
     final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
-    tierToReplicaCount.forEach((tier, requiredReplicas) -> {
-      reportTierCapacityStats(segment, requiredReplicas, tier);
 
-      SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
-      replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+    if (tierToReplicaCount.isEmpty()) {
+      // Track the counts for a segment even if it requires 0 replicas on all tiers
+      replicaCountMap.computeIfAbsent(segment.getId(), DruidServer.DEFAULT_TIER);
+    } else {
+      // Identify empty tiers and determine total required replicas
+      tierToReplicaCount.forEach((tier, requiredReplicas) -> {
+        reportTierCapacityStats(segment, requiredReplicas, tier);
 
-      if (!allTiersInCluster.contains(tier)) {
-        tiersWithNoServer.add(tier);
-      }
-    });
+        SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
+        replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+
+        if (!allTiersInCluster.contains(tier)) {
+          datasourceToInvalidLoadTiers.computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+                                      .add(tier);
+        }
+      });
+    }
 
     SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
     final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
@@ -342,13 +357,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   @Override
   public void deleteSegment(DataSegment segment)
   {
-    loadQueueManager.deleteSegment(segment);
-    RowKey rowKey = RowKey.of(Dimension.DATASOURCE, segment.getDataSource());
-    stats.add(Stats.Segments.DELETED, rowKey, 1);
+    segmentsToDelete
+        .computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+        .add(segment.getId());
   }
 
   /**
-   * Loads the broadcast segment if it is not loaded on the given server.
+   * Loads the broadcast segment if it is not already loaded on the given server.
    * Returns true only if the segment was successfully queued for load on the server.
    */
   private boolean loadBroadcastSegment(DataSegment segment, ServerHolder server)
@@ -357,19 +372,21 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return false;
     } else if (server.isDroppingSegment(segment)) {
       return server.cancelOperation(SegmentAction.DROP, segment);
+    } else if (server.canLoadSegment(segment)) {
+      return loadSegment(segment, server);
     }
 
-    if (server.canLoadSegment(segment) && loadSegment(segment, server)) {
-      return true;
+    final String skipReason;
+    if (server.getAvailableSize() < segment.getSize()) {
+      skipReason = "Not enough disk space";
+    } else if (server.isLoadQueueFull()) {
+      skipReason = "Load queue is full";
     } else {
-      log.makeAlert("Could not assign broadcast segment for datasource [%s]", segment.getDataSource())
-         .addData("segmentId", segment.getId())
-         .addData("segmentSize", segment.getSize())
-         .addData("hostName", server.getServer().getHost())
-         .addData("availableSize", server.getAvailableSize())
-         .emit();
-      return false;
+      skipReason = "Unknown error";
     }
+
+    incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
+    return false;
   }
 
   /**

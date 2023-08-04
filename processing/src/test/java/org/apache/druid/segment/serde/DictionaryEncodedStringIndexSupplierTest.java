@@ -24,12 +24,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -53,7 +53,7 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
   public void testStringColumnWithNullValueSetIndex() throws IOException
   {
     StringUtf8ColumnIndexSupplier<?> indexSupplier = makeStringWithNullsSupplier();
-    StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueSetIndex = indexSupplier.as(StringValueSetIndexes.class);
     Assert.assertNotNull(valueSetIndex);
 
     // 10 rows

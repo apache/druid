@@ -37,13 +37,13 @@ import java.util.Optional;
 
 /**
  * This class represents the partition id for kafka ingestion. This partition id includes topic name along with an
- * integer partition. The topic name is required because the same partition id can be used for different topics.
+ * integer partition. The topic name is required in multi-topic mode because the same partition id can be used for
+ * different topics.
  * This class is used as a key in {@link org.apache.druid.indexing.kafka.KafkaDataSourceMetadata} to store the offsets
  * for each partition.
- *
  */
-@JsonSerialize(using = KafkaTopicPartition.KafkaTopicPartitionSerializer.class,
-    keyUsing = KafkaTopicPartition.KafkaTopicPartitionSerializer.class)
+@JsonSerialize(using = KafkaTopicPartition.KafkaTopicPartitionSerializer.class, keyUsing =
+    KafkaTopicPartition.KafkaTopicPartitionKeySerializer.class)
 @JsonDeserialize(using = KafkaTopicPartition.KafkaTopicPartitionDeserializer.class, keyUsing =
     KafkaTopicPartition.KafkaTopicPartitionKeyDeserializer.class)
 public class KafkaTopicPartition
@@ -52,12 +52,14 @@ public class KafkaTopicPartition
   @Nullable
   private final String topic;
 
-  // This flag is used to maintain backward incompatibilty with older versions of kafka indexing. If this flag
-  // is set to false,
-  // - KafkaTopicPartition will be serialized as an integer and can be read back by older version.
-  // - topic field is ignored while comparing two KafkaTopicPartition objects and calculating hashcode.
-  // This flag must be explicitly passed while constructing KafkaTopicPartition object. That way, we can ensure that
-  // a particular supervisor is always running in multi topic mode or single topic mode.
+  /**
+   * This flag is used to maintain backward incompatibilty with older versions of kafka indexing. If this flag
+   * is set to false,
+   * - KafkaTopicPartition will be serialized as an integer and can be read back by older version.
+   * - topic field is ignored while comparing two KafkaTopicPartition objects and calculating hashcode.
+   * This flag must be explicitly passed while constructing KafkaTopicPartition object. That way, we can ensure that
+   * a particular supervisor is always running in multi topic mode or single topic mode.
+   */
   private final boolean multiTopicPartition;
 
   public KafkaTopicPartition(boolean multiTopicPartition, @Nullable String topic, int partition)
@@ -88,17 +90,6 @@ public class KafkaTopicPartition
   }
 
   @Override
-  public String toString()
-  {
-    // TODO - fix this so toString is not used for serialization
-    if (null != topic && multiTopicPartition) {
-      return topic + ":" + partition;
-    } else {
-      return Integer.toString(partition);
-    }
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -126,6 +117,16 @@ public class KafkaTopicPartition
 
   }
 
+  @Override
+  public String toString()
+  {
+    return "KafkaTopicPartition{" +
+           "partition=" + partition +
+           ", topic='" + topic + '\'' +
+           ", multiTopicPartition=" + multiTopicPartition +
+           '}';
+  }
+
   public static class KafkaTopicPartitionDeserializer extends JsonDeserializer<KafkaTopicPartition>
   {
     @Override
@@ -148,7 +149,31 @@ public class KafkaTopicPartition
     public void serialize(KafkaTopicPartition value, JsonGenerator gen, SerializerProvider serializers)
         throws IOException
     {
-      gen.writeString(value.toString());
+      if (null != value.topic && value.multiTopicPartition) {
+        gen.writeString(value.topic + ":" + value.partition);
+      } else {
+        gen.writeString(String.valueOf(value.partition));
+      }
+    }
+
+    @Override
+    public Class<KafkaTopicPartition> handledType()
+    {
+      return KafkaTopicPartition.class;
+    }
+  }
+
+  public static class KafkaTopicPartitionKeySerializer extends JsonSerializer<KafkaTopicPartition>
+  {
+    @Override
+    public void serialize(KafkaTopicPartition value, JsonGenerator gen, SerializerProvider serializers)
+        throws IOException
+    {
+      if (null != value.topic && value.multiTopicPartition) {
+        gen.writeFieldName(value.topic + ":" + value.partition);
+      } else {
+        gen.writeFieldName(String.valueOf(value.partition));
+      }
     }
 
     @Override

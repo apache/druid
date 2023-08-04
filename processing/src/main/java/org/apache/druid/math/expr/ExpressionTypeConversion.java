@@ -58,6 +58,12 @@ public class ExpressionTypeConversion
     if (Types.is(type, ExprType.STRING) && Types.is(otherType, ExprType.STRING)) {
       return ExpressionType.STRING;
     }
+    // to preserve backwards compatibility, like with strings, we only use array type if both types are
+    // arrays... this is pretty wack, but it is what it is. we might want to consider changing this
+    // behavior in the future with a flag
+    if (type.isArray() && otherType.isArray()) {
+      return leastRestrictiveType(type, otherType);
+    }
 
     type = eval.value() != null ? type : otherType;
     otherType = otherEval.value() != null ? otherType : type;
@@ -241,7 +247,7 @@ public class ExpressionTypeConversion
   {
     final ExpressionType functionType = ExpressionTypeConversion.function(type, other);
     // any number is long
-    return functionType != null && functionType.isNumeric() ? ExpressionType.LONG : functionType;
+    return Types.isNumeric(functionType) ? ExpressionType.LONG : functionType;
   }
 
   /**

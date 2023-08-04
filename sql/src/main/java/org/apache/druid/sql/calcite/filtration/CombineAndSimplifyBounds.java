@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.ISE;
@@ -30,6 +31,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.RangeFilter;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -133,6 +136,9 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
 
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
     final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
+    // Group range filters by dimension, extractionFn, and matchValueType and compute a RangeSet for each one.
+    final Map<RangeRefKey, List<RangeFilter>> ranges = new HashMap<>();
+    final Map<String, ColumnType> leastRestrictiveNumericTypes = new HashMap<>();
 
     // all and/or filters have at least 1 child
     boolean allFalse = true;
@@ -143,8 +149,20 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
         final List<BoundDimFilter> filterList = bounds.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
         filterList.add(bound);
         allFalse = false;
+      } else if (child instanceof RangeFilter) {
+        final RangeFilter range = (RangeFilter) child;
+        final RangeRefKey rangeRefKey = RangeRefKey.from(range);
+        if (rangeRefKey.getMatchValueType().isNumeric()) {
+          leastRestrictiveNumericTypes.compute(
+              range.getColumn(),
+              (c, existingType) -> ColumnType.leastRestrictiveType(existingType, range.getMatchValueType())
+          );
+        }
+        final List<RangeFilter> filterList = ranges.computeIfAbsent(rangeRefKey, k -> new ArrayList<>());
+        filterList.add(range);
+        allFalse = false;
       } else {
-        allFalse &= child instanceof FalseDimFilter;
+        allFalse = allFalse && (child instanceof FalseDimFilter);
       }
     }
 
@@ -183,6 +201,63 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             newChildren.add(Filtration.matchEverything());
           } else {
             newChildren.add(Bounds.toFilter(boundRefKey, range));
+          }
+        }
+      }
+    }
+
+    // Try to consolidate numeric groups
+    final Map<RangeRefKey, List<RangeFilter>> consolidatedNumericRanges = Maps.newHashMapWithExpectedSize(ranges.size());
+    for (Map.Entry<RangeRefKey, List<RangeFilter>> entry : ranges.entrySet()) {
+      RangeRefKey refKey = entry.getKey();
+      if (entry.getKey().getMatchValueType().isNumeric()) {
+        ColumnType numericTypeToUse = leastRestrictiveNumericTypes.get(refKey.getColumn());
+        refKey = new RangeRefKey(refKey.getColumn(), numericTypeToUse);
+      }
+      final List<RangeFilter> filterList = consolidatedNumericRanges.computeIfAbsent(refKey, k -> new ArrayList<>());
+      for (RangeFilter filter : entry.getValue()) {
+
+        int pos = newChildren.indexOf(filter);
+        if (!newChildren.remove(filter)) {
+          // Don't expect this to happen, but include it as a sanity check.
+          throw new ISE("Tried to remove range, but couldn't");
+        }
+        final RangeFilter rewrite = Ranges.toFilter(refKey, Ranges.toRange(filter, refKey.getMatchValueType()));
+        newChildren.add(pos, rewrite);
+        filterList.add(rewrite);
+      }
+    }
+
+    // Try to simplify filters within each group.
+    for (Map.Entry<RangeRefKey, List<RangeFilter>> entry : consolidatedNumericRanges.entrySet()) {
+      final RangeRefKey rangeRefKey = entry.getKey();
+      final List<RangeFilter> filterList = entry.getValue();
+
+      // Create a RangeSet for this group.
+      final RangeSet<RangeValue> rangeSet = disjunction
+                                            ? RangeSets.unionRanges(Ranges.toRanges(filterList))
+                                            : RangeSets.intersectRanges(Ranges.toRanges(filterList));
+
+      if (rangeSet.asRanges().size() < filterList.size()) {
+        // We found a simplification. Remove the old filters and add new ones.
+        for (final RangeFilter range : filterList) {
+          if (!newChildren.remove(range)) {
+            // Don't expect this to happen, but include it as a sanity check.
+            throw new ISE("Tried to remove range, but couldn't");
+          }
+        }
+
+        if (rangeSet.asRanges().isEmpty()) {
+          // range set matches nothing, equivalent to FALSE
+          newChildren.add(Filtration.matchNothing());
+        }
+
+        for (final Range<RangeValue> range : rangeSet.asRanges()) {
+          if (!range.hasLowerBound() && !range.hasUpperBound()) {
+            // range matches all, equivalent to TRUE
+            newChildren.add(Filtration.matchEverything());
+          } else {
+            newChildren.add(Ranges.toFilter(rangeRefKey, range));
           }
         }
       }
@@ -242,6 +317,9 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       return ((NotDimFilter) filter).getField();
     } else if (filter instanceof BoundDimFilter) {
       final BoundDimFilter negated = Bounds.not((BoundDimFilter) filter);
+      return negated != null ? negated : new NotDimFilter(filter);
+    } else if (filter instanceof RangeFilter) {
+      final RangeFilter negated = Ranges.not((RangeFilter) filter);
       return negated != null ? negated : new NotDimFilter(filter);
     } else {
       return new NotDimFilter(filter);

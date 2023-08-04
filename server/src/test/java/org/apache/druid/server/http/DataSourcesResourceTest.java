@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.CoordinatorServerView;
@@ -33,13 +34,13 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -591,27 +592,27 @@ public class DataSourcesResourceTest
     String interval = "2010-01-01_P1D";
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
-    IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
-    indexingServiceClient.killUnusedSegments("api-issued", "datasource1", theInterval);
-    EasyMock.expectLastCall().once();
-    EasyMock.replay(indexingServiceClient, server);
+    OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
+    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null))
+            .andReturn(Futures.immediateFuture(null));
+    EasyMock.replay(overlordClient, server);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, indexingServiceClient, null, null);
+        new DataSourcesResource(inventoryView, null, null, overlordClient, null, null);
     Response response = dataSourcesResource.killUnusedSegmentsInInterval("datasource1", interval);
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(null, response.getEntity());
-    EasyMock.verify(indexingServiceClient, server);
+    Assert.assertNull(response.getEntity());
+    EasyMock.verify(overlordClient, server);
   }
 
   @Test
   public void testMarkAsUnusedAllSegmentsInDataSource()
   {
-    IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
-    EasyMock.replay(indexingServiceClient, server);
+    OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
+    EasyMock.replay(overlordClient, server);
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, indexingServiceClient, null, null);
+        new DataSourcesResource(inventoryView, null, null, overlordClient, null, null);
     try {
       Response response =
           dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???");
@@ -624,7 +625,7 @@ public class DataSourcesResourceTest
       // expected
     }
 
-    EasyMock.verify(indexingServiceClient, server);
+    EasyMock.verify(overlordClient, server);
   }
 
   @Test

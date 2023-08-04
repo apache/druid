@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -27,20 +28,30 @@ import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataActi
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
 public class KafkaCheckpointDataSourceMetadataSerdeTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private ObjectMapper objectMapper;
+
+  @Before
+  public void setUp()
+  {
+    objectMapper = new DefaultObjectMapper();
+    objectMapper.registerSubtypes(KafkaDataSourceMetadata.class);
+    objectMapper.registerSubtypes(KafkaTopicPartition.class);
+    SimpleModule simpleModule = new SimpleModule();
+    simpleModule.addKeySerializer(KafkaTopicPartition.class,
+                                  new KafkaTopicPartition.KafkaTopicPartitionKeySerializer());
+    objectMapper.registerModule(simpleModule);
+  }
 
   @Test
   public void testCheckPointDataSourceMetadataActionSerde() throws IOException
   {
-    MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
-    MAPPER.registerSubtypes(KafkaTopicPartition.class);
-
     final KafkaDataSourceMetadata kafkaDataSourceMetadata =
         new KafkaDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
@@ -59,8 +70,8 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
         kafkaDataSourceMetadata
     );
 
-    final String serialized = MAPPER.writeValueAsString(checkpointAction);
-    final CheckPointDataSourceMetadataAction deserialized = MAPPER.readValue(
+    final String serialized = objectMapper.writeValueAsString(checkpointAction);
+    final CheckPointDataSourceMetadataAction deserialized = objectMapper.readValue(
         serialized,
         CheckPointDataSourceMetadataAction.class
     );
@@ -70,9 +81,6 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
   @Test
   public void testMultiTopicCheckPointDataSourceMetadataActionSerde() throws IOException
   {
-    MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
-    MAPPER.registerSubtypes(KafkaTopicPartition.class);
-
     final KafkaDataSourceMetadata kafkaDataSourceMetadata =
         new KafkaDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
@@ -91,8 +99,8 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
         kafkaDataSourceMetadata
     );
 
-    final String serialized = MAPPER.writeValueAsString(checkpointAction);
-    final CheckPointDataSourceMetadataAction deserialized = MAPPER.readValue(
+    final String serialized = objectMapper.writeValueAsString(checkpointAction);
+    final CheckPointDataSourceMetadataAction deserialized = objectMapper.readValue(
         serialized,
         CheckPointDataSourceMetadataAction.class
     );
@@ -102,7 +110,6 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
   @Test
   public void testCheckPointDataSourceMetadataActionOldJsonSerde() throws IOException
   {
-    MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
     final String jsonStr = "{\n"
                            + "\t\"type\": \"checkPointDataSourceMetadata\",\n"
                            + "\t\"supervisorId\": \"id_1\",\n"
@@ -167,7 +174,7 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
                            + "\t\"sequenceName\": \"dummy\"\n"
                            + "}";
 
-    final CheckPointDataSourceMetadataAction actual = MAPPER.readValue(
+    final CheckPointDataSourceMetadataAction actual = objectMapper.readValue(
         jsonStr,
         CheckPointDataSourceMetadataAction.class
     );

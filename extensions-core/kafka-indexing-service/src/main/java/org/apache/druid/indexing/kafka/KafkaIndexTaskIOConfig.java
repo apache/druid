@@ -100,7 +100,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       int taskGroupId,
       String baseSequenceName,
       SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers,
-        SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers,
       Map<String, Object> consumerProperties,
       Long pollTimeout,
       Boolean useTransaction,
