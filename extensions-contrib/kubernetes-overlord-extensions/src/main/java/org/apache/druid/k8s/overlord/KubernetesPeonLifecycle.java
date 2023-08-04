@@ -250,7 +250,8 @@ public class KubernetesPeonLifecycle
           podStatus.getPodIP(),
           DruidK8sConstants.PORT,
           DruidK8sConstants.TLS_PORT,
-          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"))
+          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
+          pod.getMetadata() != null ? pod.getMetadata().getName() : ""
       );
     }
 

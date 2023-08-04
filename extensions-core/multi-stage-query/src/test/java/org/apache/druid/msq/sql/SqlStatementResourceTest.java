@@ -380,7 +380,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                TaskState.RUNNING,
                null,
                null,
-               new TaskLocation("test", 0, 0),
+               TaskLocation.create("test", 0, 0),
                null,
                null
            ))));
@@ -402,7 +402,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                TaskState.SUCCESS,
                null,
                100L,
-               new TaskLocation("test", 0, 0),
+               TaskLocation.create("test", 0, 0),
                null,
                null
            ))));
@@ -526,7 +526,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                TaskState.RUNNING,
                null,
                null,
-               new TaskLocation("test", 0, 0),
+               TaskLocation.create("test", 0, 0),
                null,
                null
            ))));
@@ -548,7 +548,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                TaskState.SUCCESS,
                null,
                100L,
-               new TaskLocation("test", 0, 0),
+               TaskLocation.create("test", 0, 0),
                null,
                null
            ))));

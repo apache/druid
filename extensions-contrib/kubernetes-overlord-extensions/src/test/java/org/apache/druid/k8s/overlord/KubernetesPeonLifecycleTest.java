@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -632,6 +633,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(8100, location.getPort());
     Assert.assertEquals(-1, location.getTlsPort());
+    Assert.assertEquals(ID, location.getK8sPodName());
 
     verifyAll();
   }
@@ -661,6 +663,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(8100, location.getPort());
     Assert.assertEquals(-1, location.getTlsPort());
+    Assert.assertEquals(ID, location.getK8sPodName());
 
     verifyAll();
   }
@@ -691,6 +694,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(-1, location.getPort());
     Assert.assertEquals(8091, location.getTlsPort());
+    Assert.assertEquals(ID, location.getK8sPodName());
 
     verifyAll();
   }
