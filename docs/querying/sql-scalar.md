@@ -31,8 +31,10 @@ sidebar_label: "Scalar functions"
 -->
 
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 [Druid SQL](./sql.md) includes scalar functions that include numeric and string functions, IP address functions, Sketch functions, and more, as described on this page. 
 

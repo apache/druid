@@ -29,7 +29,9 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::info
+ You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::
 
 The S3 input source reads objects directly from S3. You can specify either:
 - a list of S3 URI strings
@@ -206,11 +208,15 @@ Properties Object:
 |assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
-> **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+:::info
+ **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+:::
 
 ## Google Cloud Storage input source
 
-> You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::info
+ You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::
 
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
@@ -294,7 +300,9 @@ Google Cloud Storage object:
 
 ## Azure input source
 
-> You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::info
+ You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::
 
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
@@ -375,7 +383,9 @@ The `objects` property is:
 
 ## HDFS input source
 
-> You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::info
+ You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::
 
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
@@ -462,9 +472,11 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-> **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
->
-> The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+:::info
+ **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+
+ The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+:::
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
@@ -690,10 +702,12 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 }
 ```
 
-> Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
-> have ingestion specs that rely on this and cannot rewrite them, set
-> [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
-> to `true` to enable a compatibility mode where the timestampSpec is ignored.
+:::info
+ Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
+ have ingestion specs that rely on this and cannot rewrite them, set
+ [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
+ to `true` to enable a compatibility mode where the timestampSpec is ignored.
+:::
 
 ## SQL input source
 

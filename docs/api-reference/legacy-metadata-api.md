@@ -99,8 +99,12 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 ## Metadata store information
 
-> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
+:::info
+
+Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+[`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
+
+:::
 
 `GET /druid/coordinator/v1/metadata/segments`
 
@@ -279,10 +283,14 @@ This section documents the API endpoints for the processes that reside on Query 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 as in `2016-06-27_2016-06-28`.
 
-> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
-> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
+:::info
+
+Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+[`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+[`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+[`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
+
+:::
 
 `GET /druid/v2/datasources`
 
@@ -296,18 +304,25 @@ If no interval is specified, a default interval spanning a configurable period b
 
 `GET /druid/v2/datasources/{dataSourceName}/dimensions`
 
-> This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
-> if you're using SQL.
-> 
+:::info
+
+This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
+if you're using SQL.
+
+:::
+ 
 Returns the dimensions of the datasource.
 
 `GET /druid/v2/datasources/{dataSourceName}/metrics`
 
-> This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
-> if you're using SQL.
+:::info
 
+This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
+if you're using SQL.
+
+:::
 Returns the metrics of the datasource.
 
 `GET /druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals}&numCandidates={numCandidates}`

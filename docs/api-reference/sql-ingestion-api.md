@@ -27,9 +27,13 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+
+This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ingestion method is right for you.
+
+:::
 
 The **Query** view in the web console provides a friendly experience for the multi-stage query task engine (MSQ task
 engine) and multi-stage query architecture. We recommend using the web console if you do not need a programmatic

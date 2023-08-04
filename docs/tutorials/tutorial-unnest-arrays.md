@@ -27,10 +27,14 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-> If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
+:::info
+ If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
+:::
 
-> The unnest datasource and UNNEST SQL function are [experimental](../development/experimental.md). Their API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
+:::info
+ The unnest datasource and UNNEST SQL function are [experimental](../development/experimental.md). Their API and behavior are subject
+ to change in future releases. It is not recommended to use this feature in production at this time.
+:::
 
 This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
 

@@ -775,7 +775,9 @@ the following properties.
 |--------|-----------|-------|
 |`druid.javascript.enabled`|Set to "true" to enable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, post-aggregator, router strategy, and worker selection strategy.|false|
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### Double Column storage
 
@@ -968,8 +970,10 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 
 The `smartSegmentLoading` mode simplifies Coordinator configuration for segment loading and balancing.
 In this mode, the Coordinator does not require the user to provide values of the following parameters and computes them automatically instead.
-> If you enable `smartSegmentLoading` mode **and** provide values for the following properties, Druid ignores your values. The Coordinator computes them automatically.
+:::info
+ If you enable `smartSegmentLoading` mode **and** provide values for the following properties, Druid ignores your values. The Coordinator computes them automatically.
 The computed values are based on the current state of the cluster and are designed to optimize Coordinator performance.
+:::
 
 |Property|Computed value|Description|
 |--------|--------------|-----------|
@@ -1393,7 +1397,9 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ###### affinityConfig
 
@@ -1992,9 +1998,11 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.maxNumericInFilters`|Max limit for the amount of numeric values that can be compared for a string type dimension when the entire SQL WHERE clause of a query translates to an [OR](../querying/filters.md#or) of [Bound filter](../querying/filters.md#bound-filter). By default, Druid does not restrict the amount of numeric Bound Filters on String columns, although this situation may block other queries from running. Set this property to a smaller value to prevent Druid from running queries that have prohibitively long segment processing times. The optimal limit requires some trial and error; we recommend starting with 100.  Users who submit a query that exceeds the limit of `maxNumericInFilters` should instead rewrite their queries to use strings in the `WHERE` clause instead of numbers. For example, `WHERE someString IN (‘123’, ‘456’)`. If this value is disabled, `maxNumericInFilters` set through query context is ignored.|`-1` (disabled)|
 |`druid.sql.approxCountDistinct.function`|Implementation to use for the [`APPROX_COUNT_DISTINCT` function](../querying/sql-aggregations.md). Without extensions loaded, the only valid value is `APPROX_COUNT_DISTINCT_BUILTIN` (a HyperLogLog, or HLL, based implementation). If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be `APPROX_COUNT_DISTINCT_DS_HLL` (alternative HLL implementation) or `APPROX_COUNT_DISTINCT_DS_THETA`.<br /><br />Theta sketches use significantly more memory than HLL sketches, so you should prefer one of the two HLL implementations.|APPROX_COUNT_DISTINCT_BUILTIN|
 
-> Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
-> These properties are no longer available. Since Druid 0.18.0, you can use `druid.server.http.maxSubqueryRows` to control the maximum
-> number of rows permitted across all subqueries.
+:::info
+ Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
+ These properties are no longer available. Since Druid 0.18.0, you can use `druid.server.http.maxSubqueryRows` to control the maximum
+ number of rows permitted across all subqueries.
+:::
 
 #### Broker Caching
 
@@ -2013,8 +2021,10 @@ You can optionally only configure caching to be enabled on the Broker by setting
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
-> Note: Even if cache is enabled, for [groupBy v2](../querying/groupbyquery.md#strategies) queries, both of non-result level cache and result level cache do not work on Brokers.
-> See [Differences between v1 and v2](../querying/groupbyquery.md#differences-between-v1-and-v2) and [Query caching](../querying/caching.md) for more information.
+:::info
+ Note: Even if cache is enabled, for [groupBy v2](../querying/groupbyquery.md#strategies) queries, both of non-result level cache and result level cache do not work on Brokers.
+ See [Differences between v1 and v2](../querying/groupbyquery.md#differences-between-v1-and-v2) and [Query caching](../querying/caching.md) for more information.
+:::
 
 #### Segment Discovery
 |Property|Possible Values|Description|Default|
@@ -2049,7 +2059,9 @@ for both Broker and Historical processes, when defined in the common properties 
 
 #### Local Cache
 
-> DEPRECATED: Use caffeine (default as of v0.12.0) instead
+:::info
+ DEPRECATED: Use caffeine (default as of v0.12.0) instead
+:::
 
 The local cache is deprecated in favor of the Caffeine cache, and may be removed in a future version of Druid. The Caffeine cache affords significantly better performance and control over eviction behavior compared to `local` cache, and is recommended in any situation where you are using JRE 8u60 or higher.
 

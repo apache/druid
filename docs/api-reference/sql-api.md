@@ -23,8 +23,10 @@ sidebar_label: Druid SQL
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
+ This document describes the SQL language.
+:::
 
 You can submit and cancel [Druid SQL](../querying/sql.md) queries using the Druid SQL API.
 The Druid SQL API is available at `https://ROUTER:8888/druid/v2/sql`, where `ROUTER` is the IP address of the Druid Router.
