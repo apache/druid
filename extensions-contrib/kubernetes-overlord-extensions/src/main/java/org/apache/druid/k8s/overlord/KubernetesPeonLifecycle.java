@@ -253,6 +253,7 @@ public class KubernetesPeonLifecycle
           Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
           pod.getMetadata() != null ? pod.getMetadata().getName() : ""
       );
+      log.info(StringUtils.format("K8s task %s is running at location %s", taskId.getOriginalTaskId(), taskLocation));
     }
 
     return taskLocation;
