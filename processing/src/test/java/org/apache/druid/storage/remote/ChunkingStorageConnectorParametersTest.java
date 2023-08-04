@@ -19,9 +19,12 @@
 
 package org.apache.druid.storage.remote;
 
+import com.google.common.base.Predicates;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.File;
 
 public class ChunkingStorageConnectorParametersTest
 {
@@ -34,10 +37,30 @@ public class ChunkingStorageConnectorParametersTest
   }
 
   @Test
-  public void testVerifyParameters()
+  public void testIncorrectParameters()
   {
     ChunkingStorageConnectorParameters.Builder<Void> builder = new ChunkingStorageConnectorParameters.Builder<>();
     builder.start(-1);
     Assert.assertThrows(IllegalArgumentException.class, builder::build);
+  }
+
+  @Test
+  public void testCorrectParameters()
+  {
+    ChunkingStorageConnectorParameters.Builder<Void> builder = new ChunkingStorageConnectorParameters.Builder<>();
+    builder.start(0);
+    builder.end(10);
+    builder.objectSupplier((start, end) -> null);
+    builder.objectOpenFunction(obj -> null);
+    builder.maxRetry(10);
+    builder.cloudStoragePath("/path");
+    builder.retryCondition(Predicates.alwaysTrue());
+    builder.tempDirSupplier(() -> new File("/tmp"));
+    ChunkingStorageConnectorParameters<Void> parameters = builder.build();
+    Assert.assertEquals(0, parameters.getStart());
+    Assert.assertEquals(10, parameters.getEnd());
+    Assert.assertEquals(10, parameters.getMaxRetry());
+    Assert.assertEquals("/path", parameters.getCloudStoragePath());
+    Assert.assertEquals("/tmp", parameters.getTempDirSupplier().get().getAbsolutePath());
   }
 }

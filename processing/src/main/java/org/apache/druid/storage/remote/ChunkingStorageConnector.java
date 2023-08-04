@@ -50,6 +50,20 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
   private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 100_000_000;
 
+  private final long chunkSizeBytes;
+
+  public ChunkingStorageConnector()
+  {
+    this(DOWNLOAD_MAX_CHUNK_SIZE_BYTES);
+  }
+
+  public ChunkingStorageConnector(
+      final long chunkSizeBytes
+  )
+  {
+    this.chunkSizeBytes = chunkSizeBytes;
+  }
+
   @Override
   public InputStream read(String path) throws IOException
   {
@@ -108,9 +122,8 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                 UUID.randomUUID().toString()
             );
 
-            // exclusive
             long currentReadEndPosition = Math.min(
-                currentReadStartPosition.get() + DOWNLOAD_MAX_CHUNK_SIZE_BYTES,
+                currentReadStartPosition.get() + chunkSizeBytes,
                 readEnd
             );
 
@@ -160,7 +173,6 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                   }
                   fileInputStreamClosed.set(true);
                   super.close();
-                  // since endPoint is inclusive in s3's get request API, the next currReadStart is endpoint + 1
                   currentReadStartPosition.set(currentReadEndPosition);
                   if (!outFile.delete()) {
                     throw new RE("Cannot delete temp file [%s]", outFile);
