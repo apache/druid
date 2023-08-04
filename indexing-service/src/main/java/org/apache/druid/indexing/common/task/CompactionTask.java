@@ -794,7 +794,9 @@ public class CompactionTask extends AbstractBatchIndexTask
     try {
       existingSegmentAnalyzer.fetchAndProcessIfNeeded();
     } finally {
-      emitter.emit(metricBuilder.build("compact/segmentAnalyzer/fetchAndProcessMillis", clock.millis() - start));
+      if (emitter != null) {
+        emitter.emit(metricBuilder.build("compact/segmentAnalyzer/fetchAndProcessMillis", clock.millis() - start));
+      }
     }
 
     final Granularity queryGranularityToUse;
