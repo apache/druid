@@ -77,7 +77,9 @@ parsing data is less efficient than writing a native Java parser or using an ext
 
 You can use the `inputFormat` field to specify the data format for your input data.
 
-> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+:::info
+ `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+:::
 
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
@@ -167,7 +169,9 @@ For example:
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).
-> To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
+:::info
+ To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
+:::
 
 Configure the ORC `inputFormat` to load ORC data as follows:
 
@@ -289,9 +293,11 @@ If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 
 ###### Inline Schema Based Avro Bytes Decoder
 
-> The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
-> may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
-> allows the parser to identify the proper Avro schema for reading records.
+:::info
+ The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
+ may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
+ allows the parser to identify the proper Avro schema for reading records.
+:::
 
 This decoder can be used if all the input events can be read using the same schema. In this case, specify the schema in the input task JSON itself, as described below.
 
@@ -503,7 +509,9 @@ For example:
 
 ### Protobuf
 
-> You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
+:::info
+ You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
+:::
 
 Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
@@ -686,9 +694,11 @@ Each entry in the `fields` list can have the following components:
 
 ## Parser
 
-> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
+:::info
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
 and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
+:::
 
 This section lists all default and core extension parsers.
 For community extension parsers, please see our [community extensions list](../configuration/extensions.md#community-extensions).
@@ -705,9 +715,13 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 ### Avro Hadoop Parser
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::info
+ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`.
@@ -764,10 +778,14 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 
 ### ORC Hadoop Parser
 
-> You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
+:::info
+ You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
+:::
 
-> If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
-> please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+:::info
+ If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
+ please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+:::
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.orc.mapreduce.OrcInputFormat"`.
@@ -1005,7 +1023,9 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Parquet Hadoop Parser
 
-> You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
+:::info
+ You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
+:::
 
 The Parquet Hadoop parser is for [Hadoop batch ingestion](./hadoop.md) and parses Parquet files directly.
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `org.apache.druid.data.input.parquet.DruidParquetInputFormat`.
@@ -1147,12 +1167,16 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 
 ### Parquet Avro Hadoop Parser
 
-> Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest
+:::info
+ Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest
 Parquet files. See [Parquet Hadoop Parser vs Parquet Avro Hadoop Parser](#parquet-hadoop-parser-vs-parquet-avro-hadoop-parser)
 for the differences between those parsers.
+:::
 
-> You need to include both the [`druid-parquet-extensions`](../development/extensions-core/parquet.md)
+:::info
+ You need to include both the [`druid-parquet-extensions`](../development/extensions-core/parquet.md)
 [`druid-avro-extensions`] as extensions to use the Parquet Avro Hadoop Parser.
+:::
 
 The Parquet Avro Hadoop Parser is for [Hadoop batch ingestion](./hadoop.md).
 This parser first converts the Parquet data into Avro records, and then parses them to ingest into Druid.
@@ -1234,9 +1258,13 @@ an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/ti
 
 ### Avro Stream Parser
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+:::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+:::
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::info
+ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Avro data from a stream directly.
 
@@ -1276,7 +1304,9 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
 
 ### Protobuf Parser
 
-> You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
+:::info
+ You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
+:::
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Protocol buffer data from a stream directly.
 
@@ -1430,9 +1460,11 @@ Multiple Instances:
 
 ## ParseSpec
 
-> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
+:::info
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
 and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
+:::
 
 ParseSpecs serve two purposes:
 
@@ -1468,7 +1500,9 @@ Sample spec:
 
 ### JSON Lowercase ParseSpec
 
-> The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+:::info
+ The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+:::
 
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
 
@@ -1608,7 +1642,9 @@ columns names ("column_1", "column2", ... "column_n") will be assigned. Ensure t
 Note with the JavaScript parser that data must be fully parsed and returned as a `{key:value}` format in the JS logic.
 This means any flattening or parsing multi-dimensional values must be done here.
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### TimeAndDims ParseSpec
 

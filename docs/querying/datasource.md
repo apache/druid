@@ -113,11 +113,13 @@ both are always strings.
 To see a list of all lookup datasources, use the SQL query
 `SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'lookup'`.
 
-> Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
-> SQL [`LOOKUP` function](sql-scalar.md#string-functions).
-> However, the join operator must evaluate the condition on each row, whereas the
-> `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
-> usually faster than joining to a lookup datasource.
+:::info
+ Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
+ SQL [`LOOKUP` function](sql-scalar.md#string-functions).
+ However, the join operator must evaluate the condition on each row, whereas the
+ `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
+ usually faster than joining to a lookup datasource.
+:::
 
 Refer to the [Query execution](query-execution.md#table) page for more details on how queries are executed when you
 use table datasources.
@@ -261,10 +263,12 @@ Query datasources allow you to issue subqueries. In native queries, they can app
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.
 - In the WHERE clause: `WHERE <column> { IN | NOT IN } (<subquery>)`. These are translated to joins by the SQL planner.
 
-> Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
-> processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
-> bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
-> page for more details on how subqueries are executed and what limits will apply.
+:::info
+ Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
+ processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
+ bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
+ page for more details on how subqueries are executed and what limits will apply.
+:::
 
 ### `join`
 
@@ -397,8 +401,10 @@ future versions:
 
 ### `unnest`
 
-> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
+:::info
+ The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
+ to change in future releases. It is not recommended to use this feature in production at this time.
+:::
 
 Use the `unnest` datasource to unnest a column with multiple values in an array.
 For example, you have a source column that looks like this:

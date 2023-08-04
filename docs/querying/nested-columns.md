@@ -489,7 +489,9 @@ Some operations using `JSON_VALUE` run faster than those using native Druid colu
 
 `JSON_VALUE` only returns literal types. Any paths that reference JSON objects or array types return null.
 
-> To achieve the best possible performance, use the `JSON_VALUE` function whenever you query JSON objects.
+:::info
+ To achieve the best possible performance, use the `JSON_VALUE` function whenever you query JSON objects.
+:::
 
 #### Example query: Extract nested data elements
 

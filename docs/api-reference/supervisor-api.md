@@ -105,7 +105,9 @@ Terminate all supervisors at once.
 
 `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown`
 
-> This API is deprecated and will be removed in future releases.
-> Please use the equivalent `terminate` instead.
+:::info
+ This API is deprecated and will be removed in future releases.
+ Please use the equivalent `terminate` instead.
+:::
 
 Shutdown a supervisor.

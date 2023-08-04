@@ -31,8 +31,10 @@ sidebar_label: "Multi-value string functions"
 -->
 
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 Druid supports string dimensions containing multiple values.
 This page describes the operations you can perform on multi-value string dimensions using [Druid SQL](./sql.md).
