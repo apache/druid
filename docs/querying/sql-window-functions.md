@@ -50,9 +50,9 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 | `event_time` | `channel` | `change`| `rank_value` |
 | -- | -- | -- | -- |
-| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 1	| 1 |
-| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 1	| 1 |
-| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 7	| 3 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 1 | 1 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 1 | 1 |
+| `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 7 | 3 |
 | `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 56 | 4 |
 | `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 56 | 4 |
 | `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 63 | 6 |
@@ -60,17 +60,16 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 | `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 2440 | 8 |
 | `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 2703 | 9 |
 | `2016-06-27T00:00:00.000Z`| `#kk.wikipedia`| 6900 |10 |
-| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 1	| 1 |
-| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 2	| 2 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 1 | 1 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 2 | 2 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 13 | 3 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 28 | 4 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 53 | 5 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 56 | 6 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 59 | 7 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 391 | 8 |
-| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 894	| 9 |
+| `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 894 | 9 |
 | `2016-06-27T00:00:00.000Z`| `#lt.wikipedia`| 4358 | 10 |
-
 
 </details>
 
@@ -86,9 +85,8 @@ When working with window functions, consider the following:
 
 The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
-- ORDER BY specifies the order of the rows within the windows. Currently only ascending order, ASC,x works.
+- ORDER BY specifies the order of the rows within the windows. Currently only ascending order, ASC, works.
 Sometimes windows are called partitions, but don't confuse them with the segment partitioning feature of Druid.
-
 
 The following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
 
@@ -112,7 +110,6 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 |`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value |
 |`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window|
 |`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window |
-
 
 ## Examples
 
@@ -163,7 +160,6 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 |`2016-06-27T00:00:00.000Z`| `#lt.wikipedia`|4358|10|10|10|1|1|4|894|null|1|4358|
 
 </details>
-
 
 The following example demonstrates applying a window to the SUM() function to calculate the cumulative changes to a channel over time:
 
