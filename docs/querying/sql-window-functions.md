@@ -86,7 +86,7 @@ When working with window functions, consider the following:
 
 The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
-- ORDER BY specifies the order of the rows within the windows. Currently only ASC, ascending, order works.
+- ORDER BY specifies the order of the rows within the windows. Currently only ascending order, ASC,x works.
 Sometimes windows are called partitions, but don't confuse them with the segment partitioning feature of Druid.
 
 
