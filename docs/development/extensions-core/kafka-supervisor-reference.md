@@ -80,14 +80,18 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 ## Idle Supervisor Configuration
 
-> Note that Idle state transitioning is currently designated as experimental.
+:::info
+ Note that Idle state transitioning is currently designated as experimental.
+:::
 
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `enabled` | If `true`, Kafka supervisor will become idle if there is no data on input stream/topic for some time. | no (default == false) |
 | `inactiveAfterMillis` | Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds. | no (default == `600_000`) |
 
-> When the supervisor enters the idle state, no new tasks will be launched subsequent to the completion of the currently executing tasks. This strategy may lead to reduced costs for cluster operators while using topics that get sporadic data.
+:::info
+ When the supervisor enters the idle state, no new tasks will be launched subsequent to the completion of the currently executing tasks. This strategy may lead to reduced costs for cluster operators while using topics that get sporadic data.
+:::
 
 The following example demonstrates supervisor spec with `lagBased` autoScaler and idle config enabled:
 ```json

@@ -22,10 +22,12 @@ title: "Aggregations"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about aggregators available in SQL, refer to the
-> [SQL documentation](sql-aggregations.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the native
+ language. For information about aggregators available in SQL, refer to the
+ [SQL documentation](sql-aggregations.md).
+:::
 
 You can use aggregations:
 -  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.
@@ -341,7 +343,9 @@ JavaScript functions are expected to return floating-point values.
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 <a name="approx"></a>
 
@@ -361,8 +365,10 @@ Compared to the Theta sketch, the HLL sketch does not support set operations and
 
 #### Cardinality, hyperUnique
 
-> For new use cases, we recommend evaluating [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.md) or [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.md) instead.
-> The DataSketches aggregators are generally able to offer more flexibility and better accuracy than the classic Druid `cardinality` and `hyperUnique` aggregators.
+:::info
+ For new use cases, we recommend evaluating [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.md) or [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.md) instead.
+ The DataSketches aggregators are generally able to offer more flexibility and better accuracy than the classic Druid `cardinality` and `hyperUnique` aggregators.
+:::
 
 The [Cardinality and HyperUnique](../querying/hll-old.md) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer DataSketches Theta and HLL extension-provided aggregators described above have superior accuracy and performance and are recommended instead.
 
@@ -404,9 +410,11 @@ We do not recommend the fixed buckets histogram for general use, as its usefulne
 
 #### Approximate Histogram (deprecated)
 
-> The Approximate Histogram aggregator is deprecated.
-> There are a number of other quantile estimation algorithms that offer better performance, accuracy, and memory footprint.
-> We recommend using [DataSketches Quantiles](../development/extensions-core/datasketches-quantiles.md) instead.
+:::info
+ The Approximate Histogram aggregator is deprecated.
+ There are a number of other quantile estimation algorithms that offer better performance, accuracy, and memory footprint.
+ We recommend using [DataSketches Quantiles](../development/extensions-core/datasketches-quantiles.md) instead.
+:::
 
 The [Approximate Histogram](../development/extensions-core/approximate-histograms.md) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
 

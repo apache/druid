@@ -35,7 +35,9 @@ All Druid metrics share a common set of fields:
 
 Metrics may have additional dimensions beyond those listed above.
 
-> Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
+:::info
+ Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
+:::
 
 ## Query metrics
 

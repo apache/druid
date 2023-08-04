@@ -18,6 +18,7 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+<code>[\s\S]*<\/code>
 1M
 100MiB
 32-bit
@@ -109,6 +110,8 @@ html
 HyperLogLog
 IAM
 IANA
+IcebergFilter
+IcebergInputSource
 IETF
 IP
 IPv4
@@ -216,6 +219,7 @@ SslContextFactory
 StatsD
 SYSTEM_TABLE
 TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -313,6 +317,8 @@ featureSpec
 findColumnsFromHeader
 filenames
 filesystem
+filterColumn
+filterValue
 firefox
 firehose
 firehoses
@@ -376,6 +382,7 @@ max_map_count
 memcached
 mergeable
 metadata
+metastores
 millis
 microbatch
 microbatches
@@ -484,6 +491,7 @@ skipHeaderRows
 Smoosh
 smoosh
 smooshed
+snapshotting
 splittable
 ssl
 sslmode
@@ -715,7 +723,6 @@ DurableStorageConfiguration
 ColumnTypeNotSupported
 InsertCannotAllocateSegment
 InsertCannotBeEmpty
-InsertCannotOrderByDescending
 InsertCannotReplaceExistingSegment
 InsertLockPreempted
 InsertTimeNull
@@ -1229,6 +1236,8 @@ pom.xml
 0.7.x
 0.7.x.
 TimeAndDims
+catalogProperties
+catalogUri
 column2
 column_1
 column_n
@@ -1237,6 +1246,8 @@ ctrl
 descriptorString
 headerFormat
 headerLabelPrefix
+icebergFilter
+icebergCatalog
 jsonLowercase
 kafka
 KafkaStringHeaderFormat
@@ -1309,6 +1320,7 @@ segmentOutputPath
 segmentTable
 shardSpec
 single_dim
+tableName
 targetPartitionSize
 targetRowsPerSegment
 useCombiner
@@ -1401,6 +1413,8 @@ BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+warehouseSource
+warehousePath
 index.md
 DOUBLE_ARRAY
 DOY
@@ -1801,6 +1815,7 @@ InsensitiveContainsSearchQuerySpec
 RegexSearchQuerySpec
 analysisType
 analysisTypes
+aggregatorMergeStrategy
 lenientAggregatorMerge
 minmax
 segmentMetadata
@@ -2278,6 +2293,11 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+completeTasks
+runningTasks
+waitingTasks
+pendingTasks
+shutdownAllTasks
 supervisorId
 suspendAll
 resumeAll
