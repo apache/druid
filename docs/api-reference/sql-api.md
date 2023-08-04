@@ -625,7 +625,7 @@ If a page number isn't passed, all results are returned sequentially in the same
 
 When getting query results, keep the following in mind:
 
-- JSON is the only supported result format.
+- JSON Lines is the only supported result format.
 - Getting the query results for an ingestion query returns an empty response.
 
 #### URL
