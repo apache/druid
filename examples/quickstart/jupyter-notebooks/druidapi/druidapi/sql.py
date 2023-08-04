@@ -585,6 +585,9 @@ class QueryTaskResult:
             self._reports = self._tasks().task_reports(self._id)
         return self._reports
 
+    def reports_no_wait(self) -> dict:
+        return self._tasks().task_reports(self._id, require_ok=False)
+
     @property
     def results(self):
         if not self._results:

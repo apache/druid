@@ -37,7 +37,8 @@ RUN pip install requests \
     pip install seaborn \
     pip install bokeh \
     pip install kafka-python \
-    pip install sortedcontainers 
+    pip install sortedcontainers \
+    pip install tqdm
 
 # Install druidapi client from apache/druid
 # Local install requires sudo privileges 

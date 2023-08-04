@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from druidapi import consts
+import time
 
 class DisplayClient:
     '''
@@ -144,3 +145,25 @@ class DisplayClient:
 
     def tables(self, schema=consts.DRUID_SCHEMA):
         self._druid.sql._tables_query(schema).show(display=self)
+
+    def run_task(self, query):
+        '''
+        Run an MSQ task while displaying progress in the cell output.
+        :param query: INSERT/REPLACE statement to run
+        :return: None
+        '''
+        from IPython.display import clear_output
+
+        task = self._druid.sql.task(query)
+        while True:
+            clear_output()
+            reports=task.reports_no_wait()
+            # check if summary is available and print it
+            if 'multiStageQuery' in reports.keys():
+                if 'payload' in reports['multiStageQuery'].keys():
+                    if 'counters' in reports['multiStageQuery']['payload'].keys():
+
+                        print([ reports['multiStageQuery']['payload']['counters'][s] for s in reports['multiStageQuery']['payload']['counters']])
+                    if reports['multiStageQuery']['payload']['status']['status'] in ['COMPLETED', 'FAILED']:
+                        break;
+            time.sleep(0.5)
