@@ -4,7 +4,12 @@ title: Druid SQL API
 sidebar_label: Druid SQL
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -34,7 +39,7 @@ The Druid SQL API is available at `https://ROUTER:8888/druid/v2/sql`, where `ROU
 To use the SQL API to make Druid SQL queries, send your query to the Router using the POST method:
 ```
 POST https://ROUTER:8888/druid/v2/sql/
-```  
+```
 
 Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
 ```json
@@ -42,7 +47,7 @@ Submit your query as the value of a "query" field in the JSON object within the 
 ```
 
 ### Request body
-      
+
 |Property|Description|Default|
 |--------|----|-----------|
 |`query`|SQL query string.| none (required)|
@@ -178,21 +183,21 @@ You can cancel the query using the query id `myQuery01` as follows:
 curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
 ```
 
-Cancellation requests require READ permission on all resources used in the SQL query. 
+Cancellation requests require READ permission on all resources used in the SQL query.
 
 Druid returns an HTTP 202 response for successful deletion requests.
 
 Druid returns an HTTP 404 response in the following cases:
   - `sqlQueryId` is incorrect.
   - The query completes before your cancellation request is processed.
-  
+
 Druid returns an HTTP 403 response for authorization failure.
 
 ## Query from deep storage
 
 > Query from deep storage is an [experimental feature](../development/experimental.md).
 
-You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules. 
+You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules.
 
 Note that at least one segment of a datasource must be available on a Historical process so that the Broker can plan your query. A quick way to check if this is true is whether or not a datasource is visible in the Druid console.
 
@@ -209,13 +214,13 @@ Note that at least part of a datasource must be available on a Historical proces
 
 <code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
 
-#### Request body 
+#### Request body
 
 Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. For general information about the available fields, see [Submit a query to the `sql` endpoint](#submit-a-query).
 
 Keep the following in mind when submitting queries to the `sql/statements` endpoint:
 
-- There are additional context parameters  for `sql/statements`: 
+- There are additional context parameters  for `sql/statements`:
 
    - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. You must manually retrieve your results after the query completes.
    - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
@@ -224,15 +229,18 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully queried from deep storage* 
 
-<!--400 BAD REQUEST-->
+*Successfully queried from deep storage*
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
+
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
@@ -241,21 +249,23 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
     "host": "The host on which the error occurred.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="3" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements" \
@@ -264,11 +274,13 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements" \
     "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
     "context": {
         "executionMode":"ASYNC"
-    }  
+    }
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="4" label="HTTP">
+
 
 ```HTTP
 POST /druid/v2/sql/statements HTTP/1.1
@@ -280,11 +292,12 @@ Content-Length: 134
     "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
     "context": {
         "executionMode":"ASYNC"
-    }  
+    }
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -419,49 +432,57 @@ Retrieves information about the query associated with the given query ID. The re
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="5" label="200 SUCCESS">
 
-*Successfully retrieved query status* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved query status*
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="6" label="400 BAD REQUEST">
+
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
 The following example retrieves the status of a query with specified ID `query-9b93f6f7-ab0e-48f5-986a-3520f84f0804`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="7" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="8" label="HTTP">
+
 
 ```HTTP
 GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -639,47 +660,55 @@ When getting query results, keep the following in mind:
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="9" label="200 SUCCESS">
 
-*Successfully retrieved query results* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved query results*
 
-*Query in progress. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="10" label="400 BAD REQUEST">
+
+
+*Query in progress. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--404 NOT FOUND-->
+</TabItem>
+<TabItem value="11" label="404 NOT FOUND">
+
 
 *Query not found, failed or canceled*
 
-<!--500 SERVER ERROR-->
+</TabItem>
+<TabItem value="12" label="500 SERVER ERROR">
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
@@ -687,22 +716,26 @@ When getting query results, keep the following in mind:
 
 The following example retrieves the status of a query with specified ID `query-f3bca219-173d-44d4-bdc7-5002e910352f`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="13" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-f3bca219-173d-44d4-bdc7-5002e910352f/results"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="14" label="HTTP">
+
 
 ```HTTP
 GET /druid/v2/sql/statements/query-f3bca219-173d-44d4-bdc7-5002e910352f/results HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -937,7 +970,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Cancel a query
 
-Cancels a running or accepted query. 
+Cancels a running or accepted query.
 
 #### URL
 
@@ -945,32 +978,38 @@ Cancels a running or accepted query.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 OK-->
+<TabItem value="15" label="200 OK">
 
-*A no op operation since the query is not in a state to be cancelled* 
 
-<!--202 ACCEPTED-->
+*A no op operation since the query is not in a state to be cancelled*
 
-*Successfully accepted query for cancellation* 
+</TabItem>
+<TabItem value="16" label="202 ACCEPTED">
 
-<!--404 SERVER ERROR-->
 
-*Invalid query ID. Returns a JSON object detailing the error with the following format:* 
+*Successfully accepted query for cancellation*
+
+</TabItem>
+<TabItem value="17" label="404 SERVER ERROR">
+
+
+*Invalid query ID. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
@@ -978,22 +1017,26 @@ Cancels a running or accepted query.
 
 The following example cancels a query with specified ID `query-945c9633-2fa2-49ab-80ae-8221c38c024da`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="18" label="cURL">
+
 
 ```shell
 curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-945c9633-2fa2-49ab-80ae-8221c38c024da"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="19" label="HTTP">
+
 
 ```HTTP
 DELETE /druid/v2/sql/statements/query-945c9633-2fa2-49ab-80ae-8221c38c024da HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
