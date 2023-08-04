@@ -662,7 +662,7 @@ When getting query results, keep the following in mind:
 
 <!--404 NOT FOUND-->
 
-*Query failed or canceled*
+*Query not found, failed or canceled*
 
 <!--500 SERVER ERROR-->
 
