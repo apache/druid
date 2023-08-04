@@ -855,7 +855,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test is to check if time expressions are accepted properly by the vectorized last aggregator
   @Test
-  public void testLatestVectorAggregatorsOnExpression()
+  public void testLatestVectorAggregatorsOnTimeExpression()
   {
     notMsqCompatible();
     testQuery(
