@@ -66,7 +66,7 @@ public class TaskLocation
       @JsonProperty("host") @Nullable String host,
       @JsonProperty("port") int port,
       @JsonProperty("tlsPort") int tlsPort,
-      @JsonProperty("k8sPodName") @Nullable  String k8sPodName
+      @JsonProperty("k8sPodName") @Nullable String k8sPodName
   )
   {
     this.host = host;
