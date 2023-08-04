@@ -64,7 +64,7 @@ public class AzureOutputSerdeTest
   }
 
   @Test
-  public void noPrefix() throws JsonProcessingException
+  public void noPrefix()
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"container\": \"TEST\",\n"
@@ -76,7 +76,7 @@ public class AzureOutputSerdeTest
   }
 
   @Test
-  public void nocontainer() throws JsonProcessingException
+  public void noContainer()
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
@@ -88,7 +88,7 @@ public class AzureOutputSerdeTest
   }
 
   @Test
-  public void noTempDir() throws JsonProcessingException
+  public void noTempDir()
   {
     String json = jsonStringReadyForAssert("{\n"
                                            + "  \"prefix\": \"abc\",\n"
@@ -120,7 +120,7 @@ public class AzureOutputSerdeTest
 
 
   @Test
-  public void testChunkValidation() throws JsonProcessingException
+  public void testChunkValidation()
   {
 
     String json = jsonStringReadyForAssert("{\n"
