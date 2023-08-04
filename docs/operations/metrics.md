@@ -154,7 +154,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 ## Ingestion metrics
 
-## General native ingestion metrics
+### General native ingestion metrics
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -203,6 +203,14 @@ These metrics apply to the [Kinesis indexing service](../development/extensions-
 |`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
 |`ingest/kinesis/partitionLag/time`|Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `partition`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
 
+### Compaction metrics
+
+These metrics are only reported by [compaction tasks](../data-management/compaction.md).
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`compact/segmentAnalyzer/fetchAndProcessMillis`|Time taken to fetch and process segments to infer the schema for the compaction task to run.|`dataSource`, `taskId`, `taskType`, `groupId`,`tags`|Varies. A high value indicates compaction tasks will speed up from explicitly setting the dataschema.|
+
 ### Other ingestion metrics
 
 Streaming ingestion tasks and certain types of
@@ -232,7 +240,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
-
+|`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
 ## Indexing service
