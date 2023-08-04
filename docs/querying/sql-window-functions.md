@@ -39,7 +39,7 @@ SELECT FLOOR(__time TO DAY) AS event_time,
     ABS(delta) AS change,
     RANK() OVER w AS rank_value
 FROM wikipedia
-WHERE channel in ('`#kk.wikipedia`', '#lt.wikipedia')
+WHERE channel in ('#kk.wikipedia', '#lt.wikipedia')
 AND '2016-06-28' > FLOOR(__time TO DAY) > '2016-06-26'
 GROUP BY channel, ABS(delta), __time
 WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
@@ -114,7 +114,7 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 |`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window |
 
 
-## Example
+## Examples
 
 The following example illustrates all of the built-in window functions to compare the number of characters changed per event for a channel in the Wikipedia data set.
 
@@ -133,7 +133,7 @@ SELECT FLOOR(__time TO DAY) AS event_time,
     FIRST_VALUE(ABS(delta)) OVER w AS first_val,
     LAST_VALUE(ABS(delta)) OVER w AS last_val
 FROM wikipedia
-WHERE channel IN ('`#kk.wikipedia`', '#lt.wikipedia')
+WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
 GROUP BY channel, ABS(delta), FLOOR(__time TO DAY) 
 WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 ```
@@ -165,9 +165,9 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 </details>
 
 
-The following example demonstrates applying a window to the SUM() function to calcualte the cumulative changes to a channel over time:
+The following example demonstrates applying a window to the SUM() function to calculate the cumulative changes to a channel over time:
 
-```
+```sql
 SELECT
     FLOOR(__time TO MINUTE) as "time",
     channel,
