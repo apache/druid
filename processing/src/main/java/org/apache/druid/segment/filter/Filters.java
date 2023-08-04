@@ -424,7 +424,7 @@ public class Filters
     return retVal;
   }
 
-  public static int countNumberOfFilters(Filter filter)
+  public static int countNumberOfFilters(@Nullable Filter filter)
   {
     if (filter == null) {
       return 0;

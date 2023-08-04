@@ -370,7 +370,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "unnested-multi-string1 = 3",
+        "multi-string1 = 3",
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || unnested-multi-string1 = 1))"
     );
   }
@@ -393,7 +393,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "unnested-multi-string1 = 3",
+        "multi-string1 = 3",
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
     );
   }
@@ -419,7 +419,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "",
+        "(multi-string1 = 3 || newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7 && newcol_1 = 10) || multi-string1 = 1)",
         "(unnested-multi-string1 = 3 || newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7 && newcol_1 = 10) || unnested-multi-string1 = 1)"
     );
   }
@@ -436,7 +436,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "",
+        "(multi-string1 = 3 || (newcol = 2 && multi-string1 = 2 && multi-string1 = 1))",
         "(unnested-multi-string1 = 3 || (newcol = 2 && multi-string1 = 2 && unnested-multi-string1 = 1))"
     );
   }
@@ -458,7 +458,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "unnested-multi-string1 = 3",
+        "multi-string1 = 3",
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2) && (newcol = 4 || multi-string1 = 8 || unnested-multi-string1 = 6))"
     );
   }
@@ -472,7 +472,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "unnested-multi-string1 = 3",
+        "multi-string1 = 3",
         "(unnested-multi-string1 = 3 && multi-string1 = 2)"
     );
   }
@@ -580,7 +580,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         null,
         VirtualColumns.EMPTY,
         inputColumn,
-        vc.capabilities(inputColumn)
+        vc.capabilities(UNNEST_STORAGE_ADAPTER, inputColumn)
     );
     Filter actualPushDownFilter = filterPair.lhs;
     Filter actualPostUnnestFilter = filterPair.rhs;
