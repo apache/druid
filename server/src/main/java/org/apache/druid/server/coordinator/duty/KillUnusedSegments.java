@@ -33,6 +33,8 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -130,7 +132,12 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
 
       try {
-        FutureUtils.getUnchecked(overlordClient.runKillTask("coordinator-issued", dataSource, intervalToKill), true);
+        FutureUtils.getUnchecked(overlordClient.runKillTask(
+            "coordinator-issued",
+            dataSource,
+            intervalToKill,
+            maxSegmentsToKill
+        ), true);
         ++submittedTasks;
       }
       catch (Exception ex) {
@@ -148,6 +155,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   /**
    * Calculates the interval for which segments are to be killed in a datasource.
    */
+  @Nullable
   private Interval findIntervalForKill(String dataSource)
   {
     final DateTime maxEndTime = ignoreRetainDuration
