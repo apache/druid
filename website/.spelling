@@ -347,6 +347,7 @@ interruptible
 isAllowList
 jackson-jq
 javadoc
+javascript
 joinable
 jsonCompression
 json_keys
