@@ -793,7 +793,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     long start = clock.millis();
     try {
       existingSegmentAnalyzer.fetchAndProcessIfNeeded();
-    } finally {
+    }
+    finally {
       if (emitter != null) {
         emitter.emit(metricBuilder.build("compact/segmentAnalyzer/fetchAndProcessMillis", clock.millis() - start));
       }

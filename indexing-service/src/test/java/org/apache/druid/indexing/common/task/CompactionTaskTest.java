@@ -376,6 +376,7 @@ public class CompactionTaskTest
   @Mock
   private Clock clock;
   private CachingEmitter emitter;
+
   @Before
   public void setup()
   {
