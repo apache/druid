@@ -23,5 +23,5 @@ import org.apache.druid.indexing.common.task.Task;
 
 public interface PeonLifecycleFactory
 {
-  KubernetesPeonLifecycle build(Task task);
+  KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener);
 }
