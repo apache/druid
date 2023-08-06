@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { IconNames } from '@blueprintjs/icons';
 import { T } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
@@ -22,6 +23,8 @@ import React, { useState } from 'react';
 
 import { FancyTabPane } from '../../../components';
 import type { Execution } from '../../../druid-models';
+import { pluralIfNeeded } from '../../../utils';
+import { DestinationPagesPane } from '../destination-pages-pane/destination-pages-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
 import { ExecutionWarningsPane } from '../execution-warnings-pane/execution-warnings-pane';
@@ -30,7 +33,14 @@ import { ResultTablePane } from '../result-table-pane/result-table-pane';
 
 import './execution-details-pane.scss';
 
-export type ExecutionDetailsTab = 'general' | 'sql' | 'native' | 'result' | 'error' | 'warnings';
+export type ExecutionDetailsTab =
+  | 'general'
+  | 'sql'
+  | 'native'
+  | 'result'
+  | 'pages'
+  | 'error'
+  | 'warnings';
 
 interface ExecutionDetailsPaneProps {
   execution: Execution;
@@ -53,6 +63,14 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
             <p>{`General info for ${execution.id}${
               ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
             }`}</p>
+            {execution.destination && (
+              <p>
+                {`Results written to ${execution.destination.type}`}
+                {execution.destinationPages
+                  ? ` (${pluralIfNeeded(execution.destinationPages.length, 'page')})`
+                  : undefined}
+              </p>
+            )}
             {execution.error && <ExecutionErrorPane execution={execution} />}
             {execution.stages ? (
               <ExecutionStagesPane
@@ -92,6 +110,10 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
           />
         );
 
+      case 'pages':
+        if (!execution.destinationPages) return;
+        return <DestinationPagesPane execution={execution} />;
+
       case 'error':
         return <ExecutionErrorPane execution={execution} />;
 
@@ -128,6 +150,11 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
           id: 'result',
           label: 'Results',
           icon: IconNames.TH,
+        },
+        execution.destinationPages && {
+          id: 'pages',
+          label: 'Result pages',
+          icon: IconNames.APPLICATIONS,
         },
         execution.error && {
           id: 'error',

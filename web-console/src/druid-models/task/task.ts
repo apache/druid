@@ -66,6 +66,7 @@ export interface MsqTaskPayloadResponse {
     sqlQueryContext: Record<string, any>;
     sqlResultsContext: Record<string, any>;
     sqlTypeNames: string[];
+    nativeTypeNames: string[];
     context: Record<string, any>;
     groupId: string;
     dataSource: string;

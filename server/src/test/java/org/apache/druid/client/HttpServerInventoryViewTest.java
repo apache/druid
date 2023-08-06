@@ -77,8 +77,8 @@ public class HttpServerInventoryViewTest
 
   private static final String EXEC_NAME_PREFIX = "InventoryViewTest";
 
-  private static final String METRIC_SUCCESS = "segment/serverview/sync/healthy";
-  private static final String METRIC_UNSTABLE_TIME = "segment/serverview/sync/unstableTime";
+  private static final String METRIC_SUCCESS = "serverview/sync/healthy";
+  private static final String METRIC_UNSTABLE_TIME = "serverview/sync/unstableTime";
 
   private StubServiceEmitter serviceEmitter;
 

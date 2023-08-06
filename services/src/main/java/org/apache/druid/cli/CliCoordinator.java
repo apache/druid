@@ -114,6 +114,7 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
@@ -332,7 +333,7 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
               // Bind HeartbeatSupplier only when the service operates independently of Overlord.
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
-                  .annotatedWith(Names.named("heartbeat"))
+                  .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
                   .toProvider(HeartbeatSupplier.class);
             }
 

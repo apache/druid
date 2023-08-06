@@ -216,11 +216,13 @@ public class KillUnusedSegmentsTest
 
   private void runAndVerifyKillInterval(Interval expectedKillInterval)
   {
+    int limit = config.getCoordinatorKillMaxSegments();
     target.run(params);
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("DS1"),
-        ArgumentMatchers.eq(expectedKillInterval)
+        ArgumentMatchers.eq(expectedKillInterval),
+        ArgumentMatchers.eq(limit)
     );
   }
 

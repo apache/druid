@@ -255,7 +255,7 @@ LIMIT 100`,
                       })}
                     >
                       {w.datasource === Execution.INLINE_DATASOURCE_MARKER
-                        ? 'data in report'
+                        ? 'select query'
                         : w.datasource}
                     </div>
                   </div>
