@@ -24,8 +24,8 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -36,13 +36,13 @@ public class StringLastVectorAggregator implements VectorAggregator
       DateTimes.MIN.getMillis(),
       null
   );
-  private final BaseLongVectorValueSelector timeSelector;
+  private final VectorValueSelector timeSelector;
   private final VectorObjectSelector valueSelector;
   private final int maxStringBytes;
   protected long lastTime;
 
   public StringLastVectorAggregator(
-      @Nullable final BaseLongVectorValueSelector timeSelector,
+      @Nullable final VectorValueSelector timeSelector,
       final VectorObjectSelector valueSelector,
       final int maxStringBytes
   )

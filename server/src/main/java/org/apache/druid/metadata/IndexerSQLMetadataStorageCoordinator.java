@@ -191,11 +191,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit
+  )
+  {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval))) {
+                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
             return ImmutableList.copyOf(iterator);
           }
         }
