@@ -30,10 +30,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -45,6 +47,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -71,6 +74,7 @@ import java.util.stream.Collectors;
 @Path("/druid/indexer/v1/supervisor")
 public class SupervisorResource
 {
+  private static final EmittingLogger log = new EmittingLogger(SupervisorResource.class);
   private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_READ_RA_GENERATOR =
       supervisorSpec -> {
         if (supervisorSpec.getSpec() == null) {
@@ -494,9 +498,32 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response reset(@PathParam("id") final String id)
   {
+    log.info("Existing reset on supervisor NO BODY request (backwards compatible)...[%s]", id);
+    return handleResetRequest(id, null);
+  }
+
+  @POST
+  @Path("/{id}/resetOffsets")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response resetOffsets(
+      @PathParam("id") final String id,
+      @Nullable final DataSourceMetadata partitionOffsetMap
+  )
+  {
+    log.info("ResetOffsets on supervisor with body request (NEW method)...[%s] and [%s]", id, partitionOffsetMap);
+    return handleResetRequest(id, partitionOffsetMap);
+  }
+
+  private Response handleResetRequest(
+      final String id,
+      @Nullable final DataSourceMetadata partitionOffsetMap
+  )
+  {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.resetSupervisor(id, null)) {
+          if (manager.resetSupervisor(id, partitionOffsetMap)) {
             return Response.ok(ImmutableMap.of("id", id)).build();
           } else {
             return Response.status(Response.Status.NOT_FOUND)

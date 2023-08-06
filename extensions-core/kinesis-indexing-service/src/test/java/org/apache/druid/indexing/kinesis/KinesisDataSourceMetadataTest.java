@@ -20,13 +20,23 @@
 
 package org.apache.druid.indexing.kinesis;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
+import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.initialization.Initialization;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
@@ -217,6 +227,37 @@ public class KinesisDataSourceMetadataTest
     );
   }
 
+  @Test
+  public void testKinesisDataSourceMetadataSerdeRoundTrip() throws JsonProcessingException
+  {
+    ObjectMapper jsonMapper = createObjectMapper();
+
+    KinesisDataSourceMetadata kdm1 = startMetadata(ImmutableMap.of(), ImmutableSet.of());
+    String kdmStr1 = jsonMapper.writeValueAsString(kdm1);
+    DataSourceMetadata dsMeta1 = jsonMapper.readValue(kdmStr1, DataSourceMetadata.class);
+    Assert.assertEquals(kdm1, dsMeta1);
+
+    KinesisDataSourceMetadata kdm2 = startMetadata(ImmutableMap.of("1", "3"), ImmutableSet.of());
+    String kdmStr2 = jsonMapper.writeValueAsString(kdm2);
+    DataSourceMetadata dsMeta2 = jsonMapper.readValue(kdmStr2, DataSourceMetadata.class);
+    Assert.assertEquals(kdm2, dsMeta2);
+  }
+
+  @Test
+  public void testKinesisDataSourceMetadataSerde() throws JsonProcessingException
+  {
+    ObjectMapper jsonMapper = createObjectMapper();
+    KinesisDataSourceMetadata expectedKdm1 = endMetadata(ImmutableMap.of("1", "5"));
+    String kdmStr1 = "{\"type\":\"kinesis\",\"partitions\":{\"type\":\"end\",\"stream\":\"foo\",\"topic\":\"foo\",\"partitionSequenceNumberMap\":{\"1\":5},\"partitionOffsetMap\":{\"1\":5},\"exclusivePartitions\":[]}}\n";
+    DataSourceMetadata dsMeta1 = jsonMapper.readValue(kdmStr1, DataSourceMetadata.class);
+    Assert.assertEquals(dsMeta1, expectedKdm1);
+
+    KinesisDataSourceMetadata expectedKdm2 = endMetadata(ImmutableMap.of("1", "10", "2", "19"));
+    String kdmStr2 = "{\"type\":\"kinesis\",\"partitions\":{\"type\":\"end\",\"stream\":\"foo\",\"topic\":\"food\",\"partitionSequenceNumberMap\":{\"1\":10, \"2\":19},\"partitionOffsetMap\":{\"1\":10, \"2\":19},\"exclusivePartitions\":[]}}\n";
+    DataSourceMetadata dsMeta2 = jsonMapper.readValue(kdmStr2, DataSourceMetadata.class);
+    Assert.assertEquals(dsMeta2, expectedKdm2);
+  }
+
   private static KinesisDataSourceMetadata simpleStartMetadata(Map<String, String> sequences)
   {
     return startMetadata(sequences, sequences.keySet());
@@ -232,5 +273,24 @@ public class KinesisDataSourceMetadataTest
   private static KinesisDataSourceMetadata endMetadata(Map<String, String> sequences)
   {
     return new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", sequences));
+  }
+
+  private static ObjectMapper createObjectMapper()
+  {
+    DruidModule module = new KinesisIndexingServiceModule();
+    Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        Arrays.asList(
+            module,
+            (Module) binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8000);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9000);
+            }
+        )
+    );
+    ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
+    module.getJacksonModules().forEach(objectMapper::registerModule);
+    return objectMapper;
   }
 }

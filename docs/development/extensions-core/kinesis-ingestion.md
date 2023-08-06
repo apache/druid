@@ -573,6 +573,28 @@ for the generated segments to be accepted. If the messages at the expected start
 no longer available in Kinesis (typically because the message retention period has elapsed or the topic was
 removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This endpoint enables you to recover from this condition.
 
+### Resetting Offsets for a supervisor
+
+The supervisor must be running for this endpoint to be available.
+
+To reset a supervisor, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/resetOffsets` endpoint. This endpoint clears stored
+sequence numbers, prompting the supervisor to start reading from the specified offsets.
+After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions,
+so that tasks begin reading specified offsets. For partitions that are not specified in this operation, the supervisor will resume from the last
+stored offset.
+
+This endpoint is useful when you need to recover from a stopped state due to missing sequence numbers in Kinesis.
+Use this endpoint with caution as it may result in skipped messages, leading to data loss or duplicate data.
+
+The indexing service keeps track of the latest persisted sequence number to provide exactly-once ingestion
+guarantees across tasks.
+
+Subsequent tasks must start reading from where the previous task completed
+for the generated segments to be accepted. If the messages at the expected starting sequence numbers are
+no longer available in Kinesis (typically because the message retention period has elapsed or the topic was
+removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This endpoint enables you to recover from this condition.
+
+
 ### Terminate a supervisor
 
 To terminate a supervisor and its associated indexing tasks, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/terminate` endpoint.
