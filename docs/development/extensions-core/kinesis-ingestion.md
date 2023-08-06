@@ -34,7 +34,7 @@ Review the [Kinesis known issues](#kinesis-known-issues) before deploying the `d
 
 ## Supervisor spec
 
-The following table outlines the high-level configuration options for the Kinesis supervisor object. 
+The following table outlines the high-level configuration options for the Kinesis supervisor object.
 See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
 
 |Property|Type|Description|Required|
@@ -428,14 +428,26 @@ This section describes how to use the [Supervisor API](../../api-reference/super
 
 ### AWS authentication
 
-To authenticate with AWS, you must provide your AWS access key and AWS secret key using `runtime.properties`, for example:
+Druid uses AWS access and secret keys to authenticate Kinesis API requests. There are a few ways to provide this information to Druid:
 
-```text
+1. Using roles or short-term credentials:
+
+Druid looks for credentials set in [environment variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html),
+via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the
+default [profile configuration file](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html), and from the
+EC2 instance profile provider (in this order).
+
+2. Using long-term security credentials:
+
+You can directly provide your AWS access key and AWS secret key in the `common.runtime.properties` file as shown in the example below:
+
+```properties
 druid.kinesis.accessKey=AKIAWxxxxxxxxxx4NCKS
 druid.kinesis.secretKey=Jbytxxxxxxxxxxx2+555
 ```
 
-Druid uses the AWS access key and AWS secret key to authenticate Kinesis API requests. If not provided, the service looks for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+Note: AWS does not recommend providing long-term security credentials in configuration files since it might pose a security risk.
+If this approach is used, it takes precedence over all other methods of providing credentials.
 
 To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
 The required permissions depend on the value of `useListShards`.
@@ -482,7 +494,7 @@ The following is an example policy:
   },
   {
     "Effect": "Allow",
-    "Action": ["kinesis:DescribeStreams"],
+    "Action": ["kinesis:DescribeStream"],
     "Resource": ["*"]
   },
   {
