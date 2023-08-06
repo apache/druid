@@ -92,7 +92,8 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
                   inputRange.getStart(),
                   inputRange.getSize(),
                   inputRange.getBucket(),
-                  inputRange.getPath()
+                  inputRange.getPath(),
+                  config.getMaxRetry()
               );
             }
             catch (URISyntaxException | StorageException e) {
@@ -121,7 +122,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public boolean pathExists(String path) throws IOException
   {
     try {
-      return azureStorage.getBlobExists(config.getContainer(), objectPath(path));
+      return azureStorage.getBlobExists(config.getContainer(), objectPath(path), config.getMaxRetry());
     }
     catch (URISyntaxException | StorageException e) {
       throw new IOException(e);
@@ -135,7 +136,8 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
       return azureStorage.getBlockBlobOutputStream(
           config.getContainer(),
           objectPath(path),
-          config.getChunkSize().getBytesInInt()
+          config.getChunkSize().getBytesInInt(),
+          config.getMaxRetry()
       );
     }
     catch (URISyntaxException | StorageException e) {
@@ -147,7 +149,11 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public void deleteFile(String path) throws IOException
   {
     try {
-      azureStorage.batchDeleteFiles(config.getContainer(), Collections.singletonList(objectPath(path)));
+      azureStorage.batchDeleteFiles(
+          config.getContainer(),
+          Collections.singletonList(objectPath(path)),
+          config.getMaxRetry()
+      );
     }
     catch (URISyntaxException | StorageException e) {
       throw new IOException(e);
@@ -158,7 +164,11 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public void deleteFiles(Iterable<String> paths) throws IOException
   {
     try {
-      azureStorage.batchDeleteFiles(config.getContainer(), Iterables.transform(paths, this::objectPath));
+      azureStorage.batchDeleteFiles(
+          config.getContainer(),
+          Iterables.transform(paths, this::objectPath),
+          config.getMaxRetry()
+      );
     }
     catch (StorageException | URISyntaxException e) {
       throw new IOException(e);
@@ -169,7 +179,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public void deleteRecursively(String path) throws IOException
   {
     try {
-      azureStorage.emptyCloudBlobDirectory(config.getContainer(), objectPath(path));
+      azureStorage.emptyCloudBlobDirectory(config.getContainer(), objectPath(path), config.getMaxRetry());
     }
     catch (StorageException | URISyntaxException e) {
       throw new IOException(e);
@@ -182,7 +192,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
     final String prefixBasePath = objectPath(dirName);
     List<String> paths;
     try {
-      paths = azureStorage.listDir(config.getContainer(), prefixBasePath);
+      paths = azureStorage.listDir(config.getContainer(), prefixBasePath, config.getMaxRetry());
     }
     catch (StorageException | URISyntaxException e) {
       throw new IOException(e);

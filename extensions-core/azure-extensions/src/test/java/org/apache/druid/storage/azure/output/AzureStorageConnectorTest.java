@@ -69,7 +69,8 @@ public class AzureStorageConnectorTest
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
     EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path))).andReturn(true);
+    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path), EasyMock.anyInt()))
+            .andReturn(true);
     EasyMock.replay(azureStorage);
     Assert.assertTrue(storageConnector.pathExists(TEST_FILE));
     Assert.assertEquals(CONTAINER, bucket.getValue());
@@ -83,7 +84,8 @@ public class AzureStorageConnectorTest
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
     EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path))).andReturn(false);
+    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path), EasyMock.anyInt()))
+            .andReturn(false);
     EasyMock.replay(azureStorage);
     Assert.assertFalse(storageConnector.pathExists(TEST_FILE));
     Assert.assertEquals(CONTAINER, bucket.getValue());
@@ -104,7 +106,8 @@ public class AzureStorageConnectorTest
             EasyMock.anyLong(),
             EasyMock.anyLong(),
             EasyMock.anyString(),
-            EasyMock.anyString()
+            EasyMock.anyString(),
+            EasyMock.anyInt()
         )
     ).andReturn(IOUtils.toInputStream(data, StandardCharsets.UTF_8));
 
@@ -131,7 +134,8 @@ public class AzureStorageConnectorTest
                     EasyMock.anyLong(),
                     EasyMock.anyLong(),
                     EasyMock.anyString(),
-                    EasyMock.anyString()
+                    EasyMock.anyString(),
+                    EasyMock.anyInt()
                 ))
                 .andReturn(IOUtils.toInputStream(dataQueried, StandardCharsets.UTF_8));
         EasyMock.replay(azureStorage);
@@ -152,7 +156,11 @@ public class AzureStorageConnectorTest
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
-    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    azureStorage.batchDeleteFiles(
+        EasyMock.capture(containerCapture),
+        EasyMock.capture(pathsCapture),
+        EasyMock.anyInt()
+    );
     EasyMock.replay(azureStorage);
     storageConnector.deleteFile(TEST_FILE);
     Assert.assertEquals(CONTAINER, containerCapture.getValue());
@@ -166,7 +174,7 @@ public class AzureStorageConnectorTest
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
-    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
+    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture), EasyMock.anyInt());
     EasyMock.replay(azureStorage);
     storageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.part"));
     Assert.assertEquals(CONTAINER, containerCapture.getValue());
@@ -184,7 +192,7 @@ public class AzureStorageConnectorTest
   public void testListDir() throws URISyntaxException, StorageException, IOException
   {
     EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.listDir(EasyMock.anyString(), EasyMock.anyString()))
+    EasyMock.expect(azureStorage.listDir(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyInt()))
             .andReturn(ImmutableList.of(PREFIX + "/x/y/z/" + TEST_FILE, PREFIX + "/p/q/r/" + TEST_FILE));
     EasyMock.replay(azureStorage);
     List<String> ret = Lists.newArrayList(storageConnector.listDir(""));
