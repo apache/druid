@@ -446,7 +446,7 @@ druid.kinesis.accessKey=AKIAWxxxxxxxxxx4NCKS
 druid.kinesis.secretKey=Jbytxxxxxxxxxxx2+555
 ```
 
-Note: AWS does not recommend providing long-term security credentials in configuration files since it might pose a security risk.
+> Note: AWS does not recommend providing long-term security credentials in configuration files since it might pose a security risk.
 If this approach is used, it takes precedence over all other methods of providing credentials.
 
 To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.

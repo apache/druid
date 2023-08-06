@@ -60,7 +60,7 @@ public class ITJdbcQueryTest
   private static final String QUERY_TEMPLATE =
       "SELECT \"user\", SUM(\"added\"), COUNT(*)" +
       "FROM \"wikipedia\" " +
-      "WHERE \"__time\" >= CURRENT_TIMESTAMP - INTERVAL '10' YEAR AND \"language\" = %s" +
+      "WHERE \"__time\" >= CURRENT_TIMESTAMP - INTERVAL '99' YEAR AND \"language\" = %s" +
       "GROUP BY 1 ORDER BY 3 DESC LIMIT 10";
   private static final String QUERY = StringUtils.format(QUERY_TEMPLATE, "'en'");
 
