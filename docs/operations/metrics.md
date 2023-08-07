@@ -208,7 +208,7 @@ These metrics apply to the [Kinesis indexing service](../development/extensions-
 These metrics are only reported by [compaction tasks](../data-management/compaction.md).
 
 |Metric|Description|Dimensions| Normal value                                                                                           |
-|------|-----------|----------|--------------------------------------------------------------------------------------------------------|
+|------|-----------|----------|------------|
 |`compact/segmentAnalyzer/fetchAndProcessMillis`|Time taken to fetch and process segments to infer the schema for the compaction task to run.|`dataSource`, `taskId`, `taskType`, `groupId`,`tags`| Varies. A high value indicates compaction tasks will speed up from explicitly setting the data schema. |
 
 ### Other ingestion metrics
