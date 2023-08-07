@@ -277,7 +277,19 @@ public class Druids
       return this;
     }
 
+    public TimeseriesQueryBuilder setAggregatorSpecs(AggregatorFactory... aggregators)
+    {
+      aggregatorSpecs = Arrays.asList(aggregators);
+      return this;
+    }
+
     public TimeseriesQueryBuilder postAggregators(List<PostAggregator> p)
+    {
+      postAggregatorSpecs = p;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder setPostAggregatorSpecs(List<PostAggregator> p)
     {
       postAggregatorSpecs = p;
       return this;
