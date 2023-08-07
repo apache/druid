@@ -847,7 +847,7 @@ class QueryClient:
         '''
         return self._function_args_query(table_name).rows
 
-    def wait_until_ready(self, table_name):
+    def wait_until_ready(self, table_name, verify_load_status=True):
         '''
         Waits for a datasource to be loaded in the cluster, and to become available to SQL.
 
@@ -855,8 +855,11 @@ class QueryClient:
         ----------
         table_name str
             The name of a datasource in the 'druid' schema.
+        verify_load_status
+            Check whether all published segments are loaded before testing query?
         '''
-        self.druid_client.datasources.wait_until_ready(table_name)
+        if (verify_load_status):
+            self.druid_client.datasources.wait_until_ready(table_name)
         while True:
             try:
                 self.sql('SELECT 1 FROM "{}" LIMIT 1'.format(table_name));
