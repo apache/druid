@@ -754,8 +754,6 @@ public class OverlordResource
         dataSource,
         type
     );
-    log.info("Task Runner work items");
-    log.info(runnerWorkItems.toString());
     if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING) {
       // We are interested in only those tasks which are in taskRunner.
       taskStatusPlusStream = taskStatusPlusStream

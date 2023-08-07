@@ -136,9 +136,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    log.info("known tasks from runner");
-    log.info(kubernetesTaskRunner.getKnownTasks().toString());
-    log.info(workerTaskRunner.getKnownTasks().toString());
     log.info(Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList()).toString());
     return Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList());
 
