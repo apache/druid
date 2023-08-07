@@ -24,18 +24,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.name.Names;
-import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.Initialization;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Map;
 
 public class KafkaDataSourceMetadataTest
@@ -215,17 +213,15 @@ public class KafkaDataSourceMetadataTest
   private static ObjectMapper createObjectMapper()
   {
     DruidModule module = new KafkaIndexTaskModule();
-    Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        Arrays.asList(
-            module,
-            (Module) binder -> {
+    final Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(
+            binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8000);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9000);
             }
-        )
-    );
+        ).build();
+
     ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
     module.getJacksonModules().forEach(objectMapper::registerModule);
     return objectMapper;
