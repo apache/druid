@@ -41,6 +41,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.EagerCachingInputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
@@ -977,9 +978,24 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // this helps spread the work to the processing threads
     return parserThreadPool.submit(() -> records.parallelStream()
             .map(parseRecordsToRowLists)
+            .map(SeekableStreamIndexTaskRunner::toEagerCachingRow)
             .collect(Collectors.toList())).get();
-    // TODO ideally we would pre-read and cache the row contents here, so that all of
-    //      the required lookups, transforms are performed in parallel stream before append
+  }
+
+  static Pair<List<ParseResult>, Exception> toEagerCachingRow(Pair<List<ParseResult>, Exception> existing)
+  {
+    // handle Exception path
+    if (existing.rhs != null || existing.lhs == null) {
+      return existing;
+    }
+
+    // normal List<ParseResult> mapping
+    List<ParseResult> cached = new ArrayList<>(existing.lhs.size());
+    for (ParseResult pr : existing.lhs) {
+      cached.add(pr.mapResult(EagerCachingInputRow::cacheNullableRow));
+    }
+
+    return Pair.of(cached, null);
   }
 
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
