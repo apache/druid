@@ -26,8 +26,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
-import org.apache.druid.msq.sql.SqlStatementResourceTest;
 import org.apache.druid.msq.sql.SqlStatementState;
+import org.apache.druid.msq.sql.resources.SqlStatementResourceTest;
 import org.junit.Assert;
 import org.junit.Test;
 
