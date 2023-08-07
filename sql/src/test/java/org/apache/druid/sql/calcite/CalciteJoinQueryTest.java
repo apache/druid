@@ -2553,9 +2553,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 join(
                                     new TableDataSource(CalciteTests.DATASOURCE1),
                                     new QueryDataSource(
-                                        GroupByQuery
-                                            .builder()
-                                            .setDataSource(
+                                Druids.newTimeseriesQueryBuilder().setDataSource(
                                                 Druids.newTimeBoundaryQueryBuilder()
                                                       .dataSource(CalciteTests.DATASOURCE1)
                                                       .intervals(querySegmentSpec(Filtration.eternity()))
@@ -3865,7 +3863,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         JoinType.INNER
                                     ),
                                     new QueryDataSource(
-                                        GroupByQuery.builder()
+                                Druids.newTimeseriesQueryBuilder()
                                                     .setDataSource(
                                                         new QueryDataSource(
                                                             Druids.newTimeBoundaryQueryBuilder()
@@ -3911,7 +3909,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(
+                .setDimFilter(
                             and(
                                 in("dim1", ImmutableList.of("abc", "def"), null),
                                 or(
@@ -3923,7 +3921,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                         )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING)))
+                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(queryContext)
                         .build()
@@ -4632,12 +4630,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         + "SELECT count(*) from def",
         queryContext,
         ImmutableList.of(
-            GroupByQuery
-                .builder()
-                .setDataSource(
-                    GroupByQuery
-                        .builder()
-                        .setDataSource(
+            Druids.newTimeseriesQueryBuilder().setDataSource(
+                GroupByQuery
+                    .builder()
+                    .setDataSource(
                             join(
                                 new QueryDataSource(
                                     newScanQueryBuilder()
