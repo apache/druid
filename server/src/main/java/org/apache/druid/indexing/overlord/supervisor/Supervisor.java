@@ -71,7 +71,9 @@ public interface Supervisor
   /**
    * Reset offsets with provided dataSource metadata.
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
-   * @param setOffsetsInMetadata Indicates whether provided metadatas offsets for partitions should be set or cleared.
+   * @param setOffsetsInMetadata Indicates whether partitions in the provided metadata offsets must be set or cleared.
+   *                             If true, the resulting stored offsets should be a union of existing checkpointed offsets with provided offsets.
+   *                             If false, the resulting stored offsets should be a difference of existing checkpointed offsets with provided offsets.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's state.
    */
   void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata);

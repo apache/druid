@@ -1012,17 +1012,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Creates a {@code ResetNotice} with the dataSourceMetadata and adds it to the notice queue.
-   * Validates the dataSourceMetadata.
-   * @param resetDataSourceMetadata the optional datasource metadata with offsets to reset.
-   * @param setOffsetsInMetadata Indicates whether provided metadatas offsets for partitions should be set or cleared.
+   * Reset offsets with provided dataSource metadata. Validates {@code resetDataSourceMetadata},
+   * creates a {@code ResetNotice} with the metadata and adds it to the notice queue.
+   * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
+   * @param setOffsetsInMetadata If true, the resulting stored offsets should be a union of existing checkpointed offsets with provided offsets.
+   *                             If false, the resulting stored offsets should be a difference of existing checkpointed offsets with provided offsets.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
   @Override
   public void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata)
   {
     if (resetDataSourceMetadata == null) {
-      throw InvalidInput.exception("Reset dataSourceMetadata must be provided for resetOffsets.");
+      throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
     }
 
     if (!checkSourceMetadataMatch(resetDataSourceMetadata)) {
