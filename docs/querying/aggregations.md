@@ -60,8 +60,8 @@ query time.
 | --- | --- | --- |
 | `type` | Must be "longSum", "doubleSum", or "floatSum". | Yes |
 | `name` | Output name for the summed value. | Yes |
-| `fieldName` | Name of the input column to sum over. At most one of `fieldName` or `expression` must be defined. | No |
-| `expression` | Alternative to `fieldName`, an inline [expression](./math-expr.md) can be specified instead. At most one of `fieldName` or `expression` can be defined. | No |
+| `fieldName` | Name of the input column to sum over. | No. You must define `fieldName` or `expression`. |
+| `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must define `fieldName` or `expression`. |
 
 #### `longSum` aggregator
 
@@ -96,8 +96,8 @@ Example:
 | --- | --- | --- |
 | `type` | Must be "doubleMin", "doubleMax", "floatMin", "floatMax", "longMin", or "longMax". | Yes |
 | `name` | Output name for the min or max value. | Yes |
-| `fieldName` | Name of the input column to compute the minimum or maximum value over. At most one of `fieldName` or `expression` can be defined. | No |
-| `expression` | Alternative to `fieldName`, an inline [expression](./math-expr.md) can be specified instead. At most one of `fieldName` or `expression` can be defined. | No |
+| `fieldName` | Name of the input column to compute the minimum or maximum value over. | No. You must define `fieldName` or `expression`. |
+| `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must define `fieldName` or `expression`. |
 
 #### `doubleMin` aggregator
 
@@ -187,7 +187,7 @@ Queries with first or last aggregators on a segment created with rollup return t
 | `type` | Must be "doubleFirst", "doubleLast", "floatFirst", "floatLast", "longFirst", "longLast". | Yes |
 | `name` | Output name for the first or last value. | Yes |
 | `fieldName` | Name of the input column to compute the first or last value over. | Yes |
-| `timeColumn` | Name of the input column to use for time values. Must be a LONG typed column. | No, defaults to `__time` |
+| `timeColumn` | Name of the input column to use for time values. Must be a LONG typed column. | No. Defaults to `__time`. |
 
 ##### `doubleFirst` aggregator
 
@@ -276,8 +276,8 @@ Example:
 | `type` | Must be "stringFirst", "stringLast". | Yes |
 | `name` | Output name for the first or last value. | Yes |
 | `fieldName` | Name of the input column to compute the first or last value over. | Yes |
-| `timeColumn` | Name of the input column to use for time values. Must be a LONG typed column. | No, defaults to `__time` |
-| `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No, defaults to 1024 |
+| `timeColumn` | Name of the input column to use for time values. Must be a LONG typed column. | No. Defaults to `__time`. |
+| `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No. Defaults to 1024. |
 
 
 #### `stringFirst` aggregator
@@ -369,7 +369,7 @@ Example:
 | `type` | Must be "stringAny". | Yes |
 | `name` | Output name for the value. | Yes |
 | `fieldName` | Name of the input column to compute the value over. | Yes |
-| `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No, defaults to 1024 |
+| `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No. Defaults to 1024. |
 
 Example:
 ```json
@@ -472,17 +472,17 @@ Aggregator applicable only at query time. Aggregates results using [Druid expres
 | `type` | Must be "expression". | Yes |
 | `name` | The aggregator output name. | Yes |
 | `fields` | The list of aggregator input columns. | Yes |
-| `accumulatorIdentifier` | The variable which identifies the accumulator value in the `fold` and `combine` expressions. | No (default `__acc`)|
-| `fold` | The expression to accumulate values from `fields`. The result of the expression will be stored in `accumulatorIdentifier` and available to the next computation. | Yes |
-| `combine` | The expression to combine the results of various `fold` expressions of each segment when merging results. The input is available to the expression as a variable identified by the `name`. | No (default to `fold` expression if and only if the expression has a single input in `fields`)|
+| `accumulatorIdentifier` | The variable which identifies the accumulator value in the `fold` and `combine` expressions. | No. Default `__acc`.|
+| `fold` | The expression to accumulate values from `fields`. The result of the expression is stored in `accumulatorIdentifier` and available to the next computation. | Yes |
+| `combine` | The expression to combine the results of various `fold` expressions of each segment when merging results. The input is available to the expression as a variable identified by the `name`. | No. Default to `fold` expression if the expression has a single input in `fields`.|
 | `compare` | The comparator expression which can only refer to two input variables, `o1` and `o2`, where `o1` and `o2` are the output of `fold` or `combine` expressions, and must adhere to the Java comparator contract. If not set, the aggregator will try to fall back to an output type appropriate comparator. | No |
 | `finalize` | The finalize expression which can only refer to a single input variable, `o`. This expression is used to perform any final transformation of the output of the `fold` or `combine` expressions. If not set, then the value is not transformed. | No |
 | `initialValue` | The initial value of the accumulator for the `fold` (and `combine`, if `InitialCombineValue` is null) expression. | Yes |
-| `initialCombineValue` | The initial value of the accumulator for the `combine` expression. | No (default `initialValue`) |
-| `isNullUnlessAggregated` | Indicates that the default output value should be `null` if the aggregator does not process any rows. If true, the value is `null`, if false, the result of running the expressions with initial values is used instead. | No (defaults to the value of `druid.generic.useDefaultValueForNull`)|
-| `shouldAggregateNullInputs` | Indicates if the `fold` expression should operate on any `null` input values. | No (defaults to `true`) |
-| `shouldCombineAggregateNullInputs` | Indicates if the `combine` expression should operate on any `null` input values. | No (defaults to the value of `shouldAggregateNullInputs`) |
-| `maxSizeBytes` | Maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow to before the aggregation fails. | No (8192 bytes) |
+| `initialCombineValue` | The initial value of the accumulator for the `combine` expression. | No. Default `initialValue`. |
+| `isNullUnlessAggregated` | Indicates that the default output value should be `null` if the aggregator does not process any rows. If true, the value is `null`, if false, the result of running the expressions with initial values is used instead. | No. Defaults to the value of `druid.generic.useDefaultValueForNull`. |
+| `shouldAggregateNullInputs` | Indicates if the `fold` expression should operate on any `null` input values. | No. Defaults to `true`. |
+| `shouldCombineAggregateNullInputs` | Indicates if the `combine` expression should operate on any `null` input values. | No. Defaults to the value of `shouldAggregateNullInputs`. |
+| `maxSizeBytes` | Maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow to before the aggregation fails. | No. Default is 8192 bytes. |
 
 #### Example: a "count" aggregator
 The initial value is `0`. `fold` adds `1` for each row processed.
@@ -579,7 +579,7 @@ A filtered aggregator wraps any given aggregator, but only aggregates the values
 
 This makes it possible to compute the results of a filtered and an unfiltered aggregation simultaneously, without having to issue multiple queries, and use both results as part of post-aggregations.
 
-If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
+If only the filtered results are required, consider putting the filter on the query itself. This will be much faster since it does not require scanning all the data.
 
 | Property | Description | Required |
 | --- | --- | --- |
