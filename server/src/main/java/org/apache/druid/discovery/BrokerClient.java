@@ -92,12 +92,12 @@ public class BrokerClient
           // Unwrap IOExceptions and ChannelExceptions, re-throw others
           Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
           Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
-          throw new RE(e, "HTTP request to[%s] failed", request.getUrl());
+          throw new RE(e, "HTTP request to [%s] failed", request.getUrl());
         }
       }
       catch (IOException | ChannelException ex) {
         // can happen if the node is stopped.
-        log.warn(ex, "Request[%s] failed.", request.getUrl());
+        log.warn(ex, "Request [%s] failed.", request.getUrl());
         request = getNewRequestUrl(request);
         continue;
       }
@@ -105,7 +105,7 @@ public class BrokerClient
       if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
           || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
         log.warn(
-            "Request[%s] received a %s response. Attempt %s/%s",
+            "Request [%s] received a [%s] response. Attempt [%s]/[%s]",
             request.getUrl(),
             responseStatus,
             counter + 1,
@@ -113,7 +113,7 @@ public class BrokerClient
         );
         request = getNewRequestUrl(request);
       } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
-        log.warn("Request[%s] failed with error", request.getUrl(), responseStatus.getCode());
+        log.warn("Request [%s] failed with error code [%s]", request.getUrl(), responseStatus.getCode());
         continue;
       } else {
         return fullResponseHolder.getContent();
