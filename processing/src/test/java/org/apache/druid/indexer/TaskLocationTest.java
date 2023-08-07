@@ -61,7 +61,11 @@ public class TaskLocationTest
     Assert.assertNull(noK8sJobName.getK8sPodName());
     noK8sJobName = TaskLocation.create("foo", 1, 2);
     Assert.assertNull(noK8sJobName.getK8sPodName());
+  }
 
+  @Test
+  public void testK8sJobNameSet()
+  {
     TaskLocation k8sJobName = TaskLocation.create("foo", 1, 2, false, "job-name");
     Assert.assertEquals("job-name", k8sJobName.getK8sPodName());
   }
