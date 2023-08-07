@@ -27,6 +27,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -239,14 +240,14 @@ public class TaskStatus
     }
     TaskStatus that = (TaskStatus) o;
     return getDuration() == that.getDuration() &&
-           java.util.Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getId(), that.getId()) &&
            status == that.status &&
-           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg());
+           Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg());
+    return Objects.hash(getId(), status, getDuration(), getErrorMsg());
   }
 }
