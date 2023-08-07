@@ -439,7 +439,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             );
             return;
           }
-          if (SupervisorStateManager.BasicState.IDLE.equals(getState())) {
+          if (SupervisorStateManager.BasicState.IDLE == getState()) {
             log.info(
                 "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is idle",
                 dataSource
