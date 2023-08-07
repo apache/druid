@@ -278,7 +278,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public void resetOffsets(DataSourceMetadata dataSourceMetadata, boolean setOffsetsInMetadata)
+  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata)
   {
     throw new UnsupportedOperationException("Reset offsets not supported in MaterializedViewSupervisor");
   }

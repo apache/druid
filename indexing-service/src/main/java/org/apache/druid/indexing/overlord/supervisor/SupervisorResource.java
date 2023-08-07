@@ -509,21 +509,21 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response resetOffsets(
       @PathParam("id") final String id,
-      @Nullable final DataSourceMetadata partitionOffsetMap
+      @Nullable final DataSourceMetadata resetDataSourceMetadata
   )
   {
-    log.info("ResetOffsets on supervisor with body request (NEW method)...[%s] and [%s]", id, partitionOffsetMap);
-    return handleResetRequest(id, partitionOffsetMap);
+    log.info("ResetOffsets on supervisor with body request (NEW method)...[%s] and [%s]", id, resetDataSourceMetadata);
+    return handleResetRequest(id, resetDataSourceMetadata);
   }
 
   private Response handleResetRequest(
       final String id,
-      @Nullable final DataSourceMetadata partitionOffsetMap
+      @Nullable final DataSourceMetadata resetDataSourceMetadata
   )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.resetSupervisor(id, partitionOffsetMap)) {
+          if (manager.resetSupervisor(id, resetDataSourceMetadata)) {
             return Response.ok(ImmutableMap.of("id", id)).build();
           } else {
             return Response.status(Response.Status.NOT_FOUND)

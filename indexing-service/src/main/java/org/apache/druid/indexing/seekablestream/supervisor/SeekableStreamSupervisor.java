@@ -589,23 +589,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class ResetNotice implements Notice
   {
-    final DataSourceMetadata dataSourceMetadata;
+    final DataSourceMetadata resetDataSourceMetadata;
     final boolean setOffsetsInMetadata;
     private static final String TYPE = "reset_notice";
 
     ResetNotice(
-        final DataSourceMetadata dataSourceMetadata,
+        final DataSourceMetadata resetDataSourceMetadata,
         final boolean setOffsetsInMetadata
     )
     {
-      this.dataSourceMetadata = dataSourceMetadata;
+      this.resetDataSourceMetadata = resetDataSourceMetadata;
       this.setOffsetsInMetadata = setOffsetsInMetadata;
     }
 
     @Override
     public void handle()
     {
-      resetInternal(dataSourceMetadata, setOffsetsInMetadata);
+      resetInternal(resetDataSourceMetadata, setOffsetsInMetadata);
     }
 
     @Override
@@ -1014,26 +1014,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Creates a {@code ResetNotice} with the dataSourceMetadata and adds it to the notice queue.
    * Validates the dataSourceMetadata.
-   * @param dataSourceMetadata the optional datasource metadata with offsets to reset.
+   * @param resetDataSourceMetadata the optional datasource metadata with offsets to reset.
    * @param setOffsetsInMetadata Indicates whether provided metadatas offsets for partitions should be set or cleared.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
   @Override
-  public void resetOffsets(DataSourceMetadata dataSourceMetadata, boolean setOffsetsInMetadata)
+  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata)
   {
-    if (dataSourceMetadata == null) {
+    if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata must be provided for resetOffsets.");
     }
 
-    if (!checkSourceMetadataMatch(dataSourceMetadata)) {
+    if (!checkSourceMetadataMatch(resetDataSourceMetadata)) {
       throw InvalidInput.exception(
           "Datasource metadata instance does not match required, found instance of [%s].",
-          dataSourceMetadata.getClass()
+          resetDataSourceMetadata.getClass()
       );
     }
     @SuppressWarnings("unchecked")
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
-        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) resetDataSourceMetadata;
     String resetStream = resetMetadata.getSeekableStreamSequenceNumbers().getStream();
     if (!resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
       throw InvalidInput.exception(
@@ -1063,9 +1063,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    log.info("Posting ResetNotice with datasource metadata[%s] and setOffsetsInMetadata[%s]",
-             dataSourceMetadata, setOffsetsInMetadata);
-    addNotice(new ResetNotice(dataSourceMetadata, setOffsetsInMetadata));
+    log.info("Posting ResetNotice with reset dataSource metadata[%s] and setOffsetsInMetadata[%s]",
+             resetDataSourceMetadata, setOffsetsInMetadata);
+    addNotice(new ResetNotice(resetDataSourceMetadata, setOffsetsInMetadata));
   }
 
   public ReentrantLock getRecordSupplierLock()
@@ -1644,7 +1644,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    *
-   * @param dataSourceMetadata an optional data source metadata. If null, deletes all stored offsets. If non-null, it resets/clears offsets
+   * @param dataSourceMetadata an optional reset data source metadata. If null, deletes all stored offsets. If non-null, it resets/clears offsets
    *                          based on {@code setOffsetsInMetadata}.
    * @param setOffsetsInMetadata Indicates whether provided metadatas offsets should be cleared or set.
    */
