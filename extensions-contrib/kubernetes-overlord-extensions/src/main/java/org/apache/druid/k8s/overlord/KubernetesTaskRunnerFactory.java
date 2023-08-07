@@ -55,6 +55,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final TaskConfig taskConfig;
   private final Properties properties;
   private final DruidKubernetesClient druidKubernetesClient;
+  private final TaskAdapter adapter;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
 
@@ -70,6 +71,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskConfig taskConfig,
       Properties properties,
       DruidKubernetesClient druidKubernetesClient,
+      TaskAdapter adapter,
       ServiceEmitter emitter
   )
   {
@@ -82,6 +84,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.taskConfig = taskConfig;
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
+    this.adapter = adapter;
     this.emitter = emitter;
   }
 
@@ -92,7 +95,9 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
-        kubernetesTaskRunnerConfig.isDebugJobs()
+        kubernetesTaskRunnerConfig.isDebugJobs(),
+        adapter,
+        emitter
     );
 
     runner = new KubernetesTaskRunner(

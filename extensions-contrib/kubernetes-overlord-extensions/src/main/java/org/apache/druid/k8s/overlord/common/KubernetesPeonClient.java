@@ -25,9 +25,15 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -42,12 +48,22 @@ public class KubernetesPeonClient
   private final KubernetesClientApi clientApi;
   private final String namespace;
   private final boolean debugJobs;
+  private final TaskAdapter adapter;
+  private final ServiceEmitter emitter;
 
-  public KubernetesPeonClient(KubernetesClientApi clientApi, String namespace, boolean debugJobs)
+  public KubernetesPeonClient(
+      KubernetesClientApi clientApi,
+      String namespace,
+      boolean debugJobs,
+      TaskAdapter adapter,
+      ServiceEmitter emitter
+  )
   {
     this.clientApi = clientApi;
     this.namespace = namespace;
     this.debugJobs = debugJobs;
+    this.adapter = adapter;
+    this.emitter = emitter;
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, long howLong, TimeUnit timeUnit)
@@ -69,12 +85,14 @@ public class KubernetesPeonClient
                          }, howLong, timeUnit);
       long duration = System.currentTimeMillis() - start;
       log.info("Took task %s %d ms for pod to startup", jobName, duration);
+      emitK8sPodMetrics(job, "peon/startup/time", duration);
       return result;
     });
   }
 
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
   {
+    long start = System.currentTimeMillis();
     return clientApi.executeRequest(client -> {
       Job job = client.batch()
                       .v1()
@@ -87,6 +105,8 @@ public class KubernetesPeonClient
                           howLong,
                           unit
                       );
+      long duration = System.currentTimeMillis() - start;
+      emitK8sPodMetrics(job, "peon/running/time", duration);
       if (job == null) {
         log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
         return new JobResponse(null, PeonPhase.FAILED);
@@ -252,6 +272,19 @@ public class KubernetesPeonClient
     }
     catch (Exception e) {
       throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + jobName + " not found");
+    }
+  }
+
+  private void emitK8sPodMetrics(Job job, String metric, long durationMs)
+  {
+    try {
+      Task task = adapter.toTask(job);
+      ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      emitter.emit(metricBuilder.build(metric, durationMs));
+    }
+    catch (IOException e) {
+      log.error(e, "Failed to transform job [%s] to task", job.getMetadata().getName());
     }
   }
 }
