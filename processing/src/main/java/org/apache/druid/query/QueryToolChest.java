@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
@@ -83,7 +84,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * Perform any per-query decoration of an {@link ObjectMapper} that enables it to read and write objects of the
    * query's {@link ResultType}. It is used by QueryResource on the write side, and DirectDruidClient on the read side.
-   *
+   * <p>
    * For most queries, this is a no-op, but it can be useful for query types that support more than one result
    * serialization format. Queries that implement this method must not modify the provided ObjectMapper, but instead
    * must return a copy.
@@ -96,16 +97,21 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * This method wraps a QueryRunner.  The input QueryRunner, by contract, will provide a series of
    * ResultType objects in time order (ascending or descending).  This method should return a new QueryRunner that
-   * potentially merges the stream of ordered ResultType objects.
-   *
+   * merges the stream of ordered ResultType objects.
+   * <p>
    * A default implementation constructs a {@link ResultMergeQueryRunner} which creates a
    * {@link org.apache.druid.common.guava.CombiningSequence} using the supplied {@link QueryRunner} with
-   * {@link QueryToolChest#createResultComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied by this
-   * toolchest.
+   * {@link QueryToolChest#createResultComparator(Query)} and {@link QueryToolChest#createMergeFn(Query)}} supplied
+   * by this toolchest.
+   * <p>
+   * Generally speaking, the logic that exists in makePostComputeManipulatorFn should actually exist in this method.
+   * Additionally, if a query supports PostAggregations, this method should take steps to ensure that it computes
+   * PostAggregations a minimum number of times.  This is most commonly achieved by computing the PostAgg results
+   * during merge <strong>and also</strong> rewriting the query such that it has the minimum number of PostAggs (most
+   * often zero).
    *
    * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
-   *
-   * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
+   * @return a QueryRunner that merges the stream of ordered ResultType objects
    */
   public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner)
   {
@@ -118,7 +124,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * {@link QueryToolChest#mergeResults(QueryRunner)} and also used in
    * {@link org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence} by 'CachingClusteredClient' if it
    * does not return null.
-   *
+   * <p>
    * Returning null from this function means that a query does not support result merging, at
    * least via the mechanisms that utilize this function.
    */
@@ -134,7 +140,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    */
   public Comparator<ResultType> createResultComparator(Query<ResultType> query)
   {
-    throw new UOE("%s doesn't provide a result comparator", query.getClass().getName());
+    throw DruidException.defensive("%s doesn't provide a result comparator", query.getClass().getName());
   }
 
   /**
@@ -155,7 +161,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * query passed on the created QueryMetrics object before returning.
    *
    * @param query The query that is being processed
-   *
    * @return A QueryMetrics that can be used to make metrics for the provided query
    */
   public abstract QueryMetrics<? super QueryType> makeMetrics(QueryType query);
@@ -164,15 +169,29 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * Creates a Function that can take in a ResultType and return a new ResultType having applied
    * the MetricManipulatorFn to each of the metrics.
    * <p>
-   * This exists because the QueryToolChest is the only thing that understands the internal serialization
-   * format of ResultType, so it's primary responsibility is to "decompose" that structure and apply the
-   * given function to all metrics.
+   * This function's primary purpose is to help work around some challenges that exist around deserializing
+   * results across the wire.  Specifically, different aggregators will generate different object types in a
+   * result set, if we wanted jackson to be able to deserialize these directly, we'd need to generate a response
+   * class for each query that jackson could use to deserialize things.  That is not what we do.  Instead, we have
+   * jackson deserialize Object instances and then use a MetricManipulatorFn to convert from those object instances
+   * to the actual object that the aggregator expects.  As such, this would be more effectively named
+   * "makeObjectDeserializingFn".
+   * <p>
+   * It is safe and acceptable for implementations of this method to first validate that the MetricManipulationFn
+   * is {@link org.apache.druid.query.aggregation.MetricManipulatorFns#DESERIALIZING_INSTANCE} and throw an exception
+   * if it is not.  If such an exception is ever thrown, it is indicative of a bug in the caller which should be fixed
+   * by not calling this method with anything other than the deserializing manipulator function.
+   * <p>
+   * There are some implementations where this was also tasked with computing PostAggregators, but this is actually
+   * not a good place to compute those as this function can be called in a number of cases when PostAggs are not
+   * really meaningful to compute.  Instead, PostAggs should be computed in the mergeResults call and the
+   * mergeResults implementation should take care to ensure that PostAggs are only computed the minimum number of
+   * times necessary.
    * <p>
    * This function is called very early in the processing pipeline on the Broker.
    *
    * @param query The Query that is currently being processed
    * @param fn    The function that should be applied to all metrics in the results
-   *
    * @return A function that will apply the provided fn to all metrics in the input ResultType object
    */
   public abstract Function<ResultType, ResultType> makePreComputeManipulatorFn(
@@ -181,14 +200,18 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   );
 
   /**
-   * Generally speaking this is the exact same thing as makePreComputeManipulatorFn.  It is leveraged in order to
-   * compute PostAggregators on results after they have been completely merged together. To minimize walks of segments,
-   * it is recommended to use mergeResults() call instead of this method if possible. However, this may not always be
-   * possible as we don’t always want to run PostAggregators and other stuff that happens there when you mergeResults.
+   * This manipulator functions primary purpose is to conduct finalization of aggregator values.  It would be better
+   * named "makeFinalizingManipulatorFn", even that should really be done as part of {@link #mergeResults} instead
+   * of with this separate method.
+   * <p>
+   * It is safe and acceptable for implementations of this method to first validate that the MetricManipulationFn
+   * is either {@link org.apache.druid.query.aggregation.MetricManipulatorFns#FINALIZING_INSTANCE} or
+   * {@link org.apache.druid.query.aggregation.MetricManipulatorFns#IDENTITY_INSTANCE} and throw an exception
+   * if it is not.  If such an exception is ever thrown, it is indicative of a bug in the caller which should be fixed
+   * by not calling this method with unsupported manipulator functions.
    *
    * @param query The Query that is currently being processed
    * @param fn    The function that should be applied to all metrics in the results
-   *
    * @return A function that will apply the provided fn to all metrics in the input ResultType object
    */
   public Function<ResultType, ResultType> makePostComputeManipulatorFn(QueryType query, MetricManipulationFn fn)
@@ -211,7 +234,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    *
    * @param query The query whose results might be cached
    * @param <T>   The type of object that will be stored in the cache
-   *
    * @return A CacheStrategy that can be used to populate and read from the Cache
    */
   @Nullable
@@ -231,7 +253,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * override this method and instead apply anything that might be needed here in the mergeResults() call.
    *
    * @param runner The runner to be wrapped
-   *
    * @return The wrapped runner
    */
   public QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner)
@@ -249,7 +270,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * override this method and instead apply anything that might be needed here in the mergeResults() call.
    *
    * @param runner The runner to be wrapped
-   *
    * @return The wrapped runner
    */
   public QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner)
@@ -265,7 +285,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * @param query    The query being processed
    * @param segments The list of candidate segments to be queried
    * @param <T>      A Generic parameter because Java is cool
-   *
    * @return The list of segments to actually query
    */
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
@@ -275,10 +294,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 
   /**
    * Returns whether this toolchest is able to handle the provided subquery.
-   *
+   * <p>
    * When this method returns true, the core query stack will pass subquery datasources over to the toolchest and will
    * assume they are properly handled.
-   *
+   * <p>
    * When this method returns false, the core query stack will throw an error if subqueries are present. In the future,
    * instead of throwing an error, the core query stack will handle the subqueries on its own.
    */
@@ -292,9 +311,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * be the same length as each array returned by {@link #resultsAsArrays}.
    *
    * @param query same query passed to {@link #resultsAsArrays}
-   *
    * @return row signature
-   *
    * @throws UnsupportedOperationException if this query type does not support returning results as arrays
    */
   public RowSignature resultArraySignature(QueryType query)
@@ -307,25 +324,23 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * {@link #resultArraySignature}. This functionality is useful because it allows higher-level processors to operate on
    * the results of any query in a consistent way. This is useful for the SQL layer and for any algorithm that might
    * operate on the results of an inner query.
-   *
+   * <p>
    * Not all query types support this method. They will throw {@link UnsupportedOperationException}, and they cannot
    * be used by the SQL layer or by generic higher-level algorithms.
-   *
+   * <p>
    * Some query types return less information after translating their results into arrays, especially in situations
    * where there is no clear way to translate fully rich results into flat arrays. For example, the scan query does not
    * include the segmentId in its array-based results, because it could potentially conflict with a 'segmentId' field
    * in the actual datasource being scanned.
-   *
+   * <p>
    * It is possible that there will be multiple arrays returned for a single result object. For example, in the topN
    * query, each {@link org.apache.druid.query.topn.TopNResultValue} will generate a separate array for each of its
    * {@code values}.
-   *
+   * <p>
    * By convention, the array form should include the __time column, if present, as a long (milliseconds since epoch).
    *
    * @param resultSequence results of the form returned by {@link #mergeResults}
-   *
    * @return results in array form
-   *
    * @throws UnsupportedOperationException if this query type does not support returning results as arrays
    */
   public Sequence<Object[]> resultsAsArrays(QueryType query, Sequence<ResultType> resultSequence)
@@ -338,16 +353,17 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * is the one give by {@link #resultArraySignature(Query)}. If the toolchest doesn't support this method, then it can
    * return an empty optional. It is the duty of the callees to throw an appropriate exception in that case or use an
    * alternative fallback approach
-   *
+   * <p>
    * Check documentation of {@link #resultsAsArrays(Query, Sequence)} as the behaviour of the rows represented by the
    * frame sequence is identical.
-   *
+   * <p>
    * Each Frame has a separate {@link RowSignature} because for some query types like the Scan query, every
    * column in the final result might not be present in the individual ResultType (and subsequently Frame). Therefore,
    * this is done to preserve the space by not populating the column in that particular Frame and omitting it from its
    * signature
-   *  @param query Query being executed by the toolchest. Used to determine the rowSignature of the Frames
-   * @param resultSequence results of the form returned by {@link #mergeResults(QueryRunner)}
+   *
+   * @param query                    Query being executed by the toolchest. Used to determine the rowSignature of the Frames
+   * @param resultSequence           results of the form returned by {@link #mergeResults(QueryRunner)}
    * @param memoryAllocatorFactory
    * @param useNestedForUnknownTypes true if the unknown types in the results can be serded using complex types
    */

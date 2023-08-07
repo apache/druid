@@ -139,7 +139,6 @@ public class BalanceSegmentsProfiler
                 .build()
         )
         .withSegmentAssignerUsing(loadQueueManager)
-        .withEmitter(emitter)
         .withDatabaseRuleManager(manager)
         .build();
 

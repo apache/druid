@@ -853,6 +853,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This test is to check if time expressions are accepted properly by the vectorized last aggregator
+  @Test
+  public void testLatestVectorAggregatorsOnTimeExpression()
+  {
+    notMsqCompatible();
+    testQuery(
+        "SELECT \n"
+        + "  LATEST_BY(m1, MILLIS_TO_TIMESTAMP(BITWISE_SHIFT_RIGHT(TIMESTAMP_TO_MILLIS(__time), 3)))\n"
+        + " FROM druid.foo GROUP BY TIME_FLOOR(__time, 'P1Y', null, 'America/Los_Angeles')",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(new PeriodGranularity(Period.years(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
+                  .virtualColumns(
+                      expressionVirtualColumn("v1", "bitwiseShiftRight(\"__time\",3)", ColumnType.LONG)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new FloatLastAggregatorFactory("a0", "m1", "v1")
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0f},
+            new Object[]{4.0f},
+            new Object[]{6.0f}
+        )
+    );
+  }
   // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
   // that have null values (when run in SQL compatible null mode)
   @Test

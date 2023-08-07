@@ -864,13 +864,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         {
           DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
           // Fetch the index for given table
-          ResultSet resultSet = databaseMetaData.getIndexInfo(
-              null,
-              null,
-              StringUtils.toUpperCase(tableName),
-              false,
-              false
-          );
+          ResultSet resultSet = getIndexInfo(databaseMetaData, tableName);
           while (resultSet.next()) {
             String indexName = resultSet.getString("INDEX_NAME");
             if (org.apache.commons.lang.StringUtils.isNotBlank(indexName)) {
@@ -885,6 +879,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.error(e, "Exception while listing the index on table %s ", tableName);
     }
     return ImmutableSet.copyOf(res);
+  }
+
+  /**
+   * Get the ResultSet for indexInfo for given table
+   *
+   * @param databaseMetaData DatabaseMetaData
+   * @param tableName        Name of table
+   * @return ResultSet with index info
+   */
+  public ResultSet getIndexInfo(DatabaseMetaData databaseMetaData, String tableName) throws SQLException
+  {
+    return databaseMetaData.getIndexInfo(
+        null,
+        null,
+        tableName,  // tableName is case-sensitive in mysql default setting
+        false,
+        false
+    );
   }
 
   /**

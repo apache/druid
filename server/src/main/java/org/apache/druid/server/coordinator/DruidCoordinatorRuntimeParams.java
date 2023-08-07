@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
@@ -68,7 +67,6 @@ public class DruidCoordinatorRuntimeParams
   private final StrategicSegmentAssigner segmentAssigner;
   private final @Nullable TreeSet<DataSegment> usedSegments;
   private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
-  private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final CoordinatorCompactionConfig coordinatorCompactionConfig;
   private final SegmentLoadingConfig segmentLoadingConfig;
@@ -83,7 +81,6 @@ public class DruidCoordinatorRuntimeParams
       StrategicSegmentAssigner segmentAssigner,
       @Nullable TreeSet<DataSegment> usedSegments,
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
-      ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
       SegmentLoadingConfig segmentLoadingConfig,
@@ -98,7 +95,6 @@ public class DruidCoordinatorRuntimeParams
     this.segmentAssigner = segmentAssigner;
     this.usedSegments = usedSegments;
     this.dataSourcesSnapshot = dataSourcesSnapshot;
-    this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.coordinatorCompactionConfig = coordinatorCompactionConfig;
     this.segmentLoadingConfig = segmentLoadingConfig;
@@ -143,11 +139,6 @@ public class DruidCoordinatorRuntimeParams
   {
     Preconditions.checkState(usedSegments != null, "usedSegments or dataSourcesSnapshot must be set");
     return usedSegments;
-  }
-
-  public ServiceEmitter getEmitter()
-  {
-    return emitter;
   }
 
   public CoordinatorDynamicConfig getCoordinatorDynamicConfig()
@@ -200,7 +191,6 @@ public class DruidCoordinatorRuntimeParams
         segmentAssigner,
         usedSegments,
         dataSourcesSnapshot,
-        emitter,
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
         segmentLoadingConfig,
@@ -219,7 +209,6 @@ public class DruidCoordinatorRuntimeParams
     private StrategicSegmentAssigner segmentAssigner;
     private @Nullable TreeSet<DataSegment> usedSegments;
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
-    private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
     private SegmentLoadingConfig segmentLoadingConfig;
@@ -242,7 +231,6 @@ public class DruidCoordinatorRuntimeParams
         StrategicSegmentAssigner segmentAssigner,
         @Nullable TreeSet<DataSegment> usedSegments,
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
-        ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
         SegmentLoadingConfig segmentLoadingConfig,
@@ -257,7 +245,6 @@ public class DruidCoordinatorRuntimeParams
       this.segmentAssigner = segmentAssigner;
       this.usedSegments = usedSegments;
       this.dataSourcesSnapshot = dataSourcesSnapshot;
-      this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.coordinatorCompactionConfig = coordinatorCompactionConfig;
       this.segmentLoadingConfig = segmentLoadingConfig;
@@ -279,7 +266,6 @@ public class DruidCoordinatorRuntimeParams
           segmentAssigner,
           usedSegments,
           dataSourcesSnapshot,
-          emitter,
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
           segmentLoadingConfig,
@@ -366,12 +352,6 @@ public class DruidCoordinatorRuntimeParams
     {
       this.usedSegments = createUsedSegmentsSet(usedSegments);
       this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
-      return this;
-    }
-
-    public Builder withEmitter(ServiceEmitter emitter)
-    {
-      this.emitter = emitter;
       return this;
     }
 

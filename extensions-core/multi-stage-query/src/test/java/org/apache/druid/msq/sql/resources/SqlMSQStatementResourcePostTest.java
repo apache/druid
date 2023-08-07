@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.msq.sql.resources;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,15 +27,17 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
-import org.apache.druid.msq.sql.resources.SqlStatementResource;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -43,6 +45,7 @@ import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
 import org.junit.Assert;
@@ -54,6 +57,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -142,7 +146,6 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   @Test
   public void nonSupportedModes()
   {
-
     SqlStatementResourceTest.assertExceptionMessage(
         resource.doPost(new SqlQuery(
             "select * from foo",
@@ -241,7 +244,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         + "\"resultFormat\":\"compactedList\","
         + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
         + "\"legacy\":false,"
-        + "\"context\":{\"executionMode\":\"ASYNC\",\"scanSignature\":\"[{\\\"name\\\":\\\"__time\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"cnt\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"dim1\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"dim2\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"dim3\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"m1\\\",\\\"type\\\":\\\"FLOAT\\\"},{\\\"name\\\":\\\"m2\\\",\\\"type\\\":\\\"DOUBLE\\\"},{\\\"name\\\":\\\"unique_dim1\\\",\\\"type\\\":\\\"COMPLEX<hyperUnique>\\\"}]\",\"sqlQueryId\":\"queryId\"},\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}],"
+        + "\"context\":{\"__resultFormat\":\"object\",\"executionMode\":\"ASYNC\",\"scanSignature\":\"[{\\\"name\\\":\\\"__time\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"cnt\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"dim1\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"dim2\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"dim3\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"m1\\\",\\\"type\\\":\\\"FLOAT\\\"},{\\\"name\\\":\\\"m2\\\",\\\"type\\\":\\\"DOUBLE\\\"},{\\\"name\\\":\\\"unique_dim1\\\",\\\"type\\\":\\\"COMPLEX<hyperUnique>\\\"}]\",\"sqlQueryId\":\"queryId\"},\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}],"
         + " RESOURCES=[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}],"
         + " ATTRIBUTES={\"statementType\":\"SELECT\"}}",
         String.valueOf(SqlStatementResourceTest.getResultRowsFromResponse(response).get(0))
@@ -329,6 +332,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
             null,
+            ResultFormat.OBJECTLINES.name(),
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper);
@@ -344,9 +348,122 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
             0L,
+            ResultFormat.OBJECTLINES.name(),
             SqlStatementResourceTest.makeOkRequest()
         ),
         objectMapper);
+  }
+
+  @Test
+  public void testResultFormat() throws Exception
+  {
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
+
+    SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
+        new SqlQuery(
+            "select cnt,dim1 from foo",
+            null,
+            false,
+            false,
+            false,
+            context,
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getEntity();
+
+    final List<ColumnNameAndTypes> columnNameAndTypes = ImmutableList.of(
+        new ColumnNameAndTypes("cnt", "cnt", "cnt"),
+        new ColumnNameAndTypes("dim1", "dim1", "dim1")
+    );
+
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{1, ""},
+        new Object[]{1, "10.1"},
+        new Object[]{1, "2"},
+        new Object[]{1, "1"},
+        new Object[]{1, "def"},
+        new Object[]{1, "abc"}
+    );
+
+    for (ResultFormat resultFormat : ResultFormat.values()) {
+      Assert.assertArrayEquals(
+          createExpectedResultsInFormat(resultFormat, expectedRows, columnNameAndTypes, objectMapper),
+          responseToByteArray(
+              resource.doGetResults(
+                  sqlStatementResult.getQueryId(),
+                  null,
+                  resultFormat.name(),
+                  SqlStatementResourceTest.makeOkRequest()
+              ), objectMapper
+          )
+      );
+
+      Assert.assertArrayEquals(
+          createExpectedResultsInFormat(resultFormat, expectedRows, columnNameAndTypes, objectMapper),
+          responseToByteArray(
+              resource.doGetResults(
+                  sqlStatementResult.getQueryId(),
+                  0L,
+                  resultFormat.name(),
+                  SqlStatementResourceTest.makeOkRequest()
+              ), objectMapper
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testResultFormatWithParamInSelect() throws IOException
+  {
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
+
+    SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
+        new SqlQuery(
+            "select cnt,dim1 from foo",
+            ResultFormat.OBJECTLINES,
+            false,
+            false,
+            false,
+            context,
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getEntity();
+
+
+    List<List<Object>> rows = new ArrayList<>();
+    rows.add(ImmutableList.of(1, ""));
+    rows.add(ImmutableList.of(1, "10.1"));
+    rows.add(ImmutableList.of(1, "2"));
+    rows.add(ImmutableList.of(1, "1"));
+    rows.add(ImmutableList.of(1, "def"));
+    rows.add(ImmutableList.of(1, "abc"));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        null,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        0L,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+  }
+
+  private byte[] createExpectedResultsInFormat(ResultFormat resultFormat, List<Object[]> resultsList, List<ColumnNameAndTypes> rowSignature, ObjectMapper jsonMapper) throws Exception
+  {
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    try (final ResultFormat.Writer writer = resultFormat.createFormatter(os, jsonMapper)) {
+      SqlStatementResource.resultPusherInternal(writer, Yielders.each(Sequences.simple(resultsList)), rowSignature);
+    }
+    return os.toByteArray();
   }
 
   private void assertExpectedResults(String expectedResult, Response resultsResponse, ObjectMapper objectMapper) throws IOException
@@ -400,6 +517,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     Response resultsResponse = resource.doGetResults(
         actual.getQueryId(),
+        0L,
         null,
         SqlStatementResourceTest.makeOkRequest()
     );
@@ -442,6 +560,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     Response resultsResponse = resource.doGetResults(
         actual.getQueryId(),
+        0L,
         null,
         SqlStatementResourceTest.makeOkRequest()
     );
@@ -452,7 +571,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
   private static Map<String, Object> defaultAsyncContext()
   {
-    Map<String, Object> context = new HashMap<String, Object>();
+    Map<String, Object> context = new HashMap<>();
     context.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
     return context;
   }
