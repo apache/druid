@@ -103,13 +103,13 @@ public class DruidPeonClientIntegrationTest
     TaskAdapter adapter = new TaskAdapter()
     {
       @Override
-      public Job fromTask(Task task) throws IOException
+      public Job fromTask(Task task)
       {
         return null;
       }
 
       @Override
-      public Task toTask(Job from) throws IOException
+      public Task toTask(Job from)
       {
         return task;
       }
