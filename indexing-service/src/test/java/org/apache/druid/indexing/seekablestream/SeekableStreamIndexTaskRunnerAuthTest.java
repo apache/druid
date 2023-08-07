@@ -61,6 +61,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.mock;
 import static org.easymock.EasyMock.replay;
 
@@ -117,7 +119,10 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         null,
         null
     );
-    SeekableStreamIndexTaskTuningConfig tuningConfig = mock(SeekableStreamIndexTaskTuningConfig.class);
+
+    SeekableStreamIndexTaskTuningConfig tuningConfig = createNiceMock(SeekableStreamIndexTaskTuningConfig.class);
+    expect(tuningConfig.getParsingThreadCount()).andReturn(1).atLeastOnce();
+    EasyMock.replay(tuningConfig);
     SeekableStreamIndexTaskIOConfig<String, String> ioConfig = new TestSeekableStreamIndexTaskIOConfig();
 
     // Initiliaze task and task runner

@@ -64,6 +64,7 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.input.InputRowSchemas;
+import org.apache.druid.indexing.seekablestream.StreamChunkParser.ParseResult;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -71,6 +72,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -84,6 +86,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -121,6 +124,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -205,6 +209,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
   private final String stream;
+  private final ForkJoinPool parserThreadPool;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
@@ -256,6 +261,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
+    this.parserThreadPool = (this.tuningConfig.getParsingThreadCount() == 1)
+            ? null
+            : new ForkJoinPool(this.tuningConfig.getParsingThreadCount());
 
     resetNextCheckpointTime();
   }
@@ -369,15 +377,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
 
     // Now we can initialize StreamChunkReader with the given toolbox.
-    final StreamChunkParser parser = new StreamChunkParser<RecordType>(
+    final TransformSpec transformSpec = task.getDataSchema().getTransformSpec();
+    final File taskTempDir = toolbox.getIndexingTmpDir();
+    final Supplier<StreamChunkParser<RecordType>> parserSupplier = () -> new StreamChunkParser<>(
         this.parser,
         inputFormat,
         inputRowSchema,
-        task.getDataSchema().getTransformSpec(),
-        toolbox.getIndexingTmpDir(),
-        row -> row != null && task.withinMinMaxRecordTime(row),
-        rowIngestionMeters,
-        parseExceptionHandler
+        transformSpec,
+        taskTempDir,
+        row -> row != null && task.withinMinMaxRecordTime(row)
     );
 
     initializeSequences();
@@ -620,7 +628,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           stillReading = !assignment.isEmpty();
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
-          for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record : records) {
+          final List<Pair<List<ParseResult>, Exception>> rowBlocks = mapRowBlocks(records, parserSupplier);
+
+          for (int i = 0; i < records.size(); i++) {
+            final OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record = records.get(i);
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
             log.trace(
@@ -632,7 +643,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
 
             if (shouldProcess) {
-              final List<InputRow> rows = parser.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));
+              final Pair<List<ParseResult>, Exception> rows = rowBlocks.get(i);
+              if (rows.rhs != null) {
+                throw rows.rhs;
+              }
+
               boolean isPersistRequired = false;
 
               final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToUse = sequences
@@ -650,7 +665,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 );
               }
 
-              for (InputRow row : rows) {
+              for (ParseResult parseResult : rows.lhs) {
+                InputRow row = parseResult.getInputRowAndApplyHandlers(rowIngestionMeters, parseExceptionHandler);
+                if (row == null) {
+                  continue;
+                }
+
                 final AppenderatorDriverAddResult addResult = driver.add(
                     row,
                     sequenceToUse.getSequenceName(),
@@ -768,6 +788,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         throw e;
       }
       finally {
+        if (parserThreadPool != null) {
+          parserThreadPool.shutdownNow();
+        }
         try {
           // To handle cases where tasks stop reading due to stop request or exceptions
           fireDepartmentMetrics.markProcessingDone();
@@ -920,6 +943,43 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
+  }
+
+  /**
+   * Compute the list of InputRow for each of the records
+   * @param records list of records to map
+   * @param parserSupplier provide a parser to the threads; get() will be called once per Record
+   * @return for each input record, a List<InputRow> will be returned in the same order
+   */
+  List<Pair<List<ParseResult>, Exception>> mapRowBlocks(
+          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> records,
+          Supplier<StreamChunkParser<RecordType>> parserSupplier
+  ) throws InterruptedException, ExecutionException
+  {
+    // a function to be used to parse a single OPRecord into a List<> of InputRows
+    java.util.function.Function<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>, Pair<List<ParseResult>, Exception>> parseRecordsToRowLists = r -> {
+      StreamChunkParser<RecordType> parser = parserSupplier.get();
+      try {
+        return Pair.of(parser.parse(r.getData(), isEndOfShard(r.getSequenceNumber())), null);
+      }
+      catch (Exception e) {
+        return Pair.of(null, e);
+      }
+    };
+
+    // create a 1:1 materialized view of each Record into its List of InputRows
+    // later, we use the same 1:1 identity to correlate records and rows
+    if (tuningConfig.getParsingThreadCount() == 1) {
+      return records.stream().map(parseRecordsToRowLists).collect(Collectors.toList());
+    }
+
+    // if in parallel, force materialisation of the row in each thread by eagerly loading the results;
+    // this helps spread the work to the processing threads
+    return parserThreadPool.submit(() -> records.parallelStream()
+            .map(parseRecordsToRowLists)
+            .collect(Collectors.toList())).get();
+    // TODO ideally we would pre-read and cache the row contents here, so that all of
+    //      the required lookups, transforms are performed in parallel stream before append
   }
 
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException

@@ -83,7 +83,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
    * @return the list of ByteEntity object for this record
    */
   @NotNull
-  public List<? extends ByteEntity> getData()
+  public List<RecordType> getData()
   {
     return data;
   }

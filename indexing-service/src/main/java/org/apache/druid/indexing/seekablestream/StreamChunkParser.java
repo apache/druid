@@ -21,15 +21,13 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.indexing.common.task.FilteringCloseableInputRowIterator;
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -41,8 +39,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 /**
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
@@ -55,8 +55,6 @@ class StreamChunkParser<RecordType extends ByteEntity>
   @Nullable
   private final SettableByteEntityReader<RecordType> byteEntityReader;
   private final Predicate<InputRow> rowFilter;
-  private final RowIngestionMeters rowIngestionMeters;
-  private final ParseExceptionHandler parseExceptionHandler;
 
   /**
    * Either parser or inputFormat shouldn't be null.
@@ -67,9 +65,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
       InputRowSchema inputRowSchema,
       TransformSpec transformSpec,
       File indexingTmpDir,
-      Predicate<InputRow> rowFilter,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      Predicate<InputRow> rowFilter
   )
   {
     if (parser == null && inputFormat == null) {
@@ -88,17 +84,13 @@ class StreamChunkParser<RecordType extends ByteEntity>
       this.byteEntityReader = null;
     }
     this.rowFilter = rowFilter;
-    this.rowIngestionMeters = rowIngestionMeters;
-    this.parseExceptionHandler = parseExceptionHandler;
   }
 
   @VisibleForTesting
   StreamChunkParser(
       @Nullable InputRowParser<ByteBuffer> parser,
       @Nullable SettableByteEntityReader<RecordType> byteEntityReader,
-      Predicate<InputRow> rowFilter,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      Predicate<InputRow> rowFilter
   )
   {
     if (parser == null && byteEntityReader == null) {
@@ -107,19 +99,18 @@ class StreamChunkParser<RecordType extends ByteEntity>
     this.parser = parser;
     this.byteEntityReader = byteEntityReader;
     this.rowFilter = rowFilter;
-    this.rowIngestionMeters = rowIngestionMeters;
-    this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
+  List<ParseResult> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
-      if (!isEndOfShard) {
-        // We do not count end of shard record as thrown away event since this is a record created by Druid
-        // Note that this only applies to Kinesis
-        rowIngestionMeters.incrementThrownAway();
+      // We do not count end of shard record as thrown away event since this is a record created by Druid
+      // Note that this only applies to Kinesis
+      if (isEndOfShard) {
+        return Collections.singletonList(ParseResult.forEndOfShard());
+      } else {
+        return Collections.singletonList(ParseResult.forEmptyChunk());
       }
-      return Collections.emptyList();
     } else {
       if (byteEntityReader != null) {
         return parseWithInputFormat(byteEntityReader, streamChunk);
@@ -129,21 +120,20 @@ class StreamChunkParser<RecordType extends ByteEntity>
     }
   }
 
-  private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytes)
+  private List<ParseResult> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytes)
   {
     final FluentIterable<InputRow> iterable = FluentIterable
         .from(valueBytes)
         .transform(ByteEntity::getBuffer)
         .transform(this::incrementProcessedBytes)
-        .transformAndConcat(parser::parseBatch);
-
-    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
-        CloseableIterators.withEmptyBaggage(iterable.iterator()),
-        rowFilter,
-        rowIngestionMeters,
-        parseExceptionHandler
-    );
-    return Lists.newArrayList(rowIterator);
+        .transformAndConcat(bytes -> {
+          // TODO push down synchronized{} so that each implementation can decide thread safety
+          //      for the first pass, we do it here, to guarantee it is safe
+          synchronized (parser) {
+            return parser.parseBatch(bytes);
+          }
+        });
+    return rowsToParseResult(iterable.iterator());
   }
 
   /**
@@ -152,31 +142,163 @@ class StreamChunkParser<RecordType extends ByteEntity>
    */
   private ByteBuffer incrementProcessedBytes(final ByteBuffer recordByteBuffer)
   {
-    rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
+    // TODO re-enable this, somehow. We need to make the increment data available
+    //      to the processor of the ParseResult. Should we return a Pair? or is it
+    //      a part of the ParseResult itself? How to deal with multiple parsed
+    //      results per bytebuffer?
+    // rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
     return recordByteBuffer;
   }
 
-  private List<InputRow> parseWithInputFormat(
+  private List<ParseResult> parseWithInputFormat(
       SettableByteEntityReader byteEntityReader,
       List<? extends ByteEntity> valueBytess
   ) throws IOException
   {
-    final List<InputRow> rows = new ArrayList<>();
+    final List<ParseResult> allParseResults = new ArrayList<>();
     for (ByteEntity valueBytes : valueBytess) {
-      rowIngestionMeters.incrementProcessedBytes(valueBytes.getBuffer().remaining());
+      incrementProcessedBytes(valueBytes.getBuffer());
       byteEntityReader.setEntity(valueBytes);
-      try (FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
-          byteEntityReader.read(),
-          rowFilter,
-          rowIngestionMeters,
-          parseExceptionHandler
-      )) {
-        rowIterator.forEachRemaining(rows::add);
+      try (CloseableIterator<InputRow> rows = byteEntityReader.read()) {
+        allParseResults.addAll(rowsToParseResult(rows));
       }
       catch (ParseException pe) {
-        parseExceptionHandler.handle(pe);
+        allParseResults.add(ParseResult.fromParseException(pe));
       }
     }
-    return rows;
+    return allParseResults;
+  }
+
+  List<ParseResult> rowsToParseResult(Iterator<InputRow> rows)
+  {
+    final List<ParseResult> parseResults = new ArrayList<>();
+    while (true) {
+      try {
+        if (!rows.hasNext()) {
+          break;
+        }
+
+        InputRow nextRow = rows.next();
+        boolean filterResult = rowFilter.test(nextRow);
+        parseResults.add(ParseResult.fromFilterResult(nextRow, filterResult));
+      }
+      catch (ParseException ex) {
+        parseResults.add(ParseResult.fromParseException(ex));
+      }
+    }
+    return parseResults;
+  }
+
+
+  public enum ParseResultCode
+  {
+    UNPROCESSED,
+    PROCESSED,
+    PROCESSED_WITH_ERROR,
+    UNPARSEABLE,
+    THROWN_AWAY,
+    END_OF_SHARD,
+  }
+
+  public static class ParseResult
+  {
+    final InputRow output;
+    final ParseException parseException;
+    final ParseResultCode resultCode;
+
+    public static ParseResult forEndOfShard()
+    {
+      return new ParseResult(ParseResultCode.END_OF_SHARD, null, null);
+    }
+
+    public static ParseResult forEmptyChunk()
+    {
+      return new ParseResult(ParseResultCode.THROWN_AWAY, null, null);
+    }
+
+    public ParseResult mapResult(UnaryOperator<InputRow> mapFn)
+    {
+      return new ParseResult(
+              resultCode,
+              mapFn.apply(output),
+              parseException);
+    }
+
+    public static ParseResult fromFilterResult(InputRow row, boolean valid)
+    {
+      return new ParseResult(
+              valid ? ParseResultCode.PROCESSED : ParseResultCode.THROWN_AWAY,
+              valid ? row : null,
+              null);
+    }
+
+    public static ParseResult fromParseException(ParseException ex)
+    {
+      return new ParseResult(
+              ex.isFromPartiallyValidRow()
+                      ? ParseResultCode.PROCESSED_WITH_ERROR
+                      : ParseResultCode.UNPARSEABLE,
+              null,
+              ex);
+    }
+
+    ParseResult(ParseResultCode rc, InputRow output, ParseException ex)
+    {
+      this.resultCode = rc;
+      this.output = output;
+      this.parseException = ex;
+    }
+
+    /**
+     * Performs application of meter changes and exception handler, and fetches the row.
+     *
+     * @param rowIngestionMeters
+     * @param parseExceptionHandler
+     * @return the parsed row, or null if row was thrown away at filtering
+     */
+    @Nullable
+    InputRow getInputRowAndApplyHandlers(
+            RowIngestionMeters rowIngestionMeters,
+            ParseExceptionHandler parseExceptionHandler
+    )
+    {
+      if (resultCode == ParseResultCode.THROWN_AWAY) {
+        // do not record other metrics
+        // if it was an errored row, then the parseExceptionHandler will increment the counter
+        // and perhaps even throw itself
+        rowIngestionMeters.incrementThrownAway();
+      }
+
+      parseExceptionHandler.handle(parseException);
+
+      return output;
+    }
+
+    /**
+     * Fetches the row, without updating any meters or handling exceptions.
+     *
+     * @return the row, or null if row was thrown away at filtering
+     */
+    @Nullable
+    public InputRow getRowRaw()
+    {
+      return output;
+    }
+
+    @Nullable
+    public ParseException getParseException()
+    {
+      return parseException;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "ParseResult=[" +
+              "resultCode=" + resultCode + ", " +
+              "output=" + output + ", " +
+              "parseException=" + parseException +
+              "]";
+    }
   }
 }

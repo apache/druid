@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.seekablestream.StreamChunkParser.ParseResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
@@ -61,6 +62,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RunWith(MockitoJUnitRunner.class)
 public class StreamChunkParserTest
@@ -104,9 +106,7 @@ public class StreamChunkParserTest
         null,
         null,
         null,
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
     parseAndAssertResult(chunkParser);
   }
@@ -121,9 +121,7 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
     parseAndAssertResult(chunkParser);
   }
@@ -139,9 +137,7 @@ public class StreamChunkParserTest
         null,
         null,
         null,
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
   }
 
@@ -169,9 +165,7 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
     parseAndAssertResult(chunkParser);
     Assert.assertTrue(inputFormat.props.used);
@@ -190,12 +184,11 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
-    List<InputRow> parsedRows = chunkParser.parse(ImmutableList.of(), false);
-    Assert.assertEquals(0, parsedRows.size());
+    List<ParseResult> parseResults = chunkParser.parse(ImmutableList.of(), false);
+    Assert.assertEquals(1, parseResults.size());
+    parseResults.forEach(pr -> pr.getInputRowAndApplyHandlers(rowIngestionMeters, parseExceptionHandler));
     Assert.assertEquals(0, rowIngestionMeters.getUnparseable());
     Assert.assertEquals(1, rowIngestionMeters.getThrownAway());
   }
@@ -213,12 +206,11 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
-    List<InputRow> parsedRows = chunkParser.parse(ImmutableList.of(), true);
-    Assert.assertEquals(0, parsedRows.size());
+    List<ParseResult> parseResults = chunkParser.parse(ImmutableList.of(), true);
+    Assert.assertEquals(1, parseResults.size());
+    Assert.assertNull(parseResults.get(0).getInputRowAndApplyHandlers(rowIngestionMeters, parseExceptionHandler));
     Assert.assertEquals(0, rowIngestionMeters.getUnparseable());
     Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
   }
@@ -238,27 +230,32 @@ public class StreamChunkParserTest
     );
 
     final int maxAllowedParseExceptions = 1;
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
-        mockedByteEntityReader,
-        row -> true,
-        rowIngestionMeters,
-        new ParseExceptionHandler(
+    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
             rowIngestionMeters,
             false,
             maxAllowedParseExceptions,
             0
-        )
+    );
+
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
+        parser,
+        mockedByteEntityReader,
+        row -> true
     );
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
     final String json = "malformedJson";
 
-    List<InputRow> parsedRows = chunkParser.parse(
+    List<ParseResult> parseResults = chunkParser.parse(
         Collections.singletonList(
             new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false
     );
+
+    Assert.assertEquals(1, parseResults.size());
+    parseResults.forEach(pr -> pr.getInputRowAndApplyHandlers(rowIngestionMeters, parseExceptionHandler));
+
     // no exception and no parsed rows
-    Assert.assertEquals(0, parsedRows.size());
+    Assert.assertEquals(0, rowIngestionMeters.getProcessed());
+    Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
     Assert.assertEquals(maxAllowedParseExceptions, rowIngestionMeters.getUnparseable());
   }
 
@@ -279,9 +276,7 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         mockedByteEntityReader,
-        row -> true,
-        rowIngestionMeters,
-        parseExceptionHandler
+        row -> true
     );
 
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
@@ -293,10 +288,11 @@ public class StreamChunkParserTest
         new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
         new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))
     );
+    List<ParseResult> parseResults = chunkParser.parse(byteEntities, false);
     Assert.assertThrows(
         "Max parse exceptions[0] exceeded",
         RE.class,
-        () -> chunkParser.parse(byteEntities, false)
+        () -> parseResults.forEach(pr -> pr.getInputRowAndApplyHandlers(rowIngestionMeters, parseExceptionHandler))
     );
     Assert.assertEquals(1, rowIngestionMeters.getUnparseable()); // should barf on the first unparseable row
   }
@@ -315,17 +311,17 @@ public class StreamChunkParserTest
         StringUtils.UTF8_STRING
     );
 
-    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
-        parser,
-        mockedByteEntityReader,
-        row -> true,
-        rowIngestionMeters,
-        new ParseExceptionHandler(
+    ParseExceptionHandler unlimitedParseExceptionHandler = new ParseExceptionHandler(
             rowIngestionMeters,
             false,
             Integer.MAX_VALUE,
             0
-        )
+    );
+
+    final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
+        parser,
+        mockedByteEntityReader,
+        row -> true
     );
 
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
@@ -339,9 +335,14 @@ public class StreamChunkParserTest
         new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))
     );
 
-    List<InputRow> parsedRows = chunkParser.parse(byteEntities, false);
+    List<ParseResult> parseResults = chunkParser.parse(byteEntities, false);
+    long countParsed = parseResults.stream()
+            .map(pr -> pr.getInputRowAndApplyHandlers(rowIngestionMeters, unlimitedParseExceptionHandler))
+            .filter(Objects::nonNull)
+            .count();
+
     // no exception since we've unlimited threhold for parse exceptions
-    Assert.assertEquals(0, parsedRows.size());
+    Assert.assertEquals(0, countParsed);
     Assert.assertEquals(byteEntities.size(), rowIngestionMeters.getUnparseable());
   }
 
@@ -354,9 +355,7 @@ public class StreamChunkParserTest
         () -> new StreamChunkParser<>(
             null,
             null,
-            row -> true,
-            rowIngestionMeters,
-            parseExceptionHandler
+            row -> true
         )
     );
   }
@@ -364,9 +363,9 @@ public class StreamChunkParserTest
   private void parseAndAssertResult(StreamChunkParser<ByteEntity> chunkParser) throws IOException
   {
     final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
-    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false);
-    Assert.assertEquals(1, parsedRows.size());
-    InputRow row = parsedRows.get(0);
+    List<ParseResult> parseResults = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false);
+    Assert.assertEquals(1, parseResults.size());
+    InputRow row = parseResults.get(0).getRowRaw();
     Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
     Assert.assertEquals("val", Iterables.getOnlyElement(row.getDimension("dim")));
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
