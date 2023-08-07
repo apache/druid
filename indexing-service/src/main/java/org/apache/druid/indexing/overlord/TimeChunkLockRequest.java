@@ -24,6 +24,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -79,6 +80,8 @@ public class TimeChunkLockRequest implements LockRequest
     this.interval = interval;
     if (lockType.equals(TaskLockType.APPEND) && preferredVersion == null) {
       this.preferredVersion = MIN_VERSION;
+    } else if (preferredVersion == null) {
+      this.preferredVersion = DateTimes.nowUtc().toString();
     } else {
       this.preferredVersion = preferredVersion;
     }
