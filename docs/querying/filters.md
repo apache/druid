@@ -35,19 +35,18 @@ Apache Druid supports the following types of filters.
 
 ## Selector filter
 
-The simplest filter is a selector filter. The selector filter will match a specific dimension with a specific value. Selector filters can be used as the base filters for more complex Boolean expressions of filters.
+The simplest filter is a selector filter. The selector filter matches a specific dimension with a specific value. Selector filters can be used as the base filters for more complex Boolean expressions of filters.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "selector".| Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
-| `value` | String value to match. | No, if not specified the filter will match NULL values. |
+| `value` | String value to match. | No. If not specified the filter matches NULL values. |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
 
-The selector filter is limited to only being able to match against `STRING` (single and multi-valued), `LONG`, `FLOAT`,
-`DOUBLE` types. Use the newer null and equality filters to match against `ARRAY` or `COMPLEX` types.
+The selector filter can only match against `STRING` (single and multi-valued), `LONG`, `FLOAT`, `DOUBLE` types. Use the newer null and equality filters to match against `ARRAY` or `COMPLEX` types.
 
-When the selector filter matches against numeric inputs, the string `value` will be best effort coerced into a numeric value.
+When the selector filter matches against numeric inputs, the string `value` will be best-effort coerced into a numeric value.
 
 ### Example: equivalent of `WHERE someColumn = 'hello'`
 
@@ -65,16 +64,16 @@ When the selector filter matches against numeric inputs, the string `value` will
 
 ## Equality Filter
 
-The equality filter is a replacement for the selector filter with the ability to match against any type of column. The equality filter intends to have more SQL compatible behavior than the selector filter and so cannot match NULL values, use the null filter instead.
+The equality filter is a replacement for the selector filter with the ability to match against any type of column. The equality filter is designed to have more SQL compatible behavior than the selector filter and so can not match null values. To match null values use the null filter.
 
-Druid's SQL planner will by default use the equality filter instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the equality filter by default instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "equality".| Yes |
 | `column` | Input column or virtual column name to filter. | Yes |
-| `matchValueType` | String specifying the type of value to match, e.g. `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>` etc. The `matchValueType` indicates how Druid should interpret the `matchValue` to assist in converting to the type of the `column` being matched. | Yes |
-| `matchValue` | Value to match, must not me null. | Yes |
+| `matchValueType` | String specifying the type of value to match, for example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column`. | Yes |
+| `matchValue` | Value to match, must not be null. | Yes |
 
 ### Example: equivalent of `WHERE someColumn = 'hello'`
 
@@ -97,7 +96,9 @@ Druid's SQL planner will by default use the equality filter instead of selector 
 
 ## Null Filter
 
-The null filter is a partial replacement for the selector filter dedicated to matching NULL values.
+The null filter is a partial replacement for the selector filter. It is dedicated to matching NULL values.
+
+Druid's SQL planner uses the null filter by default instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
@@ -113,7 +114,7 @@ The null filter is a partial replacement for the selector filter dedicated to ma
 
 ## Column comparison filter
 
-The column comparison filter is similar to the selector filter, but instead compares dimensions to each other. For example:
+The column comparison filter is similar to the selector filter, but compares dimensions to each other. For example:
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
@@ -122,7 +123,7 @@ The column comparison filter is similar to the selector filter, but instead comp
 
 `dimensions` is list of [DimensionSpecs](./dimensionspecs.md), making it possible to apply an extraction function if needed.
 
-Note that the column comparison filter converts all values to strings prior to comparison, which can allow differently typed input columns to still match each other without any sort of casting required.
+Note that the column comparison filter converts all values to strings prior to comparison. This allows differently-typed input columns to match without a cast operation.
 
 ### Example: equivalent of `WHERE someColumn = someLongColumn`.
 
@@ -242,12 +243,11 @@ greater than, less than, greater than or equal to, less than or equal to, and "b
 | `ordering` | String that specifies the sorting order to use when comparing values against the bound. Can be one of the following values: `"lexicographic"`, `"alphanumeric"`, `"numeric"`, `"strlen"`, `"version"`. See [Sorting Orders](./sorting-orders.md) for more details. | No, default: `"lexicographic"`|
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
 
-When the bound filter matches against numeric inputs, the string `lower` and `upper` bound values will be best effort coerced into a numeric value when using the `"numeric"` mode of ordering.
+When the bound filter matches against numeric inputs, the string `lower` and `upper` bound values are best-effort coerced into a numeric value when using the `"numeric"` mode of ordering.
 
-The bound filter is limited to only being able to match against `STRING` (single and multi-valued), `LONG`, `FLOAT`,
-`DOUBLE` types. Use the newer range to match against `ARRAY` or `COMPLEX` types.
+The bound filter can only match against `STRING` (single and multi-valued), `LONG`, `FLOAT`, `DOUBLE` types. Use the newer range to match against `ARRAY` or `COMPLEX` types.
 
-Also note that the bound filter will match null values if no lower bound is specified. Use the range filter instead if SQL compatible behavior is desired.
+Note that the bound filter matches null values if you don't specify a lower bound. Use the range filter if SQL-compatible behavior.
 
 ### Example: equivalent to `WHERE 21 <= age <= 31`:
 
@@ -312,17 +312,17 @@ Also note that the bound filter will match null values if no lower bound is spec
 
 ## Range filter
 
-The range filter is a replacement for the bound filter with the ability to compare against any type of column. The range filter has more SQL compliant behavior, and will never match NULL values, even if no lower bound is specified.
+The range filter is a replacement for the bound filter. It compares against any type of column and is designed to have has more SQL compliant behavior than the bound filter. It won't match null values, even if you don't specify a lower bound.
 
-Druid's SQL planner will by default use the range filter instead of bound filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the range filter by default instead of bound filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "range".| Yes |
 | `column` | Input column or virtual column name to filter. | Yes |
-| `matchValueType` | String specifying the type of bounds to match, e.g. `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>` etc. The `matchValueType` indicates how Druid should interpret the `matchValue` to assist in converting to the type of the `column` being matched and also defines the type of comparison to use when matching values. | Yes |
-| `lower` | Lower bound value to match. | No, at least one of `lower` or `upper` must not me null. |
-| `upper` | Upper bound value to match. | No, at least one of `lower` or `upper` must not me null. |
+| `matchValueType` | String specifying the type of bounds to match, for example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column` and also defines the type of comparison used when matching values. | Yes |
+| `lower` | Lower bound value to match. | No. At least one of `lower` or `upper` must not be null. |
+| `upper` | Upper bound value to match. | No. At least one of `lower` or `upper` must not be null. |
 | `lowerOpen` | Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). | No |
 | `upperOpen` | Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). | No |
 
@@ -456,7 +456,7 @@ This filter converts the ISO 8601 intervals to long millisecond start/end ranges
 | -------- | ----------- | -------- |
 | `type` | Must be "interval". | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
-| `intervals` | A JSON array containing ISO-8601 interval strings. This defines the time ranges to filter on. | Yes |
+| `intervals` | A JSON array containing ISO-8601 interval strings that defines the time ranges to filter on. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
 
 The interval filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
@@ -506,14 +506,14 @@ The filter above is equivalent to the following OR of Bound filters:
 
 
 ## True filter
-The true filter is a filter which matches all values.  It can be used to temporarily disable other filters without removing the filter.
+A filter which matches all values. You can use it to temporarily disable other filters without removing them.
 
 ```json
 { "type" : "true" }
 ```
 
 ## False filter
-The false filter matches no values. It can be used to force a query to match nothing.
+A filter matches no values. You can use it to force a query to match no values.
 
 ```json
 {"type": "false" }
@@ -522,7 +522,7 @@ The false filter matches no values. It can be used to force a query to match not
 
 ## Search filter
 
-Search filters can be used to filter on partial string matches.
+You can use search filters to filter on partial string matches.
 
 ```json
 {
@@ -544,8 +544,6 @@ Search filters can be used to filter on partial string matches.
 | `query`| A JSON object for the type of search. See [search query spec](#search-query-spec) for more information. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
 
-The search filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
-
 ### Search query spec
 
 #### Contains
@@ -553,15 +551,15 @@ The search filter supports the use of extraction functions, see [Filtering with 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "contains". | Yes |
-| `value` |A String value to run the search over. | Yes |
-| `caseSensitive` | Whether two string should be compared as case sensitive or not. | No, default is false (insensitive) |
+| `value` | A String value to search. | Yes |
+| `caseSensitive` | Whether the string comparison is case-sensitive or not. | No, default is false (insensitive) |
 
 #### Insensitive Contains
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "insensitive_contains". | Yes |
-| `value` | A String value to run the search over. | Yes |
+| `value` | A String value to search. | Yes |
 
 Note that an "insensitive_contains" search is equivalent to a "contains" search with "caseSensitive": false (or not
 provided).
@@ -571,14 +569,14 @@ provided).
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "fragment". | Yes |
-| `values` | A JSON array of String values to run the search over. | Yes |
-| `caseSensitive` | Whether strings should be compared as case sensitive or not. | No, default is false (insensitive) |
+| `values` | A JSON array of string values to search. | Yes |
+| `caseSensitive` | Whether the string comparison is case-sensitive or not. | No, default is false (insensitive) |
 
 
 
 ## Expression filter
 
-The expression filter allows for the implementation of arbitrary conditions, leveraging the Druid expression system. This filter allows for complete flexibility, but it might be less performant than a combination of the other filters on this page due to the fact that not always being able to take advantage of the same optimizations others might benefit from.
+The expression filter allows for the implementation of arbitrary conditions, leveraging the Druid expression system. This filter allows for complete flexibility, but it might be less performant than a combination of the other filters on this page because it can't always use the same optimizations available to other filters.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
@@ -603,7 +601,7 @@ The JavaScript filter matches a dimension against the specified JavaScript funct
 | -------- | ----------- | -------- |
 | `type` | Must be "javascript" | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
-| `function` | JavaScript function which accepts a single argument, the dimension value, and returns either true or false. | Yes |
+| `function` | JavaScript function which accepts the dimension value as a single argument, and returns either true or false. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
 
 ### Example: matching any dimension values for the dimension `name` between `'bar'` and `'foo'`
@@ -616,25 +614,22 @@ The JavaScript filter matches a dimension against the specified JavaScript funct
 }
 ```
 
-The JavaScript filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
-
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+> JavaScript-based functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
 
 ## Extraction filter
 
-> The extraction filter is now deprecated. The selector filter with an extraction function specified
-> provides identical functionality and should be used instead.
+> The extraction filter is now deprecated. Use the selector filter with an extraction function instead.
 
-Extraction filter matches a dimension using some specific [Extraction function](./dimensionspecs.md#extraction-functions).
-The following filter matches the values for which the extraction function has transformation entry `input_key=output_value` where
-`output_value` is equal to the filter `value` and `input_key` is present as dimension.
+Extraction filter matches a dimension using a specific [extraction function](./dimensionspecs.md#extraction-functions).
+The following filter matches the values for which the extraction function has a transformation entry `input_key=output_value` where
+`output_value` is equal to the filter `value` and `input_key` is present as a dimension.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
 | `type` | Must be "extraction" | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
-| `value` | String value to match. | No, if not specified the filter will match NULL values. |
+| `value` | String value to match. | No. If not specified the filter will match NULL values. |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
 
 ### Example: matching dimension values in `[product_1, product_3, product_5]` for the column `product`
@@ -697,12 +692,12 @@ according to the values defined in the lookup map; transformed values will then 
 
 Druid supports filtering on timestamp, string, long, and float columns.
 
-Note that only string columns and columns produced with the ['auto' ingestion spec](../ingestion/ingestion-spec.md#dimension-objects) also used by [type aware schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery) have bitmap indexes. Therefore, queries that filter on other column types will need to
+Note that only string columns and columns produced with the ['auto' ingestion spec](../ingestion/ingestion-spec.md#dimension-objects) also used by [type aware schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery) have bitmap indexes. Queries that filter on other column types must
 scan those columns.
 
 ### Filtering on multi-value string columns
 
-All filters will return true if any one of the dimension values is satisfies the filter.
+All filters return true if any one of the dimension values is satisfies the filter.
 
 #### Example: multi-value match behavior.
 Given a multi-value STRING row with values `['a', 'b', 'c']`, a filter such as
@@ -739,7 +734,7 @@ Given a multi-value STRING row with values `['a', 'b', 'c']`, and filter such as
 ```
 will successfully match the entire row, but not match a row with value `['a', 'c']`.
 
-To express this filter in SQL, one would need to use [SQL multi-value string functions](./sql-multivalue-string-functions.md) such as `MV_CONTAINS`, which can be optimized by the planner to the same native filters.
+To express this filter in SQL, use [SQL multi-value string functions](./sql-multivalue-string-functions.md) such as `MV_CONTAINS`, which can be optimized by the planner to the same native filters.
 
 ### Filtering on numeric columns
 
@@ -804,7 +799,7 @@ Query filters can also be applied to the timestamp column. The timestamp column 
 to the timestamp column, use the string `__time` as the dimension name. Like numeric dimensions, timestamp filters
 should be specified as if the timestamp values were strings.
 
-If the user wishes to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.md#time-format-extraction-function) is useful.
+If you want to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.md#time-format-extraction-function) is useful.
 
 #### Example: filtering on a long timestamp value
 
