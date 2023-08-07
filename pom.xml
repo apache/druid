@@ -2081,18 +2081,5 @@
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
-      <profile>
-        <id>hadoop2</id>
-        <activation>
-          <property>
-            <name>hadoop2.enabled</name>
-            <value>true</value>
-          </property>
-        </activation>
-        <properties>
-          <hadoop.compile.version>2.8.5</hadoop.compile.version>
-          <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
-        </properties>
-      </profile>
     </profiles>
 </project>

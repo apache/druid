@@ -812,7 +812,6 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
 ambari-metrics
@@ -1030,7 +1029,6 @@ PT17S
 GCS
 StaticGoogleBlobStoreFirehose
 gcs-connector
-hadoop2
 hdfs
 Aotearoa
 Czechia
