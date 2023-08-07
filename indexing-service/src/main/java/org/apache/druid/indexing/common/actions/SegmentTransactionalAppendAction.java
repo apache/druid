@@ -55,30 +55,26 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
-  @Nullable
-  private final String dataSource;
 
-  public static SegmentTransactionalAppendAction appendAction(
+  public static SegmentTransactionalAppendAction create(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, null);
+    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
       @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
-      @JsonProperty("dataSource") @Nullable String dataSource
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
   )
   {
     this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
-    this.dataSource = dataSource;
   }
 
   @JsonProperty
@@ -101,13 +97,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     return endMetadata;
   }
 
-  @JsonProperty
-  @Nullable
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
@@ -123,22 +112,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
     final SegmentPublishResult retVal;
-
-    if (segments.isEmpty()) {
-      // A stream ingestion task didn't ingest any rows and created no segments (e.g., all records were unparseable),
-      // but still needs to update metadata with the progress that the task made.
-      try {
-        retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
-            dataSource,
-            startMetadata,
-            endMetadata
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-      return retVal;
-    }
 
     final Set<DataSegment> allSegments = new HashSet<>(segments);
 
@@ -165,17 +138,15 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
                       segments,
-                      null,
                       startMetadata,
                       endMetadata,
                       appendSegmentLockMap,
-                      taskLockInfos,
-                      true
+                      taskLockInfos
                   )
               )
               .onInvalidLocks(
@@ -233,7 +204,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
-           ", dataSource='" + dataSource + '\'' +
            '}';
   }
 }

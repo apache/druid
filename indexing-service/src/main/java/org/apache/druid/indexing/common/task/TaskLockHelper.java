@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.SegmentLockTryAcquireAction;
@@ -91,10 +92,10 @@ public class TaskLockHelper
     }
   }
 
-  public TaskLockHelper(boolean useSegmentLock, TaskLockType taskLockType)
+  public TaskLockHelper(boolean useSegmentLock, Map<String, Object> context, AbstractTask.IngestionMode mode)
   {
     this.useSegmentLock = useSegmentLock;
-    this.taskLockType = taskLockType;
+    this.taskLockType = lockTypeFrom(useSegmentLock, context, mode);
   }
 
   public boolean isUseSegmentLock()
@@ -109,12 +110,7 @@ public class TaskLockHelper
 
   public TaskLockType getLockTypeToUse()
   {
-    return taskLockType == null ? TaskLockType.EXCLUSIVE : taskLockType;
-  }
-
-  public boolean hasLockedExistingSegments()
-  {
-    return !lockedExistingSegments.isEmpty();
+    return taskLockType;
   }
 
   public boolean hasOverwritingRootGenerationPartition(Interval interval)
@@ -132,6 +128,9 @@ public class TaskLockHelper
     return overwritingRootGenPartitions.get(interval);
   }
 
+  /**
+   * Verify and lock existing segments when using a SegmentLock
+   */
   boolean verifyAndLockExistingSegments(TaskActionClient actionClient, List<DataSegment> segments)
       throws IOException
   {
@@ -310,6 +309,32 @@ public class TaskLockHelper
           sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize(),
           atomicUpdateGroupSize
       );
+    }
+  }
+
+  public static TaskLockType lockTypeFrom(
+      boolean useSegmentLock,
+      Map<String, Object> context,
+      AbstractTask.IngestionMode mode
+  )
+  {
+    if (useSegmentLock) {
+      return Tasks.DEFAULT_TASK_LOCK_TYPE;
+    }
+
+    final TaskLockType lockTypeVal;
+    final String lockTypeName = context.get(Tasks.TASK_LOCK_TYPE).toString();
+    if (lockTypeName == null) {
+      lockTypeVal = (boolean) context.get(Tasks.USE_SHARED_LOCK) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    } else {
+      lockTypeVal = TaskLockType.valueOf(lockTypeName);
+    }
+
+    final Set<TaskLockType> appendModeCompatible = ImmutableSet.of(TaskLockType.SHARED, TaskLockType.APPEND);
+    if (!mode.equals(AbstractTask.IngestionMode.APPEND) && appendModeCompatible.contains(lockTypeVal)) {
+      return Tasks.DEFAULT_TASK_LOCK_TYPE;
+    } else {
+      return lockTypeVal;
     }
   }
 }

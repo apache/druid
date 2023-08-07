@@ -219,10 +219,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegments(
                       segments,
                       segmentsToBeDropped,
                       startMetadata,

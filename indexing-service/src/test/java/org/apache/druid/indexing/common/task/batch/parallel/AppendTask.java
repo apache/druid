@@ -274,7 +274,7 @@ public class AppendTask extends AbstractTask
   {
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalAppendAction.appendAction(segmentsToPublish, null, null)
+            SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
         );
     return publisher.publishSegments(
         Collections.emptySet(),

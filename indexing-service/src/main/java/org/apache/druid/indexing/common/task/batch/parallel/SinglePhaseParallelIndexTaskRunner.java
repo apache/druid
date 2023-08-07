@@ -29,8 +29,9 @@ import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -205,7 +206,10 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
   @Deprecated
   public SegmentIdWithShardSpec allocateNewSegment(String dataSource, DateTime timestamp) throws IOException
   {
-    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(timestamp);
+    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(
+        timestamp,
+        TaskLockHelper.lockTypeFrom(false, getContext(), AbstractTask.IngestionMode.APPEND)
+    );
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, intervalAndVersion.lhs);
     return new SegmentIdWithShardSpec(
@@ -235,7 +239,10 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       @Nullable String prevSegmentId
   ) throws IOException
   {
-    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(timestamp);
+    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(
+        timestamp,
+        TaskLockHelper.lockTypeFrom(false, getContext(), AbstractTask.IngestionMode.APPEND)
+    );
 
     MutableObject<SegmentIdWithShardSpec> segmentIdHolder = new MutableObject<>();
     sequenceToSegmentIds.compute(sequenceName, (k, v) -> {
@@ -283,12 +290,8 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
     return segmentIdHolder.getValue();
   }
 
-  NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
+  NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp, TaskLockType taskLockType) throws IOException
   {
-    TaskLockType taskLockType = null;
-    if (getContext().containsKey(Tasks.TASK_LOCK_TYPE)) {
-      taskLockType = TaskLockType.valueOf(getContext().get(Tasks.TASK_LOCK_TYPE).toString());
-    }
     return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp, taskLockType);
   }
 

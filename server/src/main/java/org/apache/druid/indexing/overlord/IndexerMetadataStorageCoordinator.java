@@ -153,7 +153,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -251,10 +251,6 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
    *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                       involve a metadata transaction
-   * @param segmentLockMap map of segments appended with an append lock to the task lock of the exclusive lock
-   *                       held for the datasource + interval during commit
-   * @param taskLockInfos  Set of task lock infos for which new segments with given replace the old ones
-   *                       for the datasource + interval during commit
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -263,21 +259,25 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
    * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
-  SegmentPublishResult announceHistoricalSegments(
-      Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
-      @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata,
-      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap,
-      @Nullable Set<TaskLockInfo> taskLockInfos,
-      boolean append
-  ) throws IOException;
-
-  SegmentPublishResult announceHistoricalSegments(
+  SegmentPublishResult commitSegments(
       Set<DataSegment> segments,
       Set<DataSegment> segmentsToDrop,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
+  ) throws IOException;
+
+  SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> segments,
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata,
+      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap,
+      @Nullable Set<TaskLockInfo> taskLockInfos
+  ) throws IOException;
+
+  SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
+      @Nullable Set<TaskLockInfo> taskLockInfos
   ) throws IOException;
 
   /**
@@ -324,11 +324,11 @@ public interface IndexerMetadataStorageCoordinator
   int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
 
   /**
-   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * Similar to {@link #commitSegments(Set)}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.
    *
-   * The metadata should undergo the same validation checks as performed by {@link #announceHistoricalSegments}.
+   * The metadata should undergo the same validation checks as performed by {@link #commitSegments}.
    *
    *
    * @param dataSource the datasource

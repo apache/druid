@@ -436,8 +436,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 
@@ -1159,8 +1158,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         for (Interval interval : tombstoneIntervals) {
           SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
               ingestionSchema,
-              interval.getStart(),
-              toolbox
+              interval.getStart()
           );
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
@@ -1178,11 +1176,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       switch (lockType) {
         case REPLACE:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalAppendAction.appendAction(segmentsToPublish, null, null)
+              SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
           );
         default:
           return toolbox.getTaskActionClient().submit(

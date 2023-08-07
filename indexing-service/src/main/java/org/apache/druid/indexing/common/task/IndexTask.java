@@ -256,8 +256,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
     );
   }
 
@@ -527,7 +526,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final DataSchema dataSchema;
       if (determineIntervals) {
         final boolean gotLocks = determineLockGranularityAndTryLock(
-            toolbox.getTaskActionClient(), allocateIntervals, ingestionSchema.getIOConfig()
+            toolbox.getTaskActionClient(),
+            allocateIntervals
         );
         if (!gotLocks) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
@@ -920,11 +920,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       switch (lockType) {
         case REPLACE:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalAppendAction.appendAction(segmentsToPublish, null, null)
+              SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
           );
         default:
           return toolbox.getTaskActionClient().submit(
@@ -997,8 +997,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         for (Interval interval : tombstoneIntervals) {
           SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
               ingestionSchema,
-              interval.getStart(),
-              toolbox
+              interval.getStart()
           );
           tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }

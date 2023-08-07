@@ -524,7 +524,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -542,7 +542,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -561,7 +561,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -587,7 +587,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             highPriorityTask,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -612,7 +612,7 @@ public class TaskLockboxTest
     Assert.assertFalse(
         lockbox.doInCriticalSection(
             lowPriorityTask,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );

@@ -27,7 +27,6 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -65,38 +64,25 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Nullable
   private final Set<DataSegment> segmentsToBeDropped;
 
-  @Nullable
-  private final DataSourceMetadata startMetadata;
-  @Nullable
-  private final DataSourceMetadata endMetadata;
-  @Nullable
-  private final String dataSource;
-
-  public static SegmentTransactionalReplaceAction overwriteAction(
+  public static SegmentTransactionalReplaceAction create(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @Nullable Set<DataSegment> segmentsToBeDropped,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, null, null, null);
+    return new SegmentTransactionalReplaceAction(segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
       @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @JsonProperty("segmentsToBeDropped") @Nullable Set<DataSegment> segmentsToBeDropped,
-      @JsonProperty("segments") @Nullable Set<DataSegment> segments,
-      @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
-      @JsonProperty("dataSource") @Nullable String dataSource
+      @JsonProperty("segments") Set<DataSegment> segments
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
     this.segmentsToBeDropped = segmentsToBeDropped;
-    this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
-    this.startMetadata = startMetadata;
-    this.endMetadata = endMetadata;
-    this.dataSource = dataSource;
+    this.segments = ImmutableSet.copyOf(segments);
   }
 
   @JsonProperty
@@ -119,27 +105,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     return segments;
   }
 
-  @JsonProperty
-  @Nullable
-  public DataSourceMetadata getStartMetadata()
-  {
-    return startMetadata;
-  }
-
-  @JsonProperty
-  @Nullable
-  public DataSourceMetadata getEndMetadata()
-  {
-    return endMetadata;
-  }
-
-  @JsonProperty
-  @Nullable
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
@@ -155,22 +120,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
     final SegmentPublishResult retVal;
-
-    if (segments.isEmpty()) {
-      // A stream ingestion task didn't ingest any rows and created no segments (e.g., all records were unparseable),
-      // but still needs to update metadata with the progress that the task made.
-      try {
-        retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
-            dataSource,
-            startMetadata,
-            endMetadata
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-      return retVal;
-    }
 
     final Set<DataSegment> allSegments = new HashSet<>(segments);
 
@@ -189,17 +138,13 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitReplaceSegments(
                       segments,
                       segmentsToBeDropped,
-                      startMetadata,
-                      endMetadata,
-                      null,
-                      taskLockInfos,
-                      false
+                      taskLockInfos
                   )
               )
               .onInvalidLocks(
@@ -255,9 +200,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     return "SegmentTransactionalInsertAction{" +
            "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
-           ", startMetadata=" + startMetadata +
-           ", endMetadata=" + endMetadata +
-           ", dataSource='" + dataSource + '\'' +
            ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +
            '}';
   }
