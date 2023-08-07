@@ -79,11 +79,11 @@ public class IngestionTestSqlEngine implements SqlEngine
     switch (feature) {
       case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
-      case TIMESERIES_QUERY:
       case TOPN_QUERY:
       case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
         return false;
+      case TIMESERIES_QUERY:
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
