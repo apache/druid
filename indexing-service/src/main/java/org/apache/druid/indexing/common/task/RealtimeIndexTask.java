@@ -310,6 +310,12 @@ public class RealtimeIndexTask extends AbstractTask
           }
         }
       }
+
+      @Override
+      public boolean isSegmentAnnounced(DataSegment segment)
+      {
+        return toolbox.getSegmentAnnouncer().isSegmentAnnounced(segment);
+      }
     };
 
     // NOTE: getVersion will block if there is lock contention, which will block plumber.getSink

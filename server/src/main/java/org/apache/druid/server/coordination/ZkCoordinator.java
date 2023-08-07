@@ -30,18 +30,18 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 
 /**
- * We are gradually migrating to {@link org.apache.druid.server.http.SegmentListerResource} for driving segment
- * loads/drops on data server processes.
+ * Uses {@link SegmentLoadDropHandler} to perform load and unload of segments
+ * based on requests sent via curator.
  *
- * However, this class is still the default mechanism as of this writing (2020-12-03).
+ * @deprecated Curator-based segment loading has been deprecated and HTTP-based
+ * segment loading using {@link org.apache.druid.server.http.SegmentListerResource}
+ * is now the default.
  */
 @Deprecated
 public class ZkCoordinator
@@ -50,7 +50,7 @@ public class ZkCoordinator
 
   private final Object lock = new Object();
 
-  private final DataSegmentChangeHandler dataSegmentChangeHandler;
+  private final SegmentLoadDropHandler segmentLoadDropHandler;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPaths;
   private final DruidServerMetadata me;
@@ -59,7 +59,6 @@ public class ZkCoordinator
   @Nullable
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
-  private final ExecutorService segmentLoadUnloadService;
 
   @Inject
   public ZkCoordinator(
@@ -67,19 +66,14 @@ public class ZkCoordinator
       ObjectMapper jsonMapper,
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
-      CuratorFramework curator,
-      SegmentLoaderConfig config
+      CuratorFramework curator
   )
   {
-    this.dataSegmentChangeHandler = loadDropHandler;
+    this.segmentLoadDropHandler = loadDropHandler;
     this.jsonMapper = jsonMapper;
     this.zkPaths = zkPaths;
     this.me = me;
     this.curator = curator;
-    this.segmentLoadUnloadService = Execs.multiThreaded(
-        config.getNumLoadingThreads(),
-        "ZKCoordinator--%d"
-    );
   }
 
   @LifecycleStart
@@ -138,50 +132,28 @@ public class ZkCoordinator
 
   private void childAdded(ChildData child)
   {
-    segmentLoadUnloadService.submit(() -> {
-      final String path = child.getPath();
-      DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
-      try {
-        final DataSegmentChangeRequest finalRequest = jsonMapper.readValue(
-            child.getData(),
-            DataSegmentChangeRequest.class
-        );
-
-        finalRequest.go(
-            dataSegmentChangeHandler,
-            () -> {
-              try {
-                curator.delete().guaranteed().forPath(path);
-                log.info("Completed request [%s]", finalRequest.asString());
-              }
-              catch (Exception e) {
-                try {
-                  curator.delete().guaranteed().forPath(path);
-                }
-                catch (Exception e1) {
-                  log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                }
-                log.error(e, "Exception while removing zNode[%s]", path);
-                throw new RuntimeException(e);
-              }
-            }
-        );
-      }
-      catch (Exception e) {
-        // Something went wrong in either deserializing the request using jsonMapper or when invoking it
-        try {
-          curator.delete().guaranteed().forPath(path);
-        }
-        catch (Exception e1) {
-          log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-        }
-
-        log.makeAlert(e, "Segment load/unload: uncaught exception.")
-           .addData("node", path)
-           .addData("nodeProperties", request)
-           .emit();
-      }
-    });
+    final String path = child.getPath();
+    try {
+      final DataSegmentChangeRequest changeRequest = jsonMapper.readValue(
+          child.getData(),
+          DataSegmentChangeRequest.class
+      );
+      segmentLoadDropHandler.submitCuratorRequest(
+          changeRequest,
+          () -> {
+            cleanupPath(path);
+            log.info("Completed request[%s]", changeRequest.asString());
+          }
+      );
+    }
+    catch (Exception e) {
+      // Something went wrong while deserializing the request
+      cleanupPath(path);
+      log.makeAlert(e, "Segment load/unload: uncaught exception.")
+         .addData("node", path)
+         .addData("nodeProperties", new SegmentChangeRequestNoop())
+         .emit();
+    }
   }
 
   @LifecycleStop
@@ -209,5 +181,15 @@ public class ZkCoordinator
   public boolean isStarted()
   {
     return started;
+  }
+
+  private void cleanupPath(String path)
+  {
+    try {
+      curator.delete().guaranteed().forPath(path);
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to delete zNode[%s], but ignoring exception.", path);
+    }
   }
 }

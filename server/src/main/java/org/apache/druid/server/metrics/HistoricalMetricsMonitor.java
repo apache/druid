@@ -58,7 +58,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
 
     final Object2LongOpenHashMap<String> pendingDeleteSizes = new Object2LongOpenHashMap<>();
 
-    for (DataSegment segment : segmentLoadDropMgr.getPendingDeleteSnapshot()) {
+    for (DataSegment segment : segmentLoadDropMgr.getSegmentsToDrop()) {
       pendingDeleteSizes.addTo(segment.getDataSource(), segment.getSize());
     }
 

@@ -310,6 +310,12 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     }
   }
 
+  @Override
+  public boolean isSegmentAnnounced(DataSegment segment)
+  {
+    return segmentLookup.containsKey(segment);
+  }
+
   /**
    * Returns Future that lists the segment load/drop requests since given counter.
    */

@@ -17,17 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.test;
+package org.apache.druid.server.coordination;
 
 import com.google.common.collect.Sets;
-import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Set;
 
 public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
 {
-  public Set<DataSegment> announcedSegments = Sets.newConcurrentHashSet();
+  private final Set<DataSegment> announcedSegments = Sets.newConcurrentHashSet();
 
   @Override
   public void announceSegment(DataSegment segment)
@@ -57,4 +56,14 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
     }
   }
 
+  @Override
+  public boolean isSegmentAnnounced(DataSegment segment)
+  {
+    return announcedSegments.contains(segment);
+  }
+
+  public int getNumAnnouncedSegments()
+  {
+    return announcedSegments.size();
+  }
 }

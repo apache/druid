@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.coordination;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.druid.timeline.DataSegment;
+
 import javax.annotation.Nullable;
 
 /**
@@ -38,5 +41,12 @@ public class SegmentChangeRequestNoop implements DataSegmentChangeRequest
   public String asString()
   {
     return "NOOP";
+  }
+
+  @Override
+  @JsonIgnore
+  public DataSegment getSegment()
+  {
+    throw new UnsupportedOperationException();
   }
 }

@@ -140,9 +140,9 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -257,6 +257,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
+  private TestDataSegmentAnnouncer announcer;
   private DruidNode druidNode = new DruidNode("dummy", "dummy", false, 10000, null, true, false);
   private TaskLocation taskLocation = TaskLocation.create(
       druidNode.getHost(),
@@ -264,7 +265,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       druidNode.getTlsPort()
   );
   private int pushedSegments;
-  private int announcedSinks;
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
 
@@ -414,7 +414,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     monitorScheduler = EasyMock.createStrictMock(MonitorScheduler.class);
 
     // initialize variables
-    announcedSinks = 0;
+    announcer = new TestDataSegmentAnnouncer();
     pushedSegments = 0;
     indexSpec = IndexSpec.DEFAULT;
     emitter = newMockEmitter();
@@ -644,32 +644,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             return segment;
           }
         },
-        new DataSegmentAnnouncer()
-        {
-          @Override
-          public void announceSegment(DataSegment segment)
-          {
-            announcedSinks++;
-          }
-
-          @Override
-          public void unannounceSegment(DataSegment segment)
-          {
-
-          }
-
-          @Override
-          public void announceSegments(Iterable<DataSegment> segments)
-          {
-
-          }
-
-          @Override
-          public void unannounceSegments(Iterable<DataSegment> segments)
-          {
-
-          }
-        }, // segment announcer
+        new TestDataSegmentAnnouncer(), // segment announcer
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
@@ -1285,7 +1260,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Assert.assertTrue("Task should be in Success state", status.isSuccess());
     Assert.assertEquals(taskLocation, status.getLocation());
 
-    Assert.assertEquals(1, announcedSinks);
+    Assert.assertEquals(1, announcer.getNumAnnouncedSegments());
     Assert.assertEquals(1, pushedSegments);
     Assert.assertEquals(1, mdc.getPublished().size());
     DataSegment segment = mdc.getPublished().iterator().next();

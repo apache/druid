@@ -32,4 +32,6 @@ public interface DataSegmentAnnouncer
   void announceSegments(Iterable<DataSegment> segments) throws IOException;
 
   void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
+
+  boolean isSegmentAnnounced(DataSegment segment);
 }

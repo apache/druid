@@ -28,11 +28,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.ServerTestHelper;
+import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -51,7 +53,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -59,7 +60,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 {
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
 
-  private final ObjectMapper jsonMapper = ServerTestHelper.MAPPER;
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
       "dummyHost",
@@ -77,10 +78,10 @@ public class ZkCoordinatorTest extends CuratorTestBase
       return "/druid";
     }
   };
-  private ZkCoordinator zkCoordinator;
 
   private File infoDir;
   private List<StorageLocationConfig> locations;
+  private BlockingExecutorService executor;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -88,6 +89,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   @Before
   public void setUp() throws Exception
   {
+    executor = new BlockingExecutorService("ZkCoordinator-test");
     try {
       infoDir = temporaryFolder.newFolder();
       log.info("Creating tmp test files in [%s]", infoDir);
@@ -113,6 +115,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   public void tearDown()
   {
     tearDownServerAndCurator();
+    executor.shutdownNow();
   }
 
   @Test(timeout = 60_000L)
@@ -135,7 +138,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     CountDownLatch dropLatch = new CountDownLatch(1);
 
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        ServerTestHelper.MAPPER,
+        jsonMapper,
         new SegmentLoaderConfig() {
           @Override
           public File getInfoDir()
@@ -144,63 +147,43 @@ public class ZkCoordinatorTest extends CuratorTestBase
           }
 
           @Override
-          public int getNumLoadingThreads()
-          {
-            return 5;
-          }
-
-          @Override
-          public int getAnnounceIntervalMillis()
-          {
-            return 50;
-          }
-
-          @Override
           public List<StorageLocationConfig> getLocations()
           {
             return locations;
-          }
-
-          @Override
-          public int getDropSegmentDelayMillis()
-          {
-            return 0;
           }
         },
         EasyMock.createNiceMock(DataSegmentAnnouncer.class),
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         EasyMock.createNiceMock(SegmentManager.class),
         EasyMock.createNiceMock(SegmentCacheManager.class),
-        EasyMock.createNiceMock(ScheduledExecutorService.class),
-        new ServerTypeConfig(ServerType.HISTORICAL)
+        new ServerTypeConfig(ServerType.HISTORICAL),
+        (corePoolSize, nameFormat) ->
+            new WrappingScheduledExecutorService(nameFormat, executor, false)
     )
     {
       @Override
-      public void addSegment(DataSegment s, DataSegmentChangeCallback callback)
+      public void submitCuratorRequest(DataSegmentChangeRequest request, DataSegmentChangeCallback callback)
       {
-        if (segment.getId().equals(s.getId())) {
-          loadLatch.countDown();
-          callback.execute();
+        if (!segment.getId().equals(request.getSegment().getId())) {
+          return;
         }
-      }
 
-      @Override
-      public void removeSegment(DataSegment s, DataSegmentChangeCallback callback)
-      {
-        if (segment.getId().equals(s.getId())) {
+        if (request instanceof SegmentChangeRequestLoad) {
+          loadLatch.countDown();
+        } else if (request instanceof SegmentChangeRequestDrop) {
           dropLatch.countDown();
-          callback.execute();
         }
+
+        callback.execute();
       }
     };
 
-    zkCoordinator = new ZkCoordinator(
+    ZkCoordinator zkCoordinator = new ZkCoordinator(
         segmentLoadDropHandler,
         jsonMapper,
         zkPaths,
         me,
-        curator,
-        new SegmentLoaderConfig()
+        curator
     );
     zkCoordinator.start();
 

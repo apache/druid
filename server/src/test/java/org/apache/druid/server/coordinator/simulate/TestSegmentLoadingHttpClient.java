@@ -30,7 +30,8 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.DataSegmentChangeResponse;
+import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -126,7 +127,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
   /**
    * Processes all the changes in the request.
    */
-  private List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> processRequest(
+  private List<DataSegmentChangeResponse> processRequest(
       Request request,
       DataSegmentChangeHandler changeHandler
   ) throws IOException
@@ -147,21 +148,20 @@ public class TestSegmentLoadingHttpClient implements HttpClient
   /**
    * Processes each DataSegmentChangeRequest using the handler.
    */
-  private SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus processRequest(
+  private DataSegmentChangeResponse processRequest(
       DataSegmentChangeRequest request,
       DataSegmentChangeHandler handler
   )
   {
-    SegmentLoadDropHandler.Status status;
+    SegmentChangeStatus status;
     try {
       request.go(handler, NOOP_CALLBACK);
-      status = SegmentLoadDropHandler.Status.SUCCESS;
+      status = SegmentChangeStatus.SUCCESS;
     }
     catch (Exception e) {
-      status = SegmentLoadDropHandler.Status.failed(e.getMessage());
+      status = SegmentChangeStatus.failed(e.getMessage());
     }
 
-    return new SegmentLoadDropHandler
-        .DataSegmentChangeRequestAndStatus(request, status);
+    return new DataSegmentChangeResponse(request, status);
   }
 }

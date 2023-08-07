@@ -45,4 +45,10 @@ public class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
   public void unannounceSegments(Iterable<DataSegment> segments)
   {
   }
+
+  @Override
+  public boolean isSegmentAnnounced(DataSegment segment)
+  {
+    return false;
+  }
 }

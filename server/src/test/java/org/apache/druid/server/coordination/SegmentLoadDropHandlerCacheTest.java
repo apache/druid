@@ -43,6 +43,8 @@ import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -51,7 +53,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -60,11 +61,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
-import static org.mockito.ArgumentMatchers.any;
 
 /**
  * This class includes tests that cover the storage location layer as well.
@@ -76,9 +74,9 @@ public class SegmentLoadDropHandlerCacheTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private SegmentLoadDropHandler loadDropHandler;
+  private BlockingExecutorService loadingExecutor;
   private TestStorageLocation storageLoc;
-  private ObjectMapper objectMapper;
-  private DataSegmentAnnouncer segmentAnnouncer;
+  private TestDataSegmentAnnouncer segmentAnnouncer;
 
   @Before
   public void setup() throws IOException
@@ -87,7 +85,7 @@ public class SegmentLoadDropHandlerCacheTest
     SegmentLoaderConfig config = new SegmentLoaderConfig()
         .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)))
         .withInfoDir(storageLoc.getInfoDir());
-    objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentizerFactory.class);
     SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, objectMapper);
@@ -96,7 +94,8 @@ public class SegmentLoadDropHandlerCacheTest
         TestIndex.INDEX_IO,
         objectMapper
     ));
-    segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
+    segmentAnnouncer = new TestDataSegmentAnnouncer();
+    loadingExecutor = new BlockingExecutorService("test-LoadDropHandler");
     loadDropHandler = new SegmentLoadDropHandler(
         objectMapper,
         config,
@@ -104,7 +103,9 @@ public class SegmentLoadDropHandlerCacheTest
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
         cacheManager,
-        new ServerTypeConfig(ServerType.HISTORICAL)
+        new ServerTypeConfig(ServerType.HISTORICAL),
+        (corePoolSize, nameFormat)
+            -> new WrappingScheduledExecutorService(nameFormat, loadingExecutor, false)
     );
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -127,28 +128,28 @@ public class SegmentLoadDropHandlerCacheTest
       expectedSegments.add(segment);
     }
 
-    // Start the load drop handler
     loadDropHandler.start();
 
     // Verify the expected announcements
-    ArgumentCaptor<Iterable<DataSegment>> argCaptor = ArgumentCaptor.forClass(Iterable.class);
-    Mockito.verify(segmentAnnouncer).announceSegments(argCaptor.capture());
-    List<DataSegment> announcedSegments = new ArrayList<>();
-    argCaptor.getValue().forEach(announcedSegments::add);
-    announcedSegments.sort(Comparator.comparing(DataSegment::getVersion));
-    Assert.assertEquals(expectedSegments, announcedSegments);
+    Assert.assertEquals(expectedSegments.size(), segmentAnnouncer.getNumAnnouncedSegments());
+    for (DataSegment segment : expectedSegments) {
+      Assert.assertTrue(segmentAnnouncer.isSegmentAnnounced(segment));
+    }
 
     // make sure adding segments beyond allowed size fails
-    Mockito.reset(segmentAnnouncer);
-    DataSegment newSegment = makeSegment("test", "new-segment");
-    loadDropHandler.addSegment(newSegment, null);
-    Mockito.verify(segmentAnnouncer, Mockito.never()).announceSegment(any());
-    Mockito.verify(segmentAnnouncer, Mockito.never()).announceSegments(any());
+    final DataSegment newSegment = makeSegment("test", "new-segment");
+    final List<DataSegmentChangeRequest> requestBatch = Collections.singletonList(
+        new SegmentChangeRequestLoad(newSegment)
+    );
+    loadDropHandler.submitRequestBatch(requestBatch);
+    loadingExecutor.finishAllPendingTasks();
+    Assert.assertFalse(segmentAnnouncer.isSegmentAnnounced(newSegment));
 
     // clearing some segment should allow for new segments
-    loadDropHandler.removeSegment(expectedSegments.get(0), null, false);
-    loadDropHandler.addSegment(newSegment, null);
-    Mockito.verify(segmentAnnouncer).announceSegment(newSegment);
+    loadDropHandler.cleanupFailedLoad(expectedSegments.get(0));
+    loadDropHandler.submitRequestBatch(requestBatch);
+    loadingExecutor.finishAllPendingTasks();
+    Assert.assertTrue(segmentAnnouncer.isSegmentAnnounced(newSegment));
   }
 
   private DataSegment makeSegment(String dataSource, String name)
