@@ -297,7 +297,7 @@ Supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useStrictBooleans=true`, the default)
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types
 * comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
@@ -307,7 +307,7 @@ Supported features:
 * other: `parse_long` is supported for numeric and string types
 
 ## Logical operator modes
-In Druid 28.0 and later, `druid.expressions.useStrictBooleans=true` is set by default, so logical operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. 
+In Druid 28.0 and later, `druid.expressions.useStrictBooleans=true` is set by default. Logical operations treat `null` values as "unknown" for SQL compatible behavior. _All boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. 
 
 For the "or" operator:
 * `true || null`, `null || true`, -> `1`
@@ -318,8 +318,8 @@ For the "and" operator:
 * `false && null`, `null && false` -> `0`
 
 Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values in both modes: 
-* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
-* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`.
+* `LONG` or `DOUBLE`: any value greater than 0 is considered `true`, else `false`.
+* `STRING`: the value `'true'` (case insensitive) is considered `true`, everything else is `false`.
 
 SQL compatible behavior:
 * `100 && 11` -> `1`
@@ -328,7 +328,7 @@ SQL compatible behavior:
 * `'troo' && 'true'` -> `0`
 * `'troo' || 'true'` -> `1`
 
-Prior to the 28 release of Apache Druid, boolean function expressions had inconsistent handling of true and false values, and the logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values similar to many scripting languages, and treat `null` as false, which can result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. This legacy mode can be enabled by setting `druid.expressions.useStrictBooleans=false`.
+Prior to the 28 release of Apache Druid, boolean function expressions had inconsistent handling of true and false values. The logical 'and' and 'or' operators behaved in a manner that was incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) was enabled. Logical operators would also pass through their input values similar to many scripting languages, and treated `null` as false, which would result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retained their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produced `LONG` typed values of `1` for true and `0` for false. This legacy mode can be enabled by setting `druid.expressions.useStrictBooleans=false`.
 
 Legacy behavior:
 * `100 && 11` -> `11`
