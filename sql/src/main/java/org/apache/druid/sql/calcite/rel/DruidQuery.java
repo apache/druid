@@ -1258,6 +1258,7 @@ public class DruidQuery
       return null;
     }
     if (grouping.getDimensions().size() == 0 && grouping.getHavingFilter() == null) {
+      int asd = 1;
       return null;
     }
 
