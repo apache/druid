@@ -1,23 +1,6 @@
 <!--Intentionally, there's no Apache license so that the GHA fails it. This file is not meant to be merged.
-
-- https://github.com/apache/druid/pull/14266 - we removed input source security from 26 (https://github.com/apache/druid/pull/14003). Should we not include this in 27 release notes?
-
 -->
 
-# Still need
-
-search for TBD 
-
-* Caveats for array column types
-* Caching cost for upgrade notes - is it this? [#14484](https://github.com/apache/druid/pull/14484)
-* User impact of https://github.com/apache/druid/pull/14048 for highlights
-* https://github.com/apache/druid/pull/14476 seems to only be documented here in release notes and the PR?
-* Vad's input for web console section
-* PR for Temporary storage as a runtime parameter. MSQ will start honoring changes to the Middle Manager.
-* What to do about input source security. There are no docs for it.
-* New query filters 
-* Confirm the correct naming in https://github.com/apache/druid/pull/14359 (OSHI sys mon change). The changed files say one thing and the PR description says another
-* Community extensions. What do we want to say about iceberg and the other one (what was the other one?)
 
 Apache Druid 27.0.0 contains over $NUMBER_FEATURES new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from $NUMBER_OF_CONTRIBUTORS contributors.
 
@@ -89,6 +72,22 @@ For more information, see the following:
 
 [#13197](https://github.com/apache/druid/pull/13197) [#14385](https://github.com/apache/druid/pull/14385) [#14484](https://github.com/apache/druid/pull/14484)
 
+### New query filters
+
+Druid now supports the following filters:
+
+- Equality: Use in place of the selector filter. It never matches null values.
+- Null: Match null values. Use in place of  the selector filter. 
+- Range: Filter on ranges of dimension values. Use in place of the bound filter. It never matches null values
+
+Note that Druid's SQL planner uses these new filters in place of their older counterparts by default whenever `druid.generic.useDefaultValueForNull=false` or if `sqlUseBoundAndSelectors` is set to false on the SQL query context.
+
+You can use these filters for filtering equality and ranges on ARRAY columns instead of only strings with the previous selector and bound filters.
+
+For more information, see [Query filters](https://druid.apache.org/docs/latest/querying/filters.html)
+
+[#14542](https://github.com/apache/druid/pull/14542)
+
 ### Guardrail for subquery results
 
 Users can now add a guardrail to prevent subquery’s results from exceeding the set number of bytes by setting `druid.server.http.maxSubqueryRows` in the Broker's config or `maxSubqueryRows` in the query context. This guardrail is recommended over row-based limiting.
@@ -116,10 +115,6 @@ Support for Hadoop 2 is now deprecated. It will be removed in a future release.
 
 For more information, see the [upgrade notes](#hadoop-2-deprecated-1)
 
-## Parameter execution
-
-TBD
-
 # Additional features and improvements
 
 ## SQL-based ingestion
@@ -141,12 +136,6 @@ The default `clusterStatisticsMergeMode` is now `SEQUENTIAL`, which provide more
 
 [#14310](https://github.com/apache/druid/pull/14310)
 
-### 14048 
-
-TBD
-
-[#14048](https://github.com/apache/druid/pull/14048)
-
 ### Other SQL-based ingestion improvements
 
 - The same aggregator can now have two output names [#14367](https://github.com/apache/druid/pull/14367)
@@ -166,6 +155,12 @@ TBD
 ## MSQ task engine querying
 
 In addition to the new [query from deep storage](#query-from-deep-storage-experimental) feature, SELECT queries using the MSQ task engine have been improved.
+
+### Support for querying lookup and inline data directly
+
+You can now query lookup tables directly, such as `SELECT * FROM lookup.xyz`, when using the MSQ task engine.
+
+[#14048](https://github.com/apache/druid/pull/14048)
 
 ### Truncated query results
 
