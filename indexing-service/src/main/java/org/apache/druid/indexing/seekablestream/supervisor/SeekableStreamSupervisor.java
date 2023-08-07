@@ -590,17 +590,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class ResetNotice implements Notice
   {
     final DataSourceMetadata dataSourceMetadata;
+    final boolean setOffsetsInMetadata;
     private static final String TYPE = "reset_notice";
 
-    ResetNotice(DataSourceMetadata dataSourceMetadata)
+    ResetNotice(
+        final DataSourceMetadata dataSourceMetadata,
+        final boolean setOffsetsInMetadata
+    )
     {
       this.dataSourceMetadata = dataSourceMetadata;
+      this.setOffsetsInMetadata = setOffsetsInMetadata;
     }
 
     @Override
     public void handle()
     {
-      resetInternal(dataSourceMetadata, dataSourceMetadata == null);
+      resetInternal(dataSourceMetadata, setOffsetsInMetadata);
     }
 
     @Override
@@ -999,56 +1004,68 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  /**
-   * Creates a {@code ResetNotice} with the dataSourceMetadata and adds it to the notice queue.
-   * Valdiates the dataSourceMetadata, if provided.
-   * @param dataSourceMetadata the optional datasource metadata with offsets to reset.
-   * @throws DruidException if any metadata attribute doesn't match the supervisor's.
-   */
   @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {
     log.info("Posting ResetNotice with datasource metadata [%s]", dataSourceMetadata);
-    if (dataSourceMetadata != null) {
-      if (!checkSourceMetadataMatch(dataSourceMetadata)) {
+    addNotice(new ResetNotice(dataSourceMetadata, false));
+  }
+
+  /**
+   * Creates a {@code ResetNotice} with the dataSourceMetadata and adds it to the notice queue.
+   * Validates the dataSourceMetadata.
+   * @param dataSourceMetadata the optional datasource metadata with offsets to reset.
+   * @param setOffsetsInMetadata Indicates whether provided metadatas offsets for partitions should be set or cleared.
+   * @throws DruidException if any metadata attribute doesn't match the supervisor's.
+   */
+  @Override
+  public void resetOffsets(DataSourceMetadata dataSourceMetadata, boolean setOffsetsInMetadata)
+  {
+    if (dataSourceMetadata == null) {
+      throw InvalidInput.exception("Reset dataSourceMetadata must be provided for resetOffsets.");
+    }
+
+    if (!checkSourceMetadataMatch(dataSourceMetadata)) {
+      throw InvalidInput.exception(
+          "Datasource metadata instance does not match required, found instance of [%s].",
+          dataSourceMetadata.getClass()
+      );
+    }
+    @SuppressWarnings("unchecked")
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
+    String resetStream = resetMetadata.getSeekableStreamSequenceNumbers().getStream();
+    if (!resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
+      throw InvalidInput.exception(
+          "Stream[%s] doesn't exist in the supervisor[%s]. Supervisor is consuming stream[%s].",
+          resetStream,
+          supervisorId,
+          ioConfig.getStream()
+      );
+    }
+    for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata
+        .getSeekableStreamSequenceNumbers()
+        .getPartitionSequenceNumberMap()
+        .entrySet()) {
+      final TaskGroup taskGroup = activelyReadingTaskGroups.get(getTaskGroupIdForPartition(resetPartitionOffset.getKey()));
+      if (taskGroup == null) {
+        throw InvalidInput.exception("No task found serving stream[%s], partition[%s] in supervisor[%s].",
+                                     resetStream, resetPartitionOffset.getKey(), supervisorId);
+      } else if (!taskGroup.startingSequences.containsKey(resetPartitionOffset.getKey())) {
         throw InvalidInput.exception(
-            "Datasource metadata instance does not match required, found instance of [%s].",
-            dataSourceMetadata.getClass()
-        );
-      }
-      @SuppressWarnings("unchecked")
-      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
-          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
-      String resetStream = resetMetadata.getSeekableStreamSequenceNumbers().getStream();
-      if (!resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
-        throw InvalidInput.exception(
-            "Stream[%s] doesn't exist in the supervisor[%s]. Supervisor is consuming stream[%s].",
+            "Partition[%s] doesn't exist in checkpointed metadata for stream[%s] and supervisor[%s]."
+            + " Supervisor is consuming partitions[%s].",
+            resetPartitionOffset.getKey(),
             resetStream,
             supervisorId,
-            ioConfig.getStream()
+            taskGroup.startingSequences.keySet()
         );
       }
-      for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata
-          .getSeekableStreamSequenceNumbers()
-          .getPartitionSequenceNumberMap()
-          .entrySet()) {
-        final TaskGroup taskGroup = activelyReadingTaskGroups.get(getTaskGroupIdForPartition(resetPartitionOffset.getKey()));
-        if (taskGroup == null) {
-          throw InvalidInput.exception("No task found serving stream[%s], partition[%s] in supervisor[%s].",
-                                       resetStream, resetPartitionOffset.getKey(), supervisorId);
-        } else if (!taskGroup.startingSequences.containsKey(resetPartitionOffset.getKey())) {
-          throw InvalidInput.exception(
-              "Partition[%s] doesn't exist in checkpointed metadata for stream[%s] and supervisor[%s]."
-              + " Supervisor is consuming partitions[%s].",
-              resetPartitionOffset.getKey(),
-              resetStream,
-              supervisorId,
-              taskGroup.startingSequences.keySet()
-          );
-        }
-      }
     }
-    addNotice(new ResetNotice(dataSourceMetadata));
+
+    log.info("Posting ResetNotice with datasource metadata[%s] and setOffsetsInMetadata[%s]",
+             dataSourceMetadata, setOffsetsInMetadata);
+    addNotice(new ResetNotice(dataSourceMetadata, setOffsetsInMetadata));
   }
 
   public ReentrantLock getRecordSupplierLock()
@@ -1634,7 +1651,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata, boolean setOffsetsInMetadata)
   {
-    log.info("Reset's partition offsets size[%d]", getPartitionOffsets().size());
+    log.info("Reset dataSource[%s] with metadata[%s] and setOffsetsInMetadata[%s]", dataSource,
+             dataSourceMetadata, setOffsetsInMetadata);
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
@@ -1654,7 +1672,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             dataSourceMetadata.getClass()
         );
       }
-      log.info("Reset dataSource[%s] with metadata[%s]", dataSource, dataSourceMetadata);
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
@@ -1714,7 +1731,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           } else {
             newMetadata = currentMetadata.minus(resetMetadata);
           }
-          log.info("Current metadata=[%s], new metadata=[%s]", currentMetadata, newMetadata);
+          log.info("Current checkpointed metadata=[%s], new metadata=[%s]", currentMetadata, newMetadata);
           try {
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
           }

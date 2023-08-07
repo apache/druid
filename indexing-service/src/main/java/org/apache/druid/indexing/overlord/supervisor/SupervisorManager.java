@@ -212,7 +212,11 @@ public class SupervisorManager
       return false;
     }
 
-    supervisor.lhs.reset(dataSourceMetadata);
+    if (dataSourceMetadata == null) {
+      supervisor.lhs.reset(dataSourceMetadata);
+    } else {
+      supervisor.lhs.resetOffsets(dataSourceMetadata, true);
+    }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
       autoscaler.reset();
