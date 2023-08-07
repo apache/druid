@@ -58,7 +58,7 @@ public abstract class AbstractSerializableLongObjectPairSerde<T extends Serializ
       @Override
       public Object extractValue(InputRow inputRow, String metricName)
       {
-        return inputRow.getMetric(metricName);
+        return inputRow.getRaw(metricName);
       }
     };
   }

@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@JsonTypeName("lastDouble")
+@JsonTypeName("doubleLast")
 public class DoubleLastAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME);

@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@JsonTypeName("lastFloat")
+@JsonTypeName("floatLast")
 public class FloatLastAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME);

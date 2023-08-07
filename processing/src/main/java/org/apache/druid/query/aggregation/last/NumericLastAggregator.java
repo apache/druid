@@ -78,7 +78,6 @@ public abstract class NumericLastAggregator implements Aggregator
           } else {
             rhsNull = false;
             setLastValue(inPair.rhs);
-
           }
         }
         return;
