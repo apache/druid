@@ -117,7 +117,7 @@ import java.util.stream.Collectors;
 public class SqlStatementResource
 {
 
-  public static final String RESULT_FORMAT = "resultFormat";
+  public static final String RESULT_FORMAT = "__resultFormat";
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
   private final AuthorizerMapper authorizerMapper;
