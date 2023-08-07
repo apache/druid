@@ -477,6 +477,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     BUFFER_POOLS = null;
   }
 
+  @SuppressWarnings("unused")
   public GroupByQueryRunnerTest(
       String testName,
       GroupByQueryConfig config,
@@ -489,7 +490,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
     this.originalRunner = runner;
-    String runnerName = runner.toString();
     this.vectorize = vectorize;
   }
 

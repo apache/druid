@@ -31,7 +31,7 @@ public class TestPeonLifecycleFactory implements PeonLifecycleFactory
   }
 
   @Override
-  public KubernetesPeonLifecycle build(Task task)
+  public KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener)
   {
     return kubernetesPeonLifecycle;
   }

@@ -127,13 +127,22 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
         ++numModifiedSegments;
       }
     }
+
+    if (numModifiedSegments > 0) {
+      snapshot = null;
+    }
     return numModifiedSegments;
   }
 
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
-    return usedSegments.remove(segmentId.toString()) != null;
+    boolean updated = usedSegments.remove(segmentId.toString()) != null;
+    if (updated) {
+      snapshot = null;
+    }
+
+    return updated;
   }
 
   @Nullable

@@ -32,8 +32,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -74,6 +75,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private TaskAdapter taskAdapter;
   @Mock private KubernetesPeonClient peonClient;
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
+  @Mock private ServiceEmitter emitter;
 
   private KubernetesTaskRunnerConfig config;
   private KubernetesTaskRunner runner;
@@ -93,7 +95,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         config,
         peonClient,
         httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle)
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
     );
   }
 
@@ -237,17 +240,17 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_doTask_withoutWorkItem_throwsISE()
+  public void test_doTask_withoutWorkItem_throwsRuntimeException()
   {
     Assert.assertThrows(
         "Task [id] disappeared",
-        ISE.class,
+        RuntimeException.class,
         () -> runner.doTask(task, true)
     );
   }
 
   @Test
-  public void test_doTask_whenShutdownRequested_throwsISE()
+  public void test_doTask_whenShutdownRequested_throwsRuntimeException()
   {
     KubernetesWorkItem workItem = new KubernetesWorkItem(task, null);
     workItem.shutdown();
@@ -256,7 +259,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Assert.assertThrows(
         "Task [id] has been shut down",
-        ISE.class,
+        RuntimeException.class,
         () -> runner.doTask(task, true)
     );
   }
@@ -290,7 +293,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         config,
         peonClient,
         httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle)
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
     ) {
       @Override
       protected ListenableFuture<TaskStatus> joinAsync(Task task)
@@ -326,7 +330,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         config,
         peonClient,
         httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle)
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
     ) {
       @Override
       protected ListenableFuture<TaskStatus> joinAsync(Task task)
@@ -597,6 +602,28 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
 
     Assert.assertThrows(RuntimeException.class, () -> runner.streamTaskReports(task.getId()));
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_metricsReported_whenTaskStateChange()
+  {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.unknown();
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    emitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));
+
+    replayAll();
+
+    runner.emitTaskStateMetrics(KubernetesPeonLifecycle.State.RUNNING, task.getId());
 
     verifyAll();
   }

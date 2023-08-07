@@ -56,6 +56,7 @@ public class FilteredRequestLoggerTest
       null,
       null,
       null,
+      null,
       null
   );
 

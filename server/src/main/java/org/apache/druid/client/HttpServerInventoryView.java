@@ -495,12 +495,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         final boolean isSynced = serverHolder.syncer.isSyncedSuccessfully();
         serviceEmitter.emit(
-            eventBuilder.build("segment/serverview/sync/healthy", isSynced ? 1 : 0)
+            eventBuilder.build("serverview/sync/healthy", isSynced ? 1 : 0)
         );
         final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
         if (unstableTimeMillis > 0) {
           serviceEmitter.emit(
-              eventBuilder.build("segment/serverview/sync/unstableTime", unstableTimeMillis)
+              eventBuilder.build("serverview/sync/unstableTime", unstableTimeMillis)
           );
         }
       });
@@ -571,12 +571,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     boolean isSyncedSuccessfullyAtleastOnce()
     {
-      try {
-        return syncer.isInitialized();
-      }
-      catch (InterruptedException ex) {
-        throw new ISE(ex, "Interrupted while waiting for first sync with server[%s].", druidServer.getName());
-      }
+      return syncer.isInitialized();
     }
 
     private ChangeRequestHttpSyncer.Listener<DataSegmentChangeRequest> createSyncListener()

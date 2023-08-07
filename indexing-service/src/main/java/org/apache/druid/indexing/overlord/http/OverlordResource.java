@@ -138,7 +138,7 @@ public class OverlordResource
   private final AuthConfig authConfig;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
-  private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+  private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
 
   private enum TaskStateLookup
   {
@@ -185,7 +185,7 @@ public class OverlordResource
   }
 
   /**
-   * Warning, magic: {@link org.apache.druid.client.indexing.HttpIndexingServiceClient#runTask} may call this method
+   * Warning, magic: {@link org.apache.druid.rpc.indexing.OverlordClient#runTask} may call this method
    * remotely with {@link ClientTaskQuery} objects, but we deserialize {@link Task} objects. See the comment for {@link
    * ClientTaskQuery} for details.
    */

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
@@ -35,6 +34,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 
 public class KafkaIndexTaskTuningConfigTest
 {
@@ -43,7 +43,7 @@ public class KafkaIndexTaskTuningConfigTest
   public KafkaIndexTaskTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
+    mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
   }
 
   @Test
@@ -71,7 +71,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(false, config.isReportParseExceptions());
-    Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
   }
 
   @Test
@@ -138,8 +138,6 @@ public class KafkaIndexTaskTuningConfigTest
         IndexSpec.DEFAULT,
         true,
         5L,
-        null,
-        null,
         null,
         null,
         null,
