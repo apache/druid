@@ -60,8 +60,8 @@ query time.
 | --- | --- | --- |
 | `type` | Must be "longSum", "doubleSum", or "floatSum". | Yes |
 | `name` | Output name for the summed value. | Yes |
-| `fieldName` | Name of the input column to sum over. | No. You must define `fieldName` or `expression`. |
-| `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must define `fieldName` or `expression`. |
+| `fieldName` | Name of the input column to sum over. | No. You must specify `fieldName` or `expression`. |
+| `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must specify `fieldName` or `expression`. |
 
 #### `longSum` aggregator
 
@@ -96,8 +96,8 @@ Example:
 | --- | --- | --- |
 | `type` | Must be "doubleMin", "doubleMax", "floatMin", "floatMax", "longMin", or "longMax". | Yes |
 | `name` | Output name for the min or max value. | Yes |
-| `fieldName` | Name of the input column to compute the minimum or maximum value over. | No. You must define `fieldName` or `expression`. |
-| `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must define `fieldName` or `expression`. |
+| `fieldName` | Name of the input column to compute the minimum or maximum value over. | No. You must specify `fieldName` or `expression`. |
+| `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must specify `fieldName` or `expression`. |
 
 #### `doubleMin` aggregator
 
