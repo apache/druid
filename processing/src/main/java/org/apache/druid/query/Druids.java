@@ -233,6 +233,12 @@ public class Druids
       return this;
     }
 
+    public TimeseriesQueryBuilder setDimFilter(DimFilter f)
+    {
+      dimFilter = f;
+      return this;
+    }
+
     public TimeseriesQueryBuilder descending(boolean d)
     {
       descending = d;
