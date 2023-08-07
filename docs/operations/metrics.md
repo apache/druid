@@ -205,7 +205,7 @@ These metrics apply to the [Kinesis indexing service](../development/extensions-
 
 ### Compaction metrics
 
-These metrics are only reported by [compaction tasks](../data-management/compaction.md).
+[Compaction tasks](../data-management/compaction.md) emit the following metrics.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
