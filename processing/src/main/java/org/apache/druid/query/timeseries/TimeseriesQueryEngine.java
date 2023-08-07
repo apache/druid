@@ -99,7 +99,7 @@ public class TimeseriesQueryEngine
     final boolean descending = query.isDescending();
 
     final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
-    // RowBaseStorageAdapter
+
     final boolean doVectorize = query.context().getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)

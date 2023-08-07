@@ -172,7 +172,14 @@ public class Druids
       return this;
     }
 
+
     public TimeseriesQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder setInterval(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
       return this;
@@ -197,6 +204,11 @@ public class Druids
     }
 
     public TimeseriesQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
+    {
+      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
+    }
+
+    public TimeseriesQueryBuilder setVirtualColumns(VirtualColumn... virtualColumns)
     {
       return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
     }
@@ -233,7 +245,14 @@ public class Druids
       return this;
     }
 
+
     public TimeseriesQueryBuilder granularity(Granularity g)
+    {
+      granularity = g;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder setGranularity(Granularity g)
     {
       granularity = g;
       return this;
@@ -241,6 +260,13 @@ public class Druids
 
     public TimeseriesQueryBuilder aggregators(List<AggregatorFactory> a)
     {
+      aggregatorSpecs = a;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder setAggregatorSpecs(List<AggregatorFactory> a)
+    {
+
       aggregatorSpecs = a;
       return this;
     }
@@ -264,6 +290,12 @@ public class Druids
     }
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
+    {
+      this.context = c;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder setContext(Map<String, Object> c)
     {
       this.context = c;
       return this;

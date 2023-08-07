@@ -896,11 +896,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveLatestInSubquery()
   {
+    cannotVectorize();
     notMsqCompatible();
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, LATEST(m1) AS val1, LATEST(cnt) AS val2, LATEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             GroupByQuery.builder()
                                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1070,7 +1071,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             GroupByQuery.builder()
                                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1094,15 +1095,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setContext(QUERY_CONTEXT_DEFAULT)
                                         .build()
                         )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
                                                 new DoubleSumAggregatorFactory("_a0", "a0"),
                                                 new LongSumAggregatorFactory("_a1", "a1"),
                                                 new DoubleSumAggregatorFactory("_a2", "a2")
                                             )
                         )
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         NullHandling.sqlCompatible()
@@ -1118,7 +1119,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             GroupByQuery.builder()
                                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1169,7 +1170,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             GroupByQuery.builder()
                                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1192,7 +1193,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
+                        .virtualColumns(
                             expressionVirtualColumn("v0", "CAST(\"a0\", 'DOUBLE')", ColumnType.DOUBLE)
                         )
                         .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory(
@@ -1277,10 +1278,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringAnyInSubquery()
   {
+    cannotVectorize();
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             GroupByQuery.builder()
                                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2363,7 +2365,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         sqlQuery,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             new QueryDataSource(
                                 GroupByQuery.builder()
@@ -6928,6 +6930,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDoubleNestedGroupBy()
   {
+    cannotVectorize();
     requireMergeBuffers(3);
     testQuery(
         "SELECT SUM(cnt), COUNT(*) FROM (\n"
@@ -6942,7 +6945,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  GROUP BY dim2\n"
         + ") t2",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
+
                         .setDataSource(
                             GroupByQuery.builder()
                                         .setDataSource(
@@ -7034,13 +7038,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctUsingSubquery()
   {
+    cannotVectorize();
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
+
                         .setDataSource(
                             new QueryDataSource(
                                 GroupByQuery.builder()
@@ -7249,6 +7255,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctUsingSubqueryWithWherePushDown()
   {
+    cannotVectorize();
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -7256,7 +7263,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)\n"
         + "WHERE dim2 <> ''",
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
+
                         .setDataSource(
                             new QueryDataSource(
                                 GroupByQuery.builder()
@@ -11638,6 +11646,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
+    cannotVectorize();
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
@@ -11647,7 +11656,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo WHERE __time >= '2000-01-01' GROUP BY dim2)",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             new QueryDataSource(
                                 GroupByQuery.builder()
