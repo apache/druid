@@ -290,6 +290,11 @@ public class Druids
     {
       return dataSource(new QueryDataSource(query));
     }
+
+    public TimeseriesQueryBuilder setDataSource(DataSource ds)
+    {
+      return dataSource(ds);
+    }
   }
 
   public static TimeseriesQueryBuilder newTimeseriesQueryBuilder()

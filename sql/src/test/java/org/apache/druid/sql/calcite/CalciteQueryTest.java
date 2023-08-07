@@ -6505,7 +6505,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(distinct dim2) FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                         .setDataSource(
                             new QueryDataSource(
                                 GroupByQuery.builder()
@@ -6517,15 +6517,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .build()
                             )
                         )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .granularity(Granularities.ALL)
+                        .aggregators(aggregators(
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
                                 notNull("d0")
                             )
                         ))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .context(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
