@@ -432,14 +432,14 @@ Druid uses AWS access and secret keys to authenticate Kinesis API requests. Ther
 
 1. Using roles or short-term credentials:
 
-Druid looks for credentials set in [environment variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html),
+   Druid looks for credentials set in [environment variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html),
 via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the
 default [profile configuration file](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html), and from the
 EC2 instance profile provider (in this order).
 
 2. Using long-term security credentials:
 
-You can directly provide your AWS access key and AWS secret key in the `common.runtime.properties` file as shown in the example below:
+   You can directly provide your AWS access key and AWS secret key in the `common.runtime.properties` file as shown in the example below:
 
 ```properties
 druid.kinesis.accessKey=AKIAWxxxxxxxxxx4NCKS
