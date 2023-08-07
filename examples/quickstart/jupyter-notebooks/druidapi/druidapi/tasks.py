@@ -134,7 +134,6 @@ class TaskClient:
             return self.client.get_json(REQ_TASK_REPORTS, args=[task_id])
         else:
             resp = self.client.get(REQ_TASK_REPORTS, args=[task_id], require_ok=require_ok)
-            code = resp.status_code
             if resp.status_code == requests.codes.ok:
                 try:
                     result = resp.json()
