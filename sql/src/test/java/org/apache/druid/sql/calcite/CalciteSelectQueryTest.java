@@ -33,6 +33,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -2036,7 +2037,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            GroupByQuery.builder()
+            Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2046,13 +2047,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                             dimensions(
                                 new DefaultDimensionSpec("v0", "d0", ColumnType.FLOAT)))
                         .setVirtualColumns(
-                            expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"m1\",null)",
-                                ColumnType.FLOAT))
+                            expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"1\",null)",
+                                ColumnType.LONG))
                         .build())
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
                 .build()
 
         ),
