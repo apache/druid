@@ -928,8 +928,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     // For processMetricsSpec:
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
 
-    private long processingTimeMillis = 0;
-
     ExistingSegmentAnalyzer(
         final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable,
         final boolean needRollup,
