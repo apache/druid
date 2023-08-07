@@ -1257,7 +1257,7 @@ public class DruidQuery
     if (grouping == null || windowing != null) {
       return null;
     }
-    if (grouping.getDimensions().size() == 0) {
+    if (grouping.getDimensions().size() == 0 && grouping.getHavingFilter() == null) {
       return null;
     }
 

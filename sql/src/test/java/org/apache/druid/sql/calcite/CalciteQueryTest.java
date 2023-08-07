@@ -6498,8 +6498,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinct()
   {
+    cannotVectorize();
     // When HLL is disabled, do exact count distinct through a nested query.
-
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT COUNT(distinct dim2) FROM druid.foo",
