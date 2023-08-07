@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
@@ -200,7 +201,10 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private int getAvailableKillTaskSlots(double killTaskSlotRatio, int maxKillTaskSlots)
   {
-    return Math.max(0, getKillTaskCapacity(killTaskSlotRatio, maxKillTaskSlots) - getNumActiveKillTaskSlots());
+    return Math.max(
+        0,
+        getKillTaskCapacity(getTotalWorkerCapacity(), killTaskSlotRatio, maxKillTaskSlots) - getNumActiveKillTaskSlots()
+    );
   }
 
   private int getNumActiveKillTaskSlots()
@@ -232,7 +236,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     return numActiveKillTasks;
   }
 
-  private int getKillTaskCapacity(double killTaskSlotRatio, int maxKillTaskSlots)
+  private int getTotalWorkerCapacity()
   {
     int totalWorkerCapacity;
     try {
@@ -262,6 +266,12 @@ public class KillUnusedSegments implements CoordinatorDuty
       throw new RuntimeException(e);
     }
 
-    return Math.min((int) (totalWorkerCapacity * killTaskSlotRatio), maxKillTaskSlots);
+    return totalWorkerCapacity;
+  }
+
+  @VisibleForTesting
+  static int getKillTaskCapacity(int totalWorkerCapacity, double killTaskSlotRatio, int maxKillTaskSlots)
+  {
+    return Math.min((int) (totalWorkerCapacity * Math.min(killTaskSlotRatio, 1.0)), maxKillTaskSlots);
   }
 }

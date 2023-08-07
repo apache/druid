@@ -703,6 +703,8 @@ public class CoordinatorDynamicConfigTest
             null,
             null,
             null,
+            null,
+            null,
             null
         ).build(current)
     );
