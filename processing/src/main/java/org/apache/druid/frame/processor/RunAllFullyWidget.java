@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.guava.FutureUtils;
@@ -51,6 +52,7 @@ import java.util.function.BiFunction;
  * The {@code bouncer} and {@code maxOutstandingProcessors} parameters are used to control how many processors are
  * executed on the {@link FrameProcessorExecutor} concurrently.
  */
+@SuppressWarnings("CheckReturnValue")
 public class RunAllFullyWidget<T, ResultType>
 {
   private static final Logger log = new Logger(RunAllFullyWidget.class);
@@ -296,7 +298,8 @@ public class RunAllFullyWidget<T, ResultType>
                   cleanupIfNoMoreProcessors();
                 }
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
       }
     }

@@ -75,6 +75,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  */
+@SuppressWarnings("DoNotMock")
 public class DruidLeaderClientTest extends BaseJettyTest
 {
   @Rule

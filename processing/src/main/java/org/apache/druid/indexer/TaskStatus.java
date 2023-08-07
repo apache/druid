@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
@@ -220,12 +220,12 @@ public class TaskStatus
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .add("errorMsg", errorMsg)
-                  .toString();
+    return MoreObjects.toStringHelper(this)
+                      .add("id", id)
+                      .add("status", status)
+                      .add("duration", duration)
+                      .add("errorMsg", errorMsg)
+                      .toString();
   }
 
   @Override

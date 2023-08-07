@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.segment.serde.cell.LongSerializer;
 
@@ -103,9 +103,9 @@ public class SerializablePairLongStringColumnHeader
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("bytes", bytes)
-                  .add("minValue", minValue)
-                  .toString();
+    return MoreObjects.toStringHelper(this)
+                      .add("bytes", bytes)
+                      .add("minValue", minValue)
+                      .toString();
   }
 }

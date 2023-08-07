@@ -1199,7 +1199,7 @@ public class ControllerImpl implements Controller
             settableFuture.setException(t);
           }
         }
-      });
+      }, MoreExecutors.directExecutor());
 
       taskFutures.add(settableFuture);
     }

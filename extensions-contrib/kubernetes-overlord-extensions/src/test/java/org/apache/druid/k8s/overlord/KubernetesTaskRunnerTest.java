@@ -67,6 +67,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(EasyMockRunner.class)
+@SuppressWarnings("DoNotMock")
 public class KubernetesTaskRunnerTest extends EasyMockSupport
 {
   private static final String ID = "id";
