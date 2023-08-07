@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.FilterDataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -3106,7 +3106,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           equality("dim2", "a", ColumnType.STRING)
                       ),
@@ -3143,7 +3143,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           equality("dim2", "a", ColumnType.STRING)
                       ),
@@ -3185,7 +3185,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           new InDimFilter("dim2", ImmutableList.of("a", "b"), null)
                       ),
@@ -3276,7 +3276,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           and(
                               equality("dim2", "a", ColumnType.STRING),
@@ -3314,7 +3314,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           and(
                               equality("dim2", "a", ColumnType.STRING),
@@ -3356,7 +3356,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           and(
                               equality("dim2", "a", ColumnType.STRING),
@@ -3398,7 +3398,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null)
                       ),
@@ -3700,7 +3700,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           range("m1", ColumnType.LONG, null, 10L, false, true)
                       ),
@@ -3928,7 +3928,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           and(
                               range("m1", ColumnType.LONG, null, 10L, false, true),
@@ -4106,7 +4106,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      FilterDataSource.create(
+                      FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           or(
                               range("m1", ColumnType.LONG, null, 2L, false, true),

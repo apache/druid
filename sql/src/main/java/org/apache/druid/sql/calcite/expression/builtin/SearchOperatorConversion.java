@@ -36,6 +36,15 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 
+/**
+ * Operator that tests whether its left operand is included in the range of
+ * values covered by search arguments.
+ * This is the Druid version support for https://issues.apache.org/jira/browse/CALCITE-4173
+ *
+ * SEARCH operator tests whether an operand belongs to the range set.
+ * A RexCall to SEARCH is converted back to SQL, typically an IN or OR.
+ */
+
 public class SearchOperatorConversion implements SqlOperatorConversion
 {
   private static final RexBuilder REX_BUILDER = new RexBuilder(new JavaTypeFactoryImpl(DruidTypeSystem.INSTANCE));

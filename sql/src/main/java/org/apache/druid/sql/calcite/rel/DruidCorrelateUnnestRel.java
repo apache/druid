@@ -45,12 +45,11 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.FilterDataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -197,7 +196,11 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 
     final DruidRel<?> newLeftDruidRel;
     final DruidQuery updatedLeftQuery;
-
+    // For some queries, with Calcite 1.35
+    // The plan has an MV_TO_ARRAY on the left side
+    // with a reference to it on the right side
+    // IN such a case we use a RexShuttle to remove the reference on the left
+    // And rewrite the left project
     if (unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.FIELD_ACCESS) {
       final PartialDruidQuery leftPartialQueryToBeUpdated;
       if (leftDruidRel instanceof DruidOuterQueryRel) {
@@ -211,6 +214,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       if (leftProject == null) {
         newProject = null;
       } else {
+        // Use shuttle to update left project
         final ProjectUpdateShuttle pus = new ProjectUpdateShuttle(
             unwrapMvToArray(rexNodeToUnnest),
             leftProject,
@@ -237,7 +241,9 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
                                                     .withSelectProject(newProject)
                                                     .withSort(leftPartialQueryToBeUpdated.getSort());
 
-
+      // The same MV_TO_ARRAY on left and reference to the right can happen during
+      // SORT_PROJECT and SELECT_PROJECT stages
+      // We use the same methodology of using a shuttle to rewrite the projects.
       if (leftPartialQuery.stage() == PartialDruidQuery.Stage.SORT_PROJECT) {
         final Project sortProject = leftPartialQueryToBeUpdated.getSortProject();
         final ProjectUpdateShuttle pus = new ProjectUpdateShuttle(
@@ -261,7 +267,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       newLeftDruidRel = leftDruidRel;
     }
     updatedLeftQuery = Preconditions.checkNotNull(newLeftDruidRel.toDruidQuery(false), "leftQuery");
-    VirtualColumns virtualColumns = updatedLeftQuery.getVirtualColumns(false);
 
     if (newLeftDruidRel.getPartialDruidQuery().stage().compareTo(PartialDruidQuery.Stage.SELECT_PROJECT) <= 0) {
       final Filter whereFilter = newLeftDruidRel.getPartialDruidQuery().getWhereFilter();
@@ -281,12 +286,12 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
                                                   whereFilter
                                               ))
                                               .optimizeFilterOnly(leftSignature).getDimFilter();
-        leftDataSource1 = FilterDataSource.create(updatedLeftQuery.getDataSource(), dimFilter);
+        leftDataSource1 = FilteredDataSource.create(updatedLeftQuery.getDataSource(), dimFilter);
       }
     } else {
       leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
     }
-    //if(updatedLeftQuery.getV)
+
     leftDataSource = leftDataSource1;
     return partialQuery.build(
         UnnestDataSource.create(

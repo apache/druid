@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.FilterStorageAdapter;
+import org.apache.druid.segment.FilteredStorageAdapter;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.WrappedSegmentReference;
 import org.apache.druid.utils.JvmUtils;
@@ -49,7 +49,7 @@ import java.util.function.Function;
  * putting more work to be done at the broker level. This pushes the operations down to the
  * segments and is more performant.
  */
-public class FilterDataSource implements DataSource
+public class FilteredDataSource implements DataSource
 {
 
   private final DataSource base;
@@ -67,19 +67,19 @@ public class FilterDataSource implements DataSource
     return filter;
   }
 
-  private FilterDataSource(DataSource base, DimFilter filter)
+  private FilteredDataSource(DataSource base, DimFilter filter)
   {
     this.base = base;
     this.filter = filter;
   }
 
   @JsonCreator
-  public static FilterDataSource create(
+  public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
       @JsonProperty("filter") DimFilter f
   )
   {
-    return new FilterDataSource(base, f);
+    return new FilteredDataSource(base, f);
   }
 
   @Override
@@ -101,7 +101,7 @@ public class FilterDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return new FilterDataSource(children.get(0), filter);
+    return new FilteredDataSource(children.get(0), filter);
   }
 
   @Override
@@ -113,13 +113,13 @@ public class FilterDataSource implements DataSource
   @Override
   public boolean isGlobal()
   {
-    return false;
+    return base.isGlobal();
   }
 
   @Override
   public boolean isConcrete()
   {
-    return false;
+    return base.isConcrete();
   }
 
   @Override
@@ -138,7 +138,7 @@ public class FilterDataSource implements DataSource
             baseSegment ->
                 new WrappedSegmentReference(
                     segmentMapFn.apply(baseSegment),
-                    storageAdapter -> new FilterStorageAdapter(storageAdapter, filter)
+                    storageAdapter -> new FilteredStorageAdapter(storageAdapter, filter)
                 )
     );
   }
@@ -146,13 +146,13 @@ public class FilterDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new FilterDataSource(newSource, filter);
+    return new FilteredDataSource(newSource, filter);
   }
 
   @Override
   public String toString()
   {
-    return "FilterDataSource{" +
+    return "FilteredDataSource{" +
            "base=" + base +
            ", filter='" + filter + '\'' +
            '}';
@@ -180,7 +180,7 @@ public class FilterDataSource implements DataSource
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    FilterDataSource that = (FilterDataSource) o;
+    FilteredDataSource that = (FilteredDataSource) o;
     return Objects.equals(base, that.base) && Objects.equals(filter, that.filter);
   }
 

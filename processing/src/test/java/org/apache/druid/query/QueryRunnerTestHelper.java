@@ -117,7 +117,7 @@ public class QueryRunnerTestHelper
   );
 
   public static final DataSource UNNEST_FILTER_DATA_SOURCE = UnnestDataSource.create(
-      FilterDataSource.create(
+      FilteredDataSource.create(
           new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
           new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
       ),

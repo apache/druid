@@ -33,12 +33,12 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-public class FilterStorageAdapter implements StorageAdapter
+public class FilteredStorageAdapter implements StorageAdapter
 {
   private final DimFilter filterOnDataSource;
   private final StorageAdapter baseStorageAdapter;
 
-  public FilterStorageAdapter(final StorageAdapter adapter, final DimFilter filter)
+  public FilteredStorageAdapter(final StorageAdapter adapter, final DimFilter filter)
   {
     this.baseStorageAdapter = adapter;
     this.filterOnDataSource = filter;

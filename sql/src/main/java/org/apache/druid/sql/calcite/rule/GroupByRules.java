@@ -66,7 +66,6 @@ public class GroupByRules
   )
   {
     if (!call.getCollation().getFieldCollations().isEmpty()) {
-      // TODO(gianm): validate no WITHIN GROUP elsewhere, mention location of validation code here
       return null;
     }
 

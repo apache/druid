@@ -68,11 +68,16 @@ import java.util.Properties;
 
 /**
  * Calcite planner. Clone of Calcite's
- * {@link  org.apache.calcite.prepare.PlannerImpl}, as of version 1.21,
+ * {@link  org.apache.calcite.prepare.PlannerImpl}, as of version 1.35,
  * but with the validator made accessible, and with the minimum of formatting
  * changes needed to pass Druid's static checks. Note that the resulting code
  * is more Calcite-like than Druid-like. There seemed no value in restructuring
  * the code just to be more Druid-like.
+ *
+ * Changes in 1.35:
+ *
+ * Allowing user-defined config and appending default values to the config
+ * frameworkConfig is now replaced by costFactory
  */
 public class CalcitePlanner implements Planner, ViewExpander
 {
