@@ -117,13 +117,11 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     return hashTable.getRegrowthThreshold();
   }
 
-  protected AggregateResult initSlot(KeyType key, int keyHash)
+  protected void initSlot(KeyType key, int keyHash)
   {
     final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
     if (keyBuffer == null) {
-      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
-      // be correct.
-      return Groupers.dictionaryFull(0);
+      throw new IAE("Unable to get keyBuffer for to init key");
     }
 
     if (keyBuffer.remaining() != keySize) {
@@ -137,9 +135,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     // find and try to expand if table is full and find again
     int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash, () -> {});
     if (bucket < 0) {
-      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
-      // be correct.
-      return Groupers.hashTableFull(0);
+      throw new IAE("Unable to allocate bucket for key");
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
@@ -152,7 +148,6 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
       aggregators.init(tableBuffer, bucketStartOffset + baseAggregatorOffset);
       newBucketHook(bucketStartOffset);
     }
-    return null;
   }
   
   @Override
