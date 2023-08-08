@@ -422,24 +422,7 @@ public class ControllerImpl implements Controller
               task.getQuerySpec().getColumnMappings()
           )
           : null;
-      MSQErrorReport workerError = workerErrorRef.get();
-
-      if (workerError.getFault() instanceof InvalidNullByteFault) {
-        InvalidNullByteFault inbf = (InvalidNullByteFault) workerError.getFault();
-        workerError = MSQErrorReport.fromException(
-            workerError.getTaskId(),
-            workerError.getHost(),
-            workerError.getStageNumber(),
-            InvalidNullByteException.builder()
-                                    .source(inbf.getSource())
-                                    .rowNumber(inbf.getRowNumber())
-                                    .column(inbf.getColumn())
-                                    .value(inbf.getValue())
-                                    .position(inbf.getPosition())
-                                    .build(),
-            task.getQuerySpec().getColumnMappings()
-        );
-      }
+      MSQErrorReport workerError = mapQueryColumnNameToOutputColumnName(workerErrorRef.get());
 
       taskStateForReport = TaskState.FAILED;
       errorForReport = MSQTasks.makeErrorReport(id(), selfHost, controllerError, workerError);
@@ -2668,6 +2651,32 @@ public class ControllerImpl implements Controller
       );
     }
     return mergeMode;
+  }
+
+  /**
+   * Maps the query column names (used internally while generating the query plan) to output column names (the one used
+   * by the user in the SQL query) for certain errors reported by workers (where they have limited knowledge of the
+   * ColumnMappings). For remaining errors not relying on the query column names, it returns it as is.
+   */
+  private MSQErrorReport mapQueryColumnNameToOutputColumnName(final MSQErrorReport workerErrorReport)
+  {
+    if (workerErrorReport.getFault() instanceof InvalidNullByteFault) {
+      InvalidNullByteFault inbf = (InvalidNullByteFault) workerErrorReport.getFault();
+      return MSQErrorReport.fromException(
+          workerErrorReport.getTaskId(),
+          workerErrorReport.getHost(),
+          workerErrorReport.getStageNumber(),
+          InvalidNullByteException.builder()
+                                  .source(inbf.getSource())
+                                  .rowNumber(inbf.getRowNumber())
+                                  .column(inbf.getColumn())
+                                  .value(inbf.getValue())
+                                  .position(inbf.getPosition())
+                                  .build(),
+          task.getQuerySpec().getColumnMappings()
+      );
+    }
+    return workerErrorReport;
   }
 
 

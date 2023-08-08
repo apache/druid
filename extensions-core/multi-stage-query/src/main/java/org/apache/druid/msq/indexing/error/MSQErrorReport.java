@@ -216,6 +216,8 @@ public class MSQErrorReport
         String columnName = invalidNullByteException.getColumn();
         if (columnMappings != null) {
           IntList outputColumnsForQueryColumn = columnMappings.getOutputColumnsForQueryColumn(columnName);
+
+          // outputColumnsForQueryColumn.size should always be 1 due to hasUniqueOutputColumnNames check that is done
           if (outputColumnsForQueryColumn.size() >= 1) {
             int outputColumn = outputColumnsForQueryColumn.getInt(0);
             columnName = columnMappings.getOutputColumnName(outputColumn);
