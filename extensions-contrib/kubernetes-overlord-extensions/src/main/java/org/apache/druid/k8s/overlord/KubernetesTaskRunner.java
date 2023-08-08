@@ -23,6 +23,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -32,11 +33,14 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -359,9 +363,26 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   }
 
   @Override
-  public boolean isK8sTaskRunner()
+  public Collection<ImmutableWorkerInfo> getK8sTaskRunnerWorkers()
   {
-    return true;
+    return ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker(
+                null,
+                null,
+                null,
+                getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
+                null,
+                null
+            ),
+            0,
+            0,
+            Collections.emptySet(),
+            Collections.emptyList(),
+            DateTimes.EPOCH,
+            null
+        )
+    );
   }
 
   @Override

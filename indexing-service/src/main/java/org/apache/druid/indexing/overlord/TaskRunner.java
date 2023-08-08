@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -140,9 +141,9 @@ public interface TaskRunner
   /**
    * Beacause the k8s task runner is an extension, we need to know the task runner type in the overlord resource
    */
-  default boolean isK8sTaskRunner()
+  default Collection<ImmutableWorkerInfo> getK8sTaskRunnerWorkers()
   {
-    return false;
+    return ImmutableList.of();
   }
 
   default List<TaskRunner> getSubTaskRunners()

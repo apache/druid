@@ -936,26 +936,14 @@ public class OverlordResource
           @Override
           public Response apply(TaskRunner taskRunner)
           {
-            if (taskRunner instanceof WorkerTaskRunner) {
+            // This feels like a hack to get the ingestion capacity for the k8s runner to show up in the Druid Console
+            // I think it makes sense to create a new /druid/indexer/v1/capacity api that doesn't require us to pretend to have a worker.
+            if (!taskRunner.getK8sTaskRunnerWorkers().isEmpty()) {
+              return Response.ok(
+                  taskRunner.getK8sTaskRunnerWorkers()
+              ).build();
+            } else if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
-            } else if (taskRunner.isK8sTaskRunner()) {
-              // required because kubernetes task runner has no concept of a worker, so returning a dummy worker.
-              return Response.ok(ImmutableList.of(
-                  new IndexingWorkerInfo(
-                      new IndexingWorker(
-                          "http",
-                          "host",
-                          "8100",
-                          taskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
-                          "version"
-                      ),
-                      0,
-                      Collections.emptySet(),
-                      Collections.emptyList(),
-                      DateTimes.EPOCH,
-                      null
-                  )
-              )).build();
             } else {
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",

@@ -24,6 +24,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.vavr.collection.Iterator;
+import org.apache.druid.client.indexing.IndexingWorker;
+import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
@@ -35,6 +37,7 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -45,7 +48,9 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,6 +204,32 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
+  public Collection<ImmutableWorkerInfo> getK8sTaskRunnerWorkers()
+  {
+    Collection<ImmutableWorkerInfo> workerInfos = new ArrayList<>();
+    workerInfos.add(
+        new ImmutableWorkerInfo(
+            new Worker(
+                null,
+                null,
+                null,
+                kubernetesTaskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
+                null,
+                null
+            ),
+            0,
+            0,
+            Collections.emptySet(),
+            Collections.emptyList(),
+            DateTimes.EPOCH,
+            null
+        )
+    );
+    workerInfos.addAll(getWorkers());
+    return workerInfos;
+  }
+
+  @Override
   public Collection<Worker> getLazyWorkers()
   {
     return workerTaskRunner.getLazyWorkers();
@@ -232,13 +263,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
       return ((TaskLogStreamer) workerTaskRunner).streamTaskLog(taskid, offset);
     }
     return Optional.absent();
-  }
-
-
-  @Override
-  public boolean isK8sTaskRunner()
-  {
-    return true;
   }
 
   @Nullable
