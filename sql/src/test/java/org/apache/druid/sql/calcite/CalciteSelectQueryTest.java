@@ -1991,4 +1991,3 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[] {6l}));
   }
 }
-
