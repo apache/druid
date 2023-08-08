@@ -29,7 +29,7 @@ export interface ExecutionProgressPaneProps {
   execution: Execution;
   intermediateError?: Error;
   goToTask(taskId: string): void;
-  onCancel?(): void;
+  onCancel?(message?: string): void;
   allowLiveReportsPane?: boolean;
 }
 

@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { sum } from 'd3-array';
+
 import { deepMove, deepSet } from './object-change';
 
 export type RuleType =
@@ -126,21 +128,17 @@ export class RuleUtil {
   }
 
   static totalReplicas(rule: Rule): number {
-    const tieredReplicants = rule.tieredReplicants || {};
-    let total = 0;
-    for (const k in tieredReplicants) {
-      total += tieredReplicants[k];
-    }
-    return total;
+    return sum(Object.values(rule.tieredReplicants || {}));
   }
 
-  static isColdRule(rule: Rule): boolean {
+  static isZeroReplicaRule(rule: Rule): boolean {
     return RuleUtil.canHaveTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
   }
 
-  static hasColdRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {
+  static hasZeroReplicaRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {
     return (
-      (rules || []).some(RuleUtil.isColdRule) || (defaultRules || []).some(RuleUtil.isColdRule)
+      (rules || []).some(RuleUtil.isZeroReplicaRule) ||
+      (defaultRules || []).some(RuleUtil.isZeroReplicaRule)
     );
   }
 }

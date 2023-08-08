@@ -21,6 +21,7 @@ package org.apache.druid.msq.sql.resources;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -28,10 +29,12 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.Forbidden;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.guice.annotations.MSQ;
@@ -47,6 +50,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
@@ -67,6 +71,7 @@ import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
@@ -83,6 +88,7 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -111,6 +117,7 @@ import java.util.stream.Collectors;
 public class SqlStatementResource
 {
 
+  public static final String RESULT_FORMAT = "__resultFormat";
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
   private final AuthorizerMapper authorizerMapper;
@@ -163,12 +170,14 @@ public class SqlStatementResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response doPost(final SqlQuery sqlQuery, @Context final HttpServletRequest req)
   {
-    final HttpStatement stmt = msqSqlStatementFactory.httpStatement(sqlQuery, req);
+    SqlQuery modifiedQuery = createModifiedSqlQuery(sqlQuery);
+
+    final HttpStatement stmt = msqSqlStatementFactory.httpStatement(modifiedQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
     boolean isDebug = false;
     try {
-      QueryContext queryContext = QueryContext.of(sqlQuery.getContext());
+      QueryContext queryContext = QueryContext.of(modifiedQuery.getContext());
       isDebug = queryContext.isDebug();
       contextChecks(queryContext);
 
@@ -186,7 +195,7 @@ public class SqlStatementResource
         return buildTaskResponse(sequence, stmt.query().authResult().getIdentity());
       } else {
         // Used for EXPLAIN
-        return buildStandardResponse(sequence, sqlQuery, sqlQueryId, rowTransformer);
+        return buildStandardResponse(sequence, modifiedQuery, sqlQueryId, rowTransformer);
       }
     }
     catch (DruidException e) {
@@ -250,7 +259,7 @@ public class SqlStatementResource
       if (sqlStatementResult.isPresent()) {
         return Response.ok().entity(sqlStatementResult.get()).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
     }
     catch (DruidException e) {
@@ -274,6 +283,7 @@ public class SqlStatementResource
   public Response doGetResults(
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
+      @QueryParam("resultFormat") String resultFormat,
       @Context final HttpServletRequest req
   )
   {
@@ -296,14 +306,14 @@ public class SqlStatementResource
                             );
       }
 
-      TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
+      TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
       if (taskResponse == null) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
 
       TaskStatusPlus statusPlus = taskResponse.getStatus();
       if (statusPlus == null || !MSQControllerTask.TYPE.equals(statusPlus.getType())) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
 
       MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
@@ -324,12 +334,14 @@ public class SqlStatementResource
         return Response.ok().build();
       }
 
+      ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
       return Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
-          new CountingOutputStream(outputStream)
+          new CountingOutputStream(outputStream),
+          preferredFormat
       )).build();
     }
 
@@ -392,9 +404,8 @@ public class SqlStatementResource
           default:
             throw new ISE("Illegal State[%s] encountered", sqlStatementResult.get().getState());
         }
-
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        throw queryNotFoundException(queryId);
       }
     }
     catch (DruidException e) {
@@ -521,8 +532,11 @@ public class SqlStatementResource
   )
   {
     if (sqlStatementState == SqlStatementState.SUCCESS) {
-      Map<String, Object> payload = SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(
-          queryId)));
+      Map<String, Object> payload =
+          SqlStatementResourceHelper.getPayload(contactOverlord(
+              overlordClient.taskReportAsMap(queryId),
+              queryId
+          ));
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(payload, MSQTaskReportPayload.class);
       Optional<List<PageInformation>> pageList = SqlStatementResourceHelper.populatePageList(
           msqTaskReportPayload,
@@ -536,8 +550,8 @@ public class SqlStatementResource
         rows = 0L;
         size = 0L;
         for (PageInformation pageInformation : pageList.get()) {
-          rows += pageInformation.getNumRows();
-          size += pageInformation.getSizeInBytes();
+          rows += pageInformation.getNumRows() != null ? pageInformation.getNumRows() : 0L;
+          size += pageInformation.getSizeInBytes() != null ? pageInformation.getSizeInBytes() : 0L;
         }
       }
 
@@ -589,7 +603,7 @@ public class SqlStatementResource
   private Optional<SqlStatementResult> getStatementStatus(String queryId, String currentUser, boolean withResults)
       throws DruidException
   {
-    TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
+    TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
     if (taskResponse == null) {
       return Optional.empty();
     }
@@ -609,8 +623,7 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(
-              queryId))
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
       );
     } else {
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -634,7 +647,7 @@ public class SqlStatementResource
 
   private MSQControllerTask getMSQControllerTaskOrThrow(String queryId, String currentUser)
   {
-    TaskPayloadResponse taskPayloadResponse = contactOverlord(overlordClient.taskPayload(queryId));
+    TaskPayloadResponse taskPayloadResponse = contactOverlord(overlordClient.taskPayload(queryId), queryId);
     SqlStatementResourceHelper.isMSQPayload(taskPayloadResponse, queryId);
 
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
@@ -651,6 +664,48 @@ public class SqlStatementResource
       ));
     }
     return msqControllerTask;
+  }
+
+  /**
+   * Creates a new sqlQuery from the user submitted sqlQuery after performing required modifications.
+   */
+  private SqlQuery createModifiedSqlQuery(SqlQuery sqlQuery)
+  {
+    Map<String, Object> context = sqlQuery.getContext();
+    if (context.containsKey(RESULT_FORMAT)) {
+      throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
+    }
+    Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
+                                                      .putAll(context)
+                                                      .put(RESULT_FORMAT, sqlQuery.getResultFormat().toString())
+                                                      .build();
+    return new SqlQuery(
+        sqlQuery.getQuery(),
+        sqlQuery.getResultFormat(),
+        sqlQuery.includeHeader(),
+        sqlQuery.includeTypesHeader(),
+        sqlQuery.includeSqlTypesHeader(),
+        modifiedContext,
+        sqlQuery.getParameters()
+    );
+  }
+
+  private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQSpec msqSpec)
+  {
+    if (resultFormatParam == null) {
+      return QueryContexts.getAsEnum(
+          RESULT_FORMAT,
+          msqSpec.getQuery().context().get(RESULT_FORMAT),
+          ResultFormat.class,
+          ResultFormat.DEFAULT_RESULT_FORMAT
+      );
+    }
+
+    return QueryContexts.getAsEnum(
+        "resultFormat",
+        resultFormatParam,
+        ResultFormat.class
+    );
   }
 
   private Optional<Yielder<Object[]>> getResultYielder(
@@ -671,7 +726,7 @@ public class SqlStatementResource
       }
 
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId))), MSQTaskReportPayload.class);
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
 
       if (msqTaskReportPayload.getResults().getResultYielder() == null) {
         results = Optional.empty();
@@ -682,7 +737,7 @@ public class SqlStatementResource
     } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
 
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-          contactOverlord(overlordClient.taskReportAsMap(queryId))), MSQTaskReportPayload.class);
+          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)), MSQTaskReportPayload.class);
 
       List<PageInformation> pages =
           SqlStatementResourceHelper.populatePageList(
@@ -720,7 +775,8 @@ public class SqlStatementResource
                                     return new FrameChannelSequence(standardImplementation.openChannel(
                                         finalStage.getId(),
                                         (int) pageInformation.getId(),
-                                        (int) pageInformation.getId()// we would always have partition number == worker number
+                                        (int) pageInformation.getId()
+// we would always have partition number == worker number
                                     ));
                                   }
                                   catch (Exception e) {
@@ -763,29 +819,15 @@ public class SqlStatementResource
       Optional<List<ColumnNameAndTypes>> signature,
       Closer closer,
       Optional<Yielder<Object[]>> results,
-      CountingOutputStream os
+      CountingOutputStream os,
+      ResultFormat resultFormat
   ) throws IOException
   {
     try {
-      try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
+      try (final ResultFormat.Writer writer = resultFormat.createFormatter(os, jsonMapper)) {
         Yielder<Object[]> yielder = results.get();
         List<ColumnNameAndTypes> rowSignature = signature.get();
-        writer.writeResponseStart();
-
-        while (!yielder.isDone()) {
-          writer.writeRowStart();
-          Object[] row = yielder.get();
-          for (int i = 0; i < Math.min(rowSignature.size(), row.length); i++) {
-            writer.writeRowField(
-                rowSignature.get(i).getColName(),
-                row[i]
-            );
-          }
-          writer.writeRowEnd();
-          yielder = yielder.next(null);
-        }
-        writer.writeResponseEnd();
-        yielder.close();
+        resultPusherInternal(writer, yielder, rowSignature);
       }
       catch (Exception e) {
         log.error(e, "Unable to stream results back for query[%s]", queryId);
@@ -799,6 +841,31 @@ public class SqlStatementResource
     finally {
       closer.close();
     }
+  }
+
+  @VisibleForTesting
+  static void resultPusherInternal(
+      ResultFormat.Writer writer,
+      Yielder<Object[]> yielder,
+      List<ColumnNameAndTypes> rowSignature
+  ) throws IOException
+  {
+    writer.writeResponseStart();
+
+    while (!yielder.isDone()) {
+      writer.writeRowStart();
+      Object[] row = yielder.get();
+      for (int i = 0; i < Math.min(rowSignature.size(), row.length); i++) {
+        writer.writeRowField(
+            rowSignature.get(i).getColName(),
+            row[i]
+        );
+      }
+      writer.writeRowEnd();
+      yielder = yielder.next(null);
+    }
+    writer.writeResponseEnd();
+    yielder.close();
   }
 
   private static void throwIfQueryIsNotSuccessful(String queryId, TaskStatusPlus statusPlus)
@@ -830,16 +897,16 @@ public class SqlStatementResource
 
     if (executionMode == null) {
       throw InvalidInput.exception(
-          "Execution mode is not provided to the SQL statement API. "
+          "Execution mode is not provided to the sql statement api. "
           + "Please set [%s] to [%s] in the query context",
           QueryContexts.CTX_EXECUTION_MODE,
           ExecutionMode.ASYNC
       );
     }
 
-    if (ExecutionMode.ASYNC != executionMode) {
+    if (!ExecutionMode.ASYNC.equals(executionMode)) {
       throw InvalidInput.exception(
-          "The SQL statement API currently does not support the provided execution mode [%s]. "
+          "The sql statement api currently does not support the provided execution mode [%s]. "
           + "Please set [%s] to [%s] in the query context",
           executionMode,
           QueryContexts.CTX_EXECUTION_MODE,
@@ -848,7 +915,7 @@ public class SqlStatementResource
     }
 
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);
-    if (selectDestination == MSQSelectDestination.DURABLE_STORAGE) {
+    if (MSQSelectDestination.DURABLESTORAGE.equals(selectDestination)) {
       checkForDurableStorageConnectorImpl();
     }
   }
@@ -860,28 +927,42 @@ public class SqlStatementResource
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
-                                  "The SQL Statement API cannot read from the select destination [%s] provided "
-                                  + "in the query context [%s] since it is not configured. It is recommended to configure the durable storage "
+                                  "The sql statement api cannot read from the select destination [%s] provided "
+                                  + "in the query context [%s] since it is not configured on the %s. It is recommended to configure durable storage "
                                   + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
                                   + "configure durable storage.",
-                                  MSQSelectDestination.DURABLE_STORAGE.name(),
-                                  MultiStageQueryContext.CTX_SELECT_DESTINATION
+                                  MSQSelectDestination.DURABLESTORAGE.getName(),
+                                  MultiStageQueryContext.CTX_SELECT_DESTINATION,
+                                  NodeRole.BROKER.getJsonName()
                               )
                           );
     }
   }
 
-  private <T> T contactOverlord(final ListenableFuture<T> future)
+  private <T> T contactOverlord(final ListenableFuture<T> future, String queryId)
   {
     try {
       return FutureUtils.getUnchecked(future, true);
     }
     catch (RuntimeException e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        HttpResponseException httpResponseException = (HttpResponseException) e.getCause();
+        if (httpResponseException.getResponse() != null && httpResponseException.getResponse().getResponse().getStatus()
+                                                                                .equals(HttpResponseStatus.NOT_FOUND)) {
+          log.info(httpResponseException, "Query details not found for queryId [%s]", queryId);
+          // since we get a 404, we mark the request as a NotFound. This code path is generally triggered when user passes a `queryId` which is not found in the overlord.
+          throw queryNotFoundException(queryId);
+        }
+      }
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.UNCATEGORIZED)
                           .build("Unable to contact overlord " + e.getMessage());
     }
   }
 
+  private static DruidException queryNotFoundException(String queryId)
+  {
+    return NotFound.exception("Query [%s] was not found. The query details are no longer present or might not be of the type [%s]. Verify that the id is correct.", queryId, MSQControllerTask.TYPE);
+  }
 
 }

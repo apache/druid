@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -116,11 +117,12 @@ public class CaseOperatorConversion implements SqlOperatorConversion
       if (condition.getExpression().startsWith("notnull") && condition.getArguments().get(0).isDirectColumnAccess()) {
 
         DimFilter thenFilter = null, elseFilter = null;
-        final DimFilter isNull = new SelectorDimFilter(
-            condition.getArguments().get(0).getDirectColumn(),
-            null,
-            null
-        );
+        final DimFilter isNull;
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          isNull = new SelectorDimFilter(condition.getArguments().get(0).getDirectColumn(), null, null);
+        } else {
+          isNull = NullFilter.forColumn(condition.getArguments().get(0).getDirectColumn());
+        }
 
         if (call.getOperands().get(1) instanceof RexCall) {
           final RexCall thenCall = (RexCall) call.getOperands().get(1);

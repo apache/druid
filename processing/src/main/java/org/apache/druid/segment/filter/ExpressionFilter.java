@@ -46,10 +46,12 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
@@ -122,6 +124,11 @@ public class ExpressionFilter implements Filter
             ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities(),
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
+      case ARRAY:
+        return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
+            ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(outputType)).setHasNulls(true),
+            ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+        ).makeMatcher(predicateFactory);
       default:
         if (ExpressionType.NESTED_DATA.equals(outputType)) {
           return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
@@ -187,7 +194,7 @@ public class ExpressionFilter implements Filter
     final Expr.BindingAnalysis details = bindingDetails.get();
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
-      return Filters.makeNullIndex(
+      return Filters.makeMissingColumnNullIndex(
           expr.get().eval(InputBindings.nilBindings()).asBoolean(),
           selector
       );
@@ -199,10 +206,7 @@ public class ExpressionFilter implements Filter
       // we use a default 'all false' capabilities here because if the column has a bitmap index, but the capabilities
       // are null, it means that the column is missing and should take the single valued path, while truly unknown
       // things will not have a bitmap index available
-      final ColumnCapabilities capabilities = selector.getColumnCapabilitiesWithDefault(
-          column,
-          ColumnCapabilitiesImpl.createDefault()
-      );
+      final ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
       if (ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
         if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
           return null;
@@ -210,7 +214,7 @@ public class ExpressionFilter implements Filter
         return Filters.makePredicateIndex(
             column,
             selector,
-            getBitmapPredicateFactory()
+            getBitmapPredicateFactory(capabilities)
         );
       }
     }
@@ -338,7 +342,7 @@ public class ExpressionFilter implements Filter
    * {@link DruidPredicateFactory} which evaluates the expression using the value as input, used for building predicate
    * indexes where the raw column values will be checked against this predicate
    */
-  private DruidPredicateFactory getBitmapPredicateFactory()
+  private DruidPredicateFactory getBitmapPredicateFactory(@Nullable ColumnCapabilities inputCapabilites)
   {
     return new DruidPredicateFactory()
     {
@@ -412,6 +416,19 @@ public class ExpressionFilter implements Filter
             return expr.get().eval(InputBindings.nilBindings()).asBoolean();
           }
         };
+      }
+
+      @Override
+      public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+      {
+        if (inputCapabilites == null) {
+          return input -> expr.get()
+                              .eval(InputBindings.forInputSupplier(ExpressionType.STRING_ARRAY, () -> input))
+                              .asBoolean();
+        }
+        return input -> expr.get().eval(
+            InputBindings.forInputSupplier(ExpressionType.fromColumnType(inputCapabilites), () -> input)
+        ).asBoolean();
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..

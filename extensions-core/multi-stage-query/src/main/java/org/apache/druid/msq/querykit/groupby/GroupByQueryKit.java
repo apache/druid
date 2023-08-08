@@ -120,12 +120,14 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     // (i.e. no GROUP BY clause)
     // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
     // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
-    if (intermediateClusterBy.getColumns().isEmpty() && resultClusterBy.isEmpty()) {
+    if (intermediateClusterBy.isEmpty() && resultClusterBy.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
     } else if (doOrderBy) {
-      shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
+      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+                                         ? ShuffleSpecFactories.singlePartition()
+                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
       shuffleSpecFactoryPostAggregation = doLimitOrOffset
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;

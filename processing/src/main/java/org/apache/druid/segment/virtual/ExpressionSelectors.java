@@ -300,7 +300,7 @@ public class ExpressionSelectors
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities columnCapabilities
+      @Nullable final ColumnCapabilities columnCapabilities
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
@@ -321,7 +321,7 @@ public class ExpressionSelectors
   )
   {
     final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
-    final Map<String, InputBindings.InputSupplier> suppliers = new HashMap<>();
+    final Map<String, InputBindings.InputSupplier<?>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();
@@ -344,11 +344,16 @@ public class ExpressionSelectors
       final boolean homogenizeNullMultiValueStringArrays =
           plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
 
-      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
-        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
+      if (capabilities == null || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, or implicitly mapped mvd, use Object selector and see if that gives anything useful
         supplier = supplierFromObjectSelector(
             columnSelectorFactory.makeColumnValueSelector(columnName),
             homogenizeNullMultiValueStringArrays
+        );
+      } else if (capabilities.isArray()) {
+        supplier = supplierFromObjectSelector(
+            columnSelectorFactory.makeColumnValueSelector(columnName),
+            false
         );
       } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);

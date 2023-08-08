@@ -203,7 +203,8 @@ For more information about partitioning, see [Partitioning](concepts.md#partitio
 ### `CLUSTERED BY`
 
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
-column names or expressions.
+column names or expressions. Druid's segment generation only supports ascending order, so an `INSERT` or `REPLACE` query with
+`CLUSTERED BY` columns in `DESC` ordering is not allowed.
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
 
@@ -242,6 +243,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
 | `durableShuffleStorage` | SELECT, INSERT, REPLACE <br /><br />Whether to use durable storage for shuffle mesh. To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true`). If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error. <br /><br />                                                                                                                                                                                                                                                                                                                                                                                                                   | `false` |
 | `faultTolerance` | SELECT, INSERT, REPLACE<br /><br /> Whether to turn on fault tolerance mode or not. Failed workers are retried based on [Limits](#limits). Cannot be used when `durableShuffleStorage` is explicitly set to false.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `false` |
+| `selectDestination` | SELECT<br /><br /> Controls where the final result of the select query is written. <br />Use `taskReport`(the default) to write select results to the task report. <b> This is not scalable since task reports size explodes for large results </b> <br/>Use `durableStorage` to write results to durable storage location. <b>For large results sets, its recommended to use `durableStorage` </b>. To configure durable storage see [`this`](#durable-storage) section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `taskReport` |
 
 ## Joins
 
@@ -341,53 +343,24 @@ CLUSTERED BY user
 
 The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown in the above example.
 
-## Durable Storage
+## Durable storage
 
-Using durable storage with your SQL-based ingestion can improve their reliability by writing intermediate files to a storage location temporarily. 
+SQL-based ingestion supports using durable storage to store intermediate files temporarily. Enabling it can improve reliability. For more information, see [Durable storage](../operations/durable-storage.md).
 
-To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
-cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
-the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
-for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
-
-Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
-by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)
-If the configured limit is too low, `NotEnoughTemporaryStorageFault` may be thrown.
-
-### Enable durable storage
-
-To enable durable storage, you need to set the following common service properties:
-
-```
-druid.msq.intermediate.storage.enable=true
-druid.msq.intermediate.storage.type=s3
-druid.msq.intermediate.storage.bucket=YOUR_BUCKET
-druid.msq.intermediate.storage.prefix=YOUR_PREFIX
-druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
-```
-
-For detailed information about the settings related to durable storage, see [Durable storage configurations](#durable-storage-configurations).
-
-
-### Use durable storage for queries
-
-When you run a query, include the context parameter `durableShuffleStorage` and set it to `true`.
-
-For queries where you want to use fault tolerance for workers,  set `faultTolerance` to `true`, which automatically sets `durableShuffleStorage` to `true`.
-
-## Durable storage configurations
+### Durable storage configurations
 
 The following common service properties control how durable storage behaves:
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.bucket` | n/a | The bucket in S3 where you want to store intermediate files.  |
-|`druid.msq.intermediate.storage.chunkSize` | 100MiB | Optional. Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 
-|`druid.msq.intermediate.storage.enable` | true | Required. Whether to enable durable storage for the cluster.|
-|`druid.msq.intermediate.storage.maxRetry` | 10 | Optional. Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 
-|`druid.msq.intermediate.storage.prefix` | n/a | S3 prefix to store intermediate stage results. Provide a unique value for the prefix. Don't share the same prefix between clusters. If the location  includes other files or directories, then they will get cleaned up as well.  |
+|`druid.msq.intermediate.storage.enable` | true | Required. Whether to enable durable storage for the cluster. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md).|
+|`druid.msq.intermediate.storage.type` | `s3` for Amazon S3 | Required. The type of storage to use.  `s3` is the only supported storage type.  |
+|`druid.msq.intermediate.storage.bucket` | n/a | The S3 bucket to store intermediate files.  |
+|`druid.msq.intermediate.storage.prefix` | n/a | S3 prefix to store intermediate stage results. Provide a unique value for the prefix. Don't share the same prefix between clusters. If the location includes other files or directories, then they will get cleaned up as well.  |
 |`druid.msq.intermediate.storage.tempDir`| n/a | Required. Directory path on the local disk to temporarily store intermediate stage results.  |
-|`druid.msq.intermediate.storage.type` | `s3` if your deep storage is S3 | Required. The type of storage to use. You can either set this to `local` or `s3`.  |
+|`druid.msq.intermediate.storage.maxRetry` | 10 | Optional. Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 
+|`druid.msq.intermediate.storage.chunkSize` | 100MiB | Optional. Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 
+
 
 In addition to the common service properties, there are certain properties that you configure on the Overlord specifically to clean up intermediate files:
 
@@ -454,4 +427,3 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_WorkerFailed">`WorkerFailed`</a> | A worker task failed unexpectedly. | `errorMsg`<br /><br />`workerTaskId`: The ID of the worker task. |
 | <a name="error_WorkerRpcFailed">`WorkerRpcFailed`</a> | A remote procedure call to a worker task failed and could not recover. | `workerTaskId`: the id of the worker task |
 | <a name="error_UnknownError">`UnknownError`</a> | All other errors. | `message` |
-| <a name="error_InsertCannotOrderByDescending">`InsertCannotOrderByDescending`</a> | Deprecated. An INSERT query contained a `CLUSTERED BY` expression in descending order. Druid's segment generation code only supports ascending order. The query returns a `ValidationException` instead of the fault. | `columnName` |

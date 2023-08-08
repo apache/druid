@@ -123,4 +123,9 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   {
     return task.getDataSource();
   }
+
+  public Task getTask()
+  {
+    return task;
+  }
 }
