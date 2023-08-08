@@ -110,6 +110,10 @@ public class KubernetesTaskRunnerConfig
   private Map<String, String> annotations = ImmutableMap.of();
 
   @JsonProperty
+  @NotNull
+  private boolean sendTasksToWorkerTaskRunner = false;
+
+  @JsonProperty
   @Min(1)
   @Max(Integer.MAX_VALUE)
   @NotNull
@@ -135,7 +139,8 @@ public class KubernetesTaskRunnerConfig
       List<String> javaOptsArray,
       Map<String, String> labels,
       Map<String, String> annotations,
-      Integer capacity
+      Integer capacity,
+      boolean sendTasksToWorkerTaskRunner
   )
   {
     this.namespace = namespace;
@@ -196,6 +201,7 @@ public class KubernetesTaskRunnerConfig
         capacity,
         this.capacity
     );
+    this.sendTasksToWorkerTaskRunner = sendTasksToWorkerTaskRunner;
   }
 
   public String getNamespace()
@@ -278,6 +284,10 @@ public class KubernetesTaskRunnerConfig
   {
     return capacity;
   }
+  public boolean getSendTasksToWorkerTaskRunner()
+  {
+    return sendTasksToWorkerTaskRunner;
+  }
 
   public static Builder builder()
   {
@@ -302,6 +312,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> labels;
     private Map<String, String> annotations;
     private Integer capacity;
+    private boolean sendTasksToWorkerTaskRunner;
 
     public Builder()
     {
@@ -403,6 +414,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withSendTasksToWorkerTaskRunner(boolean sendTasksToWorkerTaskRunner)
+    {
+      this.sendTasksToWorkerTaskRunner = sendTasksToWorkerTaskRunner;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -421,7 +438,8 @@ public class KubernetesTaskRunnerConfig
           this.javaOptsArray,
           this.labels,
           this.annotations,
-          this.capacity
+          this.capacity,
+          this.sendTasksToWorkerTaskRunner
       );
     }
   }

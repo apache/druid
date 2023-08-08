@@ -54,7 +54,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunnerFactory.build(),
         workerTaskRunnerFactory.build(),
-        false
+        kubernetesTaskRunnerConfig.getSendTasksToWorkerTaskRunner()
     );
     return runner;
   }
