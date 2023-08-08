@@ -119,9 +119,19 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
 
   protected AggregateResult initSlot(KeyType key, int keyHash)
   {
-    final ByteBuffer keyBuffer = getKeyBuffer(key);
-    if(keyBuffer==null) {
+    final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
+    if (keyBuffer == null) {
+      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
+      // be correct.
       return Groupers.dictionaryFull(0);
+    }
+
+    if (keyBuffer.remaining() != keySize) {
+      throw new IAE(
+          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
+          keyBuffer.remaining(),
+          keySize
+      );
     }
 
     // find and try to expand if table is full and find again
@@ -133,36 +143,18 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
+    final boolean bucketWasUsed = hashTable.isBucketUsed(bucket);
+    final ByteBuffer tableBuffer = hashTable.getTableBuffer();
 
     // Set up key and initialize the aggs if this is a new bucket.
-    
-    if (!hashTable.isOffsetUsed(bucketStartOffset)) {
+    if (!bucketWasUsed) {
       hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
-      aggregators.init(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
+      aggregators.init(tableBuffer, bucketStartOffset + baseAggregatorOffset);
       newBucketHook(bucketStartOffset);
     }
     return null;
   }
   
-  private ByteBuffer getKeyBuffer(KeyType key)
-  {
-    final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
-    if (keyBuffer == null) {
-      // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
-      // be correct.
-      return null;
-    }
-
-    if (keyBuffer.remaining() != keySize) {
-      throw new IAE(
-          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-          keyBuffer.remaining(),
-          keySize
-      );
-    }
-    return keyBuffer;
-  }
-
   @Override
   public AggregateResult aggregate(KeyType key, int keyHash)
   {
