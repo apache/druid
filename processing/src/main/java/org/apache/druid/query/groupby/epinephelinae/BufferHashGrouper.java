@@ -75,16 +75,10 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
     this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();
     this.useDefaultSorting = useDefaultSorting;
-
-    if (keySerde.isEmpty()) {
-      // early initialization is needed when () is grouped
-      init();
-    }
   }
 
-  // final is added to this method - there is a case in which early init is needed
   @Override
-  public final void init()
+  public void init()
   {
     if (!initialized) {
       ByteBuffer buffer = bufferSupplier.get();
@@ -164,15 +158,16 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     offsetList.reset();
     hashTable.reset();
     keySerde.reset();
-    if (keySerde.isEmpty()) {
-      KeyType key = keySerde.createKey();
-      initSlot(key, hashFunction().applyAsInt(key));
-    }
   }
 
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
+    if (!initialized && keySerde.isEmpty()) {
+      init();
+      KeyType key = keySerde.createKey();
+      initSlot(key, hashFunction().applyAsInt(key));
+    }
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
