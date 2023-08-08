@@ -301,12 +301,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                            NullHandling.replaceWithDefault() ?
-                            new CountAggregatorFactory("_a0:count") :
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("_a0:count"),
-                                notNull("a0")
-                            ),
+                            new CountAggregatorFactory("_a0:count"),
                             new ApproximateHistogramAggregatorFactory(
                                 "_a1:agg",
                                 "a0",
