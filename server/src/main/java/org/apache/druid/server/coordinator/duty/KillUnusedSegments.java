@@ -181,7 +181,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         submittedTasks < dataSourcesToKill.size()
             ? StringUtils.format(
             " Datasources skipped: %s",
-            ImmutableList.of(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size() - 1)
+            ImmutableList.of(dataSourcesToKill).subList(submittedTasks - 1, dataSourcesToKill.size() - 1)
         )
             : ""
     );
