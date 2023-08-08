@@ -33,7 +33,6 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -52,7 +51,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -1929,40 +1927,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @Ignore
-  public void testCountDistinctApproximateEmptySet()
-  {
-    cannotVectorize();
-    testQuery(
-        PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true)),
-        "select count(distinct m1) from druid.foo where m1 < -1.0",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                .setDataSource(
-                    GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
-                        .setDimFilter(
-                            range("m1", ColumnType.LONG, null, -1.0, false, true))
-                        .build())
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-
-                .build()
-
-        ),
-        ImmutableList.of(new Object[] {0l}));
-  }
-
-  @Test
   public void testCountDistinctNonApproximateEmptySet()
   {
     cannotVectorize();
@@ -1974,7 +1938,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
-                // Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -1997,7 +1960,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctNonApproximate6()
+  public void testCountDistinctNonApproximateBasic()
   {
     cannotVectorize();
     testQuery(
@@ -2027,40 +1990,5 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(new Object[] {6l}));
   }
-
-  @Ignore
-  @Test
-  public void testCountDistinctNonApproximateX()
-  {
-    cannotVectorize();
-    testQuery(
-        PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                .setDataSource(
-                    GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ColumnType.FLOAT)))
-                        .setVirtualColumns(
-                            expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"1\",null)",
-                                ColumnType.LONG))
-                        .build())
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
-                .build()
-
-        ),
-        ImmutableList.of(new Object[] {0l}));
-  }
-
 }
 

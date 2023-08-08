@@ -238,6 +238,11 @@ public interface Grouper<KeyType> extends Closeable
      */
     void reset();
 
+    /**
+     * Returns true if the key is empty.
+     *
+     * Implies that there will be only one group.
+     */
     default boolean isEmpty()
     {
       return keySize() == 0;

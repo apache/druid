@@ -75,14 +75,14 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
     this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();
     this.useDefaultSorting = useDefaultSorting;
-    
+
     if (keySerde.isEmpty()) {
-      // need to do early initialization - because when () is grouped;
-      // that must be in the resultset as well
+      // early initialization is needed when () is grouped
       init();
     }
   }
 
+  // final is added to this method - there is a case in which early init is needed
   @Override
   public final void init()
   {

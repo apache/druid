@@ -117,44 +117,6 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     return hashTable.getRegrowthThreshold();
   }
 
-  protected void initSlot(KeyType key, int keyHash)
-  {
-    final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
-    if (keyBuffer == null) {
-      throw new IAE("Unable to get keyBuffer for to init key");
-    }
-
-    if (keyBuffer.remaining() != keySize) {
-      throw new IAE(
-          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-          keyBuffer.remaining(),
-          keySize
-      );
-    }
-
-    // find and try to expand if table is full and find again
-    int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash, () -> {});
-    if (bucket < 0) {
-      throw new IAE("Unable to allocate bucket for key");
-    }
-
-    final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
-
-    ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
-   
-  }
-  
-  private void ensureBucketInitialized(int bucket, int bucketStartOffset, ByteBuffer keyBuffer, int keyHash)
-  {
-    // Set up key and initialize the aggs if this is a new bucket.
-    if (!hashTable.isOffsetUsed(bucketStartOffset)) {
-      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
-      aggregators.init(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
-      newBucketHook(bucketStartOffset);
-    }
-    
-  }
-
   @Override
   public AggregateResult aggregate(KeyType key, int keyHash)
   {
@@ -194,6 +156,45 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     afterAggregateHook(bucketStartOffset);
 
     return AggregateResult.ok();
+  }
+
+  /**
+   * Initializes the slot corresponding with key to be present.
+   */
+  protected void initSlot(KeyType key, int keyHash)
+  {
+    final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
+    if (keyBuffer == null) {
+      throw new IAE("Unable to get keyBuffer for to init key");
+    }
+
+    if (keyBuffer.remaining() != keySize) {
+      throw new IAE(
+          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
+          keyBuffer.remaining(),
+          keySize
+      );
+    }
+
+    // find and try to expand if table is full and find again
+    int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash, () -> {});
+    if (bucket < 0) {
+      throw new IAE("Unable to allocate bucket for key");
+    }
+
+    final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
+
+    ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
+  }
+
+  private void ensureBucketInitialized(int bucket, int bucketStartOffset, ByteBuffer keyBuffer, int keyHash)
+  {
+    // Set up key and initialize the aggs if this is a new bucket.
+    if (!hashTable.isOffsetUsed(bucketStartOffset)) {
+      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
+      aggregators.init(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
+      newBucketHook(bucketStartOffset);
+    }
   }
 
   @Override
