@@ -126,8 +126,11 @@ public class AzureOutputConfig
     if (!tempDir.canRead() || !tempDir.canWrite()) {
       throw DruidException.forPersona(DruidException.Persona.ADMIN)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build("Cannot read or write on the 'tempDir' [%s]. "
-                                 + "Please provide a different path to store the intermediate contents of AzureStorageConnector");
+                          .build(
+                              "Cannot read or write on the 'tempDir' [%s]. "
+                              + "Please provide a different path to store the intermediate contents of AzureStorageConnector",
+                              tempDir.getAbsolutePath()
+                          );
     }
   }
 
