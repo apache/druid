@@ -55,7 +55,7 @@ When the selector filter matches against numeric inputs, the string `value` will
 ```
 
 
-### Example: equivalent of `WHERE someColumn IS NULL`.
+### Example: equivalent of `WHERE someColumn IS NULL`
 
 ``` json
 { "type": "selector", "dimension": "someColumn", "value": null }
@@ -72,7 +72,7 @@ Druid's SQL planner uses the equality filter by default instead of selector filt
 | -------- | ----------- | -------- |
 | `type` | Must be "equality".| Yes |
 | `column` | Input column or virtual column name to filter. | Yes |
-| `matchValueType` | String specifying the type of value to match, for example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column`. | Yes |
+| `matchValueType` | String specifying the type of value to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column`. | Yes |
 | `matchValue` | Value to match, must not be null. | Yes |
 
 ### Example: equivalent of `WHERE someColumn = 'hello'`
@@ -125,7 +125,7 @@ The column comparison filter is similar to the selector filter, but compares dim
 
 Note that the column comparison filter converts all values to strings prior to comparison. This allows differently-typed input columns to match without a cast operation.
 
-### Example: equivalent of `WHERE someColumn = someLongColumn`.
+### Example: equivalent of `WHERE someColumn = someLongColumn`
 
 ``` json
 {
@@ -249,7 +249,7 @@ The bound filter can only match against `STRING` (single and multi-valued), `LON
 
 Note that the bound filter matches null values if you don't specify a lower bound. Use the range filter if SQL-compatible behavior.
 
-### Example: equivalent to `WHERE 21 <= age <= 31`:
+### Example: equivalent to `WHERE 21 <= age <= 31`
 
 ```json
 {
@@ -261,7 +261,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-### Example: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using the default lexicographic sorting order.
+### Example: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using the default lexicographic sorting order
 
 ```json
 {
@@ -286,7 +286,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-### Example: equivalent to `WHERE age < 31`.
+### Example: equivalent to `WHERE age < 31`
 
 ```json
 {
@@ -320,13 +320,13 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 | -------- | ----------- | -------- |
 | `type` | Must be "range".| Yes |
 | `column` | Input column or virtual column name to filter. | Yes |
-| `matchValueType` | String specifying the type of bounds to match, for example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column` and also defines the type of comparison used when matching values. | Yes |
+| `matchValueType` | String specifying the type of bounds to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column` and also defines the type of comparison used when matching values. | Yes |
 | `lower` | Lower bound value to match. | No. At least one of `lower` or `upper` must not be null. |
 | `upper` | Upper bound value to match. | No. At least one of `lower` or `upper` must not be null. |
 | `lowerOpen` | Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). | No |
 | `upperOpen` | Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). | No |
 
-### Example: equivalent to `WHERE 21 <= age <= 31`:
+### Example: equivalent to `WHERE 21 <= age <= 31`
 
 ```json
 {
@@ -338,7 +338,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using STRING comparison.
+### Example: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using STRING comparison
 
 ```json
 {
@@ -364,7 +364,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE age < 31`.
+### Example: equivalent to `WHERE age < 31`
 
 ```json
 {
@@ -699,7 +699,7 @@ scan those columns.
 
 All filters return true if any one of the dimension values is satisfies the filter.
 
-#### Example: multi-value match behavior.
+#### Example: multi-value match behavior
 Given a multi-value STRING row with values `['a', 'b', 'c']`, a filter such as
 
 ```json
@@ -744,7 +744,7 @@ When filtering on numeric columns using string based filters such as the selecto
 converted into a numeric predicate and will be applied to the numeric column values directly. In some cases (such as
 the "regex" filter) the numeric column values will be converted to strings during the scan.
 
-#### Example: filtering on a specific value, `myFloatColumn = 10.1`:
+#### Example: filtering on a specific value, `myFloatColumn = 10.1`
 
 ```json
 {
@@ -765,7 +765,7 @@ or with a selector filter:
 }
 ```
 
-#### Example: filtering on a range of values, `10 <= myFloatColumn < 20`:
+#### Example: filtering on a range of values, `10 <= myFloatColumn < 20`
 
 ```json
 {
@@ -822,7 +822,7 @@ or with a selector filter:
 }
 ```
 
-#### Example: filtering on day of week using an extractionFn
+#### Example: filtering on day of week using an extraction function
 
 ```json
 {
