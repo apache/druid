@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.FluentIterable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -120,34 +119,15 @@ class StreamChunkParser<RecordType extends ByteEntity>
     }
   }
 
-  private List<ParseResult> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytes)
+  private List<ParseResult> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytess)
   {
-    final FluentIterable<InputRow> iterable = FluentIterable
-        .from(valueBytes)
-        .transform(ByteEntity::getBuffer)
-        .transform(this::incrementProcessedBytes)
-        .transformAndConcat(bytes -> {
-          // TODO push down synchronized{} so that each implementation can decide thread safety
-          //      for the first pass, we do it here, to guarantee it is safe
-          synchronized (parser) {
-            return parser.parseBatch(bytes);
-          }
-        });
-    return rowsToParseResult(iterable.iterator());
-  }
-
-  /**
-   * Increments the processed bytes with the number of bytes remaining in the
-   * given buffer. This method must be called before reading the buffer.
-   */
-  private ByteBuffer incrementProcessedBytes(final ByteBuffer recordByteBuffer)
-  {
-    // TODO re-enable this, somehow. We need to make the increment data available
-    //      to the processor of the ParseResult. Should we return a Pair? or is it
-    //      a part of the ParseResult itself? How to deal with multiple parsed
-    //      results per bytebuffer?
-    // rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
-    return recordByteBuffer;
+    final List<ParseResult> allParseResults = new ArrayList<>();
+    for (ByteEntity valueBytes : valueBytess) {
+      long bytesProcessed = valueBytes.getBuffer().remaining();
+      Iterator<InputRow> parsed = parser.parseBatch(valueBytes.getBuffer()).iterator();
+      allParseResults.addAll(rowsToParseResult(parsed, bytesProcessed));
+    }
+    return allParseResults;
   }
 
   private List<ParseResult> parseWithInputFormat(
@@ -157,19 +137,19 @@ class StreamChunkParser<RecordType extends ByteEntity>
   {
     final List<ParseResult> allParseResults = new ArrayList<>();
     for (ByteEntity valueBytes : valueBytess) {
-      incrementProcessedBytes(valueBytes.getBuffer());
+      long bytesProcessed = valueBytes.getBuffer().remaining();
       byteEntityReader.setEntity(valueBytes);
       try (CloseableIterator<InputRow> rows = byteEntityReader.read()) {
-        allParseResults.addAll(rowsToParseResult(rows));
+        allParseResults.addAll(rowsToParseResult(rows, bytesProcessed));
       }
       catch (ParseException pe) {
-        allParseResults.add(ParseResult.fromParseException(pe));
+        allParseResults.add(ParseResult.fromParseException(pe, bytesProcessed));
       }
     }
     return allParseResults;
   }
 
-  List<ParseResult> rowsToParseResult(Iterator<InputRow> rows)
+  List<ParseResult> rowsToParseResult(Iterator<InputRow> rows, long bytesProcessed)
   {
     final List<ParseResult> parseResults = new ArrayList<>();
     while (true) {
@@ -180,11 +160,14 @@ class StreamChunkParser<RecordType extends ByteEntity>
 
         InputRow nextRow = rows.next();
         boolean filterResult = rowFilter.test(nextRow);
-        parseResults.add(ParseResult.fromFilterResult(nextRow, filterResult));
+        parseResults.add(ParseResult.fromFilterResult(nextRow, filterResult, bytesProcessed));
       }
       catch (ParseException ex) {
-        parseResults.add(ParseResult.fromParseException(ex));
+        parseResults.add(ParseResult.fromParseException(ex, bytesProcessed));
       }
+
+      // only record bytes on first element in list
+      bytesProcessed = 0;
     }
     return parseResults;
   }
@@ -205,15 +188,16 @@ class StreamChunkParser<RecordType extends ByteEntity>
     final InputRow output;
     final ParseException parseException;
     final ParseResultCode resultCode;
+    final long bytesProcessed;
 
     public static ParseResult forEndOfShard()
     {
-      return new ParseResult(ParseResultCode.END_OF_SHARD, null, null);
+      return new ParseResult(ParseResultCode.END_OF_SHARD, null, null, 0L);
     }
 
     public static ParseResult forEmptyChunk()
     {
-      return new ParseResult(ParseResultCode.THROWN_AWAY, null, null);
+      return new ParseResult(ParseResultCode.THROWN_AWAY, null, null, 0L);
     }
 
     public ParseResult mapResult(UnaryOperator<InputRow> mapFn)
@@ -221,32 +205,36 @@ class StreamChunkParser<RecordType extends ByteEntity>
       return new ParseResult(
               resultCode,
               mapFn.apply(output),
-              parseException);
+              parseException,
+              bytesProcessed);
     }
 
-    public static ParseResult fromFilterResult(InputRow row, boolean valid)
+    public static ParseResult fromFilterResult(InputRow row, boolean valid, long bytesProcessed)
     {
       return new ParseResult(
               valid ? ParseResultCode.PROCESSED : ParseResultCode.THROWN_AWAY,
               valid ? row : null,
-              null);
+              null,
+              bytesProcessed);
     }
 
-    public static ParseResult fromParseException(ParseException ex)
+    public static ParseResult fromParseException(ParseException ex, long bytesProcessed)
     {
       return new ParseResult(
               ex.isFromPartiallyValidRow()
                       ? ParseResultCode.PROCESSED_WITH_ERROR
                       : ParseResultCode.UNPARSEABLE,
               null,
-              ex);
+              ex,
+              bytesProcessed);
     }
 
-    ParseResult(ParseResultCode rc, InputRow output, ParseException ex)
+    ParseResult(ParseResultCode rc, InputRow output, ParseException ex, long bytesProcessed)
     {
       this.resultCode = rc;
       this.output = output;
       this.parseException = ex;
+      this.bytesProcessed = bytesProcessed;
     }
 
     /**
@@ -262,6 +250,8 @@ class StreamChunkParser<RecordType extends ByteEntity>
             ParseExceptionHandler parseExceptionHandler
     )
     {
+      rowIngestionMeters.incrementProcessedBytes(bytesProcessed);
+
       if (resultCode == ParseResultCode.THROWN_AWAY) {
         // do not record other metrics
         // if it was an errored row, then the parseExceptionHandler will increment the counter
