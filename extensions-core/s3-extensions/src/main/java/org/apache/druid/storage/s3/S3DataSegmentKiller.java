@@ -153,13 +153,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
         );
         RetryUtils.retry(
             () -> {
-              try {
-                s3Client.deleteObjects(deleteObjectsRequest);
-                return null;
-              }
-              catch (Exception e) {
-                throw e;
-              }
+              s3Client.deleteObjects(deleteObjectsRequest);
+              return null;
             },
             S3Utils.S3RETRY,
             3
