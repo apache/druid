@@ -2161,7 +2161,7 @@ export function issueWithSampleData(
     if (oneOf(firstLine, '[', '[]')) {
       return (
         <>
-          This data looks like a multi-line JSON array. For Druid to parse a text file it must have
+          This data looks like a multi-line JSON array. For Druid to parse a text file, it must have
           one row per event. Consider reformatting your data as{' '}
           <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>.
         </>
