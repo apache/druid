@@ -58,9 +58,18 @@ public class AzureOutputConfigTest
     if (!tempDir.setWritable(false)) {
       throw new ISE("Unable to change the permission of temp folder for %s", this.getClass().getName());
     }
+    //noinspection ResultOfObjectAllocationIgnored
     Assert.assertThrows(
         DruidException.class,
         () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT)
     );
+  }
+
+  @Test
+  public void testTempDirectoryNotPresentButWritable() throws IOException
+  {
+    File tempDir = new File(temporaryFolder.newFolder() + "/notPresent1/notPresent2/notPresent3");
+    //noinspection ResultOfObjectAllocationIgnored
+    new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT);
   }
 }

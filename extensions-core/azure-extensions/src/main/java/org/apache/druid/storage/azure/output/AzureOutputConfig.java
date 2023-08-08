@@ -111,7 +111,7 @@ public class AzureOutputConfig
       );
     }
 
-    if (!tempDir.canRead() || !tempDir.canWrite()) {
+    if (!tempDir.mkdirs() || !tempDir.canRead() || !tempDir.canWrite()) {
       throw InvalidInput.exception("Cannot read or write on the 'tempDir' [%s]. "
                                    + "Please provide a different path to store the intermediate contents of AzureStorageConnector"
       );
