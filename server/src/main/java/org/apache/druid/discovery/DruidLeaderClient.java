@@ -265,8 +265,9 @@ public class DruidLeaderClient
 
     if (leader == null) {
       throw new IOE(
-          "A leader node could not be found for [%s] service. Check logs to validate service health.",
-          nodeRoleToWatch
+          "A leader node could not be found for [%s] service. "
+          + "Check logs of service [%s] to confirm it is healthy.",
+          nodeRoleToWatch, nodeRoleToWatch
       );
     } else {
       return leader;
