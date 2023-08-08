@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
@@ -175,16 +174,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
 
-    log.debug("Submitted [%d] kill tasks for [%d] datasources.%s",
-        submittedTasks,
-        submittedTasks,
-        submittedTasks < dataSourcesToKill.size()
-            ? StringUtils.format(
-            " Datasources skipped: %s",
-            ImmutableList.of(dataSourcesToKill).subList(submittedTasks - 1, dataSourcesToKill.size() - 1)
-        )
-            : ""
-    );
+    log.debug("Submitted [%d] kill tasks for [%d] datasources.", submittedTasks, dataSourcesToKill.size());
   }
 
   /**
