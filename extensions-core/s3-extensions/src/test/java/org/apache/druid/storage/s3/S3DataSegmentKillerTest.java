@@ -405,4 +405,19 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     );
     Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
+
+  @Test
+  public void test_kill_listOfSegments_retryableExceptionThrown() throws SegmentLoadingException
+  {
+    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
+    deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
+    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
+    EasyMock.expectLastCall().andThrow(new SdkClientException("Unable to execute HTTP request")).once();
+    EasyMock.expectLastCall().andVoid().times(2);
+
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_1));
+  }
 }

@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -150,7 +151,19 @@ public class S3DataSegmentKiller implements DataSegmentKiller
             s3Bucket,
             keysToDeleteStrings
         );
-        s3Client.deleteObjects(deleteObjectsRequest);
+        RetryUtils.retry(
+            () -> {
+              try {
+                s3Client.deleteObjects(deleteObjectsRequest);
+                return null;
+              }
+              catch (Exception e) {
+                throw e;
+              }
+            },
+            S3Utils.S3RETRY,
+            3
+        );
       }
       catch (MultiObjectDeleteException e) {
         hadException = true;
@@ -165,7 +178,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
             key
         ));
       }
-      catch (AmazonServiceException e) {
+      catch (Exception e) {
         hadException = true;
         log.noStackTrace().warn(e,
             "Unable to delete from bucket [%s], the following keys [%s]",
