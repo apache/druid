@@ -42,7 +42,7 @@ The simplest filter is a selector filter. The selector filter matches a specific
 | `type` | Must be "selector".| Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `value` | String value to match. | No. If not specified the filter matches NULL values. |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 The selector filter can only match against `STRING` (single and multi-valued), `LONG`, `FLOAT`, `DOUBLE` types. Use the newer null and equality filters to match against `ARRAY` or `COMPLEX` types.
 
@@ -207,7 +207,7 @@ The in filter can match input rows against a set of values, where a match occurs
 | `type` | Must be "in".| Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `values` | List of string value to match. | Yes |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 
 If an empty `values` array is passed to the "in" filter, it will simply return an empty result.
@@ -241,7 +241,7 @@ greater than, less than, greater than or equal to, less than or equal to, and "b
 | `lowerStrict` | Boolean indicating whether to perform strict comparison on the `lower` bound (">" instead of ">="). | No, default: `false` |
 | `upperStrict` | Boolean indicating whether to perform strict comparison on the upper bound ("<" instead of "<="). | No, default: `false`|
 | `ordering` | String that specifies the sorting order to use when comparing values against the bound. Can be one of the following values: `"lexicographic"`, `"alphanumeric"`, `"numeric"`, `"strlen"`, `"version"`. See [Sorting Orders](./sorting-orders.md) for more details. | No, default: `"lexicographic"`|
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 When the bound filter matches against numeric inputs, the string `lower` and `upper` bound values are best-effort coerced into a numeric value when using the `"numeric"` mode of ordering.
 
@@ -387,7 +387,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE ARRAY['a','b','c'] < arrayColumn < ARRAY['d','e','f']`, using ARRAY comparison.
+### Example: equivalent to `WHERE ARRAY['a','b','c'] < arrayColumn < ARRAY['d','e','f']`, using ARRAY comparison
 
 ```json
 {
@@ -413,7 +413,7 @@ supported are "%" (matches any number of characters) and "\_" (matches any one c
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `pattern` | String LIKE pattern, such as "foo%" or "___bar".| Yes |
 | `escape`| A string escape character that can be used to escape special characters. | No |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 Like filters support the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
@@ -436,7 +436,7 @@ The regular expression filter is similar to the selector filter, but using regul
 | `type` | Must be "regex".| Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `pattern` | String pattern to match - any standard [Java regular expression](http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html). | Yes |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 Note that it is often more optimal to use a like filter instead of a regex for simple matching of prefixes.
 
@@ -457,7 +457,7 @@ This filter converts the ISO 8601 intervals to long millisecond start/end ranges
 | `type` | Must be "interval". | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `intervals` | A JSON array containing ISO-8601 interval strings that defines the time ranges to filter on. | Yes |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 The interval filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
@@ -542,7 +542,7 @@ You can use search filters to filter on partial string matches.
 | `type` | Must be "search". | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `query`| A JSON object for the type of search. See [search query spec](#search-query-spec) for more information. | Yes |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 ### Search query spec
 
@@ -554,7 +554,7 @@ You can use search filters to filter on partial string matches.
 | `value` | A String value to search. | Yes |
 | `caseSensitive` | Whether the string comparison is case-sensitive or not. | No, default is false (insensitive) |
 
-#### Insensitive Contains
+#### Insensitive contains
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
@@ -602,7 +602,7 @@ The JavaScript filter matches a dimension against the specified JavaScript funct
 | `type` | Must be "javascript" | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `function` | JavaScript function which accepts the dimension value as a single argument, and returns either true or false. | Yes |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 ### Example: matching any dimension values for the dimension `name` between `'bar'` and `'foo'`
 
@@ -630,7 +630,7 @@ The following filter matches the values for which the extraction function has a 
 | `type` | Must be "extraction" | Yes |
 | `dimension` | Input column or virtual column name to filter. | Yes |
 | `value` | String value to match. | No. If not specified the filter will match NULL values. |
-| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details. | No |
+| `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 ### Example: matching dimension values in `[product_1, product_3, product_5]` for the column `product`
 
