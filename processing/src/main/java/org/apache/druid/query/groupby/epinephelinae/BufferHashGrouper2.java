@@ -76,7 +76,7 @@ public class BufferHashGrouper2<KeyType> extends AbstractBufferHashGrouper<KeyTy
     this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();
     this.useDefaultSorting = useDefaultSorting;
     
-    if(keySerde.isEmpty()) {
+    if (keySerde.isEmpty()) {
       init();
     }
   }
@@ -167,7 +167,7 @@ public class BufferHashGrouper2<KeyType> extends AbstractBufferHashGrouper<KeyTy
     offsetList.reset();
     hashTable.reset();
     keySerde.reset();
-    if(keySerde.isEmpty()) {
+    if (keySerde.isEmpty()) {
       KeyType key = keySerde.createKey();
       initSlot(key, hashFunction().applyAsInt(key));
     }

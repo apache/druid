@@ -75,10 +75,16 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
     this.bucketSize = HASH_SIZE + keySerde.keySize() + aggregators.spaceNeeded();
     this.useDefaultSorting = useDefaultSorting;
+    
+    if (keySerde.isEmpty()) {
+      // need to do early initialization - because when () is grouped;
+      // that must be in the resultset as well
+      init();
+    }
   }
 
   @Override
-  public void init()
+  public final void init()
   {
     if (!initialized) {
       ByteBuffer buffer = bufferSupplier.get();
@@ -158,6 +164,10 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     offsetList.reset();
     hashTable.reset();
     keySerde.reset();
+    if (keySerde.isEmpty()) {
+      KeyType key = keySerde.createKey();
+      initSlot(key, hashFunction().applyAsInt(key));
+    }
   }
 
   @Override

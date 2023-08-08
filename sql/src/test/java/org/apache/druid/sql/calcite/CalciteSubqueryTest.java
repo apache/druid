@@ -118,7 +118,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         + "WHERE cnt > 0",
         queryContext,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            GroupByQuery.builder()
                         .setDataSource(
                             new QueryDataSource(
                                 new TopNQueryBuilder()
@@ -169,7 +169,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         + ")",
         queryContext,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            GroupByQuery.builder()
                         .setDataSource(
                             new QueryDataSource(
                                 GroupByQuery.builder()
@@ -541,7 +541,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         + ") LIMIT 1\n",
         queryContext,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            GroupByQuery.builder()
                         .setDataSource(
                             new QueryDataSource(
                                 Druids.newTimeseriesQueryBuilder()
@@ -692,7 +692,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
           + "WHERE cnt > 0",
           modifiedQueryContext,
           ImmutableList.of(
-              Druids.newTimeseriesQueryBuilder()
+              GroupByQuery.builder()
                           .setDataSource(
                               new QueryDataSource(
                                   new TopNQueryBuilder()
@@ -879,7 +879,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo LIMIT 10 ) tmpA",
         queryContext,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            GroupByQuery.builder()
                         .setDataSource(
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)

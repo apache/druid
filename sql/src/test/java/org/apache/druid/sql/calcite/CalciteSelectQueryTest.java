@@ -2007,7 +2007,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "select count(distinct m1) from druid.foo where m1 < 111.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            GroupByQuery.builder()
+//            Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2019,9 +2020,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(
                             range("m1", ColumnType.LONG, null, 111.0, false, true))
                         .build())
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                 .build()
 
         ),

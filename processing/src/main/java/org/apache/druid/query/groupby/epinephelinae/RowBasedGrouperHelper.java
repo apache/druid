@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -255,19 +254,17 @@ public class RowBasedGrouperHelper
     );
 
     final Grouper<RowBasedKey> grouper;
-    if(query.getDimensions().isEmpty()) {
+    if (false && query.getDimensions().isEmpty()) {
       grouper = new BufferHashGrouper2<>(
           bufferSupplier,
           keySerdeFactory.factorize(),
           AggregatorAdapters.factorizeBuffered(
               columnSelectorFactory,
-              query.getAggregatorSpecs()
-          ),
+              query.getAggregatorSpecs()),
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets(),
-          true
-      );
+          true);
     } else if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
           bufferSupplier,
