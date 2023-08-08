@@ -106,7 +106,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
-
+  private static String WORKER_CATEGORY = "_k8s_worker_category";
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -370,13 +370,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, Long.valueOf(config.getCapacity() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, Long.valueOf(Math.min(config.getCapacity(), tasks.size())));
   }
 
   @Override
