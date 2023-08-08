@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
@@ -28,8 +29,11 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
@@ -452,7 +456,8 @@ public class UnnestStorageAdapter implements StorageAdapter
    * over multi-value strings. (Rather than treat them as arrays.) There isn't a method on the Filter interface that
    * tells us this, so resort to instanceof.
    */
-  private static boolean filterMapsOverMultiValueStrings(final Filter filter)
+  @VisibleForTesting
+  static boolean filterMapsOverMultiValueStrings(final Filter filter)
   {
     if (filter instanceof BooleanFilter) {
       for (Filter child : ((BooleanFilter) filter).getFilters()) {
@@ -468,7 +473,10 @@ public class UnnestStorageAdapter implements StorageAdapter
       return filter instanceof SelectorFilter
              || filter instanceof InDimFilter
              || filter instanceof LikeFilter
-             || filter instanceof BoundFilter;
+             || filter instanceof BoundFilter
+             || filter instanceof NullFilter
+             || filter instanceof EqualityFilter
+             || filter instanceof RangeFilter;
     }
   }
 
