@@ -63,6 +63,7 @@ public class CombiningSequence<T> implements Sequence<T>
     if (combiningAccumulator.accumulatedSomething()) {
       return accumulator.accumulate(combiningAccumulator.retVal, lastValue);
     } else {
+      // return accumulator.my_empty(initValue);
       return initValue;
     }
   }

@@ -24,4 +24,6 @@ package org.apache.druid.java.util.common.guava;
 public interface Accumulator<AccumulatedType, InType>
 {
   AccumulatedType accumulate(AccumulatedType accumulated, InType in);
+
+  // AccumulatedType my_empty(AccumulatedType initValue);
 }

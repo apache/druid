@@ -710,6 +710,20 @@ public class GroupByQueryEngineV2
         }
       }
 
+//      if (grouper == null && keySerde.isEmpty()) {
+//        grouper = new BufferHashGrouper2<>(
+//            Suppliers.ofInstance(buffer),
+//            keySerde,
+//            AggregatorAdapters.factorizeBuffered(
+//                selectorFactory,
+//                query.getAggregatorSpecs()
+//            ),
+//            querySpecificConfig.getBufferGrouperMaxSize(),
+//            querySpecificConfig.getBufferGrouperMaxLoadFactor(),
+//            querySpecificConfig.getBufferGrouperInitialBuckets(),
+//            true
+//        );
+//      }
       if (grouper == null) {
         grouper = new BufferHashGrouper<>(
             Suppliers.ofInstance(buffer),

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
@@ -253,7 +255,20 @@ public class RowBasedGrouperHelper
     );
 
     final Grouper<RowBasedKey> grouper;
-    if (concurrencyHint == -1) {
+    if(query.getDimensions().isEmpty()) {
+      grouper = new BufferHashGrouper2<>(
+          bufferSupplier,
+          keySerdeFactory.factorize(),
+          AggregatorAdapters.factorizeBuffered(
+              columnSelectorFactory,
+              query.getAggregatorSpecs()
+          ),
+          querySpecificConfig.getBufferGrouperMaxSize(),
+          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
+          querySpecificConfig.getBufferGrouperInitialBuckets(),
+          true
+      );
+    } else if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
           bufferSupplier,
           keySerdeFactory,

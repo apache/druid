@@ -1259,7 +1259,7 @@ public class DruidQuery
     }
     if (grouping.getDimensions().size() == 0 && grouping.getHavingFilter() == null) {
       int asd = 1;
-      return null;
+      // return null;
     }
 
     if (sorting != null && sorting.getOffsetLimit().hasLimit() && sorting.getOffsetLimit().getLimit() <= 0) {

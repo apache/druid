@@ -237,6 +237,11 @@ public interface Grouper<KeyType> extends Closeable
      * and {@link #bufferComparator()} may no longer work properly on previously-serialized keys.
      */
     void reset();
+
+    default boolean isEmpty()
+    {
+      return keySize() == 0;
+    }
   }
 
   interface BufferComparator
