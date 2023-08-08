@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -28,11 +29,26 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.BoundFilter;
+import org.apache.druid.segment.filter.ColumnComparisonFilter;
+import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.filter.LikeFilter;
+import org.apache.druid.segment.filter.NotFilter;
 import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -391,6 +407,48 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       Assert.assertEquals(1, count);
       return null;
     });
+  }
+
+  @Test
+  public void testAllowedFiltersForPushdown()
+  {
+    Filter[] allowed = new Filter[] {
+        new SelectorFilter("column", "value"),
+        new InDimFilter("column", ImmutableSet.of("a", "b")),
+        new LikeFilter("column", null, LikeDimFilter.LikeMatcher.from("hello%", null), null),
+        new BoundFilter(
+            new BoundDimFilter("column", "a", "b", true, true, null, null, null)
+        ),
+        NullFilter.forColumn("column"),
+        new EqualityFilter("column", ColumnType.LONG, 1234L, null),
+        new RangeFilter("column", ColumnType.LONG, 0L, 1234L, true, false, null)
+    };
+    // not exhaustive
+    Filter[] notAllowed = new Filter[] {
+        TrueFilter.instance(),
+        FalseFilter.instance(),
+        new ColumnComparisonFilter(ImmutableList.of(DefaultDimensionSpec.of("col1"), DefaultDimensionSpec.of("col2")))
+    };
+
+    for (Filter f : allowed) {
+      Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(f));
+    }
+    for (Filter f : notAllowed) {
+      Assert.assertFalse(UnnestStorageAdapter.filterMapsOverMultiValueStrings(f));
+    }
+
+    Filter notAnd = new NotFilter(
+        new AndFilter(
+            Arrays.asList(allowed)
+        )
+    );
+
+    Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(notAnd));
+    Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(new OrFilter(Arrays.asList(allowed))));
+    Assert.assertTrue(UnnestStorageAdapter.filterMapsOverMultiValueStrings(new NotFilter(notAnd)));
+    Assert.assertFalse(
+        UnnestStorageAdapter.filterMapsOverMultiValueStrings(new NotFilter(new OrFilter(Arrays.asList(notAllowed))))
+    );
   }
 }
 
