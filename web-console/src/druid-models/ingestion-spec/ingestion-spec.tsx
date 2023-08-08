@@ -2179,7 +2179,7 @@ export function issueWithSampleData(
       const formatLabel = format.type.toUpperCase();
       return (
         <>
-          {`This ${formatLabel} data has values that contain new lines. Druid requires ${formatLabel} files to have one event per line and thus ${formatLabel} values can not contain new lines. Consider encoding new lines in the values of your ${formatLabel} with some special delimiter.`}
+          {`This ${formatLabel} data has values that contain new lines. Druid requires ${formatLabel} files to have one event per line, so ${formatLabel} values can not contain new lines. Consider encoding new lines in the values of your ${formatLabel} with some special delimiter.`}
         </>
       );
     }
