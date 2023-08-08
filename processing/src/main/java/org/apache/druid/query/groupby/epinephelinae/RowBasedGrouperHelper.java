@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
@@ -254,18 +253,7 @@ public class RowBasedGrouperHelper
     );
 
     final Grouper<RowBasedKey> grouper;
-    if (false && query.getDimensions().isEmpty()) {
-      grouper = new BufferHashGrouper2<>(
-          bufferSupplier,
-          keySerdeFactory.factorize(),
-          AggregatorAdapters.factorizeBuffered(
-              columnSelectorFactory,
-              query.getAggregatorSpecs()),
-          querySpecificConfig.getBufferGrouperMaxSize(),
-          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
-          querySpecificConfig.getBufferGrouperInitialBuckets(),
-          true);
-    } else if (concurrencyHint == -1) {
+    if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
           bufferSupplier,
           keySerdeFactory,

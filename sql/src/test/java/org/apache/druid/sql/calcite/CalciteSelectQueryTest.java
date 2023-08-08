@@ -2041,7 +2041,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            GroupByQuery.builder()
+//            Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2054,9 +2055,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"1\",null)",
                                 ColumnType.LONG))
                         .build())
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
                 .build()
 
         ),
