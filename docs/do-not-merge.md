@@ -46,8 +46,8 @@ As part of the type-aware schema discovery improvements, array column types are 
 For more information about this feature, see the following:
 
 -  [Type-aware schema discovery](https://druid.apache.org/docs/latest/ingestion/schema-design.html#type-aware-schema-discovery)
--  [26.0.0 release notes for Schema auto-discovery](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29-schema-auto-discovery-%28experimental%29).
-- [26.0.0 release notes for array column types](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29).
+-  [26.0.0 release notes for Schema auto-discovery](https://github.com/apache/druid/releases#26.00-highlights-auto-type-column-schema-%28experimental%29-schema-auto-discovery-%28experimental%29)
+- [26.0.0 release notes for array column types](https://github.com/apache/druid/releases#26.0.0-highlights-auto-type-column-schema-%28experimental%29)
 
 ## Smart segment loading
 
@@ -80,7 +80,7 @@ Note that Druid's SQL planner uses these new filters in place of their older cou
 
 You can use these filters for filtering equality and ranges on ARRAY columns instead of only strings with the previous selector and bound filters.
 
-For more information, see [Query filters](https://druid.apache.org/docs/latest/querying/filters.html)
+For more information, see [Query filters](https://druid.apache.org/docs/latest/querying/filters.html).
 
 [#14542](https://github.com/apache/druid/pull/14542)
 
@@ -109,7 +109,7 @@ Druid now fully supports Java 17.
 
 Support for Hadoop 2 is now deprecated. It will be removed in a future release.
 
-For more information, see the [upgrade notes](#hadoop-2-deprecated-1)
+For more information, see the [upgrade notes](#hadoop-2-deprecated-1).
 
 # Additional features and improvements
 
@@ -164,7 +164,7 @@ To fetch the complete result set, run the query using the native engine.
 
 ### New context parameter for query results
 
-Added a query context parameter `MultiStageQueryContext` to determine whether the result of an MSQ SELECT query is limited .
+Added a query context parameter `MultiStageQueryContext` to determine whether the result of an MSQ SELECT query is limited.
 
 [#14476](https://github.com/apache/druid/pull/14476)
 
