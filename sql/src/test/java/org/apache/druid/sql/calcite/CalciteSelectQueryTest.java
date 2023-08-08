@@ -2008,7 +2008,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
-//            Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2042,7 +2041,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
-//            Druids.newTimeseriesQueryBuilder()
                 .setDataSource(
                     GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)

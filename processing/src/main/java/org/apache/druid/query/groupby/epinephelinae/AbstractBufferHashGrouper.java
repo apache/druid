@@ -139,17 +139,22 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
-    final boolean bucketWasUsed = hashTable.isBucketUsed(bucket);
-    final ByteBuffer tableBuffer = hashTable.getTableBuffer();
 
-    // Set up key and initialize the aggs if this is a new bucket.
-    if (!bucketWasUsed) {
-      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
-      aggregators.init(tableBuffer, bucketStartOffset + baseAggregatorOffset);
-      newBucketHook(bucketStartOffset);
-    }
+    ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
+   
   }
   
+  private void ensureBucketInitialized(int bucket, int bucketStartOffset, ByteBuffer keyBuffer, int keyHash)
+  {
+    // Set up key and initialize the aggs if this is a new bucket.
+    if (!hashTable.isOffsetUsed(bucketStartOffset)) {
+      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
+      aggregators.init(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
+      newBucketHook(bucketStartOffset);
+    }
+    
+  }
+
   @Override
   public AggregateResult aggregate(KeyType key, int keyHash)
   {
@@ -177,22 +182,14 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
-    final boolean bucketWasUsed = hashTable.isBucketUsed(bucket);
-    final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-
-    // Set up key and initialize the aggs if this is a new bucket.
-    if (!bucketWasUsed) {
-      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
-      aggregators.init(tableBuffer, bucketStartOffset + baseAggregatorOffset);
-      newBucketHook(bucketStartOffset);
-    }
+    ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
 
     if (canSkipAggregate(bucketStartOffset)) {
       return AggregateResult.ok();
     }
 
     // Aggregate the current row.
-    aggregators.aggregateBuffered(tableBuffer, bucketStartOffset + baseAggregatorOffset);
+    aggregators.aggregateBuffered(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
 
     afterAggregateHook(bucketStartOffset);
 

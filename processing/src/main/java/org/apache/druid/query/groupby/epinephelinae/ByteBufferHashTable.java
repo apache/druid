@@ -348,7 +348,7 @@ public class ByteBufferHashTable
 
   protected boolean isBucketUsed(final int bucket)
   {
-    return (tableBuffer.get(bucket * bucketSizeWithHash) & 0x80) == 0x80;
+    return isOffsetUsed(getOffsetForBucket(bucket));
   }
 
   protected boolean isOffsetUsed(final int bucketOffset)
