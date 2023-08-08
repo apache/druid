@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure.output;
 
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
@@ -69,6 +70,15 @@ public class AzureOutputConfigTest
   public void testTempDirectoryNotPresentButWritable() throws IOException
   {
     File tempDir = new File(temporaryFolder.newFolder() + "/notPresent1/notPresent2/notPresent3");
+    //noinspection ResultOfObjectAllocationIgnored
+    new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT);
+  }
+
+  @Test
+  public void testTempDirectoryPresent() throws IOException
+  {
+    File tempDir = new File(temporaryFolder.newFolder() + "/notPresent1/notPresent2/notPresent3");
+    FileUtils.mkdirp(tempDir);
     //noinspection ResultOfObjectAllocationIgnored
     new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT);
   }

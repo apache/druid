@@ -20,12 +20,15 @@
 package org.apache.druid.storage.azure.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.RetryUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Objects;
 
 /**
@@ -111,10 +114,20 @@ public class AzureOutputConfig
       );
     }
 
-    if (!tempDir.mkdirs() || !tempDir.canRead() || !tempDir.canWrite()) {
-      throw InvalidInput.exception("Cannot read or write on the 'tempDir' [%s]. "
-                                   + "Please provide a different path to store the intermediate contents of AzureStorageConnector"
-      );
+    try {
+      FileUtils.mkdirp(tempDir);
+    }
+    catch (IOException e) {
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, "Unable to create temporary directory [%s]", tempDir.getAbsolutePath());
+    }
+
+    if (!tempDir.canRead() || !tempDir.canWrite()) {
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Cannot read or write on the 'tempDir' [%s]. "
+                                 + "Please provide a different path to store the intermediate contents of AzureStorageConnector");
     }
   }
 
