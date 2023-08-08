@@ -473,7 +473,11 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
                         .setAggregatorSpecs(
                             new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                             NullHandling.replaceWithDefault() ?
-                            new CountAggregatorFactory("_a0:count"),
+                            new CountAggregatorFactory("_a0:count") :
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("_a0:count"),
+                                notNull("a0")
+                            ),
                             new FixedBucketsHistogramAggregatorFactory(
                                 "_a1:agg",
                                 "a0",
