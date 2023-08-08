@@ -349,10 +349,10 @@ SQL-based ingestion supports using durable storage to store intermediate files t
 
 ### Durable storage configurations
 
-Durable storage is supported on Amazon S3 storage and Microsoft's Azure storage. There are a few common configurations that controls the behaviour for both the services as documented below. Apart from the common configurations,
+Durable storage is supported on Amazon S3 storage and Microsoft's Azure storage. There are a few common configurations that controls the behavior for both the services as documented below. Apart from the common configurations,
 there are a few properties specific to each storage that must be set.
 
-Common properties to configure the behaviour of durable storage
+Common properties to configure the behavior of durable storage
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
@@ -367,14 +367,14 @@ Following properties need to be set in addition to the common properties to enab
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
 |`druid.msq.intermediate.storage.bucket` | n/a | Required. The S3 bucket where the files are uploaded to and download from |
-|`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and donot share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well.  |
+|`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well.  |
 
 Following properties must be set in addition to the common properties to enable durable storage on Azure.  
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
 |`druid.msq.intermediate.storage.container` | n/a | Required. The Azure container where the files are uploaded to and downloaded from.  |
-|`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the container to namespace the connector's files. Provide a unique value for the prefix and donot share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. |
+|`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the container to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. |
 
 Durable storage creates files on the remote storage and is cleaned up once the job no longer requires those files. However, due to failures causing abrupt exit of the tasks, these files might not get cleaned up.
 Therefore, there are certain properties that you configure on the Overlord specifically to clean up intermediate files for the tasks that have completed and would no longer require these files:
