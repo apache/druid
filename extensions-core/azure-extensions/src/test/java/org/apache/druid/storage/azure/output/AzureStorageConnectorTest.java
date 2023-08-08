@@ -69,7 +69,7 @@ public class AzureStorageConnectorTest
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
     EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path), EasyMock.anyInt()))
+    EasyMock.expect(azureStorage.getBlockBlobExists(EasyMock.capture(bucket), EasyMock.capture(path), EasyMock.anyInt()))
             .andReturn(true);
     EasyMock.replay(azureStorage);
     Assert.assertTrue(storageConnector.pathExists(TEST_FILE));
@@ -84,7 +84,7 @@ public class AzureStorageConnectorTest
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
     EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.getBlobExists(EasyMock.capture(bucket), EasyMock.capture(path), EasyMock.anyInt()))
+    EasyMock.expect(azureStorage.getBlockBlobExists(EasyMock.capture(bucket), EasyMock.capture(path), EasyMock.anyInt()))
             .andReturn(false);
     EasyMock.replay(azureStorage);
     Assert.assertFalse(storageConnector.pathExists(TEST_FILE));
@@ -99,10 +99,10 @@ public class AzureStorageConnectorTest
     EasyMock.reset(azureStorage);
 
     String data = "test";
-    EasyMock.expect(azureStorage.getBlobLength(EasyMock.anyString(), EasyMock.anyString()))
+    EasyMock.expect(azureStorage.getBlockBlobLength(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(4L);
     EasyMock.expect(
-        azureStorage.getBlobInputStream(
+        azureStorage.getBlockBlobInputStream(
             EasyMock.anyLong(),
             EasyMock.anyLong(),
             EasyMock.anyString(),
@@ -130,7 +130,7 @@ public class AzureStorageConnectorTest
       for (long length = 1; length <= data.length() - start; ++length) {
         String dataQueried = data.substring(start, start + ((Long) length).intValue());
         EasyMock.reset(azureStorage);
-        EasyMock.expect(azureStorage.getBlobInputStream(
+        EasyMock.expect(azureStorage.getBlockBlobInputStream(
                     EasyMock.anyLong(),
                     EasyMock.anyLong(),
                     EasyMock.anyString(),

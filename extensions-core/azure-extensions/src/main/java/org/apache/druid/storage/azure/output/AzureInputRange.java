@@ -21,18 +21,37 @@ package org.apache.druid.storage.azure.output;
 
 import java.util.Objects;
 
+/**
+ * Represents a chunk of the Azure blob
+ */
 public class AzureInputRange
 {
+
+  /**
+   * Starting location in the blob stream
+   */
   private final long start;
+
+  /**
+   * Size of the blob stream that this object represents
+   */
   private final long size;
-  private final String bucket;
+
+  /**
+   * Container where the blob resides
+   */
+  private final String container;
+
+  /**
+   * Absolute path of the blob
+   */
   private final String path;
 
-  public AzureInputRange(long start, long size, String bucket, String path)
+  public AzureInputRange(long start, long size, String container, String path)
   {
     this.start = start;
     this.size = size;
-    this.bucket = bucket;
+    this.container = container;
     this.path = path;
   }
 
@@ -46,9 +65,9 @@ public class AzureInputRange
     return size;
   }
 
-  public String getBucket()
+  public String getContainer()
   {
-    return bucket;
+    return container;
   }
 
   public String getPath()
@@ -68,13 +87,13 @@ public class AzureInputRange
     AzureInputRange that = (AzureInputRange) o;
     return start == that.start
            && size == that.size
-           && Objects.equals(bucket, that.bucket)
+           && Objects.equals(container, that.container)
            && Objects.equals(path, that.path);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(start, size, bucket, path);
+    return Objects.hash(start, size, container, path);
   }
 }

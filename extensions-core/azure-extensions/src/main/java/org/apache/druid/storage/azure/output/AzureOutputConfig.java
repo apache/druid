@@ -28,6 +28,9 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
+/**
+ * Configuration of the Azure storage connector
+ */
 public class AzureOutputConfig
 {
   @JsonProperty

@@ -36,6 +36,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Implementation of the storage connector that facilitates reading and writing from Azure's blob storage.
+ * This extends the {@link ChunkingStorageConnector} so that the downloads are in a chunked manner.
+ */
 public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRange>
 {
 
@@ -58,7 +62,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public ChunkingStorageConnectorParameters<AzureInputRange> buildInputParams(String path) throws IOException
   {
     try {
-      return buildInputParams(path, 0, azureStorage.getBlobLength(config.getContainer(), objectPath(path)));
+      return buildInputParams(path, 0, azureStorage.getBlockBlobLength(config.getContainer(), objectPath(path)));
     }
     catch (URISyntaxException | StorageException e) {
       throw new IOException(e);
@@ -88,10 +92,10 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
           public InputStream open(AzureInputRange inputRange) throws IOException
           {
             try {
-              return azureStorage.getBlobInputStream(
+              return azureStorage.getBlockBlobInputStream(
                   inputRange.getStart(),
                   inputRange.getSize(),
-                  inputRange.getBucket(),
+                  inputRange.getContainer(),
                   inputRange.getPath(),
                   config.getMaxRetry()
               );
@@ -107,7 +111,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
             AzureInputRange newInputRange = new AzureInputRange(
                 inputRange.getStart() + offset,
                 Math.max(inputRange.getSize() - offset, 0),
-                inputRange.getBucket(),
+                inputRange.getContainer(),
                 inputRange.getPath()
             );
             return open(newInputRange);
@@ -122,7 +126,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
   public boolean pathExists(String path) throws IOException
   {
     try {
-      return azureStorage.getBlobExists(config.getContainer(), objectPath(path), config.getMaxRetry());
+      return azureStorage.getBlockBlobExists(config.getContainer(), objectPath(path), config.getMaxRetry());
     }
     catch (URISyntaxException | StorageException e) {
       throw new IOException(e);

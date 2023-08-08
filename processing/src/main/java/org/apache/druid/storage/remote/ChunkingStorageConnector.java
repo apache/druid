@@ -48,7 +48,18 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
+  /**
+   * Default size for chunking of the storage connector. Set to 100MBs to keep the chunk size small relative to the
+   * total frame size, while also preventing a large number of calls to the remote storage. While fetching a single
+   * file, 100MBs would be required in the disk space.
+   */
   private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 100_000_000;
+
+  /**
+   * Default fetch buffer size while copying from the remote location to the download file. Set to default sizing given
+   * in the {@link org.apache.commons.io.IOUtils}
+   */
+  private static final int FETCH_BUFFER_SIZE_BYTES = 8 * 1024;
 
   private final long chunkSizeBytes;
 
@@ -146,7 +157,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                       params.getMaxRetry()
                   ),
                   outFile,
-                  new byte[8 * 1024],
+                  new byte[FETCH_BUFFER_SIZE_BYTES],
                   Predicates.alwaysFalse(),
                   1,
                   StringUtils.format(
