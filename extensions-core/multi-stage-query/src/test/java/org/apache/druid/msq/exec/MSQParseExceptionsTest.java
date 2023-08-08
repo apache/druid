@@ -104,7 +104,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
   }
 
   @Test
-  public void testIngestWithNullByteInSqlExpression() throws IOException
+  public void testIngestWithNullByteInSqlExpression()
   {
 
     RowSignature rowSignature = RowSignature.builder()
@@ -130,14 +130,11 @@ public class MSQParseExceptionsTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedMSQFault(
             new InvalidNullByteFault(
-                StringUtils.format(
-                    "external input source: LocalInputSource{baseDir=\"null\", filter=null, files=[%s]}",
-                    "f"
-                ),
+                "external input source: InlineInputSource{data='{\"desc\":\"Row with NULL\",\"text\":\"There is a null in\\u0000 here somewhere\"}\n'}",
                 1,
-                "agent_category",
-                "Personal computer\u0000",
-                17
+                "text",
+                "There is A null in\u0000 here somewhere",
+                18
             )
         )
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
