@@ -22,7 +22,6 @@ package org.apache.druid.discovery;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -257,7 +256,7 @@ public class DruidLeaderClient
     );
   }
 
-  private String getCurrentKnownLeader(final boolean cached)
+  private String getCurrentKnownLeader(final boolean cached) throws IOException
   {
     final String leader = currentKnownLeader.accumulateAndGet(
         null,
@@ -265,13 +264,10 @@ public class DruidLeaderClient
     );
 
     if (leader == null) {
-      throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build(
-                              "No leader server found for NodeRole [%s] and leaderRequestPath [%s].",
-                              nodeRoleToWatch,
-                              leaderRequestPath
-                          );
+      throw new IOE(
+          "A leader node could not be found for [%s] service. Check logs to validate service health.",
+          nodeRoleToWatch
+      );
     } else {
       return leader;
     }
