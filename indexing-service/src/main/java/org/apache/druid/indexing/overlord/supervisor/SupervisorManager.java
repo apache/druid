@@ -215,7 +215,7 @@ public class SupervisorManager
     if (resetDataSourceMetadata == null) {
       supervisor.lhs.reset(null);
     } else {
-      supervisor.lhs.resetOffsets(resetDataSourceMetadata, true);
+      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
     }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {

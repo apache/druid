@@ -69,14 +69,12 @@ public interface Supervisor
   void reset(DataSourceMetadata dataSourceMetadata);
 
   /**
-   * Reset offsets with provided dataSource metadata.
+   * Reset offsets with provided dataSource metadata. The resulting stored offsets should be a union of existing checkpointed
+   * offsets with provided offsets.
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
-   * @param setOffsetsInMetadata Indicates whether partitions in the provided metadata offsets must be set or cleared.
-   *                             If true, the resulting stored offsets should be a union of existing checkpointed offsets with provided offsets.
-   *                             If false, the resulting stored offsets should be a difference of existing checkpointed offsets with provided offsets.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's state.
    */
-  void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata);
+  void resetOffsets(DataSourceMetadata resetDataSourceMetadata);
 
   /**
    * The definition of checkpoint is not very strict as currently it does not affect data or control path.

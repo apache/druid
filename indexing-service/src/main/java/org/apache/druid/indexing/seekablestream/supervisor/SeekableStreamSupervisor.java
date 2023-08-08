@@ -99,6 +99,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Null;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -1013,14 +1014,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Reset offsets with provided dataSource metadata. Validates {@code resetDataSourceMetadata},
-   * creates a {@code ResetNotice} with the metadata and adds it to the notice queue.
+   * creates a {@code ResetNotice} with the metadata and adds it to the notice queue. The resulting stored offsets
+   * is a union of existing checkpointed offsets with provided offsets.
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
-   * @param setOffsetsInMetadata If true, the resulting stored offsets should be a union of existing checkpointed offsets with provided offsets.
-   *                             If false, the resulting stored offsets should be a difference of existing checkpointed offsets with provided offsets.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
   @Override
-  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata)
+  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
   {
     if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
@@ -1064,9 +1064,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    log.info("Posting ResetNotice with reset dataSource metadata[%s] and setOffsetsInMetadata[%s]",
-             resetDataSourceMetadata, setOffsetsInMetadata);
-    addNotice(new ResetNotice(resetDataSourceMetadata, setOffsetsInMetadata));
+    log.info("Posting ResetNotice with reset dataSource metadata[%s]", resetDataSourceMetadata);
+    addNotice(new ResetNotice(resetDataSourceMetadata, true));
   }
 
   public ReentrantLock getRecordSupplierLock()
@@ -1645,10 +1644,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   *
-   * @param dataSourceMetadata an optional reset data source metadata. If null, deletes all stored offsets. If non-null, it resets/clears offsets
-   *                          based on {@code setOffsetsInMetadata}.
-   * @param setOffsetsInMetadata Indicates whether provided metadatas offsets should be cleared or set.
+   * @param dataSourceMetadata An optional data source metadata to reset. If set to null, all stored offsets will be deleted.
+   *                           If non-null, offsets will be set/cleared based on {@code setOffsetsInMetadata}.
+   * @param setOffsetsInMetadata Indicates whether partitions in the provided metadata offsets must be set or cleared.
+   *                             If true, the resulting stored offsets will be a union of existing checkpointed offsets with provided offsets.
+   *                             If false, the resulting stored offsets will be a difference of existing checkpointed offsets from provided offsets.
    */
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata, boolean setOffsetsInMetadata)

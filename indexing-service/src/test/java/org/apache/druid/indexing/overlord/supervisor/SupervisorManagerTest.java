@@ -347,7 +347,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    supervisor1.resetOffsets(datasourceMetadata, true);
+    supervisor1.resetOffsets(datasourceMetadata);
     replayAll();
 
     manager.start();

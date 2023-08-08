@@ -164,7 +164,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
       }
 
       @Override
-      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata, boolean setOffsetsInMetadata)
+      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
       {
       }
 

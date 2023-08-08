@@ -1145,7 +1145,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(0, supervisor.getNoticesQueueSize());
     Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
 
-    supervisor.resetOffsets(resetMetadata, true);
+    supervisor.resetOffsets(resetMetadata);
 
     // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -1237,7 +1237,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(0, supervisor.getNoticesQueueSize());
     Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
 
-    supervisor.resetOffsets(resetMetadata, true);
+    supervisor.resetOffsets(resetMetadata);
 
     // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -1282,7 +1282,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     MatcherAssert.assertThat(
         Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(null, true)
+            supervisor.resetOffsets(null)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Reset dataSourceMetadata is required for resetOffsets."
@@ -1329,7 +1329,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     MatcherAssert.assertThat(
         Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(dataSourceMetadata, true)
+            supervisor.resetOffsets(dataSourceMetadata)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Stream[i-am-not-real] doesn't exist in the supervisor[testSupervisorId]. Supervisor is consuming stream[stream]."
@@ -1373,7 +1373,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
     MatcherAssert.assertThat(
         Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(dataSourceMetadata, true)
+            supervisor.resetOffsets(dataSourceMetadata)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Partition[1] doesn't exist in checkpointed metadata for stream[stream] and supervisor[testSupervisorId]. Supervisor is consuming partitions[[0]]."
