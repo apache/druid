@@ -35,7 +35,6 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -74,7 +73,6 @@ import java.util.stream.Collectors;
 @Path("/druid/indexer/v1/supervisor")
 public class SupervisorResource
 {
-  private static final EmittingLogger log = new EmittingLogger(SupervisorResource.class);
   private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_READ_RA_GENERATOR =
       supervisorSpec -> {
         if (supervisorSpec.getSpec() == null) {
@@ -498,7 +496,6 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response reset(@PathParam("id") final String id)
   {
-    log.info("Existing reset on supervisor NO BODY request (backwards compatible)...[%s]", id);
     return handleResetRequest(id, null);
   }
 
@@ -512,7 +509,6 @@ public class SupervisorResource
       @Nullable final DataSourceMetadata resetDataSourceMetadata
   )
   {
-    log.info("ResetOffsets on supervisor with body request (NEW method)...[%s] and [%s]", id, resetDataSourceMetadata);
     return handleResetRequest(id, resetDataSourceMetadata);
   }
 
