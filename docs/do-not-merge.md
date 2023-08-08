@@ -43,10 +43,6 @@ Type-aware schema auto-discovery is now generally available. Druid can determine
 
 As part of the type-aware schema discovery improvements, array column types are now generally available. Druid can determine the column types for your schema and assign them to these array column types when you ingest data using type-aware schema auto-discovery with the `auto` column type.
 
-Keep the following in mind when using these features:
-
-- TBD
-
 For more information about this feature, see the following:
 
 -  [Type-aware schema discovery](https://druid.apache.org/docs/latest/ingestion/schema-design.html#type-aware-schema-discovery)
@@ -62,7 +58,7 @@ The Coordinator can now prioritize load of more recent segments and segments tha
 
 Additionally, leadership changes have less impact now, and the Coordinator doesn't get stuck even if re-election happens while a Coordinator run is in progress.
 
-Lastly, the `cost` balancer strategy performs much better now and is capable of moving more segments in a single Coordinator run. These improvements were made by borrowing ideas from the `cachingCost` strategy.
+Lastly, the `cost` balancer strategy performs much better now and is capable of moving more segments in a single Coordinator run. These improvements were made by borrowing ideas from the `cachingCost` strategy. We recommend using `cost` instead of `cachingCost` since `cachingCost` is now deprecated.
 
 For more information, see the following:
 
@@ -126,9 +122,7 @@ Previously, queries would successfully plan if any CLUSTERED BY columns containe
 
 The MSQ fault, `InsertCannotOrderByDescending`, is deprecated. An INSERT or REPLACE query containing a CLUSTERED BY expression cannot be in descending order. Druid's segment generation code only supports ascending order. Instead of the fault, Druid now throws a query `ValidationException`.
 
-[#14436](https://github.com/apache/druid/pull/14436)
-
-[#14370](https://github.com/apache/druid/pull/14370)
+[#14436](https://github.com/apache/druid/pull/14436) [#14370](https://github.com/apache/druid/pull/14370)
 
 ### Improved segment sizes
 
@@ -140,8 +134,7 @@ The default `clusterStatisticsMergeMode` is now `SEQUENTIAL`, which provide more
 
 - The same aggregator can now have two output names [#14367](https://github.com/apache/druid/pull/14367)
 - Enabled using functions as inputs for `index` and `length` parameters [#14480](https://github.com/apache/druid/pull/14480)
-- Improved parse exceptions ASK FOR PR
-- Temporary storage as a runtime parameter. MSQ will start honoring changes to the Middle Manager. ASK FOR PR TBD
+- Improved parse exceptions [#14398](https://github.com/apache/druid/pull/14398)
 
 ## Ingestion
 
@@ -208,7 +201,7 @@ Updated EARLIEST_BY and LATEST_BY function signatures as follows:
 
 Use the new  `INFORMATION_SCHEMA.ROUTINES` to programmatically get information about the functions that Druid SQL supports. 
 
-For more information, such as the available columns, see [ROUTINES table](https://druid.apache.org/docs/latest/querying/sql-metadata-tables.html#routines-table)
+For more information, such as the available columns, see [ROUTINES table](https://druid.apache.org/docs/latest/querying/sql-metadata-tables.html#routines-table).
 
 [#14378](https://github.com/apache/druid/pull/14378)
 
@@ -231,16 +224,11 @@ Set it to one of the following:
 
 The EXPLAIN PLAN result includes a new column `ATTRIBUTES` that describes the attributes of a query.
 
-For more information, see [SQL translation](https://druid.apache.org/docs/latest/querying/sql-translation.html)
+For more information, see [SQL translation](https://druid.apache.org/docs/latest/querying/sql-translation.html).
 
 [#14391](https://github.com/apache/druid/pull/14391)
 
-### New query filters
-
-TBD
-
 ## Metrics and monitoring
-
 
 ### Monitor for Overlord and Coordinator service health
 
@@ -249,8 +237,6 @@ Added a new monitor `ServiceStatusMonitor` to monitor the service health of the 
 [#14443](https://github.com/apache/druid/pull/14443)
 
 ### New Broker metrics
-
-TBD for name changes
 
 The following metrics are now available for Brokers:
 
@@ -289,8 +275,6 @@ Added `groupId` to task metrics emitted by the Overlord. This is helpful for gro
 
 ### New metrics for monitoring sync status of `HttpServerInventoryView`
 
-TBD for name change
-
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|-----------|----------|
 |`serverview/sync/healthy`|Sync status of the Coordinator/Broker with a segment-loading server such as a Historical or Peon. Emitted by the Coordinator and Brokers only when HTTP-based server view is enabled. This metric can be used in conjunction with `segment/serverview/sync/unstableTime` to debug slow startup of the Coordinator.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
@@ -308,8 +292,6 @@ For the related metrics, see [new metrics for task completion updates](#new-metr
 
 
 ### Enabled empty tiered replicants for load rules
-
-MENTION THAT THIS IS PART OF QUERY DEEP STORAGE
 
 Druid now allows empty tiered replicants in load rules. Use this feature along with [query from deep storage](#query-from-deep-storage-experimental) to increase the amount of data you can query without needing to scale your Historical processes.
 
@@ -362,7 +344,6 @@ There's now a dialog for managing your dynamic compaction config:
 * Added stateful filter URLs for all views. [#14395](https://github.com/apache/druid/pull/14395)
 
 
-
 ## Extensions
 
 ### Improved segment metadata for Kafka emitter extension
@@ -383,7 +364,7 @@ druid.emitter.kafka.segmentMetadata.topic=foo
 
 You can now ingest data stored in Iceberg and query that data directly by [querying from deep storage](#query-from-deep-storage-experimental). Support for Iceberg is available through the new community extension. 
 
-For more information, see [Iceberg extension](https://druid.apache.org/docs/latest/development/extensions-contrib/ice-berg.html)
+For more information, see [Iceberg extension](https://druid.apache.org/docs/latest/development/extensions-contrib/ice-berg.html).
 
 [#14329](https://github.com/apache/druid/pull/14329)
 
@@ -392,8 +373,8 @@ For more information, see [Iceberg extension](https://druid.apache.org/docs/late
 The following dependencies have had their versions bumped:
 
 * Apache DataSketches has been upgraded to 4.1.0. Additionally, the datasketches-memory component has been upgraded to version 2.2.0. [#14430](https://github.com/apache/druid/pull/14430)
-* Hadoop has been upgraded to version 3.3.6 [#14489](https://github.com/apache/druid/pull/14489)
-* Avro has been upgraded to version 1.11.1 [#14440](https://github.com/apache/druid/pull/14440)
+* Hadoop has been upgraded to version 3.3.6. [#14489](https://github.com/apache/druid/pull/14489)
+* Avro has been upgraded to version 1.11.1. [#14440](https://github.com/apache/druid/pull/14440)
 
 ## Developer notes
 
@@ -420,13 +401,9 @@ The maximum input bytes for each worker for SQL-based ingestion is now 512 MiB (
 
 When using the built-in `FileConfigProvider` for Kafka, interpolations are now intercepted by the JsonConfigurator instead of being passed down to the Kafka provider. This breaks existing deployments.
 
-For more information, see [KIP-297](https://cwiki.apache.org/confluence/display/KAFKA/KIP-297%3A+Externalizing+Secrets+for+Connect+Configurations)
+For more information, see [KIP-297](https://cwiki.apache.org/confluence/display/KAFKA/KIP-297%3A+Externalizing+Secrets+for+Connect+Configurations).
 
 [#13023](https://github.com/apache/druid/pull/13023)
-
-### SQL compatibility mode
-
-TBD
 
 ### Hadoop 2 deprecated
 
@@ -438,7 +415,7 @@ Consider migrating to SQL-based ingestion or native ingestion if you are using H
 
 GroupBy queries using the v1 legacy engine has been deprecated. It will be removed in future releases. Use v2 instead. Note that v2 has been the default GroupBy engine.
 
-For more information, see [GroupBy queries](https://druid.apache.org/docs/latest/querying/groupbyquery.html)
+For more information, see [GroupBy queries](https://druid.apache.org/docs/latest/querying/groupbyquery.html).
 
 ### Push-based real-time ingestion deprecated
 
