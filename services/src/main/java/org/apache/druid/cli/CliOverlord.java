@@ -118,6 +118,7 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
@@ -361,7 +362,7 @@ public class CliOverlord extends ServerRunnable
 
               @Provides
               @LazySingleton
-              @Named("heartbeat")
+              @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
               public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster)
               {
                 return () -> {
