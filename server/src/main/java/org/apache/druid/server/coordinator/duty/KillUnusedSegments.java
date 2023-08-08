@@ -21,32 +21,27 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.utils.CollectionUtils;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Completely removes information about unused segments who have an interval end that comes before
@@ -61,6 +56,9 @@ public class KillUnusedSegments implements CoordinatorDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
+  public static final Predicate<TaskStatusPlus> TASK_PREDICATE =
+      status -> null != status
+                && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
 
   private final long period;
@@ -144,6 +142,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private void killUnusedSegments(Collection<String> dataSourcesToKill, int availableKillTaskSlots)
   {
     int submittedTasks = 0;
+    log.info("datasourcesToKill: %s", dataSourcesToKill);
     for (String dataSource : dataSourcesToKill) {
       if (submittedTasks >= availableKillTaskSlots) {
         log.info(StringUtils.format(
@@ -174,7 +173,17 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
 
-    log.debug("Submitted [%d] kill tasks for [%d] datasources.", submittedTasks, dataSourcesToKill.size());
+    log.debug(
+        "Submitted [%d] kill tasks for [%d] datasources.%s",
+        submittedTasks,
+        dataSourcesToKill.size(),
+        availableKillTaskSlots < dataSourcesToKill.size()
+            ? StringUtils.format(
+            " Datasources skipped: %s",
+            ImmutableList.copyOf(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size())
+        )
+            : ""
+    );
   }
 
   /**
@@ -203,77 +212,12 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     return Math.max(
         0,
-        getKillTaskCapacity(getTotalWorkerCapacity(), killTaskSlotRatio, maxKillTaskSlots) - getNumActiveKillTaskSlots()
+        getKillTaskCapacity(
+            CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient),
+            killTaskSlotRatio,
+            maxKillTaskSlots
+        ) - CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, TASK_PREDICATE).size()
     );
-  }
-
-  /**
-   * Get the number of active kill task slots in use. The kill tasks counted, are only those thare are submitted
-   * by this coordinator duty (have prefix {@link KillUnusedSegments#TASK_ID_PREFIX}. The value returned here
-   * may be an overestimate, as in some cased the taskType can be null if middleManagers are running with an older
-   * version, and these tasks are counted as active kill tasks to be safe.
-   * @return
-   */
-  private int getNumActiveKillTaskSlots()
-  {
-    final CloseableIterator<TaskStatusPlus> activeTasks =
-        FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 0), true);
-    // Fetch currently running kill tasks
-    int numActiveKillTasks = 0;
-
-    try (final Closer closer = Closer.create()) {
-      closer.register(activeTasks);
-      while (activeTasks.hasNext()) {
-        final TaskStatusPlus status = activeTasks.next();
-
-        // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
-        // the tasks of the unknown taskType as the killTask. This is because it's important to not run
-        // killTasks more than the configured limit at any time which might impact to the ingestion
-        // performance.
-        if (status.getType() == null
-            || (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX))) {
-          numActiveKillTasks++;
-        }
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    return numActiveKillTasks;
-  }
-
-  private int getTotalWorkerCapacity()
-  {
-    int totalWorkerCapacity;
-    try {
-      final IndexingTotalWorkerCapacityInfo workerCapacityInfo =
-          FutureUtils.get(overlordClient.getTotalWorkerCapacity(), true);
-      totalWorkerCapacity = workerCapacityInfo.getMaximumCapacityWithAutoScale();
-      if (totalWorkerCapacity < 0) {
-        totalWorkerCapacity = workerCapacityInfo.getCurrentClusterCapacity();
-      }
-    }
-    catch (ExecutionException e) {
-      // Call to getTotalWorkerCapacity may fail during a rolling upgrade: API was added in 0.23.0.
-      if (e.getCause() instanceof HttpResponseException
-          && ((HttpResponseException) e.getCause()).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-        log.noStackTrace().warn(e, "Call to getTotalWorkerCapacity failed. Falling back to getWorkers.");
-        totalWorkerCapacity =
-            FutureUtils.getUnchecked(overlordClient.getWorkers(), true)
-                .stream()
-                .mapToInt(worker -> worker.getWorker().getCapacity())
-                .sum();
-      } else {
-        throw new RuntimeException(e.getCause());
-      }
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-
-    return totalWorkerCapacity;
   }
 
   @VisibleForTesting
