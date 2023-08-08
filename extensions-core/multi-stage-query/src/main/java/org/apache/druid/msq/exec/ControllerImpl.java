@@ -55,6 +55,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -104,6 +105,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
@@ -412,9 +414,32 @@ public class ControllerImpl implements Controller
       final String selfHost = MSQTasks.getHostFromSelfNode(selfDruidNode);
       final MSQErrorReport controllerError =
           exceptionEncountered != null
-          ? MSQErrorReport.fromException(id(), selfHost, null, exceptionEncountered)
+          ? MSQErrorReport.fromException(
+              id(),
+              selfHost,
+              null,
+              exceptionEncountered,
+              task.getQuerySpec().getColumnMappings()
+          )
           : null;
-      final MSQErrorReport workerError = workerErrorRef.get();
+      MSQErrorReport workerError = workerErrorRef.get();
+
+      if (workerError.getFault() instanceof InvalidNullByteFault) {
+        InvalidNullByteFault inbf = (InvalidNullByteFault) workerError.getFault();
+        workerError = MSQErrorReport.fromException(
+            workerError.getTaskId(),
+            workerError.getHost(),
+            workerError.getStageNumber(),
+            InvalidNullByteException.builder()
+                                    .source(inbf.getSource())
+                                    .rowNumber(inbf.getRowNumber())
+                                    .column(inbf.getColumn())
+                                    .value(inbf.getValue())
+                                    .position(inbf.getPosition())
+                                    .build(),
+            task.getQuerySpec().getColumnMappings()
+        );
+      }
 
       taskStateForReport = TaskState.FAILED;
       errorForReport = MSQTasks.makeErrorReport(id(), selfHost, controllerError, workerError);

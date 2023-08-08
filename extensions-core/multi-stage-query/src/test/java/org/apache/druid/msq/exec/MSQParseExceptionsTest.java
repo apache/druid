@@ -104,6 +104,47 @@ public class MSQParseExceptionsTest extends MSQTestBase
   }
 
   @Test
+  public void testIngestWithNullByteInSqlExpression() throws IOException
+  {
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("desc", ColumnType.STRING)
+                                            .add("text", ColumnType.STRING)
+                                            .build();
+
+    testIngestQuery()
+        .setSql(""
+                + "WITH \"ext\" AS (SELECT *\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{\"type\":\"inline\",\"data\":\"{\\\"desc\\\":\\\"Row with NULL\\\",\\\"text\\\":\\\"There is a null in\\\\u0000 here somewhere\\\"}\\n\"}',\n"
+                + "    '{\"type\":\"json\"}'\n"
+                + "  )\n"
+                + ") EXTEND (\"desc\" VARCHAR, \"text\" VARCHAR))\n"
+                + "SELECT\n"
+                + "  \"desc\",\n"
+                + "  REPLACE(\"text\", 'a', 'A') AS \"text\"\n"
+                + "FROM \"ext\"\n"
+                + "")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedDataSource("foo1")
+        .setExpectedMSQFault(
+            new InvalidNullByteFault(
+                StringUtils.format(
+                    "external input source: LocalInputSource{baseDir=\"null\", filter=null, files=[%s]}",
+                    "f"
+                ),
+                1,
+                "agent_category",
+                "Personal computer\u0000",
+                17
+            )
+        )
+        .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .verifyResults();
+  }
+
+  @Test
   public void testIngestWithSanitizedNullByte() throws IOException
   {
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
