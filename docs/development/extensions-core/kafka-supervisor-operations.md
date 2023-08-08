@@ -144,15 +144,6 @@ will resume from the last stored offset.
 Use care when using this operation! Resetting offsets for a supervisor may cause Kafka messages to be skipped or read
 twice, resulting in missing or duplicate data.
 
-The reason for using this operation is to recover from a state in which the supervisor
-ceases operating due to missing offsets. The indexing service keeps track of the latest
-persisted Kafka offsets in order to provide exactly-once ingestion guarantees across
-tasks. Subsequent tasks must start reading from where the previous task completed in
-order for the generated segments to be accepted. If the messages at the expected
-starting offsets are no longer available in Kafka (typically because the message retention
-period has elapsed or the topic was removed and re-created) the supervisor will refuse
-to start and in flight tasks will fail. This operation enables you to recover from this condition.
-
 Note that the supervisor must be running for this endpoint to be available.
 
 ## Terminating Supervisors
