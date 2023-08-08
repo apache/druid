@@ -370,6 +370,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
+    // A negative return value indicates tasks are queued in the thread pool
+    // but have not been scheduled to run in K8s yet.
     return ImmutableMap.of(WORKER_CATEGORY, Long.valueOf(config.getCapacity() - tasks.size()));
   }
 
