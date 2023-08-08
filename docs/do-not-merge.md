@@ -51,7 +51,7 @@ For more information about this feature, see the following:
 
 ## Smart segment loading
 
-The Coordinator is now much more stable and user-friendly. In the new smartSegmentLoading mode, it dynamically computes values for several configs which maximize performance.
+The Coordinator is now much more stable and user-friendly. In the new `smartSegmentLoading` mode, it dynamically computes values for several configs which maximize performance.
 
 The Coordinator can now prioritize load of more recent segments and segments that are completely unavailable over load of segments that already have some replicas loaded in the cluster. It can also re-evaluate decisions taken in previous runs and cancel operations that are not needed anymore. Moreoever, move operations started by segment balancing do not compete with the load of unavailable segments thus reducing the reaction time for changes in the cluster and speeding up segment assignment decisions.
 
