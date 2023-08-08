@@ -173,7 +173,7 @@ public class CoordinatorDynamicConfig
     this.killTaskSlotRatio = killTaskSlotRatio != null ? killTaskSlotRatio : Defaults.KILL_TASK_SLOT_RATIO;
     if (null != maxKillTaskSlots && maxKillTaskSlots < 0) {
       throw InvalidInput.exception(
-          "maxKillTaskSlots [%d] is invalid. It must be > 0.",
+          "maxKillTaskSlots [%d] is invalid. It must be >= 0.",
           maxKillTaskSlots
       );
     }
@@ -533,6 +533,11 @@ public class CoordinatorDynamicConfig
     static final int MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
     static final boolean USE_ROUND_ROBIN_ASSIGNMENT = true;
     static final boolean SMART_SEGMENT_LOADING = true;
+
+    // The following default values for killTaskSlotRatio and maxKillTaskSlots
+    // are to preserve the behavior before Druid 0.28 and a future version may
+    // want to consider better defaults so that kill tasks can not eat up all
+    // the capacity in the cluster would be nice
     static final double KILL_TASK_SLOT_RATIO = 1.0;
     static final int MAX_KILL_TASK_SLOTS = Integer.MAX_VALUE;
   }

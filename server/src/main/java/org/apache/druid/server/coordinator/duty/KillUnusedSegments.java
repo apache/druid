@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
@@ -118,7 +119,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     int maxKillTaskSlots = params.getCoordinatorDynamicConfig().getMaxKillTaskSlots();
     int availableKillTaskSlots = getAvailableKillTaskSlots(killTaskSlotRatio, maxKillTaskSlots);
     if (0 == availableKillTaskSlots) {
-      log.warn("Not killing any unused segments because there are no available kill task slots at this time.");
+      log.debug("Not killing any unused segments because there are no available kill task slots at this time.");
       return params;
     }
 
@@ -174,7 +175,16 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
 
-    log.debug("Submitted [%d] kill tasks for [%d] datasources.", submittedTasks, dataSourcesToKill.size());
+    log.debug("Submitted [%d] kill tasks for [%d] datasources.%s",
+        submittedTasks,
+        submittedTasks,
+        submittedTasks < dataSourcesToKill.size()
+            ? StringUtils.format(
+            " Datasources skipped :%s",
+            ImmutableList.of(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size())
+        )
+            : ""
+    );
   }
 
   /**
@@ -207,6 +217,13 @@ public class KillUnusedSegments implements CoordinatorDuty
     );
   }
 
+  /**
+   * Get the number of active kill task slots in use. The kill tasks counted, are only those thare are submitted
+   * by this coordinator duty (have prefix {@link KillUnusedSegments#TASK_ID_PREFIX}. The value returned here
+   * may be an overestimate, as in some cased the taskType can be null if middleManagers are running with an older
+   * version, and these tasks are counted as active kill tasks to be safe.
+   * @return
+   */
   private int getNumActiveKillTaskSlots()
   {
     final CloseableIterator<TaskStatusPlus> activeTasks =
