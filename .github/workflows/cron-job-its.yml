@@ -111,7 +111,6 @@ jobs:
     name: security vulnerabilities
     strategy:
       fail-fast: false
-      matrix:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
