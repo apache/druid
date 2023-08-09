@@ -859,7 +859,7 @@ class QueryClient:
             If true, checks whether all published segments are loaded before testing query.
             If false, tries the test query before checking whether all published segments are loaded.
         '''
-        if (verify_load_status):
+        if verify_load_status:
             self.druid_client.datasources.wait_until_ready(table_name)
         while True:
             try:
