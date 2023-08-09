@@ -224,7 +224,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
                 null,
                 StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK)
-            )).build()).build()
+            )).build()).build(),
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
+            .withValue(Boolean.toString(task.supportsQueries()))
+            .build()
     );
   }
 
