@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -437,7 +438,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
     // struggled with the idea of making it match on equaling this
     s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
-    EasyMock.expectLastCall().andThrow(new RuntimeException("")).once();
+    EasyMock.expectLastCall().andThrow(new AbortedException("")).once();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
