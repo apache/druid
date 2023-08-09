@@ -5704,6 +5704,16 @@ license_file_path: licenses/bin/color-name.MIT
 
 ---
 
+name: "commander"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: TJ Holowaychuk
+version: 2.20.0
+license_file_path: licenses/bin/commander.MIT
+
+---
+
 name: "constant-case"
 license_category: binary
 module: web-console
@@ -5801,6 +5811,16 @@ license_name: BSD-3-Clause License
 copyright: Mike Bostock
 version: 2.0.0
 license_file_path: licenses/bin/d3-color.BSD3
+
+---
+
+name: "d3-dsv"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.0.0
+license_file_path: licenses/bin/d3-dsv.BSD3
 
 ---
 
@@ -6169,6 +6189,16 @@ license_name: BSD-3-Clause License
 copyright: Michael Ridgway
 version: 3.3.0
 license_file_path: licenses/bin/hoist-non-react-statics.BSD3
+
+---
+
+name: "iconv-lite"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alexander Shtuchkin
+version: 0.4.24
+license_file_path: licenses/bin/iconv-lite.MIT
 
 ---
 
@@ -6721,6 +6751,16 @@ license_file_path: licenses/bin/resolve.MIT
 
 ---
 
+name: "rw"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.3
+license_file_path: licenses/bin/rw.BSD3
+
+---
+
 name: "safe-buffer"
 license_category: binary
 module: web-console
@@ -6728,6 +6768,16 @@ license_name: MIT License
 copyright: Feross Aboukhadijeh
 version: 5.1.2
 license_file_path: licenses/bin/safe-buffer.MIT
+
+---
+
+name: "safer-buffer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Nikita Skovoroda
+version: 2.1.2
+license_file_path: licenses/bin/safer-buffer.MIT
 
 ---
 
