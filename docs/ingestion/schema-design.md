@@ -261,7 +261,7 @@ native boolean types, Druid ingests these values as strings if `druid.expression
 the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql-functions.md#unnest). Nested
 columns can be queried with the [JSON functions](../querying/sql-json-functions.md).
 
-We also highly recommend setting `druid.generic.useDefaultValueForNull=false` when using these columns since it also enables out of the box `ARRAY` type filtering. If not set to `false`, setting `sqlUseBoundsAndSelectors` to `false` on the [SQL query context](../querying/sql-query-context.md) can enable `ARRAY` filtering instead.
+We also highly recommend setting `druid.generic.useDefaultValueForNull=false` (the default) when using these columns since it also enables out of the box `ARRAY` type filtering. If not set to `false`, setting `sqlUseBoundsAndSelectors` to `false` on the [SQL query context](../querying/sql-query-context.md) can enable `ARRAY` filtering instead.
 
 Mixed type columns are stored in the _least_ restrictive type that can represent all values in the column. For example:
 

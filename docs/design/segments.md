@@ -82,9 +82,12 @@ For each row in the list of column data, there is only a single bitmap that has 
 
 ## Handling null values
 
-By default, Druid string dimension columns use the values `''` and `null` interchangeably. Numeric and metric columns cannot represent `null` but use nulls to mean `0`. However, Druid provides a SQL compatible null handling mode, which you can enable at the system level through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, allows Druid to create segments _at ingestion time_ in which the following occurs:
+By default, Druid runs in a SQL compatible null handling mode, which allows Druid to create segments _at ingestion time_ in which the following occurs:
+
 * String columns can distinguish `''` from `null`,
 * Numeric columns can represent `null` valued rows instead of `0`.
+
+Druid also has a legacy null handling mode which was the default prior to Druid 28.0.0. In this mode string dimension columns use the values `''` and `null` interchangeably. Numeric and metric columns cannot represent `null` but use nulls to mean `0`. You can enable this classic behavior at the system level through `druid.generic.useDefaultValueForNull` and setting to `true`.
 
 String dimension columns contain no additional column structures in SQL compatible null handling mode. Instead, they reserve an additional dictionary entry for the `null` value. Numeric columns are stored in the segment with an additional bitmap in which the set bits indicate `null`-valued rows. 
 

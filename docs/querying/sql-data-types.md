@@ -71,8 +71,8 @@ Casts between two SQL types with the same Druid runtime type have no effect othe
 Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
 
 If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid either substitutes a default
-value (when `druid.generic.useDefaultValueForNull = true`, the default mode), or substitutes [NULL](#null-values) (when
-`druid.generic.useDefaultValueForNull = false`). NULL values cast to non-nullable types are also substituted with a default value. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
+value (when `druid.generic.useDefaultValueForNull = true`), or substitutes [NULL](#null-values) (when
+`druid.generic.useDefaultValueForNull = false`, the default mode). NULL values cast to non-nullable types are also substituted with a default value. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
 ## Multi-value strings
 
@@ -129,15 +129,15 @@ VARCHAR. ARRAY typed results will be serialized into stringified JSON arrays if 
 ## NULL values
 
 The [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling)
-runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, set this to `false`.
+runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, set this to `false` (the default).
 
-When `druid.generic.useDefaultValueForNull = true` (the default mode), Druid treats NULLs and empty strings
+When `druid.generic.useDefaultValueForNull = true`, Druid treats NULLs and empty strings
 interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
 For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col`
 contains an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty
 string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows
 where `expr` is neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing
-values are treated as zeroes.
+values are treated as zeroes. This was the default prior to Druid 28.0.0.
 
 When `druid.generic.useDefaultValueForNull = false`, NULLs are treated more closely to the SQL standard. In this mode,
 numeric NULL is permitted, and NULLs and empty strings are no longer treated as interchangeable. This property
