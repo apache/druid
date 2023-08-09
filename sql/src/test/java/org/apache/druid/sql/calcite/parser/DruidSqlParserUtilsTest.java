@@ -207,39 +207,6 @@ public class DruidSqlParserUtilsTest
     @Test
     public void testClusteredByOrdinalsAndAliases()
     {
-      // Construct the select source args
-      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
-      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
-      selectArgs.add(new SqlIdentifier("DIM3", new SqlParserPos(0, 2)));
-
-      SqlBasicCall sqlBasicCall1 = new SqlBasicCall(
-          new SqlAsOperator(),
-          new SqlNode[]{
-              new SqlIdentifier("DIM3", SqlParserPos.ZERO),
-              new SqlIdentifier("DIM3_ALIAS", SqlParserPos.ZERO)
-          },
-          new SqlParserPos(0, 3)
-      );
-      selectArgs.add(sqlBasicCall1);
-
-      SqlBasicCall sqlBasicCall2 = new SqlBasicCall(
-          new SqlAsOperator(),
-          new SqlNode[]{
-              new SqlIdentifier("FLOOR(__time)", SqlParserPos.ZERO),
-              new SqlIdentifier("floor_dim4_time", SqlParserPos.ZERO)
-          },
-          new SqlParserPos(0, 4)
-      );
-      selectArgs.add(sqlBasicCall2);
-
-      selectArgs.add(new SqlIdentifier("DIM5", new SqlParserPos(0, 5)));
-      selectArgs.add(new SqlIdentifier("DIM6", new SqlParserPos(0, 6)));
-
-      final SqlNodeList args3 = new SqlNodeList(SqlParserPos.ZERO);
-      args3.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
-      args3.add(SqlLiteral.createCharString("PT1H", SqlParserPos.ZERO));
-      selectArgs.add(TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args3));
-
       final ImmutableList<Pair<Integer, String>> sourceFieldMappings = ImmutableList.of(
           Pair.of(1, "__time"),
           Pair.of(2, "DIM3"),
@@ -467,7 +434,7 @@ public class DruidSqlParserUtilsTest
 
   public static class NonParameterizedTests
   {
-    private static final DateTimeZone TZ_LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
+    private static final DateTimeZone TZ_LOS_ANGELES = DateTimes.inferTzFromString("America/Los_Angeles");
 
     @Test
     public void test_parseTimeStampWithTimeZone_timestamp_utc()
