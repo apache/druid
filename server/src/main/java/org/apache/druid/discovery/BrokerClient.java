@@ -101,6 +101,7 @@ public class BrokerClient
         request = getNewRequestUrl(request);
         continue;
       }
+
       HttpResponseStatus responseStatus = fullResponseHolder.getResponse().getStatus();
       if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
           || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
@@ -114,7 +115,6 @@ public class BrokerClient
         request = getNewRequestUrl(request);
       } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
         log.warn("Request [%s] failed with error code [%s]", request.getUrl(), responseStatus.getCode());
-        continue;
       } else {
         return fullResponseHolder.getContent();
       }

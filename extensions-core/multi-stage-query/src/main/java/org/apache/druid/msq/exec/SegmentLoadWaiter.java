@@ -37,6 +37,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -194,7 +195,7 @@ public class SegmentLoadWaiter
     SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, version),
                                      ResultFormat.OBJECTLINES,
                                      false, false, false, null, null);
-    request.setContent("application/json", objectMapper.writeValueAsBytes(sqlQuery));
+    request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));
 
     String response = brokerClient.sendQuery(request);
 
