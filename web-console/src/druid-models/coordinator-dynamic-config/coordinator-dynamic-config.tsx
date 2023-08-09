@@ -239,7 +239,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
       <>
         Ratio of total available task slots, including autoscaling if applicable that will be
         allowed for kill tasks. This limit only applies for kill tasks that are spawned
-        automatically by the Coordinator's auto kill duty, which is enabled when
+        automatically by the Coordinator&apos;s auto kill duty, which is enabled when
         <Code>druid.coordinator.kill.on</Code> is true.
       </>
     ),
@@ -251,7 +251,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     info: (
       <>
         Maximum number of tasks that will be allowed for kill tasks. This limit only applies for
-        kill tasks that are spawned automatically by the Coordinator's auto kill duty, which is
+        kill tasks that are spawned automatically by the Coordinator&apos;s auto kill duty, which is
         enabled when <Code>druid.coordinator.kill.on</Code> is true.
       </>
     ),
