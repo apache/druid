@@ -412,7 +412,16 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
     s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
-    EasyMock.expectLastCall().andThrow(new MultiObjectDeleteException(ImmutableList.of(), ImmutableList.of())).once();
+    MultiObjectDeleteException.DeleteError retryableError = new MultiObjectDeleteException.DeleteError();
+    retryableError.setCode("RequestLimitExceeded");
+    MultiObjectDeleteException.DeleteError nonRetryableError = new MultiObjectDeleteException.DeleteError();
+    nonRetryableError.setCode("nonRetryableError");
+    EasyMock.expectLastCall()
+        .andThrow(new MultiObjectDeleteException(
+            ImmutableList.of(retryableError, nonRetryableError),
+            ImmutableList.of()
+        ))
+        .once();
     EasyMock.expectLastCall().andVoid().times(2);
 
 
