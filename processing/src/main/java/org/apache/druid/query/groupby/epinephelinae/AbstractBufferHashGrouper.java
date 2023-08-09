@@ -120,6 +120,11 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   @Override
   public AggregateResult aggregate(KeyType key, int keyHash)
   {
+    return aggregate(key, keyHash, false);
+  }
+
+  private AggregateResult aggregate(KeyType key, int keyHash, boolean skipAggregate)
+  {
     final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
     if (keyBuffer == null) {
       // This may just trigger a spill and get ignored, which is ok. If it bubbles up to the user, the message will
@@ -146,7 +151,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
     ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
 
-    if (canSkipAggregate(bucketStartOffset)) {
+    if (skipAggregate || canSkipAggregate(bucketStartOffset)) {
       return AggregateResult.ok();
     }
 
@@ -158,33 +163,13 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     return AggregateResult.ok();
   }
 
-  /**
-   * Initializes the slot corresponding with key to be present.
-   */
-  protected void initSlot(KeyType key, int keyHash)
+  protected void addEmptyAggregateIfNeeded()
   {
-    final ByteBuffer keyBuffer = keySerde.toByteBuffer(key);
-    if (keyBuffer == null) {
-      throw new IAE("Unable to get keyBuffer for to init key");
+    if (keySerde.isEmpty()) {
+      init();
+      KeyType key = keySerde.createKey();
+      aggregate(key, hashFunction().applyAsInt(key), true);
     }
-
-    if (keyBuffer.remaining() != keySize) {
-      throw new IAE(
-          "keySerde.toByteBuffer(key).remaining[%s] != keySerde.keySize[%s], buffer was the wrong size?!",
-          keyBuffer.remaining(),
-          keySize
-      );
-    }
-
-    // find and try to expand if table is full and find again
-    int bucket = hashTable.findBucketWithAutoGrowth(keyBuffer, keyHash, () -> {});
-    if (bucket < 0) {
-      throw new IAE("Unable to allocate bucket for key");
-    }
-
-    final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
-
-    ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
   }
 
   private void ensureBucketInitialized(int bucket, int bucketStartOffset, ByteBuffer keyBuffer, int keyHash)

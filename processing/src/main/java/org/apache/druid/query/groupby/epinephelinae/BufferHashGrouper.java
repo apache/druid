@@ -163,11 +163,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
-    if (!initialized && keySerde.isEmpty()) {
-      init();
-      KeyType key = keySerde.createKey();
-      initSlot(key, hashFunction().applyAsInt(key));
-    }
+    addEmptyAggregateIfNeeded();
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
