@@ -23,7 +23,7 @@ sidebar_label: Automatic compaction
   ~ under the License.
   -->
 
-This document describes status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. Automatic compaction can be configured in the Druid web console or API. 
+This topic describes status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. You can configure automatic compaction in the Druid web console or API. 
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -31,16 +31,16 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 ### Update capacity for compaction tasks
 
-Update the capacity for compaction tasks. Maximum number of compaction tasks is limited by `ratio` and `max`.
-`ratio` is ratio of the total task slots to the compaction task slots and the `max` is the number of task slots for compaction tasks.
-
-The minimum number of compaction tasks is 1 and the maximum is 2147483652.
+Update the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483652.
 
 #### URL
 
 <code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
 
 #### Query parameters
+
+To limit the maximum number of compaction tasks, use the optional query parameters `ratio` and `max`:
+
 * `ratio` (optional)
   * Type: Float
   * Default: 0.1
@@ -87,15 +87,15 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+A successful request returns an HTTP `200 OK` message code and an empty response body.
 
-### Create or update datasource automatic compaction configuration
+### Create or update automatic compaction configuration
 
-Creates or updates the automatic compaction config for a datasource. The automatic compaction can be submitted as a JSON object in the request body. 
+Creates or updates the automatic compaction configuration for a datasource. You pass the automatic compaction as a JSON object in the request body.
 
-Automatic compaction configuration require only the `dataSource` property. All others will be filled with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
+Automatic compaction configuration require only the `dataSource` property. Druid fills all other properties with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
-Note that this endpoint will return an HTTP `200 OK` even if the datasource name does not exist.
+Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
 
 #### URL 
 
@@ -114,13 +114,13 @@ Note that this endpoint will return an HTTP `200 OK` even if the datasource name
 ---
 #### Sample request
 
-The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data.
+The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data. In this example: 
 
 * `wikipedia_hour` is a datasource with `HOUR` segment granularity.
 * `skipOffsetFromLatest` is set to `PT0S`, meaning that no data is skipped. 
 * `partitionsSpec` is set to the default `dynamic`, allowing Druid to dynamically determine the optimal partitioning strategy.
-* `type` is set to `index_parallel`, meaning that parallel indexing will be used.
-* `segmentGranularity` is set to `DAY`, meaning that each compacted segment will be a day of data.
+* `type` is set to `index_parallel`, meaning that parallel indexing is used.
+* `segmentGranularity` is set to `DAY`, meaning that each compacted segment is a day of data.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -171,10 +171,10 @@ Content-Length: 281
 
 #### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+A successful request returns an HTTP `200 OK` message code and an empty response body.
 
 
-### Remove datasource automatic compaction configuration
+### Remove automatic compaction configuration
 
 Removes the automatic compaction configuration for a datasource. This updates the compaction status of the datasource to "Not enabled." 
 
@@ -220,11 +220,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+A successful request returns an HTTP `200 OK` message code and an empty response body.
 
 ## Automatic compaction configuration
 
-### Get all automatic compaction configuration
+### Get all automatic compaction configurations
 
 Retrieves all automatic compaction configurations. Returns a `compactionConfigs` object containing the active automatic compaction configuration of all datasources.
 
@@ -369,7 +369,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-### Get datasource automatic compaction configuration
+### Get automatic compaction configuration
 
 Retrieves the automatic compaction configuration of a datasource.
 
@@ -467,14 +467,14 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-### Get datasource automatic compaction configuration history
+### Get automatic compaction configuration history
 
-Retrieves the history of the automatic compaction config for a datasource. Returns an empty list if the  datasource does not exist or there is no compaction history for the datasource.
+Retrieves the history of the automatic compaction configuration for a datasource. Returns an empty list if the  datasource does not exist or there is no compaction history for the datasource.
 
 The response contains a list of objects with the following keys:
-* `globalConfig`: A JSON object containing automatic compaction config that applies to the entire cluster. 
-* `compactionConfig`: A JSON object containing the automatic compaction config for the datasource.
-* `auditInfo`: A JSON object that contains information about the change made - like `author`, `comment` and `ip`.
+* `globalConfig`: A JSON object containing automatic compaction configuration that applies to the entire cluster. 
+* `compactionConfig`: A JSON object containing the automatic compaction configuration for the datasource.
+* `auditInfo`: A JSON object that contains information about the change made, such as `author`, `comment` or `ip`.
 * `auditTime`: The date and time when the change was made.
 
 #### URL
@@ -627,7 +627,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get segments awaiting compaction
 
-Returns the total size of segments awaiting compaction for the given datasource. The specified datasource must have automatic compaction enabled.
+Returns the total size of segments awaiting compaction for a given datasource. The specified datasource must have automatic compaction enabled.
 
 #### URL
 
@@ -690,19 +690,19 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get compaction status and statistics
 
-Retrieves the status and statistics from the automatic compaction run of all datasources which have automatic compaction enabled in the latest run. Returns a list of `latestStatus` objects. Each `latestStatus` represents the status for a datasource with automatic compaction enabled.
+Retrieves an array of `latestStatus` objects representing the status and statistics from the latest automatic compaction run for all datasources with automatic compaction enabled.
 
-The `latestStatus` object has the following keys:
+The `latestStatus` object has the following properties:
 * `dataSource`: Name of the datasource for this status information.
-* `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active automatic compaction config submitted. Otherwise, returns `NOT_ENABLED`.
+* `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the datasource has an active automatic compaction configuration submitted. Otherwise, returns `NOT_ENABLED`.
 * `bytesAwaitingCompaction`: Total bytes of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction config.
 * `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
 * `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
-* `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the automatic compaction config.
+* `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the automatic compaction configuration.
 * `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
 * `intervalCountAwaitingCompaction`: Total number of intervals of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
-* `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the automatic compaction config.
+* `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the automatic compaction configuration.
 * `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
 
 #### URL
@@ -732,7 +732,7 @@ The `latestStatus` object has the following keys:
 <!--cURL-->
 
 ```shell
-curl "hhttp://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/status"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/status"
 ```
 
 <!--HTTP-->
