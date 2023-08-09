@@ -815,6 +815,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(8100, location.getPort());
     Assert.assertEquals(-1, location.getTlsPort());
+    Assert.assertEquals(ID, location.getK8sPodName());
 
     verifyAll();
   }
@@ -850,6 +851,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(8100, location.getPort());
     Assert.assertEquals(-1, location.getTlsPort());
+    Assert.assertEquals(ID, location.getK8sPodName());
 
     verifyAll();
   }
@@ -886,6 +888,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assert.assertEquals("ip", location.getHost());
     Assert.assertEquals(-1, location.getPort());
     Assert.assertEquals(8091, location.getTlsPort());
+    Assert.assertEquals(ID, location.getK8sPodName());
 
     verifyAll();
   }
