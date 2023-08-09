@@ -856,7 +856,8 @@ class QueryClient:
         table_name str
             The name of a datasource in the 'druid' schema.
         verify_load_status
-            Check whether all published segments are loaded before testing query?
+            If true, checks whether all published segments are loaded before testing query.
+            If false, tries the test query before checking whether all published segments are loaded.
         '''
         if (verify_load_status):
             self.druid_client.datasources.wait_until_ready(table_name)
