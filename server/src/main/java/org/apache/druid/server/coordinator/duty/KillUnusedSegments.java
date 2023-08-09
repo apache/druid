@@ -58,7 +58,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
-  public static final Predicate<TaskStatusPlus> TASK_PREDICATE =
+  public static final Predicate<TaskStatusPlus> IS_COORDINATOR_ISSUED_KILL_TASK =
       status -> null != status
                 && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
@@ -113,6 +113,11 @@ public class KillUnusedSegments implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
 
+    final long currentTimeMillis = System.currentTimeMillis();
+    if (lastKillTime + period > currentTimeMillis) {
+      log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
+      return params;
+    }
     TaskStats taskStats = TaskStats.EMPTY;
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
@@ -125,7 +130,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     );
     int availableKillTaskSlots = getAvailableKillTaskSlots(
         killTaskCapacity,
-        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, TASK_PREDICATE).size()
+        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_COORDINATOR_ISSUED_KILL_TASK).size()
     );
     final CoordinatorRunStats stats = params.getCoordinatorStats();
 
@@ -133,16 +138,12 @@ public class KillUnusedSegments implements CoordinatorDuty
     taskStats.maxSlots = killTaskCapacity;
 
     if (0 < availableKillTaskSlots) {
-
       // If no datasource has been specified, all are eligible for killing unused segments
       if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
         dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
       }
 
-      final long currentTimeMillis = System.currentTimeMillis();
-      if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
-        log.debug("No eligible datasource to kill unused segments.");
-      } else if (lastKillTime + period > currentTimeMillis) {
+      if (lastKillTime + period > currentTimeMillis) {
         log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
       } else {
         log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
@@ -204,17 +205,19 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
 
-    log.debug(
-        "Submitted [%d] kill tasks for [%d] datasources.%s",
-        submittedTasks,
-        dataSourcesToKill.size(),
-        availableKillTaskSlots < dataSourcesToKill.size()
-            ? StringUtils.format(
-            " Datasources skipped: %s",
-            ImmutableList.copyOf(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size())
-        )
-            : ""
-    );
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Submitted [%d] kill tasks for [%d] datasources.%s",
+          submittedTasks,
+          dataSourcesToKill.size(),
+          availableKillTaskSlots < dataSourcesToKill.size()
+              ? StringUtils.format(
+              " Datasources skipped: %s",
+              ImmutableList.copyOf(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size())
+          )
+              : ""
+      );
+    }
 
     // report stats
     return submittedTasks;

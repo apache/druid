@@ -81,7 +81,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   private static final Logger LOG = new Logger(CompactSegments.class);
 
-  private static final Predicate<TaskStatusPlus> TASK_PREDICATE =
+  private static final Predicate<TaskStatusPlus> IS_COMPACTION_TASK =
       status -> null != status && COMPACTION_TASK_TYPE.equals(status.getType());
 
   private final CompactionSegmentSearchPolicy policy;
@@ -151,7 +151,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     int busyCompactionTaskSlots = 0;
     final List<TaskStatusPlus> compactionTasks = CoordinatorDutyUtils.getNumActiveTaskSlots(
         overlordClient,
-        TASK_PREDICATE
+        IS_COMPACTION_TASK
     );
     for (TaskStatusPlus status : compactionTasks) {
       final TaskPayloadResponse response =

@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -34,6 +33,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import javax.annotation.Nonnull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -92,6 +92,7 @@ public class CoordinatorDutyUtils
    *
    * @param overlordClient The overlord client to use to retrieve the list of active tasks.
    * @param taskPredicate  The predicate to match against the list of retreived task status.
+   *                       This predicate will never be called with a null task status.
    *
    * @return the number of active tasks that match the task predicate provided
    */
@@ -103,7 +104,7 @@ public class CoordinatorDutyUtils
     final CloseableIterator<TaskStatusPlus> activeTasks =
         FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 0), true);
     // Fetch currently running kill tasks
-    ImmutableList.Builder<TaskStatusPlus> taskStatuses = ImmutableList.builder();
+    List<TaskStatusPlus> taskStatuses = new ArrayList<>();
 
     try (final Closer closer = Closer.create()) {
       closer.register(activeTasks);
@@ -114,7 +115,7 @@ public class CoordinatorDutyUtils
         // the tasks of the unknown taskType as the killTask. This is because it's important to not run
         // killTasks more than the configured limit at any time which might impact to the ingestion
         // performance.
-        if (status.getType() == null || (taskPredicate.apply(status))) {
+        if (null != status && (null == status.getType() || (taskPredicate.apply(status)))) {
           taskStatuses.add(status);
         }
       }
@@ -123,6 +124,6 @@ public class CoordinatorDutyUtils
       throw new RuntimeException(e);
     }
 
-    return taskStatuses.build();
+    return taskStatuses;
   }
 }
