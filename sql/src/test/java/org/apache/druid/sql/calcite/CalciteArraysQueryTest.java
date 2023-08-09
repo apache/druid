@@ -3284,7 +3284,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                      //null
                       not(equality("j0.unnest", "b", ColumnType.STRING))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -3294,7 +3293,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
+            new Object[]{""}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
             new Object[]{""}
         )
     );
