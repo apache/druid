@@ -194,8 +194,7 @@ public class MSQWorkerTaskLauncher
       }
       exec.shutdown();
       stopFuture.set(null);
-    }
-    else if (state.compareAndSet(State.STARTED, State.STOPPED)) {
+    } else if (state.compareAndSet(State.STARTED, State.STOPPED)) {
       if (interrupt) {
         cancelTasksOnStop.set(true);
       }

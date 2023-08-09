@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
@@ -47,7 +46,6 @@ import java.nio.charset.StandardCharsets;
 
 public class BrokerClientTest extends BaseJettyTest
 {
-
   private DiscoveryDruidNode discoveryDruidNode;
   private HttpClient httpClient;
 
@@ -55,10 +53,10 @@ public class BrokerClientTest extends BaseJettyTest
   protected Injector setupInjector()
   {
     final DruidNode node = new DruidNode("test", "localhost", false, null, null, true, false);
-    discoveryDruidNode = new DiscoveryDruidNode(node, NodeRole.PEON, ImmutableMap.of());
+    discoveryDruidNode = new DiscoveryDruidNode(node, NodeRole.BROKER, ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               JsonConfigProvider.bindInstance(
                   binder,
@@ -66,8 +64,7 @@ public class BrokerClientTest extends BaseJettyTest
                   node
               );
               binder.bind(Integer.class).annotatedWith(Names.named("port")).toInstance(node.getPlaintextPort());
-              binder.bind(JettyServerInitializer.class).to(DruidLeaderClientTest.TestJettyServerInitializer.class).in(
-                  LazySingleton.class);
+              binder.bind(JettyServerInitializer.class).to(DruidLeaderClientTest.TestJettyServerInitializer.class).in(LazySingleton.class);
               Jerseys.addResource(binder, DruidLeaderClientTest.SimpleResource.class);
               LifecycleModule.register(binder, Server.class);
             }
@@ -81,9 +78,7 @@ public class BrokerClientTest extends BaseJettyTest
   public void testSimple() throws Exception
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
-    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
-        ImmutableList.of(discoveryDruidNode)
-    );
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode));
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER)).andReturn(druidNodeDiscovery);

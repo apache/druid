@@ -71,7 +71,7 @@ public class BrokerClient
     String host = ClientUtils.pickOneHost(druidNodeDiscovery);
 
     if (host == null) {
-      throw new IOE("No known server");
+      throw new IOE("No known server.");
     }
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", host, urlPath)));
   }
@@ -81,7 +81,6 @@ public class BrokerClient
     StringFullResponseHandler responseHandler = new StringFullResponseHandler(StandardCharsets.UTF_8);
 
     for (int counter = 0; counter < MAX_RETRIES; counter++) {
-
       final StringFullResponseHolder fullResponseHolder;
 
       try {

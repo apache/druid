@@ -744,6 +744,7 @@ TooManyWorkers
 NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
+TIMED_OUT
 # MSQ context parameters
 maxNumTasks
 taskAssignment
