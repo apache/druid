@@ -17,31 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.storage.azure.output;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import java.util.List;
-
-public class StorageConnectorModule implements DruidModule
+public class AzureInputRangeTest
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
+  @Test
+  public void testEquals()
   {
-    return ImmutableList.of(
-        new SimpleModule(StorageConnector.class.getSimpleName())
-            .registerSubtypes(LocalFileStorageConnectorProvider.class)
-    );
-  }
-
-  @Override
-  public void configure(Binder binder)
-  {
-
+    EqualsVerifier.forClass(AzureInputRange.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

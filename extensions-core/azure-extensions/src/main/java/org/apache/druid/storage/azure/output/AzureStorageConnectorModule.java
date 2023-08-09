@@ -17,25 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.storage.azure.output;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 
+import java.util.Collections;
 import java.util.List;
 
-public class StorageConnectorModule implements DruidModule
+public class AzureStorageConnectorModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(
-        new SimpleModule(StorageConnector.class.getSimpleName())
-            .registerSubtypes(LocalFileStorageConnectorProvider.class)
+    return Collections.singletonList(
+        new SimpleModule(AzureStorageConnectorModule.class.getSimpleName())
+            .registerSubtypes(AzureStorageConnectorProvider.class)
     );
   }
 
