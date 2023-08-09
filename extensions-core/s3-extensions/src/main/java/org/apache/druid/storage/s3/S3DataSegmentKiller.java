@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -151,12 +150,11 @@ public class S3DataSegmentKiller implements DataSegmentKiller
             s3Bucket,
             keysToDeleteStrings
         );
-        RetryUtils.retry(
+        S3Utils.retryS3Operation(
             () -> {
               s3Client.deleteObjects(deleteObjectsRequest);
               return null;
             },
-            S3Utils.S3RETRY,
             3
         );
       }
@@ -173,10 +171,18 @@ public class S3DataSegmentKiller implements DataSegmentKiller
             key
         ));
       }
-      catch (Exception e) {
+      catch (AmazonServiceException e) {
         hadException = true;
         log.noStackTrace().warn(e,
             "Unable to delete from bucket [%s], the following keys [%s]",
+            s3Bucket,
+            chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", "))
+        );
+      }
+      catch (Exception e) {
+        hadException = true;
+        log.noStackTrace().warn(e,
+            "Unexpected exception occurred when deleting from bucket [%s], the following keys [%s]",
             s3Bucket,
             chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", "))
         );
