@@ -173,7 +173,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
 
   protected void addEmptyAggregateIfNeeded()
   {
-    if (keySerde.isEmpty()) {
+    if (isInitialized() && keySerde.isEmpty()) {
       init();
       KeyType key = keySerde.createKey();
       aggregate(key, hashFunction().applyAsInt(key), true);
