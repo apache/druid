@@ -590,6 +590,9 @@ exports[`RetentionDialog matches snapshot 1`] = `
                 </a>
                 ):
               </p>
+              <p>
+                The cluster default rules are applied if no datasource specific rule matches.
+              </p>
               <div
                 class="default-rule"
               >

@@ -198,7 +198,12 @@ ORDER BY 1`,
             <p>
               Cluster defaults (<a onClick={onEditDefaults}>edit</a>):
             </p>
-            {defaultRules.map(renderDefaultRule)}
+            <p>The cluster default rules are applied if no datasource specific rule matches.</p>
+            {currentTab === 'form' ? (
+              defaultRules.map(renderDefaultRule)
+            ) : (
+              <JsonInput value={defaultRules} />
+            )}
           </FormGroup>
         </>
       )}
