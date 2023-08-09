@@ -21,8 +21,6 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.util.TimeUnit;
-import org.apache.calcite.runtime.CalciteContextException;
-import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -44,15 +42,12 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -617,8 +612,8 @@ public class DruidSqlParserUtilsTest
     @Test
     public void test_parseTimeStampWithTimeZone_unknownTimestamp_invalid()
     {
-      final CalciteContextException e = Assert.assertThrows(
-          CalciteContextException.class,
+      final DruidException e = Assert.assertThrows(
+          DruidException.class,
           () -> DruidSqlParserUtils.parseTimeStampWithTimeZone(
               SqlLiteral.createUnknown(
                   SqlTypeName.TIMESTAMP.getSpaceName(),
@@ -629,11 +624,11 @@ public class DruidSqlParserUtilsTest
           )
       );
 
-      MatcherAssert.assertThat(e, ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(CalciteException.class)));
       MatcherAssert.assertThat(
           e,
-          ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-              "Illegal TIMESTAMP literal 'not a timestamp'")))
+          DruidExceptionMatcher
+              .invalidSqlInput()
+              .expectMessageContains("Cannot get a timestamp from sql expression")
       );
     }
   }

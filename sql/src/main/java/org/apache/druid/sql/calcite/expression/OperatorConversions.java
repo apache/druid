@@ -752,6 +752,11 @@ public class OperatorConversions
     private final IntSet nullableOperands;
     private final IntSet literalOperands;
 
+    public int getNumberOfLiteralOperands()
+    {
+      return literalOperands.size();
+    }
+
     @VisibleForTesting
     DefaultOperandTypeChecker(
         final List<String> operandNames,

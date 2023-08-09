@@ -121,8 +121,7 @@ public class OperatorConversionsTest
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testRequiredOperandsOnly")
-          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE)
-          .requiredOperandCount(1)
+          .operandTypeChecker(BasicOperandTypeChecker.builder().operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE).requiredOperandCount(1).build())
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -481,16 +480,22 @@ public class OperatorConversionsTest
         Mockito.when(validator.deriveType(ArgumentMatchers.any(), ArgumentMatchers.eq(node)))
                .thenReturn(relDataType);
         Mockito.when(relDataType.getSqlTypeName()).thenReturn(operand.type);
+
+        //Mockito.when(SqlUtil.isLiteral(node, true)).thenReturn(false);
         operands.add(node);
       }
       SqlParserPos pos = Mockito.mock(SqlParserPos.class);
       Mockito.when(pos.plusAll(ArgumentMatchers.any(Collection.class)))
+             .thenReturn(pos);
+      Mockito.when(pos.plusAll((SqlNode[]) ArgumentMatchers.any()))
              .thenReturn(pos);
       SqlCallBinding callBinding = new SqlCallBinding(
           validator,
           Mockito.mock(SqlValidatorScope.class),
           function.createCall(pos, operands)
       );
+
+
 
       Mockito.when(validator.newValidationError(ArgumentMatchers.any(), ArgumentMatchers.any()))
              .thenAnswer((Answer<CalciteContextException>) invocationOnMock -> new CalciteContextException(
