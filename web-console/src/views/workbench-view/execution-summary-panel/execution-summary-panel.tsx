@@ -49,12 +49,12 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   const buttons: JSX.Element[] = [];
 
   if (queryResult) {
+    const wrapQueryLimit = queryResult.getSqlOuterLimit();
     let resultCount: string;
     const numTotalRows = execution?.destination?.numTotalRows;
-    if (typeof numTotalRows === 'number') {
+    if (typeof wrapQueryLimit === 'undefined' && typeof numTotalRows === 'number') {
       resultCount = pluralIfNeeded(numTotalRows, 'result');
     } else {
-      const wrapQueryLimit = queryResult.getSqlOuterLimit();
       const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
 
       resultCount = hasMoreResults
