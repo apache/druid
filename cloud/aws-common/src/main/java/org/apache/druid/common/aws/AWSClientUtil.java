@@ -32,34 +32,38 @@ import java.util.Set;
 public class AWSClientUtil
 {
   /**
-   * This list of error code come from {@link RetryUtils}. At the moment, aws sdk does not expose a good
-   * way of retrying {@link com.amazonaws.services.s3.AmazonS3#deleteObjects(DeleteObjectsRequest)} requests. This
-   * request is used in org.apache.druid.storage.s3.S3DataSegmentKiller to delete a batch of segments from deep
-   * storage.
+   * This list of error code come from {@link RetryUtils}, and
+   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">...</a>. At the moment, aws sdk
+   * does not expose a good way of retrying
+   * {@link com.amazonaws.services.s3.AmazonS3#deleteObjects(DeleteObjectsRequest)} requests. This request is used in
+   * org.apache.druid.storage.s3.S3DataSegmentKiller to delete a batch of segments from deep storage.
    */
   private static final Set<String> RECOVERABLE_ERROR_CODES = ImmutableSet.of(
-      "Throttling",
-      "ThrottlingException",
-      "ThrottledException",
-      "ProvisionedThroughputExceededException",
-      "SlowDown",
-      "TooManyRequestsException",
-      "RequestLimitExceeded",
+      "503 SlowDown",
+      "AuthFailure",
       "BandwidthLimitExceeded",
+      "EC2ThrottledException",
+      "IDPCommunicationError",
+      "InternalError",
+      "InvalidSignatureException",
+      "PriorRequestNotComplete",
+      "ProvisionedThroughputExceededException",
+      "RequestExpired",
+      "RequestInTheFuture",
+      "RequestLimitExceeded",
       "RequestThrottled",
       "RequestThrottledException",
-      "EC2ThrottledException",
-      "PriorRequestNotComplete",
       "RequestTimeTooSkewed",
-      "RequestExpired",
-      "InvalidSignatureException",
-      "SignatureDoesNotMatch",
-      "AuthFailure",
-      "RequestInTheFuture",
-      "TransactionInProgressException",
       "RequestTimeout",
       "RequestTimeoutException",
-      "IDPCommunicationError"
+      "ServiceUnavailable",
+      "SignatureDoesNotMatch",
+      "SlowDown",
+      "ThrottledException",
+      "ThrottlingException",
+      "TooManyRequestsException",
+      "TransactionInProgressException",
+      "Throttling"
   );
 
   /**
