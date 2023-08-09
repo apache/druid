@@ -580,16 +580,22 @@ exports[`RetentionDialog matches snapshot 1`] = `
           <div
             class="bp4-form-group"
           >
+            <label
+              class="bp4-label"
+            >
+              Cluster defaults (
+              <a>
+                edit
+              </a>
+              )
+               
+              <span
+                class="bp4-text-muted"
+              />
+            </label>
             <div
               class="bp4-form-content"
             >
-              <p>
-                Cluster defaults (
-                <a>
-                  edit
-                </a>
-                ):
-              </p>
               <p>
                 The cluster default rules are applied if no datasource specific rule matches.
               </p>

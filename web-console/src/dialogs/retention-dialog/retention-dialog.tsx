@@ -194,10 +194,13 @@ ORDER BY 1`,
       {datasource !== CLUSTER_DEFAULT_FAKE_DATASOURCE && (
         <>
           <Divider />
-          <FormGroup>
-            <p>
-              Cluster defaults (<a onClick={onEditDefaults}>edit</a>):
-            </p>
+          <FormGroup
+            label={
+              <>
+                Cluster defaults (<a onClick={onEditDefaults}>edit</a>)
+              </>
+            }
+          >
             <p>The cluster default rules are applied if no datasource specific rule matches.</p>
             {currentTab === 'form' ? (
               defaultRules.map(renderDefaultRule)
