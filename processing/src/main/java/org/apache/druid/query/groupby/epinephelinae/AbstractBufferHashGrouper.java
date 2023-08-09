@@ -149,7 +149,15 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     }
 
     final int bucketStartOffset = hashTable.getOffsetForBucket(bucket);
-    ensureBucketInitialized(bucket, bucketStartOffset, keyBuffer, keyHash);
+    final boolean bucketWasUsed = hashTable.isBucketUsed(bucket);
+    final ByteBuffer tableBuffer = hashTable.getTableBuffer();
+
+    // Set up key and initialize the aggs if this is a new bucket.
+    if (!bucketWasUsed) {
+      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
+      aggregators.init(tableBuffer, bucketStartOffset + baseAggregatorOffset);
+      newBucketHook(bucketStartOffset);
+    }
 
     if (skipAggregate || canSkipAggregate(bucketStartOffset)) {
       return AggregateResult.ok();
@@ -169,16 +177,6 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
       init();
       KeyType key = keySerde.createKey();
       aggregate(key, hashFunction().applyAsInt(key), true);
-    }
-  }
-
-  private void ensureBucketInitialized(int bucket, int bucketStartOffset, ByteBuffer keyBuffer, int keyHash)
-  {
-    // Set up key and initialize the aggs if this is a new bucket.
-    if (!hashTable.isOffsetUsed(bucketStartOffset)) {
-      hashTable.initializeNewBucketKey(bucket, keyBuffer, keyHash);
-      aggregators.init(hashTable.getTableBuffer(), bucketStartOffset + baseAggregatorOffset);
-      newBucketHook(bucketStartOffset);
     }
   }
 
