@@ -210,11 +210,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
     }
-    finally {
-      synchronized (tasks) {
-        tasks.remove(task.getId());
-      }
-    }
   }
 
   @VisibleForTesting
@@ -269,6 +264,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     workItem.shutdown();
+    tasks.remove(taskid);
   }
 
   @Override
@@ -439,6 +435,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                 .stream()
                 .filter(KubernetesWorkItem::isPending)
                 .collect(Collectors.toList());
+  }
+
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    final KubernetesWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return TaskLocation.unknown();
+    } else {
+      return workItem.getLocation();
+    }
   }
 
   @Nullable
