@@ -2658,9 +2658,15 @@ public class ControllerImpl implements Controller
    * by the user in the SQL query) for certain errors reported by workers (where they have limited knowledge of the
    * ColumnMappings). For remaining errors not relying on the query column names, it returns it as is.
    */
-  private MSQErrorReport mapQueryColumnNameToOutputColumnName(final MSQErrorReport workerErrorReport)
+  @Nullable
+  private MSQErrorReport mapQueryColumnNameToOutputColumnName(
+      @Nullable final MSQErrorReport workerErrorReport
+  )
   {
-    if (workerErrorReport.getFault() instanceof InvalidNullByteFault) {
+
+    if (workerErrorReport == null) {
+      return null;
+    } else if (workerErrorReport.getFault() instanceof InvalidNullByteFault) {
       InvalidNullByteFault inbf = (InvalidNullByteFault) workerErrorReport.getFault();
       return MSQErrorReport.fromException(
           workerErrorReport.getTaskId(),
@@ -2675,8 +2681,9 @@ public class ControllerImpl implements Controller
                                   .build(),
           task.getQuerySpec().getColumnMappings()
       );
+    } else {
+      return workerErrorReport;
     }
-    return workerErrorReport;
   }
 
 
