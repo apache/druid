@@ -248,7 +248,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.5
+version: 2.12.7
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -289,7 +289,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.5.1
+version: 2.12.7
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -3592,7 +3592,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.10.5
+version: 2.12.7
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
