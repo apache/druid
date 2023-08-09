@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -150,11 +151,12 @@ public class S3DataSegmentKiller implements DataSegmentKiller
             s3Bucket,
             keysToDeleteStrings
         );
-        S3Utils.retryS3Operation(
+        RetryUtils.retry(
             () -> {
               s3Client.deleteObjects(deleteObjectsRequest);
               return null;
             },
+            exception -> (exception instanceof MultiObjectDeleteException) || S3Utils.S3RETRY.apply(exception),
             3
         );
       }

@@ -412,7 +412,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
     s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
-    EasyMock.expectLastCall().andThrow(new SdkClientException("Unable to execute HTTP request")).once();
+    EasyMock.expectLastCall().andThrow(new MultiObjectDeleteException(ImmutableList.of(), ImmutableList.of())).once();
     EasyMock.expectLastCall().andVoid().times(2);
 
 
