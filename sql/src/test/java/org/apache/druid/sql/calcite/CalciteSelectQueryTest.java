@@ -31,8 +31,10 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1990,4 +1992,47 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(new Object[] {6l}));
   }
+
+  @Test
+  public void testCountDistinctNonApproximateWithFilter()
+  {
+    long expectedCount;
+    AggregatorFactory aggregate;
+    cannotVectorize();
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.FLOAT)))
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"m1\",null)",
+                                ColumnType.FLOAT))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(
+                    useDefault
+                        ? new CountAggregatorFactory("a0")
+                        : new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("a0"),
+                            notNull("d0"))))
+                .build()
+
+        ),
+        // returning 1 is incorrect result; but with nulls as default that should be expected
+        ImmutableList.of(new Object[] {useDefault ? 1l : 0l}));
+  }
+
 }
