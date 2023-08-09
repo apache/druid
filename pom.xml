@@ -1674,12 +1674,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.6.0</version>
-                    <configuration>
-                        <usedDependencies>
-                            <dependency>org.immutables:value-annotations</dependency>
-                        </usedDependencies>
-                    </configuration>
+                    <version>3.1.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
