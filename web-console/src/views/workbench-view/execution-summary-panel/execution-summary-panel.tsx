@@ -23,7 +23,12 @@ import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
-import { downloadQueryResults, formatDurationHybrid, pluralIfNeeded } from '../../../utils';
+import {
+  downloadQueryResults,
+  formatDurationHybrid,
+  formatInteger,
+  pluralIfNeeded,
+} from '../../../utils';
 import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
 
 import './execution-summary-panel.scss';
@@ -44,12 +49,18 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   const buttons: JSX.Element[] = [];
 
   if (queryResult) {
-    const wrapQueryLimit = queryResult.getSqlOuterLimit();
-    const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
+    let resultCount: string;
+    const numTotalRows = execution?.destination?.numTotalRows;
+    if (typeof numTotalRows === 'number') {
+      resultCount = pluralIfNeeded(numTotalRows, 'result');
+    } else {
+      const wrapQueryLimit = queryResult.getSqlOuterLimit();
+      const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
 
-    const resultCount = hasMoreResults
-      ? `${queryResult.getNumResults() - 1}+ results`
-      : pluralIfNeeded(queryResult.getNumResults(), 'result');
+      resultCount = hasMoreResults
+        ? `${formatInteger(queryResult.getNumResults() - 1)}+ results`
+        : pluralIfNeeded(queryResult.getNumResults(), 'result');
+    }
 
     const warningCount = execution?.stages?.getWarningCount();
 
