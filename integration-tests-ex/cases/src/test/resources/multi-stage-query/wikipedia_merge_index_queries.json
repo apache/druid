@@ -34,8 +34,8 @@
       "timestamp" : "2013-08-31T00:00:00.000Z",
       "event" : {
         "continent":"Asia",
-        "earliest_user":"masterYi",
-        "latest_user":"stringer"
+        "earliest_user":null,
+        "latest_user":null
       }
     } ]
   }
