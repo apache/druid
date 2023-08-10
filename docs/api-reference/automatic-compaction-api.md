@@ -23,7 +23,7 @@ sidebar_label: Automatic compaction
   ~ under the License.
   -->
 
-This topic describes status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. You can configure automatic compaction in the Druid web console or API. 
+This topic describes the status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. You can configure automatic compaction in the Druid web console or API. 
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -31,7 +31,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 ### Update capacity for compaction tasks
 
-Update the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483652.
+Updates the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483652.
 
 #### URL
 
@@ -93,7 +93,7 @@ A successful request returns an HTTP `200 OK` message code and an empty response
 
 Creates or updates the automatic compaction configuration for a datasource. You pass the automatic compaction as a JSON object in the request body.
 
-Automatic compaction configuration require only the `dataSource` property. Druid fills all other properties with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
+The automatic compaction configuration requires only the `dataSource` property. Druid fills all other properties with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
 Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
 
@@ -114,7 +114,9 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 ---
 #### Sample request
 
-The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data. In this example: 
+The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data. 
+
+In this example: 
 
 * `wikipedia_hour` is a datasource with `HOUR` segment granularity.
 * `skipOffsetFromLatest` is set to `PT0S`, meaning that no data is skipped. 
@@ -226,7 +228,7 @@ A successful request returns an HTTP `200 OK` message code and an empty response
 
 ### Get all automatic compaction configurations
 
-Retrieves all automatic compaction configurations. Returns a `compactionConfigs` object containing the active automatic compaction configuration of all datasources.
+Retrieves all automatic compaction configurations. Returns a `compactionConfigs` object containing the active automatic compaction configurations of all datasources.
 
 You can use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompactionTaskSlots` values for managing resource allocation of compaction tasks.
 
@@ -371,7 +373,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get automatic compaction configuration
 
-Retrieves the automatic compaction configuration of a datasource.
+Retrieves the automatic compaction configuration for a datasource.
 
 #### URL
 
@@ -474,7 +476,7 @@ Retrieves the history of the automatic compaction configuration for a datasource
 The response contains a list of objects with the following keys:
 * `globalConfig`: A JSON object containing automatic compaction configuration that applies to the entire cluster. 
 * `compactionConfig`: A JSON object containing the automatic compaction configuration for the datasource.
-* `auditInfo`: A JSON object that contains information about the change made, such as `author`, `comment` or `ip`.
+* `auditInfo`: A JSON object containing information about the change made, such as `author`, `comment` or `ip`.
 * `auditTime`: The date and time when the change was made.
 
 #### URL
@@ -636,7 +638,7 @@ Returns the total size of segments awaiting compaction for a given datasource. T
 #### Query parameter
 * `dataSource` (required)
   * Type: String
-  * Name of the datasource for this status information
+  * Name of the datasource for this status information.
 
 #### Responses
 
@@ -696,7 +698,7 @@ The `latestStatus` object has the following properties:
 * `dataSource`: Name of the datasource for this status information.
 * `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the datasource has an active automatic compaction configuration submitted. Otherwise, returns `NOT_ENABLED`.
 * `bytesAwaitingCompaction`: Total bytes of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
-* `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction config.
+* `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction configuration.
 * `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
 * `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the automatic compaction configuration.
@@ -712,7 +714,7 @@ The `latestStatus` object has the following properties:
 #### Query parameters
 * `dataSource` (optional)
   * Type: String
-  * Filter the result by name of specific datasource.
+  * Filter the result by name of a specific datasource.
 
 #### Responses
 
