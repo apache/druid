@@ -146,7 +146,7 @@ public class Stats
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
     public static final CoordinatorStat SUBMITTED_TASKS
-        = CoordinatorStat.toDebugAndEmit("killTasks", "killTask/task/count");
+        = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
   }
 
   public static class Balancer
