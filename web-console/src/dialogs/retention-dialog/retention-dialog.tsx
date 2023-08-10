@@ -188,7 +188,7 @@ ORDER BY 1`,
               </>
             }
           >
-            <p>The cluster default rules are applied if no datasource specific rule matches.</p>
+            <p>The cluster default rules are evaluated if none of the above rules match.</p>
             {currentTab === 'form' ? (
               defaultRules.map((rule, index) => (
                 <RuleEditor key={index} rule={rule} tiers={tiers} />
