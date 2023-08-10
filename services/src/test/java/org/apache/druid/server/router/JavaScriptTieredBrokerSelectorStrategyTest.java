@@ -55,7 +55,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
   public void checkJdkCompatibility()
   {
     // skip tests for newer JDKs without javascript support
-    Assume.assumeNotNull(new ScriptEngineManager().getEngineByName("javascript"));
+    Assume.assumeNotNull(new ScriptEngineManager().getEngineByName("nashorn"));
   }
 
   @Test
