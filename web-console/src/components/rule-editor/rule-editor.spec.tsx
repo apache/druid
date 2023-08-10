@@ -26,7 +26,7 @@ describe('RuleEditor', () => {
     const ruleEditor = (
       <RuleEditor
         rule={{ type: 'loadForever', tieredReplicants: { test1: 1 } }}
-        tiers={['test', 'test', 'test']}
+        tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={undefined}

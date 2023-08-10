@@ -145,9 +145,15 @@ public abstract class Granularity implements Cacheable
   public abstract DateTime toDate(String filePath, Formatter formatter);
 
   /**
-   * Return true if time chunks populated by this granularity includes the given interval time chunk.
+   * Return true only if the time chunks populated by this granularity includes the given interval time chunk. The
+   * interval must fit exactly into the scheme of the granularity for this to return true
    */
   public abstract boolean isAligned(Interval interval);
+
+  public DateTimeZone getTimeZone()
+  {
+    return DateTimeZone.UTC;
+  }
 
   public DateTime bucketEnd(DateTime time)
   {
@@ -254,21 +260,21 @@ public abstract class Granularity implements Cacheable
   {
     private final Interval inputInterval;
 
-    private DateTime currStart;
-    private DateTime currEnd;
+    private long currStart;
+    private long currEnd;
 
     private IntervalIterator(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
 
-      currStart = bucketStart(inputInterval.getStart());
+      currStart = bucketStart(inputInterval.getStartMillis());
       currEnd = increment(currStart);
     }
 
     @Override
     public boolean hasNext()
     {
-      return currStart.isBefore(inputInterval.getEnd());
+      return currStart < inputInterval.getEndMillis();
     }
 
     @Override
@@ -277,7 +283,7 @@ public abstract class Granularity implements Cacheable
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
-      Interval retVal = new Interval(currStart, currEnd);
+      Interval retVal = new Interval(currStart, currEnd, getTimeZone());
 
       currStart = currEnd;
       currEnd = increment(currStart);

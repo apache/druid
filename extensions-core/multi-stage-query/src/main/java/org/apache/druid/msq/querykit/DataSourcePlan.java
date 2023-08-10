@@ -30,6 +30,7 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
@@ -56,6 +57,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
@@ -78,6 +80,8 @@ public class DataSourcePlan
    * of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
+
+  private static final Logger log = new Logger(DataSourcePlan.class);
 
   static {
     CONTEXT_MAP_NO_SEGMENT_GRANULARITY.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, null);
@@ -144,9 +148,13 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm preferredJoinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
+          preferredJoinAlgorithm,
+          ((JoinDataSource) dataSource)
+      );
 
-      switch (joinAlgorithm) {
+      switch (deducedJoinAlgorithm) {
         case BROADCAST:
           return forBroadcastHashJoin(
               queryKit,
@@ -171,7 +179,7 @@ public class DataSourcePlan
           );
 
         default:
-          throw new UOE("Cannot handle join algorithm [%s]", joinAlgorithm);
+          throw new UOE("Cannot handle join algorithm [%s]", deducedJoinAlgorithm);
       }
     } else {
       throw new UOE("Cannot handle dataSource [%s]", dataSource);
@@ -196,6 +204,48 @@ public class DataSourcePlan
   public Optional<QueryDefinitionBuilder> getSubQueryDefBuilder()
   {
     return Optional.ofNullable(subQueryDefBuilder);
+  }
+
+  /**
+   * Contains the logic that deduces the join algorithm to be used. Ideally, this should reside while planning the
+   * native query, however we don't have the resources and the structure in place (when adding this function) to do so.
+   * Therefore, this is done while planning the MSQ query
+   * It takes into account the algorithm specified by "sqlJoinAlgorithm" in the query context and the join condition
+   * that is present in the query.
+   */
+  private static JoinAlgorithm deduceJoinAlgorithm(JoinAlgorithm preferredJoinAlgorithm, JoinDataSource joinDataSource)
+  {
+    JoinAlgorithm deducedJoinAlgorithm;
+    if (JoinAlgorithm.BROADCAST.equals(preferredJoinAlgorithm)) {
+      deducedJoinAlgorithm = JoinAlgorithm.BROADCAST;
+    } else if (isConditionEqualityOnLeftAndRightColumns(joinDataSource.getConditionAnalysis())) {
+      deducedJoinAlgorithm = JoinAlgorithm.SORT_MERGE;
+    } else {
+      deducedJoinAlgorithm = JoinAlgorithm.BROADCAST;
+    }
+
+    if (deducedJoinAlgorithm != preferredJoinAlgorithm) {
+      log.debug(
+          "User wanted to plan join [%s] as [%s], however the join will be executed as [%s]",
+          joinDataSource,
+          preferredJoinAlgorithm.toString(),
+          deducedJoinAlgorithm.toString()
+      );
+    }
+
+    return deducedJoinAlgorithm;
+  }
+
+  /**
+   * Checks if the join condition on two tables "table1" and "table2" is of the form
+   * table1.columnA = table2.columnA && table1.columnB = table2.columnB && ....
+   * sortMerge algorithm can help these types of join conditions
+   */
+  private static boolean isConditionEqualityOnLeftAndRightColumns(JoinConditionAnalysis joinConditionAnalysis)
+  {
+    return joinConditionAnalysis.getEquiConditions()
+                                .stream()
+                                .allMatch(equality -> equality.getLeftExpr().isIdentifier());
   }
 
   /**
@@ -512,8 +562,11 @@ public class DataSourcePlan
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
    *
    * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
-   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering. Ideally,
-   * we'd support this everywhere it appears, but we can get away without it for now.
+   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
+   *
+   * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
+   * the SQL layer avoids "intervals" in other cases. See
+   * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.
    */
   private static void checkQuerySegmentSpecIsEternity(
       final DataSource dataSource,

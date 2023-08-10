@@ -103,6 +103,7 @@ public class TableInputSpecSlicer implements InputSpecSlicer
                         .flatMap(
                             holder ->
                                 StreamSupport.stream(holder.getObject().spliterator(), false)
+                                             .filter(chunk -> !chunk.getObject().isTombstone())
                                              .map(
                                                  chunk ->
                                                      new DataSegmentWithInterval(

@@ -110,10 +110,19 @@ exports[`HeaderBar matches snapshot 1`] = `
       active={false}
       className="header-entry"
       disabled={false}
-      href="#ingestion"
+      href="#supervisors"
+      icon="eye-open"
+      minimal={true}
+      text="Supervisors"
+    />
+    <Blueprint4.AnchorButton
+      active={false}
+      className="header-entry"
+      disabled={false}
+      href="#tasks"
       icon="gantt-chart"
       minimal={true}
-      text="Ingestion"
+      text="Tasks"
     />
     <Blueprint4.AnchorButton
       active={false}
@@ -148,6 +157,19 @@ exports[`HeaderBar matches snapshot 1`] = `
             selected={false}
             shouldDismissPopover={true}
             text="Lookups"
+          />
+          <Blueprint4.MenuDivider />
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            href="#explore"
+            icon="compass"
+            label="(experimental)"
+            multiline={false}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Explore"
           />
         </Blueprint4.Menu>
       }
@@ -229,6 +251,17 @@ exports[`HeaderBar matches snapshot 1`] = `
             selected={false}
             shouldDismissPopover={true}
             text="Overlord dynamic config"
+          />
+          <Blueprint4.MenuItem
+            active={false}
+            disabled={false}
+            icon="compressed"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={Object {}}
+            selected={false}
+            shouldDismissPopover={true}
+            text="Compaction dynamic config"
           />
           <Blueprint4.MenuDivider />
           <Blueprint4.MenuItem

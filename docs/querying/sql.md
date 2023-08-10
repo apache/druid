@@ -26,7 +26,7 @@ sidebar_label: "Overview and syntax"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-You can query data in Druid datasources using [Druid SQL](./sql.md). Druid translates SQL queries into its [native query language](./querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](./sql-translation.md).
+You can query data in Druid datasources using Druid SQL. Druid translates SQL queries into its [native query language](querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](sql-translation.md).
 
 Druid SQL planning occurs on the Broker.
 Set [Broker runtime properties](../configuration/index.md#sql) to configure the query plan and JDBC querying.
@@ -42,8 +42,8 @@ For more information and SQL querying options see:
 - [Query translation](./sql-translation.md) for information about how Druid translates SQL queries to native queries before running them.
 
 For information about APIs, see:
-- [Druid SQL API](./sql-api.md) for information on the HTTP API.
-- [SQL JDBC driver API](./sql-jdbc.md) for information about the JDBC driver API.
+- [Druid SQL API](../api-reference/sql-api.md) for information on the HTTP API.
+- [SQL JDBC driver API](../api-reference/sql-jdbc.md) for information about the JDBC driver API.
 - [SQL query context](./sql-query-context.md) for information about the query context parameters that affect SQL planning.
 
 ## Syntax
@@ -270,7 +270,7 @@ written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL 
 Druid SQL supports dynamic parameters using question mark (`?`) syntax, where parameters are bound to `?` placeholders
 at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and provide a
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
-which they are passed. Parameters are supported in both the [HTTP POST](sql-api.md) and [JDBC](sql-jdbc.md) APIs.
+which they are passed. Parameters are supported in both the [HTTP POST](../api-reference/sql-api.md) and [JDBC](../api-reference/sql-jdbc.md) APIs.
 
 In certain cases, using dynamic parameters in expressions can cause type inference issues which cause your query to fail, for example:
 

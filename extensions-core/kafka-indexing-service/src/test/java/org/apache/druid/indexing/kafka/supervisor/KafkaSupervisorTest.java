@@ -253,7 +253,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -309,7 +308,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            new IdleConfig(true, 1000L)
+            new IdleConfig(true, 1000L),
+            1
     );
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
@@ -328,8 +328,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false,
             null,
             numThreads,
-            null,
-            TEST_CHAT_THREADS,
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
@@ -1434,7 +1432,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testBeginPublishAndQueueNextTasks() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
@@ -1529,7 +1527,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTask() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
@@ -1649,7 +1647,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
@@ -1760,8 +1758,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingAndReadingTask() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -1879,8 +1877,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testReportWhenMultipleActiveTasks() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
 
     supervisor = getTestableSupervisorForIdleBehaviour(1, 2, true, "PT10S", null, null, false, null);
 
@@ -2037,8 +2035,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     addSomeEvents(100);
 
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost", 234, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost", 234, -1);
 
     Task id1 = createKafkaIndexTask(
         "id1",
@@ -2342,8 +2340,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     addSomeEvents(100);
 
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost", 234, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost", 234, -1);
 
     Task id1 = createKafkaIndexTask(
         "id1",
@@ -2551,7 +2549,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhilePausing() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     addSomeEvents(100);
@@ -2637,7 +2635,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     addSomeEvents(100);
@@ -2752,8 +2750,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testStopGracefully() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -3020,8 +3018,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetRunningTasks() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -3415,8 +3413,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         tuningConfig
     );
 
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     Collection workItems = new ArrayList<>();
     workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
@@ -3575,7 +3573,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
-    Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
+    Assert.assertEquals(ISE.class.getName(), serviceEmitter.getExceptionClass());
   }
 
   @Test
@@ -3610,8 +3608,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     // graceful shutdown is expected to be called on running tasks since state is suspended
 
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, true, kafkaHost);
@@ -4130,8 +4128,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false,
             null,
             numThreads,
-            null,
-            TEST_CHAT_THREADS,
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
@@ -4170,8 +4166,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -4363,10 +4357,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     List<Task> tasks = ImmutableList.of(readingTask, publishingTask, pausedTask, failsToResumePausedTask, waitingTask, pendingTask);
     Collection taskRunnerWorkItems = ImmutableList.of(
-        new TestTaskRunnerWorkItem(readingTask, null, new TaskLocation("testHost", 1001, -1)),
-        new TestTaskRunnerWorkItem(publishingTask, null, new TaskLocation("testHost", 1002, -1)),
-        new TestTaskRunnerWorkItem(pausedTask, null, new TaskLocation("testHost", 1003, -1)),
-        new TestTaskRunnerWorkItem(failsToResumePausedTask, null, new TaskLocation("testHost", 1004, -1))
+        new TestTaskRunnerWorkItem(readingTask, null, TaskLocation.create("testHost", 1001, -1)),
+        new TestTaskRunnerWorkItem(publishingTask, null, TaskLocation.create("testHost", 1002, -1)),
+        new TestTaskRunnerWorkItem(pausedTask, null, TaskLocation.create("testHost", 1003, -1)),
+        new TestTaskRunnerWorkItem(failsToResumePausedTask, null, TaskLocation.create("testHost", 1004, -1))
     );
 
     DateTime startTime = DateTimes.nowUtc();
@@ -4658,11 +4652,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
-        idleConfig
+        idleConfig,
+        null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
-        null,
         null,
         null
     )
@@ -4698,8 +4692,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         resetOffsetAutomatically,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -4772,11 +4764,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
+        null,
         null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
-        null,
         null,
         null
     )
@@ -4812,8 +4804,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -4890,11 +4880,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
+        null,
         null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
-        null,
         null,
         null
     )

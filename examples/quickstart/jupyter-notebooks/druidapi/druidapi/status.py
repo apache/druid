@@ -35,7 +35,7 @@ class StatusClient:
 
     You can find the service endpoints by querying the sys.servers table using SQL.
 
-    See https://druid.apache.org/docs/latest/operations/api-reference.html#process-information
+    See https://druid.apache.org/docs/latest/api-reference/api-reference.html#process-information
     '''
     
     def __init__(self, rest_client, owns_client=False):

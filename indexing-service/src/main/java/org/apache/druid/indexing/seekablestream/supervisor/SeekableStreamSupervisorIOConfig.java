@@ -50,6 +50,8 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final AutoScalerConfig autoScalerConfig;
   @Nullable private final IdleConfig idleConfig;
 
+  private final int stopTaskCount;
+
   public SeekableStreamSupervisorIOConfig(
       String stream,
       @Nullable InputFormat inputFormat,
@@ -64,7 +66,8 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period earlyMessageRejectionPeriod,
       @Nullable AutoScalerConfig autoScalerConfig,
       DateTime lateMessageRejectionStartDateTime,
-      @Nullable IdleConfig idleConfig
+      @Nullable IdleConfig idleConfig,
+      @Nullable Integer stopTaskCount
   )
   {
     this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
@@ -78,6 +81,8 @@ public abstract class SeekableStreamSupervisorIOConfig
     } else {
       this.taskCount = taskCount != null ? taskCount : 1;
     }
+    this.stopTaskCount = stopTaskCount == null ? this.taskCount : stopTaskCount;
+    Preconditions.checkArgument(this.stopTaskCount > 0, "stopTaskCount must be greater than 0");
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
@@ -198,5 +203,11 @@ public abstract class SeekableStreamSupervisorIOConfig
   public IdleConfig getIdleConfig()
   {
     return idleConfig;
+  }
+
+  @JsonProperty
+  public int getStopTaskCount()
+  {
+    return stopTaskCount;
   }
 }

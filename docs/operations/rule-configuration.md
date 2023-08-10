@@ -34,11 +34,11 @@ You can specify the data to retain or drop in the following ways:
 - Period: segment data specified as an offset from the present time.
 - Interval: a fixed time range.
 
-Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../dependencies/metadata-storage.md).
+Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../design/metadata-storage.md).
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](./api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Service status API reference](../api-reference/service-status-api.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 
@@ -107,9 +107,20 @@ In the web console you can use the up and down arrows on the right side of the i
 
 ## Load rules
 
-Load rules define how Druid assigns segments to [historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
+Load rules define how Druid assigns segments to [Historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
 
-If you have a single tier, Druid automatically names the tier `_default` and loads all segments onto it. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
+If you have a single tier, Druid automatically names the tier `_default`. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
+
+All load rules can have these properties:
+
+|Property|Description|Required|Default value|
+|---------|-----------|---------|-------------|
+| `tieredReplicants`| Map from tier names to the respective number of segment replicas to be loaded on those tiers. The number of replicas for each tier must be either 0 or a positive integer.| No | When `useDefaultTierForNull` is `true`, the default value is `{"_default_tier": 2}` i.e. 2 replicas to be loaded on the `_default_tier`.<br/><br/>When `useDefaultTierForNull` is `false`, the default value is `{}` i.e. no replicas to be loaded on any tier. |
+|`useDefaultTierForNull`|Determines the default value of `tieredReplicants` if it is not specified or set to `null`.| No | `true`|
+
+Specific types of load rules discussed below may have other properties too.
+
+Load rules are also how you take advantage of the resource savings that [query the data from deep storage](../querying/query-from-deep-storage.md) provides. One way to configure data so that certain segments are not loaded onto Historical tiers but are available to query from deep storage is to set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false` for those segments, either by interval or by period.
 
 ### Forever load rule
 
@@ -130,6 +141,7 @@ The following example places one replica of each segment on a custom tier named 
 Set the following property:
 
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Period load rule
 
@@ -157,7 +169,8 @@ Set the following properties:
   - the segment interval starts any time after the rule interval starts.
 
   You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. 
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Interval load rule
 
@@ -179,7 +192,8 @@ Interval load rules have type `loadByInterval`. The following example places one
 Set the following properties:
 
 - `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier. 
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ## Drop rules
 
@@ -195,7 +209,7 @@ Forever drop rules have type `dropForever`:
 
 ```json
 {
-  "type": "dropForever",
+  "type": "dropForever"
 }
 ```
 
@@ -209,7 +223,7 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 {
   "type": "dropByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 
@@ -244,7 +258,7 @@ Set the following property:
 
 ### Interval drop rule
 
-You can use a drop interval rule to prevent Druid from loading a specified range of data onto any tier. The range is typically your oldest data. The dropped data resides in cold storage, but is not queryable. If you need to query the data, update or remove the interval drop rule so that Druid reloads the data.
+You can use a drop interval rule to prevent Druid from loading a specified range of data onto any tier. The range is typically your oldest data. The dropped data resides in deep storage and can still be [queried from deep storage](../querying/query-from-deep-storage.md). 
 
 Interval drop rules have type `dropByInterval` and the following JSON structure:
 
@@ -271,7 +285,7 @@ Forever broadcast rules have type `broadcastForever`:
 
 ```json
 {
-  "type": "broadcastForever",
+  "type": "broadcastForever"
 }
 ```
 
@@ -285,7 +299,7 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 {
   "type": "broadcastByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 

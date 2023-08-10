@@ -21,8 +21,6 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
@@ -30,6 +28,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
@@ -55,6 +54,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final DruidNode druidNode;
   private final TaskConfig taskConfig;
   private final Properties properties;
+  private final DruidKubernetesClient druidKubernetesClient;
+  private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
 
 
@@ -67,7 +68,9 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskLogs taskLogs,
       @Self DruidNode druidNode,
       TaskConfig taskConfig,
-      Properties properties
+      Properties properties,
+      DruidKubernetesClient druidKubernetesClient,
+      ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -78,33 +81,27 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.druidNode = druidNode;
     this.taskConfig = taskConfig;
     this.properties = properties;
+    this.druidKubernetesClient = druidKubernetesClient;
+    this.emitter = emitter;
   }
 
   @Override
   public KubernetesTaskRunner build()
   {
-    DruidKubernetesClient client;
-    if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
-      Config config = new ConfigBuilder().build();
-      config.setHttpsProxy(null);
-      config.setHttpProxy(null);
-      client = new DruidKubernetesClient(config);
-    } else {
-      client = new DruidKubernetesClient();
-    }
 
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
-        client,
+        druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
         kubernetesTaskRunnerConfig.isDebugJobs()
     );
 
     runner = new KubernetesTaskRunner(
-        buildTaskAdapter(client),
+        buildTaskAdapter(druidKubernetesClient),
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper)
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
+        emitter
     );
     return runner;
   }

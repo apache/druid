@@ -1,7 +1,7 @@
 ---
 id: tutorial-msq-convert-spec
-title: "Tutorial: Convert an ingestion spec for SQL-based ingestion"
-sidebar_label: "Convert ingestion spec to SQL"
+title: Convert an ingestion spec for SQL-based ingestion
+sidebar_label: Convert ingestion spec to SQL
 description: How to convert an ingestion spec to a query for SQL-based ingestion in the web console.
 ---
 

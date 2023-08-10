@@ -108,7 +108,8 @@ public class SQLMetadataRuleManagerTest
     List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
-            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
         )
     );
     ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("override rule"));
@@ -171,7 +172,8 @@ public class SQLMetadataRuleManagerTest
     List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
-            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
         )
     );
     final AuditInfo auditInfo = createAuditInfo("create audit entry");
@@ -200,9 +202,10 @@ public class SQLMetadataRuleManagerTest
     List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
-            DruidServer.DEFAULT_TIER,
-            DruidServer.DEFAULT_NUM_REPLICANTS
-        )
+                DruidServer.DEFAULT_TIER,
+                DruidServer.DEFAULT_NUM_REPLICANTS
+        ),
+            null
         )
     );
     final AuditInfo auditInfo = createAuditInfo("test_comment");
@@ -232,7 +235,8 @@ public class SQLMetadataRuleManagerTest
     List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
-            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
         )
     );
     ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("test"));
@@ -258,7 +262,8 @@ public class SQLMetadataRuleManagerTest
     List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
-            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
         )
     );
     ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("update rules"));
@@ -286,7 +291,8 @@ public class SQLMetadataRuleManagerTest
     List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
-            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
         )
     );
     ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("update rules"));

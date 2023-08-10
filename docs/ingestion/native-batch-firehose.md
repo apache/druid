@@ -1,6 +1,6 @@
 ---
 id: native-batch-firehose
-title: "Native batch ingestion with firehose (Deprecated)"
+title: "JSON-based batch ingestion with firehose (Deprecated)"
 sidebar_label: "Firehose (deprecated)"
 ---
 
@@ -23,7 +23,7 @@ sidebar_label: "Firehose (deprecated)"
   ~ under the License.
   -->
 
-> Firehose ingestion is deprecated. See [Migrate from firehose to input source ingestion](./migrate-from-firehose-ingestion.md) for instructions on migrating from firehose ingestion to using native batch ingestion input sources.
+> Firehose ingestion is deprecated. See [Migrate from firehose to input source ingestion](../operations/migrate-from-firehose-ingestion.md) for instructions on migrating from firehose ingestion to using native batch ingestion input sources.
 
 There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
 

@@ -20,6 +20,7 @@
 package org.apache.druid.msq.exec;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
@@ -28,7 +29,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.msq.rpc.CoordinatorServiceClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -52,13 +52,13 @@ import java.util.function.Supplier;
  */
 public class TaskDataSegmentProvider implements DataSegmentProvider
 {
-  private final CoordinatorServiceClient coordinatorClient;
+  private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManager segmentCacheManager;
   private final IndexIO indexIO;
   private final ConcurrentHashMap<SegmentId, SegmentHolder> holders;
 
   public TaskDataSegmentProvider(
-      CoordinatorServiceClient coordinatorClient,
+      CoordinatorClient coordinatorClient,
       SegmentCacheManager segmentCacheManager,
       IndexIO indexIO
   )

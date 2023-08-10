@@ -63,10 +63,12 @@ import java.util.stream.Collectors;
 public class MSQTestControllerContext implements ControllerContext
 {
   private static final Logger log = new Logger(MSQTestControllerContext.class);
+  private static final int NUM_WORKERS = 4;
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.singleThreaded(
+  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+      NUM_WORKERS,
       "MultiStageQuery-test-controller-client"));
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
@@ -96,16 +98,18 @@ public class MSQTestControllerContext implements ControllerContext
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
-    Mockito.when(coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
+    Mockito.when(coordinatorClient.fetchUsedSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.anyList()
                  )
     ).thenAnswer(invocation ->
-                     (injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
-                              .getSegments()
-                              .stream()
-                              .filter(dataSegment -> dataSegment.getDataSource().equals(invocation.getArguments()[0]))
-                              .collect(Collectors.toList())
+                     Futures.immediateFuture(
+                         injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
+                                 .getSegments()
+                                 .stream()
+                                 .filter(dataSegment -> dataSegment.getDataSource()
+                                                                   .equals(invocation.getArguments()[0]))
+                                 .collect(Collectors.toList())
                      )
     );
     this.workerMemoryParameters = workerMemoryParameters;

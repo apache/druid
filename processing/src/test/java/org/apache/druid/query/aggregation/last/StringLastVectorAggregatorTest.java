@@ -130,6 +130,25 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void aggregateNoOp()
+  {
+    // Test that aggregates run just fine when the input field does not exist
+    StringLastVectorAggregator aggregator = new StringLastVectorAggregator(null, selector, 10);
+    aggregator.aggregate(buf, 0, 0, VALUES.length);
+  }
+
+  @Test
+  public void aggregateBatchNoOp()
+  {
+    // Test that aggregates run just fine when the input field does not exist
+    StringLastVectorAggregator aggregator = new StringLastVectorAggregator(null, selector, 10);
+    int[] positions = new int[]{0, 43, 70};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    aggregator.aggregate(buf, 3, positions, null, positionOffset);
+  }
+
+  @Test
   public void aggregateBatchWithoutRows()
   {
     int[] positions = new int[]{0, 43, 70};

@@ -126,7 +126,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setUpClass()
   {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
   }
 
   @Test
@@ -494,8 +494,6 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         return NullHandling.defaultFloatValue();
       case DOUBLE:
         return NullHandling.defaultDoubleValue();
-      case ARRAY:
-        return Collections.emptyList();
       default:
         return null;
     }

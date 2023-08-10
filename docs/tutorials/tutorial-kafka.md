@@ -1,7 +1,7 @@
 ---
 id: tutorial-kafka
-title: "Tutorial: Load streaming data from Apache Kafka"
-sidebar_label: "Load from Apache Kafka"
+title: Load streaming data from Apache Kafka
+sidebar_label: Load from Apache Kafka
 ---
 
 <!--
@@ -76,8 +76,7 @@ In this section, you download sample data to the tutorial's directory and send t
 2. Download the sample data to your new directory and extract it:
 
    ```bash
-   cd sample-data
-   curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz
+   (cd sample-data && curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz)
    ```
 
 3. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic:
@@ -128,7 +127,7 @@ To use the console data loader:
 
    ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) to ingest into Druid. The console does most of this for you, but you need to create JSON-type dimensions for the three nested columns in the data. 
+7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/schema-model.md#dimensions) and [metrics](../ingestion/schema-model.md#metrics) to ingest into Druid. The console does most of this for you, but you need to create JSON-type dimensions for the three nested columns in the data. 
 
     Click **Add dimension** and enter the following information. You can only add one dimension at a time.
     - Name: `event`, Type: `json`

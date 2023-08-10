@@ -30,8 +30,6 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import classNames from 'classnames';
-import { select, selectAll } from 'd3-selection';
 import {
   C,
   Column,
@@ -41,7 +39,10 @@ import {
   SqlExpression,
   SqlQuery,
   SqlType,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
+import classNames from 'classnames';
+import { select, selectAll } from 'd3-selection';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { ClearableInput, LearnMore, Loader } from '../../../components';
@@ -950,7 +951,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 <AnchorButton
                   icon={IconNames.HELP}
                   text="Learn more..."
-                  href={`${getLink('DOCS')}/ingestion/data-model.html#primary-timestamp`}
+                  href={`${getLink('DOCS')}/ingestion/schema-model.html#primary-timestamp`}
                   target="_blank"
                   intent={Intent.WARNING}
                   minimal

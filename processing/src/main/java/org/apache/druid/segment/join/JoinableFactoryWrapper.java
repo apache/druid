@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -177,7 +178,10 @@ public class JoinableFactoryWrapper
         }
         return new JoinClauseToFilterConversion(null, false);
       }
-      final Filter onlyFilter = new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues());
+      final Filter onlyFilter = Filters.toFilter(new InDimFilter(
+          leftColumn,
+          columnValuesWithUniqueFlag.getColumnValues()
+      ));
       if (!columnValuesWithUniqueFlag.isAllUnique()) {
         joinClauseFullyConverted = false;
       }
