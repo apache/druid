@@ -1999,12 +1999,14 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateGroupingEmptySet2()
   {
+    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
                 PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        "select dim1,dim2,count(distinct m1) from druid.foo where m1 < 111.0 group by grouping sets ((dim1),(dim2))",
+        //"select dim1,dim2,m1 from druid.foo where m1 < 3.0",
+        "select dim1,dim2,count(distinct m1) from druid.foo where m1 <2.0 group by grouping sets ((dim1),(dim2),())",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
