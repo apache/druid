@@ -58,7 +58,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
-  public static final Predicate<TaskStatusPlus> IS_COORDINATOR_ISSUED_KILL_TASK =
+  public static final Predicate<TaskStatusPlus> IS_AUTO_KILL_TASK =
       status -> null != status
                 && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
@@ -118,7 +118,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
       return params;
     }
-    TaskStats taskStats = TaskStats.EMPTY;
+    TaskStats taskStats = new TaskStats();
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
     double killTaskSlotRatio = params.getCoordinatorDynamicConfig().getKillTaskSlotRatio();
@@ -130,7 +130,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     );
     int availableKillTaskSlots = getAvailableKillTaskSlots(
         killTaskCapacity,
-        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_COORDINATOR_ISSUED_KILL_TASK).size()
+        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
     );
     final CoordinatorRunStats stats = params.getCoordinatorStats();
 
@@ -260,8 +260,6 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   static class TaskStats
   {
-
-    static final TaskStats EMPTY = new TaskStats();
     int availableTaskSlots;
     int maxSlots;
     int submittedTasks;
