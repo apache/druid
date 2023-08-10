@@ -173,7 +173,6 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     int submittedTasks = 0;
     if (0 < availableKillTaskSlots && !CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
-      log.info("datasourcesToKill: %s", dataSourcesToKill);
       for (String dataSource : dataSourcesToKill) {
         if (submittedTasks >= availableKillTaskSlots) {
           log.info(StringUtils.format(
