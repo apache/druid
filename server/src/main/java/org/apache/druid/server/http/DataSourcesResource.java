@@ -36,7 +36,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
-import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -50,6 +50,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
@@ -104,7 +105,7 @@ public class DataSourcesResource
   private final CoordinatorServerView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
 
@@ -113,7 +114,7 @@ public class DataSourcesResource
       CoordinatorServerView serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
-      @Nullable IndexingServiceClient indexingServiceClient,
+      @Nullable OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator
   )
@@ -121,7 +122,7 @@ public class DataSourcesResource
     this.serverInventoryView = serverInventoryView;
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataRuleManager = metadataRuleManager;
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
   }
@@ -311,7 +312,7 @@ public class DataSourcesResource
       @QueryParam("interval") final String interval
   )
   {
-    if (indexingServiceClient == null) {
+    if (overlordClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
 
@@ -333,7 +334,7 @@ public class DataSourcesResource
       @PathParam("interval") final String interval
   )
   {
-    if (indexingServiceClient == null) {
+    if (overlordClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
     if (StringUtils.contains(interval, '_')) {
@@ -341,7 +342,7 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      indexingServiceClient.killUnusedSegments("api-issued", dataSourceName, theInterval);
+      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null), true);
       return Response.ok().build();
     }
     catch (Exception e) {

@@ -1,0 +1,14 @@
+false	-65535	-65535
+false	0	-65535
+false	1	-65535
+false	3	-65535
+false	7	-65535
+false	13	-65535
+false	29	-65535
+false	1073741823	-65535
+false	2147483647	-65535
+true	-1	-1
+true	19	-1
+true	109	-1
+true	65535	-1
+true	10000000	-1

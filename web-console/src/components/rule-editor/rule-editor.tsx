@@ -81,7 +81,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
     if (!tieredReplicantsList.length) {
       return (
         <FormGroup>
-          There is no historical replication configured, data will not be loaded on hisotricals.
+          There is no historical replication configured, data will not be loaded on historicals.
         </FormGroup>
       );
     }

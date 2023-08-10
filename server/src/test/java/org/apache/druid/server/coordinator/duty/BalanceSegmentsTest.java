@@ -31,8 +31,8 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -339,8 +339,6 @@ public class BalanceSegmentsTest
                 CoordinatorDynamicConfig.builder()
                                         .withSmartSegmentLoading(false)
                                         .withMaxSegmentsToMove(1)
-                                        .withUseBatchedSegmentSampler(true)
-                                        .withPercentOfSegmentsToConsiderPerMove(40)
                                         .build()
             )
             .withBalancerStrategy(balancerStrategy)
@@ -355,7 +353,7 @@ public class BalanceSegmentsTest
   }
 
   @Test
-  public void testUseBatchedSegmentSampler()
+  public void testMoveForMultipleDatasources()
   {
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(
         createHolder(server1, allSegments),
@@ -367,7 +365,6 @@ public class BalanceSegmentsTest
             CoordinatorDynamicConfig.builder()
                                     .withSmartSegmentLoading(false)
                                     .withMaxSegmentsToMove(2)
-                                    .withUseBatchedSegmentSampler(true)
                                     .build()
         )
         .withBroadcastDatasources(broadcastDatasources)
@@ -426,7 +423,7 @@ public class BalanceSegmentsTest
 
     return new ServerHolder(
         server.toImmutableDruidServer(),
-        new LoadQueuePeonTester(),
+        new TestLoadQueuePeon(),
         isDecommissioning,
         maxSegmentsInLoadQueue,
         10

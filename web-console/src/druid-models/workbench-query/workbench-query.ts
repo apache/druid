@@ -21,7 +21,7 @@ import type {
   SqlExpression,
   SqlPartitionedByClause,
   SqlQuery,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -29,7 +29,7 @@ import {
   SqlOrderByClause,
   SqlOrderByExpression,
   SqlTable,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
@@ -71,8 +71,6 @@ export interface WorkbenchQueryValue {
 }
 
 export class WorkbenchQuery {
-  static INLINE_DATASOURCE_MARKER = '__query_select';
-
   private static enabledQueryEngines: DruidEngine[] = ['native', 'sql-native'];
 
   static blank(): WorkbenchQuery {
@@ -228,7 +226,7 @@ export class WorkbenchQuery {
   static getRowColumnFromIssue(issue: string): RowColumn | undefined {
     const m = issue.match(/at line (\d+),(\d+)/);
     if (!m) return;
-    return { match: '', row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+    return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
 
   public readonly queryParts: WorkbenchQueryPart[];
@@ -602,7 +600,7 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery) {
+    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }
@@ -622,6 +620,7 @@ export class WorkbenchQuery {
     }
 
     if (engine === 'sql-msq-task') {
+      apiQuery.context.executionMode ??= 'async';
       apiQuery.context.finalizeAggregations ??= !ingestQuery;
       apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
     }

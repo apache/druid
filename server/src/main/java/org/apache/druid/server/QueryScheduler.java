@@ -106,9 +106,12 @@ public class QueryScheduler implements QueryWatcher
     this.laningStrategy = laningStrategy;
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
-    // if totalNumThreads is above 0 and less than druid.server.http.numThreads, enforce total limit
+    // if totalNumThreads is above 0 and less than druid.server.http.numThreads and
+    // requests are not being queued by Jetty, enforce total limit
     final boolean limitTotal;
-    if (totalNumThreads > 0 && totalNumThreads < serverConfig.getNumThreads()) {
+    if (totalNumThreads > 0
+        && totalNumThreads < serverConfig.getNumThreads()
+        && !serverConfig.isEnableQueryRequestsQueuing()) {
       limitTotal = true;
       this.totalCapacity = totalNumThreads;
     } else {

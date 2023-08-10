@@ -109,6 +109,8 @@ html
 HyperLogLog
 IAM
 IANA
+IcebergFilter
+IcebergInputSource
 IETF
 IP
 IPv4
@@ -308,10 +310,13 @@ enum
 expectedType
 expr
 failover
+failovers
 featureSpec
 findColumnsFromHeader
 filenames
 filesystem
+filterColumn
+filterValue
 firefox
 firehose
 firehoses
@@ -342,6 +347,7 @@ interruptible
 isAllowList
 jackson-jq
 javadoc
+javascript
 joinable
 jsonCompression
 json_keys
@@ -375,6 +381,7 @@ max_map_count
 memcached
 mergeable
 metadata
+metastores
 millis
 microbatch
 microbatches
@@ -483,6 +490,7 @@ skipHeaderRows
 Smoosh
 smoosh
 smooshed
+snapshotting
 splittable
 ssl
 sslmode
@@ -713,7 +721,6 @@ DurableStorageConfiguration
 ColumnTypeNotSupported
 InsertCannotAllocateSegment
 InsertCannotBeEmpty
-InsertCannotOrderByDescending
 InsertCannotReplaceExistingSegment
 InsertLockPreempted
 InsertTimeNull
@@ -806,7 +813,6 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
 ambari-metrics
@@ -872,6 +878,8 @@ P1D
 cycleSize
 doubleMax
 doubleAny
+doubleFirst
+doubleLast
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -881,6 +889,8 @@ druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
+longFirst
+longLast
 longMean
 longMeanNoNulls
 longMin
@@ -1024,7 +1034,6 @@ PT17S
 GCS
 StaticGoogleBlobStoreFirehose
 gcs-connector
-hadoop2
 hdfs
 Aotearoa
 Czechia
@@ -1227,6 +1236,8 @@ pom.xml
 0.7.x
 0.7.x.
 TimeAndDims
+catalogProperties
+catalogUri
 column2
 column_1
 column_n
@@ -1235,6 +1246,8 @@ ctrl
 descriptorString
 headerFormat
 headerLabelPrefix
+icebergFilter
+icebergCatalog
 jsonLowercase
 kafka
 KafkaStringHeaderFormat
@@ -1307,6 +1320,7 @@ segmentOutputPath
 segmentTable
 shardSpec
 single_dim
+tableName
 targetPartitionSize
 targetRowsPerSegment
 useCombiner
@@ -1399,6 +1413,8 @@ BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+warehouseSource
+warehousePath
 index.md
 DOUBLE_ARRAY
 DOY
@@ -1489,6 +1505,8 @@ str1
 str2
 string_to_array
 stringAny
+stringFirst
+stringLast
 Strlen
 strlen
 strpos
@@ -1748,6 +1766,8 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
+floatFirst
+floatLast
 floatSum
 joinFilterRewriteMaxSize
 maxQueuedBytes
@@ -1799,6 +1819,7 @@ InsensitiveContainsSearchQuerySpec
 RegexSearchQuerySpec
 analysisType
 analysisTypes
+aggregatorMergeStrategy
 lenientAggregatorMerge
 minmax
 segmentMetadata
@@ -2276,3 +2297,15 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+completeTasks
+runningTasks
+waitingTasks
+pendingTasks
+shutdownAllTasks
+supervisorId
+suspendAll
+resumeAll
+terminateAll
+selfDiscovered
+loadstatus
+isLeader

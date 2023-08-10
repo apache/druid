@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.exec.Limits;
-import org.apache.druid.msq.indexing.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -117,7 +117,7 @@ public class MSQResultsReport
     return resultYielder;
   }
 
-  @JsonProperty("resultsTruncted")
+  @JsonProperty("resultsTruncated")
   public boolean isResultsTruncated()
   {
     return resultsTruncated;

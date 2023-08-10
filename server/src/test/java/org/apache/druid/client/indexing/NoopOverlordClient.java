@@ -21,14 +21,27 @@ package org.apache.druid.client.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class NoopOverlordClient implements OverlordClient
 {
+  @Override
+  public ListenableFuture<URI> findCurrentLeader()
+  {
+    throw new UnsupportedOperationException();
+  }
+
   @Override
   public ListenableFuture<Void> runTask(String taskId, Object taskObject)
   {
@@ -37,6 +50,16 @@ public class NoopOverlordClient implements OverlordClient
 
   @Override
   public ListenableFuture<Void> cancelTask(String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+      @Nullable String state,
+      @Nullable String dataSource,
+      @Nullable Integer maxCompletedTasks
+  )
   {
     throw new UnsupportedOperationException();
   }
@@ -54,13 +77,43 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
+  public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Integer> killPendingSegments(String dataSource, Interval interval)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
   {
     throw new UnsupportedOperationException();
   }
