@@ -33,6 +33,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -77,6 +79,8 @@ public class KillUnusedSegmentsTest
   private DruidCoordinatorConfig config;
 
   @Mock
+  private CoordinatorRunStats stats;
+  @Mock
   private DruidCoordinatorRuntimeParams params;
   @Mock
   private CoordinatorDynamicConfig coordinatorDynamicConfig;
@@ -94,6 +98,7 @@ public class KillUnusedSegmentsTest
   public void setup()
   {
     Mockito.doReturn(coordinatorDynamicConfig).when(params).getCoordinatorDynamicConfig();
+    Mockito.doReturn(stats).when(params).getCoordinatorStats();
     Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCoordinatorKillPeriod();
     Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
     Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
@@ -181,6 +186,7 @@ public class KillUnusedSegmentsTest
     );
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
+    verifyStats(9, 1, 10);
   }
 
   @Test
@@ -198,6 +204,7 @@ public class KillUnusedSegmentsTest
     );
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
+    verifyStats(9, 1, 10);
   }
 
   @Test
@@ -214,6 +221,7 @@ public class KillUnusedSegmentsTest
     );
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
+    verifyStats(9, 1, 10);
   }
 
   @Test
@@ -226,6 +234,7 @@ public class KillUnusedSegmentsTest
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     // Only 1 unused segment is killed
     runAndVerifyKillInterval(yearOldSegment.getInterval());
+    verifyStats(9, 1, 10);
   }
 
   @Test
@@ -233,6 +242,7 @@ public class KillUnusedSegmentsTest
   {
     mockTaskSlotUsage(0.10, 10, 1, 5);
     runAndVerifyNoKill();
+    verifyStats(0, 0, 0);
   }
 
   @Test
@@ -279,13 +289,28 @@ public class KillUnusedSegmentsTest
   private void runAndVerifyKillInterval(Interval expectedKillInterval)
   {
     int limit = config.getCoordinatorKillMaxSegments();
+    Mockito.doReturn(Futures.immediateFuture("ok"))
+        .when(overlordClient)
+        .runKillTask(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.any(Interval.class),
+            ArgumentMatchers.anyInt());
     target.run(params);
+
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("DS1"),
         ArgumentMatchers.eq(expectedKillInterval),
         ArgumentMatchers.eq(limit)
     );
+  }
+
+  private void verifyStats(int availableSlots, int submittedTasks, int maxSlots)
+  {
+    Mockito.verify(stats).add(Stats.Kill.AVAILABLE_SLOTS, availableSlots);
+    Mockito.verify(stats).add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
+    Mockito.verify(stats).add(Stats.Kill.MAX_SLOTS, maxSlots);
   }
 
   private void runAndVerifyNoKill()
