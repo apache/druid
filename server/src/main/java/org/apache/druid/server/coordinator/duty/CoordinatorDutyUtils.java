@@ -103,7 +103,7 @@ public class CoordinatorDutyUtils
   {
     final CloseableIterator<TaskStatusPlus> activeTasks =
         FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 0), true);
-    // Fetch currently running kill tasks
+    // Fetch currently running tasks that match the predicate
     List<TaskStatusPlus> taskStatuses = new ArrayList<>();
 
     try (final Closer closer = Closer.create()) {
