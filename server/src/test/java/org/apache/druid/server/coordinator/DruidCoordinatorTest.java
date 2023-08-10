@@ -690,7 +690,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupDoesNotContainsCompactSegments()
   {
-    CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null)));
+    CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
+        "group1",
+        Duration.standardSeconds(1),
+        ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null, druidCoordinatorConfig))
+    );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group));
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
