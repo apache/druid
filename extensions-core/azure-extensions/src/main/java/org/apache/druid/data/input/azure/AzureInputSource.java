@@ -139,7 +139,7 @@ public class AzureInputSource extends CloudObjectInputSource
       public long getObjectSize(CloudObjectLocation location)
       {
         try {
-          final CloudBlob blobWithAttributes = storage.getBlobReferenceWithAttributes(
+          final CloudBlob blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
               location.getBucket(),
               location.getPath()
           );

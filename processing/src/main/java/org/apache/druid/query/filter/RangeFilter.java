@@ -34,6 +34,7 @@ import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
@@ -514,10 +516,18 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (hasLowerBound()) {
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.LONG);
         if (lowerCast.isNumericNull()) {
-          hasLowerBound = false;
-          lowerBound = Long.MIN_VALUE;
+          // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
+          return DruidLongPredicate.ALWAYS_FALSE;
         } else {
-          lowerBound = lowerCast.asLong();
+          if (lowerOpen) {
+            // lower bound is open, so take the floor of the value so that x > 1.1 can match 2 but not 1
+            lowerBound = (long) Math.floor(lowerEval.asDouble());
+          } else {
+            // lower bound is closed, tkae the ceil of the value so that x >= 1.1 can match 2 but not 1
+            lowerBound = (long) Math.ceil(lowerEval.asDouble());
+          }
           hasLowerBound = true;
         }
       } else {
@@ -529,10 +539,18 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         ExprEval<?> upperCast = upperEval.castTo(ExpressionType.LONG);
         if (upperCast.isNumericNull()) {
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
           return DruidLongPredicate.ALWAYS_FALSE;
         } else {
+          if (upperOpen) {
+            // upper bound is open, take the ceil so that x < 1.1 can match 1 but not 2
+            upperBound = (long) Math.ceil(upperEval.asDouble());
+          } else {
+            // upper bound is closed, take the floor so that x <= 1.1 can match 1 but not 2
+            upperBound = (long) Math.floor(upperEval.asDouble());
+          }
           hasUpperBound = true;
-          upperBound = upperCast.asLong();
         }
       } else {
         hasUpperBound = false;
@@ -562,8 +580,10 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (hasLowerBound()) {
         ExprEval<?> lowerCast = lowerEval.castTo(ExpressionType.DOUBLE);
         if (lowerCast.isNumericNull()) {
-          hasLowerBound = false;
-          lowerBound = Double.NEGATIVE_INFINITY;
+          // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
+          return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           lowerBound = lowerCast.asDouble();
           hasLowerBound = true;
@@ -577,6 +597,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         ExprEval<?> upperCast = upperEval.castTo(ExpressionType.DOUBLE);
         if (upperCast.isNumericNull()) {
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
+          // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
+          // but just in case...
           return DruidDoublePredicate.ALWAYS_FALSE;
         } else {
           hasUpperBound = true;
@@ -595,9 +617,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private Supplier<Predicate<String>> makeStringPredicateSupplier()
   {
     return Suppliers.memoize(() -> {
-      final Comparator<String> stringComparator = matchValueType.isNumeric()
-                                                  ? StringComparators.NUMERIC
-                                                  : StringComparators.LEXICOGRAPHIC;
+      final Comparator<String> stringComparator =
+          matchValueType.isNumeric() ? StringComparators.NUMERIC : StringComparators.LEXICOGRAPHIC;
       final String lowerBound = hasLowerBound() ? lowerEval.castTo(ExpressionType.STRING).asString() : null;
       final String upperBound = hasUpperBound() ? upperEval.castTo(ExpressionType.STRING).asString() : null;
 
@@ -607,15 +628,37 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     });
   }
 
-
-
   private Predicate<Object[]> makeArrayPredicate(TypeSignature<ValueType> inputType)
   {
-    final Comparator<Object[]> arrayComparator = inputType.getNullableStrategy();
+    final Comparator<Object[]> arrayComparator;
+    if (inputType.getElementType().is(ValueType.STRING) && Types.isNumericOrNumericArray(matchValueType)) {
+      arrayComparator = new NumericStringArrayComparator();
+    } else {
+      arrayComparator = inputType.getNullableStrategy();
+    }
     final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(inputType);
     final RangeType rangeType = RangeType.of(hasLowerBound(), lowerOpen, hasUpperBound(), upperOpen);
-    final Object[] lowerBound = hasLowerBound() ? lowerEval.castTo(expressionType).asArray() : null;
-    final Object[] upperBound = hasUpperBound() ? upperEval.castTo(expressionType).asArray() : null;
+
+    final Object[] lowerBound;
+    final Object[] upperBound;
+    if (hasLowerBound()) {
+      if (lowerOpen) {
+        lowerBound = lowerEval.castTo(expressionType).asArray();
+      } else {
+        lowerBound = castArrayForComparisonWithCeilIfNeeded(lowerEval, expressionType);
+      }
+    } else {
+      lowerBound = null;
+    }
+    if (hasUpperBound()) {
+      if (upperOpen) {
+        upperBound = castArrayForComparisonWithCeilIfNeeded(upperEval, expressionType);
+      } else {
+        upperBound = upperEval.castTo(expressionType).asArray();
+      }
+    } else {
+      upperBound = null;
+    }
     return makeComparatorPredicate(rangeType, arrayComparator, lowerBound, upperBound);
   }
 
@@ -631,7 +674,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
             final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
-            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Object[] upperBound = castArrayForComparisonWithCeilIfNeeded(upperEval, val.asArrayType());
             final Comparator<Object[]> comparator = val.type().getNullableStrategy();
             final int lowerComparing = comparator.compare(val.asArray(), lowerBound);
             final int upperComparing = comparator.compare(upperBound, val.asArray());
@@ -656,8 +699,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
-            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Object[] lowerBound = castArrayForComparisonWithCeilIfNeeded(lowerEval, val.asArrayType());
+            final Object[] upperBound = castArrayForComparisonWithCeilIfNeeded(upperEval, val.asArrayType());
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
@@ -669,7 +712,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] lowerBound = castArrayForComparisonWithCeilIfNeeded(lowerEval, val.asArrayType());
             final Object[] upperBound = upperEval.castTo(val.type()).asArray();
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
@@ -682,7 +725,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Object[] upperBound = castArrayForComparisonWithCeilIfNeeded(upperEval, val.asArrayType());
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
             return upperComparing > 0;
@@ -715,7 +758,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
               return false;
             }
             ExprEval<?> val = ExprEval.bestEffortOf(input);
-            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] lowerBound = castArrayForComparisonWithCeilIfNeeded(lowerEval, val.asArrayType());
             final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
             final int lowerComparing = arrayComparator.compare(lowerBound, val.asArray());
             return lowerComparing >= 0;
@@ -739,7 +782,10 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     @Override
     public Predicate<String> makeStringPredicate()
     {
-      return stringPredicateSupplier.get();
+      return new FallbackPredicate<>(
+          stringPredicateSupplier.get(),
+          ExpressionType.STRING
+      );
     }
 
     @Override
@@ -748,8 +794,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (matchValueType.isNumeric()) {
         return longPredicateSupplier.get();
       }
-      Predicate<String> stringPredicate = stringPredicateSupplier.get();
-      return input -> stringPredicate.apply(String.valueOf(input));
+      Predicate<String> stringPredicate = makeStringPredicate();
+      return input -> stringPredicate.apply(Evals.asString(input));
     }
 
     @Override
@@ -758,8 +804,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (matchValueType.isNumeric()) {
         return floatPredicateSupplier.get();
       }
-      Predicate<String> stringPredicate = stringPredicateSupplier.get();
-      return input -> stringPredicate.apply(String.valueOf(input));
+      Predicate<String> stringPredicate = makeStringPredicate();
+      return input -> stringPredicate.apply(Evals.asString(input));
     }
 
     @Override
@@ -768,8 +814,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (matchValueType.isNumeric()) {
         return doublePredicateSupplier.get();
       }
-      Predicate<String> stringPredicate = stringPredicateSupplier.get();
-      return input -> stringPredicate.apply(String.valueOf(input));
+      Predicate<String> stringPredicate = makeStringPredicate();
+      return input -> stringPredicate.apply(Evals.asString(input));
     }
 
     @Override
@@ -778,9 +824,9 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       if (inputType == null) {
         return typeDetectingArrayPredicateSupplier.get();
       }
-      return arrayPredicates.computeIfAbsent(
-          inputType,
-          (existing) -> RangeFilter.this.makeArrayPredicate(inputType)
+      return new FallbackPredicate<>(
+          arrayPredicates.computeIfAbsent(inputType, (existing) -> RangeFilter.this.makeArrayPredicate(inputType)),
+          ExpressionType.fromColumnTypeStrict(inputType)
       );
     }
 
@@ -809,6 +855,27 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       return "RangePredicateFactory{" +
              "rangeFilter=" + rangeFilter +
              '}';
+    }
+  }
+
+  /**
+   * This method is like {@link ExprEval#castTo(ExpressionType)} and {@link ExprEval#asArray()}, but when the target
+   * type is {@link ExpressionType#LONG_ARRAY}, the array elements are treated as decimals and passed to
+   * {@link Math#ceil(double)} before converting to a LONG instead of the typical flooring that would happen when
+   * casting.
+   */
+  private static Object[] castArrayForComparisonWithCeilIfNeeded(ExprEval<?> valueToCast, ExpressionType typeToCastTo)
+  {
+    if (ExpressionType.LONG_ARRAY.equals(typeToCastTo)) {
+      final ExprEval<?> doubleArray = valueToCast.castTo(ExpressionType.DOUBLE_ARRAY);
+      final Object[] o = doubleArray.asArray();
+      final Object[] ceilArray = new Object[o.length];
+      for (int i = 0; i < o.length; i++) {
+        ceilArray[i] = o[i] == null ? null : (long) Math.ceil((Double) o[i]);
+      }
+      return ceilArray;
+    } else {
+      return valueToCast.castTo(typeToCastTo).asArray();
     }
   }
 
@@ -1033,6 +1100,33 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         return upperOpen ? LOWER_UNBOUNDED_UPPER_OPEN : LOWER_UNBOUNDED_UPPER_CLOSED;
       }
       return UNBOUNDED;
+    }
+  }
+
+  private static class NumericStringArrayComparator implements Comparator<Object[]>
+  {
+    @Override
+    public int compare(Object[] o1, Object[] o2)
+    {
+      //noinspection ArrayEquality
+      if (o1 == o2) {
+        return 0;
+      }
+      if (o1 == null) {
+        return -1;
+      }
+      if (o2 == null) {
+        return 1;
+      }
+      final int iter = Math.min(o1.length, o2.length);
+      for (int i = 0; i < iter; i++) {
+        final int cmp = StringComparators.NUMERIC.compare((String) o1[i], (String) o2[i]);
+        if (cmp == 0) {
+          continue;
+        }
+        return cmp;
+      }
+      return Integer.compare(o1.length, o2.length);
     }
   }
 }

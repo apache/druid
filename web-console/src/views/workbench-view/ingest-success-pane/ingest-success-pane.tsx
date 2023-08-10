@@ -40,7 +40,7 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
   const datasource = execution.getIngestDatasource();
   if (!datasource) return null;
   const table = T(datasource);
-  const rows = execution.getIngestNumRows();
+  const rows = execution.getOutputNumTotalRows();
 
   const warnings = execution.stages?.getWarningCount() || 0;
 

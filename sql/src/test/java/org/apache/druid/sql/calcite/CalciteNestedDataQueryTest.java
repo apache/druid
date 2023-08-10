@@ -1320,6 +1320,52 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByRootSingleTypeLongJsonValueFilter()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(long, '$.') = '1' GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn(
+                                "long",
+                                "v0",
+                                ColumnType.STRING,
+                                Collections.emptyList(),
+                                false,
+                                null,
+                                false
+                            )
+                        )
+                        .setDimFilter(
+                            equality("v0", "1", ColumnType.STRING)
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testGroupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
   {
     if (NullHandling.replaceWithDefault()) {
@@ -2738,6 +2784,43 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             // as long typed, which makes a long processor which will convert the 1.1 to a 1L
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariant2Double()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.mixed2') = 1.1 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0")
+                            )
+                        )
+                        .setDimFilter(equality("v0", 1.1, ColumnType.DOUBLE))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", 1L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
@@ -5563,7 +5646,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "str",
                       "variant",
                       "variantEmptyObj",
-                      "variantEmtpyArray"
+                      "variantEmtpyArray",
+                      "variantNumeric",
+                      "variantWithArrays"
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
@@ -5578,8 +5663,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 0.0D,
                 "true",
                 "51",
+                -0.13D,
                 "1",
                 "[]",
+                "[51,-35]",
                 "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}",
                 "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
                 null,
@@ -5614,8 +5701,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 0.0D,
                 "false",
                 "b",
+                1.1D,
                 "\"b\"",
                 "2",
+                "b",
                 "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}",
                 "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
                 "[\"a\",\"b\",\"c\"]",
@@ -5649,6 +5738,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 1L,
                 1.0D,
                 "true",
+                "1",
+                1.0D,
                 "1",
                 "1",
                 "1",
@@ -5686,8 +5777,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 3.3D,
                 "true",
                 "1",
+                0.0D,
                 "{}",
                 "4",
+                "1",
                 "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}",
                 "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
                 "[\"d\",\"e\"]",
@@ -5722,8 +5815,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 4.4D,
                 "true",
                 "hello",
+                -1000.0D,
                 "{}",
                 "[]",
+                "hello",
                 "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}",
                 "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
                 null,
@@ -5758,8 +5853,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 5.9D,
                 "false",
                 "",
+                3.33D,
                 "\"a\"",
                 "6",
+                null,
                 "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}",
                 null,
                 "[\"a\",\"b\"]",
@@ -5794,10 +5891,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 2.0D,
                 "",
                 "3.0",
+                1.0D,
                 "3.3",
                 "3",
+                "3.0",
                 "{\"a\":300}",
-                "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
+                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
                 "[\"b\",\"c\"]",
                 "[\"d\",null,\"b\"]",
                 "[1,2,3,4]",
@@ -5832,8 +5931,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 "true",
                 "51",
+                -0.13D,
                 "1",
                 "[]",
+                "[51,-35]",
                 "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}",
                 "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
                 null,
@@ -5868,8 +5969,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 "false",
                 "b",
+                1.1D,
                 "\"b\"",
                 "2",
+                "b",
                 "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}",
                 "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
                 "[\"a\",\"b\",\"c\"]",
@@ -5903,6 +6006,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 1L,
                 1.0D,
                 "true",
+                "1",
+                1.0D,
                 "1",
                 "1",
                 "1",
@@ -5940,8 +6045,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 3.3D,
                 "true",
                 "1",
+                null,
                 "{}",
                 "4",
+                "1",
                 "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}",
                 "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
                 "[\"d\",\"e\"]",
@@ -5976,8 +6083,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 4.4D,
                 "true",
                 "hello",
+                -1000.0D,
                 "{}",
                 "[]",
+                "hello",
                 "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}",
                 "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
                 null,
@@ -6012,8 +6121,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 5.9D,
                 "false",
                 null,
+                3.33D,
                 "\"a\"",
                 "6",
+                null,
                 "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}",
                 null,
                 "[\"a\",\"b\"]",
@@ -6048,10 +6159,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 2.0D,
                 null,
                 "3.0",
+                1.0D,
                 "3.3",
                 "3",
+                "3.0",
                 "{\"a\":300}",
-                "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
+                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
                 "[\"b\",\"c\"]",
                 "[\"d\",null,\"b\"]",
                 "[1,2,3,4]",
@@ -6085,8 +6198,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("double", ColumnType.DOUBLE)
                     .add("bool", ColumnType.STRING)
                     .add("variant", ColumnType.STRING)
+                    .add("variantNumeric", ColumnType.DOUBLE)
                     .add("variantEmptyObj", ColumnType.NESTED_DATA)
                     .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
+                    .add("variantWithArrays", ColumnType.STRING_ARRAY)
                     .add("obj", ColumnType.NESTED_DATA)
                     .add("complexObj", ColumnType.NESTED_DATA)
                     .add("arrayString", ColumnType.STRING_ARRAY)

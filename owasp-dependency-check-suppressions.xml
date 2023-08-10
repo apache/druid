@@ -62,25 +62,6 @@
     <!-- This CVE affects the server -->
     <cve>CVE-2021-3563</cve>
   </suppress>
-  <suppress>
-    <!--
-      ~ CVE-2021-27568:
-      ~ dependency on hadoop 2.8.5 is blocking us from updating this dependency. Not a major concern since Druid
-      ~ eats uncaught exceptions, and only displays them in logs. This issue also should only affect ingestion
-      ~ jobs which can only be run by admin type users.
-
-      ~ CVE-2022-45688:
-      ~ We do not use XML, so not impact that by this CVE
-      -->
-    <notes><![CDATA[
-   file name: json-smart-2.3.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
-    <cve>CVE-2021-27568</cve>
-    <cve>CVE-2021-31684</cve>
-    <cve>CVE-2022-45688</cve>
-    <cve>CVE-2023-1370</cve>
-  </suppress>
 
   <suppress>
     <notes><![CDATA[
@@ -90,19 +71,6 @@
     <cve>CVE-2022-45688</cve>
   </suppress>
 
-  <suppress>
-    <!--
-      accessors-smart-1.2 is a dependency of json-smart-2.3.
-      owasp seems to flag this too against CVE-2021-27568 for some reason.
-      This can be fixed only when json-smart is upgraded.
-      -->
-    <notes><![CDATA[
-   file name: accessors-smart-1.2.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/net\.minidev/accessors\-smart@.*$</packageUrl>
-    <cve>CVE-2021-27568</cve>
-    <cve>CVE-2022-45688</cve>
-  </suppress>
   <suppress>
     <!--
       the suppressions here aren't currently applicable, but can be resolved once we update the version
@@ -117,13 +85,6 @@
      -->
     <cve>CVE-2022-42003</cve>
     <cve>CVE-2022-42004</cve>
-    <!-- CVE-2021-46877 only applies to jdk serialization which we do not use
-    https://nvd.nist.gov/vuln/detail/CVE-2021-46877
-    https://github.com/FasterXML/jackson-databind/issues/3328
-    -->
-    <cve>CVE-2021-46877</cve>
-    <!-- According to jackson community, this is not a security issue, see https://github.com/FasterXML/jackson-databind/issues/3972#issuecomment-1596193098, https://github.com/jeremylong/DependencyCheck/issues/5779 -->
-    <cve>CVE-2023-35116</cve>
   </suppress>
 
 
@@ -230,6 +191,7 @@
     <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
+    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -392,6 +354,13 @@
     <cve>CVE-2022-33915</cve>
   </suppress>
   <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
+  </suppress>
+  <suppress>
     <!--
       - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
       -->
@@ -429,19 +398,6 @@
      <cve>CVE-2018-1296</cve>
      <cve>CVE-2018-8009</cve>
      <cve>CVE-2018-8029</cve>
-  </suppress>
-  <suppress>
-     <!-- Suppress cves that aren't applicable to hadoop client -->
-     <notes><![CDATA[
-     file name: hadoop-*-2.8.5.jar
-     ]]></notes>
-     <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
-     <cve>CVE-2018-11765</cve>
-     <cve>CVE-2020-9492</cve>
-     <cve>CVE-2022-25168</cve>
-     <cve>CVE-2022-26612</cve>
-     <cve>CVE-2018-8009</cve>
-     <cve>CVE-2021-33036</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -630,7 +586,6 @@
     <notes><![CDATA[
    file name: *jackson-*.jar
    ]]></notes>
-    <cve>CVE-2020-36518</cve>
     <cve>CVE-2022-45688</cve>
   </suppress>
 
@@ -668,19 +623,12 @@
   </suppress>
 
   <suppress>
-    <!-- jackson-dataformat-cbor-2.10.5.jar -->
-    <notes><![CDATA[
-   file name: jackson-dataformat-cbor-2.10.5.jar
-   ]]></notes>
-    <cve>CVE-2020-28491</cve>
-  </suppress>
-
-  <suppress>
     <!-- okhttp -->
     <notes><![CDATA[
    file name: okhttp-*.jar
    ]]></notes>
     <cve>CVE-2021-0341</cve>
+    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
   </suppress>
 
   <suppress>

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -47,13 +48,16 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.semantic.ArrayElementIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -93,6 +97,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
+        final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
 
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -147,6 +152,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
             columnName,
             NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
         );
+        final ByteBuffer arrayElementDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.ARRAY_ELEMENT_DICTIONARY_FILE_NAME
+        );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -180,6 +190,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
             byteOrder,
             Double.BYTES
         );
+
         final ByteBuffer arrayDictionarybuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -193,6 +204,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         try (ColumnarInts throwAway = ints.get()) {
           size = throwAway.size();
         }
+        arrayElementDictionarySupplier = FixedIndexed.read(
+            arrayElementDictionaryBuffer,
+            CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
+            byteOrder,
+            Integer.BYTES
+        );
         return new VariantColumnAndIndexSupplier(
             logicalType,
             variantTypeByte,
@@ -201,6 +218,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
             longDictionarySupplier,
             doubleDictionarySupplier,
             arrayDictionarySupplier,
+            arrayElementDictionarySupplier,
             ints,
             valueIndexes,
             arrayElementIndexes,
@@ -222,11 +240,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   @Nullable
   private final Byte variantTypeSetByte;
   private final BitmapFactory bitmapFactory;
-  private final GenericIndexed<ByteBuffer> stringDictionary;
-  private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
+  private final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
+  private final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
   private final Supplier<ColumnarInts> encodedValueColumnSupplier;
   @SuppressWarnings("unused")
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
@@ -242,6 +260,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
+      Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier,
       Supplier<ColumnarInts> encodedValueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       GenericIndexed<ImmutableBitmap> elementIndexes,
@@ -252,11 +271,13 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   {
     this.logicalType = logicalType;
     this.variantTypeSetByte = variantTypeSetByte;
-    this.stringDictionary = stringDictionary;
-    this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
+    stringDictionarySupplier = frontCodedStringDictionarySupplier != null
+                               ? frontCodedStringDictionarySupplier
+                               : stringDictionary::singleThreaded;
     this.longDictionarySupplier = longDictionarySupplier;
     this.doubleDictionarySupplier = doubleDictionarySupplier;
     this.arrayDictionarySupplier = arrayDictionarySupplier;
+    this.arrayElementDictionarySupplier = arrayElementDictionarySupplier;
     this.encodedValueColumnSupplier = encodedValueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.arrayElementIndexes = elementIndexes;
@@ -273,20 +294,8 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   @Override
   public NestedCommonFormatColumn get()
   {
-    if (frontCodedStringDictionarySupplier != null) {
-      return new VariantColumn<>(
-          frontCodedStringDictionarySupplier.get(),
-          longDictionarySupplier.get(),
-          doubleDictionarySupplier.get(),
-          arrayDictionarySupplier.get(),
-          encodedValueColumnSupplier.get(),
-          nullValueBitmap,
-          logicalType,
-          variantTypeSetByte
-      );
-    }
     return new VariantColumn<>(
-        stringDictionary.singleThreaded(),
+        stringDictionarySupplier.get(),
         longDictionarySupplier.get(),
         doubleDictionarySupplier.get(),
         arrayDictionarySupplier.get(),
@@ -306,6 +315,8 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(ValueIndexes.class) && variantTypeSetByte == null && logicalType.isArray()) {
       return (T) new ArrayValueIndexes();
+    } else if (clazz.equals(ArrayElementIndexes.class) && variantTypeSetByte == null && logicalType.isArray()) {
+      return (T) new VariantArrayElementIndexes();
     }
     return null;
   }
@@ -320,30 +331,48 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
+  private ImmutableBitmap getElementBitmap(int idx)
+  {
+    if (idx < 0) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
+    }
+    final int elementDictionaryIndex = arrayElementDictionarySupplier.get().indexOf(idx);
+    if (elementDictionaryIndex < 0) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
+    }
+    final ImmutableBitmap bitmap = arrayElementIndexes.get(elementDictionaryIndex);
+    return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
+  }
+
   private class ArrayValueIndexes implements ValueIndexes
   {
     @Nullable
     @Override
-    public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+    public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
-                                       .castTo(ExpressionType.fromColumnTypeStrict(logicalType));
-      if (eval.value() == null) {
-        return null;
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType)
+      );
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
       }
-      final Object[] arrayToMatch = eval.asArray();
+      final Object[] arrayToMatch = castForComparison.asArray();
       Indexed elements;
+      final int elementOffset;
       switch (logicalType.getElementType().getType()) {
         case STRING:
-          elements = frontCodedStringDictionarySupplier != null
-                     ? frontCodedStringDictionarySupplier.get()
-                     : stringDictionary.singleThreaded();
+          elements = stringDictionarySupplier.get();
+          elementOffset = 0;
           break;
         case LONG:
           elements = longDictionarySupplier.get();
+          elementOffset = stringDictionarySupplier.get().size();
           break;
         case DOUBLE:
           elements = doubleDictionarySupplier.get();
+          elementOffset = stringDictionarySupplier.get().size() + longDictionarySupplier.get().size();
           break;
         default:
           throw DruidException.defensive(
@@ -353,30 +382,29 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       }
 
       final int[] ids = new int[arrayToMatch.length];
-      boolean hasMissingElement = false;
+      final int arrayOffset = stringDictionarySupplier.get().size() + longDictionarySupplier.get().size() + doubleDictionarySupplier.get().size();
       for (int i = 0; i < arrayToMatch.length; i++) {
-        if (logicalType.getElementType().is(ValueType.STRING)) {
+        if (arrayToMatch[i] == null) {
+          ids[i] = 0;
+        } else if (logicalType.getElementType().is(ValueType.STRING)) {
           ids[i] = elements.indexOf(StringUtils.toUtf8ByteBuffer((String) arrayToMatch[i]));
         } else {
-          ids[i] = elements.indexOf(arrayToMatch[i]);
+          ids[i] = elements.indexOf(arrayToMatch[i]) + elementOffset;
         }
         if (ids[i] < 0) {
-          hasMissingElement = true;
-          break;
+          if (value == null) {
+            return new AllFalseBitmapColumnIndex(bitmapFactory);
+          }
         }
       }
 
-      final boolean noMatch = hasMissingElement;
       final FrontCodedIntArrayIndexed dictionary = arrayDictionarySupplier.get();
       return new SimpleBitmapColumnIndex()
       {
         @Override
         public double estimateSelectivity(int totalRows)
         {
-          if (noMatch) {
-            return 0.0;
-          }
-          final int id = dictionary.indexOf(ids);
+          final int id = dictionary.indexOf(ids) + arrayOffset;
           if (id < 0) {
             return 0.0;
           }
@@ -386,14 +414,85 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
-          if (noMatch) {
-            return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
-          }
-          final int id = dictionary.indexOf(ids);
+          final int id = dictionary.indexOf(ids) + arrayOffset;
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
           return bitmapResultFactory.wrapDimensionValue(getBitmap(id));
+        }
+      };
+    }
+  }
+
+  private class VariantArrayElementIndexes implements ArrayElementIndexes
+  {
+
+    @Nullable
+    @Override
+    public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
+    {
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
+      );
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
+      }
+      Indexed elements;
+      final int elementOffset;
+      switch (logicalType.getElementType().getType()) {
+        case STRING:
+          elements = stringDictionarySupplier.get();
+          elementOffset = 0;
+          break;
+        case LONG:
+          elements = longDictionarySupplier.get();
+          elementOffset = stringDictionarySupplier.get().size();
+          break;
+        case DOUBLE:
+          elements = doubleDictionarySupplier.get();
+          elementOffset = stringDictionarySupplier.get().size() + longDictionarySupplier.get().size();
+          break;
+        default:
+          throw DruidException.defensive(
+              "Unhandled array type [%s] how did this happen?",
+              logicalType.getElementType()
+          );
+      }
+
+      return new SimpleBitmapColumnIndex()
+      {
+        @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          final int elementId = getElementId();
+          if (elementId < 0) {
+            return 0.0;
+          }
+          return (double) getElementBitmap(elementId).size() / totalRows;
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          final int elementId = getElementId();
+
+          if (elementId < 0) {
+            return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
+          }
+          return bitmapResultFactory.wrapDimensionValue(getElementBitmap(elementId));
+        }
+
+        private int getElementId()
+        {
+          if (castForComparison.value() == null) {
+            return 0;
+          } else if (castForComparison.type().is(ExprType.STRING)) {
+            return elements.indexOf(StringUtils.toUtf8ByteBuffer(castForComparison.asString()));
+          } else {
+            return elements.indexOf(castForComparison.value()) + elementOffset;
+          }
         }
       };
     }

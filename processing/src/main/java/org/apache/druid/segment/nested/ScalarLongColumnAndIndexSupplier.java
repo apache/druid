@@ -51,6 +51,7 @@ import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -64,6 +65,7 @@ import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -228,14 +230,15 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   {
     @Nullable
     @Override
-    public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+    public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
-                                       .castTo(ExpressionType.LONG);
-      if (eval.isNumericNull()) {
-        return null;
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory);
       }
-      final long longValue = eval.asLong();
+      final long longValue = castForComparison.asLong();
+
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
@@ -413,12 +416,23 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     )
     {
       final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-      IntIntPair range = dictionary.getRange(
-          startValue == null ? null : startValue.longValue(),
-          startStrict,
-          endValue == null ? null : endValue.longValue(),
-          endStrict
-      );
+      final Long startLong;
+      final Long endLong;
+      if (startValue == null) {
+        startLong = null;
+      } else if (startStrict) {
+        startLong = (long) Math.floor(startValue.doubleValue());
+      } else {
+        startLong = (long) Math.ceil(startValue.doubleValue());
+      }
+      if (endValue == null) {
+        endLong = null;
+      } else if (endStrict) {
+        endLong = (long) Math.ceil(endValue.doubleValue());
+      } else {
+        endLong = (long) Math.floor(endValue.doubleValue());
+      }
+      final IntIntPair range = dictionary.getRange(startLong, startStrict, endLong, endStrict);
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();

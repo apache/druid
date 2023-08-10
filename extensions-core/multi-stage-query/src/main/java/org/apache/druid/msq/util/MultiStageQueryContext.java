@@ -67,7 +67,7 @@ import java.util.stream.Collectors;
  *
  * <li><b>selectDestination</b>: If the query is a Select, determines the location to write results to, once the query
  * is finished. Depending on the location, the results might also be truncated to {@link Limits#MAX_SELECT_RESULT_ROWS}.
- * Default value is {@link MSQSelectDestination#TASK_REPORT}, which writes all the results to the report.
+ * Default value is {@link MSQSelectDestination#TASKREPORT}, which writes all the results to the report.
  *
  * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
@@ -93,7 +93,7 @@ public class MultiStageQueryContext
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
-  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASK_REPORT.toString();
+  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASKREPORT.getName();
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;

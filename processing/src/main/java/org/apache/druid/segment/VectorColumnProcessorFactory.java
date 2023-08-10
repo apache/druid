@@ -83,11 +83,16 @@ public interface VectorColumnProcessorFactory<T>
    */
   T makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector);
 
+  /**
+   * Called when {@link ColumnCapabilities#getType()} is ARRAY.
+   */
   T makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector);
 
   /**
    * Called when {@link ColumnCapabilities#getType()} is COMPLEX. May also be called for STRING typed columns in
    * cases where the dictionary does not exist or is not expected to be useful.
+   *
+   * @see VectorObjectSelector#getObjectVector() for details on what can appear here when type is STRING
    */
   T makeObjectProcessor(@SuppressWarnings("unused") ColumnCapabilities capabilities, VectorObjectSelector selector);
 

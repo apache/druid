@@ -324,6 +324,14 @@ public class PlannerContext
     return stringifyArrays;
   }
 
+  /**
+   * Whether we should use {@link org.apache.druid.query.filter.BoundDimFilter} and
+   * {@link org.apache.druid.query.filter.SelectorDimFilter} (true) or {@link org.apache.druid.query.filter.RangeFilter},
+   * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
+   *
+   * Typically true when {@link NullHandling#replaceWithDefault()} and false when {@link NullHandling#sqlCompatible()}.
+   * Can be overriden by the undocumented context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   */
   public boolean isUseBoundsAndSelectors()
   {
     return useBoundsAndSelectors;

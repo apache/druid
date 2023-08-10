@@ -116,7 +116,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
 
   /**
    * Converts the current result of {@link #getRow()} into null, if the row is empty, a String, if the row has size 1,
-   * or a String[] array, if the row has size > 1, using {@link #lookupName(int)}.
+   * or a {@code List<String>}, if the row has size > 1, using {@link #lookupName(int)}.
    *
    * This method is not the default implementation of {@link #getObject()} to minimize the chance that implementations
    * "forget" to override it with more optimized version.
@@ -130,6 +130,11 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   /**
    * Converts a particular {@link IndexedInts} to an Object in a standard way, assuming each element in the IndexedInts
    * is a dictionary ID that can be resolved with the provided selector.
+   *
+   * Specification:
+   * 1) Empty row ({@link IndexedInts#size()} zero) returns null.
+   * 2) Single-value row returns a single {@link String}.
+   * 3) Two+ value rows return {@link List} of {@link String}.
    */
   @Nullable
   static Object rowToObject(IndexedInts row, DimensionDictionarySelector selector)

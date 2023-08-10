@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -491,7 +492,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        new IdleConfig(true, 200L)
+        new IdleConfig(true, 200L),
+        null
     )
     {
     }).anyTimes();
@@ -1087,6 +1089,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -1147,6 +1150,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
         null,
+        null,
         null
     )
     {
@@ -1179,18 +1183,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       @Override
       public Integer getWorkerThreads()
-      {
-        return 1;
-      }
-
-      @Override
-      public boolean getChatAsync()
-      {
-        return false;
-      }
-
-      @Override
-      public Integer getChatThreads()
       {
         return 1;
       }
@@ -1297,7 +1289,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier()
+    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return recordSupplier;
     }

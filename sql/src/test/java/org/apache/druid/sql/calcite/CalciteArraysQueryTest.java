@@ -43,6 +43,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -519,6 +520,33 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayOverlapFilterWithExtractionFn()
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    NullHandling.sqlCompatible()
+                    ? expressionFilter("array_overlap(substring(\"dim3\", 0, 1),array('a','b'))")
+                    : new InDimFilter("dim3", ImmutableList.of("a", "b"), new SubstringDimExtractionFn(0, 1))
+                )
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
   public void testArrayOverlapFilterNonLiteral()
   {
     testQuery(
@@ -553,6 +581,35 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     and(
                         equality("dim3", "a", ColumnType.STRING),
                         equality("dim3", "b", ColumnType.STRING)
+                    )
+                )
+                .columns("dim3")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayContainsFilterWithExtractionFn()
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    NullHandling.sqlCompatible()
+                    ? expressionFilter("array_contains(substring(\"dim3\", 0, 1),array('a','b'))")
+                    : and(
+                        selector("dim3", "a", new SubstringDimExtractionFn(0, 1)),
+                        selector("dim3", "b", new SubstringDimExtractionFn(0, 1))
                     )
                 )
                 .columns("dim3")
