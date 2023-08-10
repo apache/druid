@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, Menu, MenuItem } from '@blueprintjs/core';
+import { AnchorButton, Button, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
@@ -108,6 +108,8 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
       <p>
         Format when downloading:
         <Popover2
+          minimal
+          position={Position.BOTTOM_LEFT}
           content={
             <Menu>
               {RESULT_FORMATS.map((resultFormat, i) => (
