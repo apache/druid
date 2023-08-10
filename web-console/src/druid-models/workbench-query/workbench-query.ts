@@ -600,7 +600,7 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery) {
+    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }

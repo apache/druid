@@ -37,6 +37,7 @@ import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -46,8 +47,11 @@ import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -67,6 +71,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -82,12 +87,12 @@ import java.util.TreeMap;
 import java.util.stream.Stream;
 
 /**
- * An {@link org.apache.druid.data.input.InputSource} that allows reading from Druid segments.
+ * An {@link InputSource} that allows reading from Druid segments.
  *
  * Used internally by {@link org.apache.druid.indexing.common.task.CompactionTask}, and can also be used directly.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
+public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>, TaskInputSource
 {
 
   public static final String TYPE_KEY = "druid";
@@ -147,6 +152,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    */
   private final List<String> metrics;
 
+  @Nullable
+  private final TaskToolbox toolbox;
+
   @JsonCreator
   public DruidInputSource(
       @JsonProperty("dataSource") final String dataSource,
@@ -163,6 +171,35 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       @JacksonInject TaskConfig taskConfig
   )
   {
+    this(
+        dataSource,
+        interval,
+        segmentIds,
+        dimFilter,
+        dimensions,
+        metrics,
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        taskConfig,
+        null
+    );
+  }
+
+  private DruidInputSource(
+      final String dataSource,
+      @Nullable Interval interval,
+      @Nullable List<WindowedSegmentId> segmentIds,
+      DimFilter dimFilter,
+      List<String> dimensions,
+      List<String> metrics,
+      IndexIO indexIO,
+      CoordinatorClient coordinatorClient,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
+      TaskConfig taskConfig,
+      @Nullable TaskToolbox toolbox
+  )
+  {
     Preconditions.checkNotNull(dataSource, "dataSource");
     if ((interval == null && segmentIds == null) || (interval != null && segmentIds != null)) {
       throw new IAE("Specify exactly one of 'interval' and 'segments'");
@@ -177,6 +214,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
     this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
     this.taskConfig = Preconditions.checkNotNull(taskConfig, "null taskConfig");
+    this.toolbox = toolbox;
   }
 
   @JsonIgnore
@@ -229,6 +267,24 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   public List<String> getMetrics()
   {
     return metrics;
+  }
+
+  @Override
+  public InputSource withTaskToolbox(TaskToolbox toolbox)
+  {
+    return new DruidInputSource(
+        this.dataSource,
+        this.interval,
+        this.segmentIds,
+        this.dimFilter,
+        this.dimensions,
+        this.metrics,
+        this.indexIO,
+        this.coordinatorClient,
+        this.segmentCacheManagerFactory,
+        this.taskConfig,
+        toolbox
+    );
   }
 
   @Override
@@ -307,7 +363,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (interval == null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(coordinatorClient, dataSource, interval);
+      return getTimelineForInterval(toolbox, coordinatorClient, dataSource, interval);
     }
   }
 
@@ -322,6 +378,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Streams.sequentialStreamFrom(
           createSplits(
+              toolbox,
               coordinatorClient,
               dataSource,
               interval,
@@ -341,6 +398,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Iterators.size(
           createSplits(
+              toolbox,
               coordinatorClient,
               dataSource,
               interval,
@@ -365,7 +423,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        taskConfig
+        taskConfig,
+        toolbox
     );
   }
 
@@ -413,6 +472,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   public static Iterator<InputSplit<List<WindowedSegmentId>>> createSplits(
+      TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
       String dataSource,
       Interval interval,
@@ -431,6 +491,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval(
+        toolbox,
         coordinatorClient,
         dataSource,
         interval
@@ -474,18 +535,37 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(
+      TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
       String dataSource,
       Interval interval
   )
   {
-    final Collection<DataSegment> usedSegments = FutureUtils.getUnchecked(
-        coordinatorClient.fetchUsedSegments(
-            dataSource,
-            Collections.singletonList(Preconditions.checkNotNull(interval, "interval"))
-        ),
-        true
-    );
+    Preconditions.checkNotNull(interval);
+
+    final Collection<DataSegment> usedSegments;
+    if (toolbox == null) {
+      usedSegments = FutureUtils.getUnchecked(
+          coordinatorClient.fetchUsedSegments(dataSource, Collections.singletonList(interval)),
+          true
+      );
+    } else {
+      try {
+        usedSegments = toolbox.getTaskActionClient()
+                              .submit(
+                                  new RetrieveUsedSegmentsAction(
+                                      dataSource,
+                                      null,
+                                      Collections.singletonList(interval),
+                                      Segments.ONLY_VISIBLE
+                                  )
+                              );
+      }
+      catch (IOException e) {
+        LOG.error(e, "Error retrieving the used segments for interval[%s].", interval);
+        throw new RuntimeException(e);
+      }
+    }
 
     return SegmentTimeline.forSegments(usedSegments).lookup(interval);
   }

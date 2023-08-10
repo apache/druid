@@ -36,6 +36,7 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
+import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
@@ -65,8 +66,6 @@ const taskTableColumns: string[] = [
   'Location',
   ACTION_COLUMN_LABEL,
 ];
-
-const CANCELED_ERROR_MSG = 'Shutdown request from user';
 
 interface TaskQueryResultRow {
   task_id: string;
@@ -137,7 +136,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
   static TASK_SQL = `WITH tasks AS (SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
-  CASE WHEN "error_msg" = '${CANCELED_ERROR_MSG}' THEN 'CANCELED' WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status"
+  CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status"
   FROM sys.tasks
 )
 SELECT "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg", "status"
@@ -406,16 +405,11 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span>
+                  <span title={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && errorMsg !== CANCELED_ERROR_MSG && (
-                      <a
-                        onClick={() => this.setState({ alertErrorMsg: errorMsg })}
-                        title={errorMsg}
-                      >
-                        &nbsp;?
-                      </a>
+                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                      <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>
                 </TableFilterableCell>
