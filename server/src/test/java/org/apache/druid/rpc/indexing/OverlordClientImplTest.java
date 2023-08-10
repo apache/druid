@@ -422,7 +422,14 @@ public class OverlordClientImplTest
   public void test_taskPayload() throws ExecutionException, InterruptedException, JsonProcessingException
   {
     final String taskID = "taskId_1";
-    final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(taskID, "test", null, null);
+    final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(
+        taskID,
+        "test",
+        null,
+        null,
+        null,
+        null
+    );
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/" + taskID),

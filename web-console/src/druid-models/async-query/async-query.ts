@@ -28,10 +28,14 @@ export interface AsyncStatusResponse {
   schema?: { name: string; type: string; nativeType: string }[];
   result?: {
     dataSource: string;
-    sampleRecords: any[][];
+    sampleRecords?: any[][];
     numTotalRows: number;
     totalSizeInBytes: number;
-    pages: any[];
+    pages?: {
+      id: number;
+      numRows: number;
+      sizeInBytes: number;
+    }[];
   };
   errorDetails?: ErrorResponse;
 }

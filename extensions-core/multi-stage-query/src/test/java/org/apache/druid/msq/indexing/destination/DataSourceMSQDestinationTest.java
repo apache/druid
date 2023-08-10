@@ -17,13 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.msq.indexing.destination;
 
-import org.apache.druid.indexing.common.IndexTaskClient;
-import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.joda.time.Duration;
 
-public interface IndexTaskClientFactory<T extends IndexTaskClient>
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class DataSourceMSQDestinationTest
 {
-  T build(TaskInfoProvider taskInfoProvider, String callerId, int numThreads, Duration httpTimeout, long numRetries);
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(DataSourceMSQDestination.class)
+                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
+                  .usingGetClass()
+                  .verify();
+  }
 }

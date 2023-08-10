@@ -554,13 +554,6 @@
 
     <profiles>
         <profile>
-            <id>hadoop2</id>
-            <properties>
-                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
-                <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
-            </properties>
-        </profile>
-        <profile>
             <id>integration-tests</id>
             <properties>
                 <start.hadoop.docker>false</start.hadoop.docker>

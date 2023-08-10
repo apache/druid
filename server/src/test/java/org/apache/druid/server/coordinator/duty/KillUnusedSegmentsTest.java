@@ -20,6 +20,13 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
+import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -32,6 +39,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -143,6 +151,7 @@ public class KillUnusedSegmentsTest
         ArgumentMatchers.anyInt()
     );
 
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     target.run(params);
     Mockito.verify(overlordClient, Mockito.never())
            .runKillTask(anyString(), anyString(), any(Interval.class));
@@ -156,6 +165,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // No unused segment is older than the retention period
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     target.run(params);
     Mockito.verify(overlordClient, Mockito.never())
            .runKillTask(anyString(), anyString(), any(Interval.class));
@@ -169,6 +179,7 @@ public class KillUnusedSegmentsTest
         yearOldSegment.getInterval().getStart(),
         dayOldSegment.getInterval().getEnd()
     );
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
   }
 
@@ -185,6 +196,7 @@ public class KillUnusedSegmentsTest
         yearOldSegment.getInterval().getStart(),
         nextDaySegment.getInterval().getEnd()
     );
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
   }
 
@@ -200,6 +212,7 @@ public class KillUnusedSegmentsTest
         yearOldSegment.getInterval().getStart(),
         nextMonthSegment.getInterval().getEnd()
     );
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
   }
 
@@ -210,18 +223,116 @@ public class KillUnusedSegmentsTest
            .when(config).getCoordinatorKillMaxSegments();
     target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     // Only 1 unused segment is killed
     runAndVerifyKillInterval(yearOldSegment.getInterval());
   }
 
+  @Test
+  public void testKillTaskSlotRatioNoAvailableTaskCapacityForKill()
+  {
+    mockTaskSlotUsage(0.10, 10, 1, 5);
+    runAndVerifyNoKill();
+  }
+
+  @Test
+  public void testMaxKillTaskSlotsNoAvailableTaskCapacityForKill()
+  {
+    mockTaskSlotUsage(1.0, 3, 3, 10);
+    runAndVerifyNoKill();
+  }
+
+  @Test
+  public void testGetKillTaskCapacity()
+  {
+    Assert.assertEquals(
+        10,
+        KillUnusedSegments.getKillTaskCapacity(10, 1.0, Integer.MAX_VALUE)
+    );
+
+    Assert.assertEquals(
+        0,
+        KillUnusedSegments.getKillTaskCapacity(10, 0.0, Integer.MAX_VALUE)
+    );
+
+    Assert.assertEquals(
+        10,
+        KillUnusedSegments.getKillTaskCapacity(10, Double.POSITIVE_INFINITY, Integer.MAX_VALUE)
+    );
+
+    Assert.assertEquals(
+        0,
+        KillUnusedSegments.getKillTaskCapacity(10, 1.0, 0)
+    );
+
+    Assert.assertEquals(
+        1,
+        KillUnusedSegments.getKillTaskCapacity(10, 0.1, 3)
+    );
+
+    Assert.assertEquals(
+        2,
+        KillUnusedSegments.getKillTaskCapacity(10, 0.3, 2)
+    );
+  }
+
   private void runAndVerifyKillInterval(Interval expectedKillInterval)
   {
+    int limit = config.getCoordinatorKillMaxSegments();
     target.run(params);
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("DS1"),
-        ArgumentMatchers.eq(expectedKillInterval)
+        ArgumentMatchers.eq(expectedKillInterval),
+        ArgumentMatchers.eq(limit)
     );
+  }
+
+  private void runAndVerifyNoKill()
+  {
+    target.run(params);
+    Mockito.verify(overlordClient, Mockito.never()).runKillTask(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(Interval.class),
+        ArgumentMatchers.anyInt()
+    );
+  }
+
+  private void mockTaskSlotUsage(
+      double killTaskSlotRatio,
+      int maxKillTaskSlots,
+      int numPendingCoordKillTasks,
+      int maxWorkerCapacity
+  )
+  {
+    Mockito.doReturn(killTaskSlotRatio)
+        .when(coordinatorDynamicConfig).getKillTaskSlotRatio();
+    Mockito.doReturn(maxKillTaskSlots)
+        .when(coordinatorDynamicConfig).getMaxKillTaskSlots();
+    Mockito.doReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(1, maxWorkerCapacity)))
+        .when(overlordClient)
+        .getTotalWorkerCapacity();
+    List<TaskStatusPlus> runningCoordinatorIssuedKillTasks = new ArrayList<>();
+    for (int i = 0; i < numPendingCoordKillTasks; i++) {
+      runningCoordinatorIssuedKillTasks.add(new TaskStatusPlus(
+          KillUnusedSegments.TASK_ID_PREFIX + "_taskId_" + i,
+          "groupId_" + i,
+          KillUnusedSegments.KILL_TASK_TYPE,
+          DateTimes.EPOCH,
+          DateTimes.EPOCH,
+          TaskState.RUNNING,
+          RunnerTaskState.RUNNING,
+          -1L,
+          TaskLocation.unknown(),
+          "datasource",
+          null
+      ));
+    }
+    Mockito.doReturn(Futures.immediateFuture(
+            CloseableIterators.withEmptyBaggage(runningCoordinatorIssuedKillTasks.iterator())))
+        .when(overlordClient)
+        .taskStatuses(null, null, 0);
   }
 
   private DataSegment createSegmentWithEnd(DateTime endTime)
