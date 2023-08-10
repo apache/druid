@@ -48,6 +48,7 @@ import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
@@ -135,6 +136,19 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       throw new IOException("No TASK_JSON environment variable found in pod: " + from.getMetadata().getName());
     }
     return mapper.readValue(Base64Compression.decompressBase64(contents), Task.class);
+  }
+
+  @Override
+  public String getTaskId(Job from) throws IOException {
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
+    if (annotations == null) {
+      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    String taskId = annotations.get(DruidK8sConstants.TASK_ID);
+    if (taskId == null) {
+      throw new IOE("No task.id annotation found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    return taskId;
   }
 
   @VisibleForTesting

@@ -172,6 +172,19 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
   }
 
+  @Override
+  public String getTaskId(Job from) throws IOException {
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
+    if (annotations == null) {
+      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    String taskId = annotations.get(DruidK8sConstants.TASK_ID);
+    if (taskId == null) {
+      throw new IOE("No task.id annotation found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    return taskId;
+  }
+
   private HashMap<String, PodTemplate> initializePodTemplates(Properties properties)
   {
     HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();

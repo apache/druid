@@ -32,6 +32,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
@@ -76,6 +77,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private KubernetesPeonClient peonClient;
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
   @Mock private ServiceEmitter emitter;
+  @Mock private TaskStorage taskStorage;
 
   private KubernetesTaskRunnerConfig config;
   private KubernetesTaskRunner runner;
@@ -96,7 +98,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        taskStorage
     );
   }
 
@@ -294,7 +297,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        taskStorage
     ) {
       @Override
       protected ListenableFuture<TaskStatus> joinAsync(Task task)
@@ -331,7 +335,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        taskStorage
     ) {
       @Override
       protected ListenableFuture<TaskStatus> joinAsync(Task task)

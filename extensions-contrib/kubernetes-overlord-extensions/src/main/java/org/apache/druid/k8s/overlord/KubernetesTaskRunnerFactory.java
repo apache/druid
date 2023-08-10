@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -57,6 +58,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
+  private TaskStorage taskStorage;
 
 
   @Inject
@@ -70,7 +72,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskConfig taskConfig,
       Properties properties,
       DruidKubernetesClient druidKubernetesClient,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      TaskStorage taskStorage
   )
   {
     this.smileMapper = smileMapper;
@@ -83,6 +86,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
+    this.taskStorage = taskStorage;
   }
 
   @Override
@@ -101,7 +105,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         peonClient,
         httpClient,
         new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
-        emitter
+        emitter,
+        taskStorage
     );
     return runner;
   }

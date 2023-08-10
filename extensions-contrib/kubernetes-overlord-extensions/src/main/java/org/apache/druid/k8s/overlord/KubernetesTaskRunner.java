@@ -37,6 +37,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -61,6 +62,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -106,6 +108,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
+  private final TaskStorage taskStorage;
 
 
   public KubernetesTaskRunner(
@@ -114,7 +117,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       KubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      TaskStorage taskStorage
   )
   {
     this.adapter = adapter;
@@ -127,6 +131,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         Execs.multiThreaded(config.getCapacity(), "k8s-task-runner-%d")
     );
     this.emitter = emitter;
+    this.taskStorage = taskStorage;
   }
 
   @Override
@@ -312,10 +317,19 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
     List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
+    Map<String, Task> tasksFromStorage = new HashMap<>();
+    for (Task task: taskStorage.getActiveTasks()) {
+      tasksFromStorage.put(task.getId(), task);
+    }
     for (Job job : client.getPeonJobs()) {
       try {
-        Task task = adapter.toTask(job);
-        restoredTasks.add(Pair.of(task, joinAsync(task)));
+        String taskId = adapter.getTaskId(job);
+        Task task = tasksFromStorage.get(taskId);
+        if (task == null) {
+          log.warn("Found K8s job running task id %s that was not in taskStorage during restore, ignoring it.", taskId);
+          continue;
+        }
+        restoredTasks.add(Pair.of(tasksFromStorage.get(taskId), joinAsync(task)));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());

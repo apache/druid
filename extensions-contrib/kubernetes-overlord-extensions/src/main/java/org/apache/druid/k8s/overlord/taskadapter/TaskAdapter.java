@@ -31,4 +31,6 @@ public interface TaskAdapter
 
   Task toTask(Job from) throws IOException;
 
+  String getTaskId(Job from) throws IOException;
+
 }
