@@ -143,13 +143,10 @@ public class KillUnusedSegments implements CoordinatorDuty
         dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
       }
 
-      if (lastKillTime + period > currentTimeMillis) {
-        log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
-      } else {
-        log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
-        lastKillTime = currentTimeMillis;
-        taskStats.submittedTasks = killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
-      }
+      log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
+      lastKillTime = currentTimeMillis;
+      taskStats.submittedTasks = killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
+
     }
 
     addStats(taskStats, stats);
