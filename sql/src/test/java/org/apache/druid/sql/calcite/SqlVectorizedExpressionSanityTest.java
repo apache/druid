@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -62,7 +61,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -181,13 +179,12 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testQuery() throws ValidationException
+  public void testQuery()
   {
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }
 
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
-      throws ValidationException
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",

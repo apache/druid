@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.log.RequestLogEvent;
 
@@ -139,6 +140,8 @@ public class GraphiteEmitter implements Emitter
           "The following alert is dropped, description is [%s], severity is [%s]",
           alertEvent.getDescription(), alertEvent.getSeverity()
       );
+    } else if (event instanceof SegmentMetadataEvent) {
+      // do nothing. Ignore this event type
     } else {
       log.error("unknown event type [%s]", event.getClass());
     }

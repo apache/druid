@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
@@ -37,12 +38,14 @@ import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -58,6 +61,12 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class KubernetesPeonLifecycle
 {
+  @FunctionalInterface
+  public interface TaskStateListener
+  {
+    void stateChanged(State state, String taskId);
+  }
+
   private static final EmittingLogger log = new EmittingLogger(KubernetesPeonLifecycle.class);
 
   protected enum State
@@ -77,18 +86,26 @@ public class KubernetesPeonLifecycle
   private final TaskLogs taskLogs;
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
+  private final TaskStateListener stateListener;
+
+  @MonotonicNonNull
+  private LogWatch logWatch;
+
+  private TaskLocation taskLocation;
 
   protected KubernetesPeonLifecycle(
       Task task,
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      TaskStateListener stateListener
   )
   {
     this.taskId = new K8sTaskId(task);
     this.kubernetesClient = kubernetesClient;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
+    this.stateListener = stateListener;
   }
 
   /**
@@ -103,14 +120,10 @@ public class KubernetesPeonLifecycle
   protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout) throws IllegalStateException
   {
     try {
-      Preconditions.checkState(
-          state.compareAndSet(State.NOT_STARTED, State.PENDING),
-          "Task [%s] failed to run: invalid peon lifecycle state transition [%s]->[%s]",
-          taskId.getOriginalTaskId(),
-          state.get(),
-          State.PENDING
-      );
+      updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
+      // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
+      taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           launchTimeout,
@@ -119,8 +132,13 @@ public class KubernetesPeonLifecycle
 
       return join(timeout);
     }
+    catch (Exception e) {
+      log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      shutdown();
+      throw e;
+    }
     finally {
-      state.set(State.STOPPED);
+      stopTask();
     }
   }
 
@@ -134,16 +152,7 @@ public class KubernetesPeonLifecycle
   protected synchronized TaskStatus join(long timeout) throws IllegalStateException
   {
     try {
-      Preconditions.checkState(
-          (
-              state.compareAndSet(State.NOT_STARTED, State.RUNNING) ||
-              state.compareAndSet(State.PENDING, State.RUNNING)
-          ),
-          "Task [%s] failed to join: invalid peon lifecycle state transition [%s]->[%s]",
-          taskId.getOriginalTaskId(),
-          state.get(),
-          State.RUNNING
-      );
+      updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
@@ -151,19 +160,18 @@ public class KubernetesPeonLifecycle
           TimeUnit.MILLISECONDS
       );
 
-      saveLogs();
-
       return getTaskStatus(jobResponse.getJobDuration());
     }
     finally {
       try {
+        saveLogs();
         shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Task [%s] shutdown failed", taskId);
+        log.warn(e, "Task [%s] cleanup failed", taskId);
       }
 
-      state.set(State.STOPPED);
+      stopTask();
     }
   }
 
@@ -217,27 +225,33 @@ public class KubernetesPeonLifecycle
       return TaskLocation.unknown();
     }
 
-    Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId);
-    if (!maybePod.isPresent()) {
-      return TaskLocation.unknown();
+    /* It's okay to cache this because podIP only changes on pod restart, and we have to set restartPolicy to Never
+    since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
+    if we decide we need to change this later.
+    **/
+    if (taskLocation == null) {
+      Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
+      if (!maybePod.isPresent()) {
+        return TaskLocation.unknown();
+      }
+
+      Pod pod = maybePod.get();
+      PodStatus podStatus = pod.getStatus();
+
+      if (podStatus == null || podStatus.getPodIP() == null) {
+        return TaskLocation.unknown();
+      }
+      taskLocation = TaskLocation.create(
+          podStatus.getPodIP(),
+          DruidK8sConstants.PORT,
+          DruidK8sConstants.TLS_PORT,
+          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
+          pod.getMetadata() != null ? pod.getMetadata().getName() : ""
+      );
+      log.info("K8s task %s is running at location %s", taskId.getOriginalTaskId(), taskLocation);
     }
 
-    Pod pod = maybePod.get();
-    PodStatus podStatus = pod.getStatus();
-
-    if (podStatus == null || podStatus.getPodIP() == null) {
-      return TaskLocation.unknown();
-    }
-
-    return TaskLocation.create(
-        podStatus.getPodIP(),
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        Boolean.parseBoolean(pod.getMetadata()
-            .getAnnotations()
-            .getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")
-        )
-    );
+    return taskLocation;
   }
 
   private TaskStatus getTaskStatus(long duration)
@@ -265,14 +279,31 @@ public class KubernetesPeonLifecycle
     return taskStatus.withDuration(duration);
   }
 
-  private void saveLogs()
+  protected void startWatchingLogs()
+  {
+    if (logWatch != null) {
+      log.debug("There is already a log watcher for %s", taskId.getOriginalTaskId());
+      return;
+    }
+    try {
+      Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
+      if (maybeLogWatch.isPresent()) {
+        logWatch = maybeLogWatch.get();
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Error watching logs from task: %s", taskId);
+    }
+  }
+
+  protected void saveLogs()
   {
     try {
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
-        Optional<InputStream> maybeLogStream = streamLogs();
-        if (maybeLogStream.isPresent()) {
-          FileUtils.copyInputStreamToFile(maybeLogStream.get(), file.toFile());
+        startWatchingLogs();
+        if (logWatch != null) {
+          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
         }
@@ -282,11 +313,33 @@ public class KubernetesPeonLifecycle
         log.error(e, "Failed to stream logs for task [%s]", taskId.getOriginalTaskId());
       }
       finally {
+        if (logWatch != null) {
+          logWatch.close();
+        }
         Files.deleteIfExists(file);
       }
     }
     catch (IOException e) {
       log.warn(e, "Failed to manage temporary log file for task [%s]", taskId.getOriginalTaskId());
     }
+  }
+
+  private void stopTask()
+  {
+    if (!State.STOPPED.equals(state.get())) {
+      updateState(new State[]{State.NOT_STARTED, State.PENDING, State.RUNNING}, State.STOPPED);
+    }
+  }
+
+  private void updateState(State[] acceptedStates, State targetState)
+  {
+    Preconditions.checkState(
+        Arrays.stream(acceptedStates).anyMatch(s -> state.compareAndSet(s, targetState)),
+        "Task [%s] failed to run: invalid peon lifecycle state transition [%s]->[%s]",
+        taskId.getOriginalTaskId(),
+        state.get(),
+        targetState
+    );
+    stateListener.stateChanged(state.get(), taskId.getOriginalTaskId());
   }
 }

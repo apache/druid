@@ -23,7 +23,7 @@ title: "HDFS"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-hdfs-storage` in the extensions load list and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-hdfs-storage` in the extensions load list and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
 
 ## Deep Storage
 
@@ -59,7 +59,7 @@ You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/
 Run the below command to install the `hadoop-aws.jar` file under `${DRUID_HOME}/extensions/druid-hdfs-storage` in all nodes.
 
 ```bash
-java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
+${DRUID_HOME}/bin/run-java -classpath "${DRUID_HOME}/lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
 cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar ${DRUID_HOME}/extensions/druid-hdfs-storage/
 ```
 
@@ -112,7 +112,7 @@ example properties. Please follow the instructions at
 [https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
 for more details.
 For more configurations, [GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)
-and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
+and [GCS core template](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/src/test/resources/core-site.xml).
 
 ```xml
 <property>
@@ -147,18 +147,16 @@ and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/maste
 </property>
 ```
 
-Tested with Druid 0.17.0, Hadoop 2.8.5 and gcs-connector jar 2.0.0-hadoop2.
-
 ## Reading data from HDFS or Cloud Storage
 
 ### Native batch ingestion
 
-The [HDFS input source](../../ingestion/native-batch-input-source.md#hdfs-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md)
+The [HDFS input source](../../ingestion/input-sources.md#hdfs-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md)
 to read files directly from the HDFS Storage. You may be able to read objects from cloud storage
 with the HDFS input source, but we highly recommend to use a proper
-[Input Source](../../ingestion/native-batch-input-source.md) instead if possible because
-it is simple to set up. For now, only the [S3 input source](../../ingestion/native-batch-input-source.md#s3-input-source)
-and the [Google Cloud Storage input source](../../ingestion/native-batch-input-source.md#google-cloud-storage-input-source)
+[Input Source](../../ingestion/input-sources.md) instead if possible because
+it is simple to set up. For now, only the [S3 input source](../../ingestion/input-sources.md#s3-input-source)
+and the [Google Cloud Storage input source](../../ingestion/input-sources.md#google-cloud-storage-input-source)
 are supported for cloud storage types, and so you may still want to use the HDFS input source
 to read from cloud storage other than those two.
 

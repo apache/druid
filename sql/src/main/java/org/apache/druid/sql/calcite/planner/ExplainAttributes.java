@@ -19,10 +19,12 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.calcite.sql.SqlNode;
+import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * ExplainAttributes holds the attributes of a SQL statement that is used in the EXPLAIN PLAN result.
@@ -32,18 +34,34 @@ public final class ExplainAttributes
   private final String statementType;
 
   @Nullable
-  private final SqlNode targetDataSource;
+  private final String targetDataSource;
+
+  @Nullable
+  private final Granularity partitionedBy;
+
+  @Nullable
+  private final List<String> clusteredBy;
+
+  @Nullable
+  private final String replaceTimeChunks;
 
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
-      @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource)
+      @JsonProperty("targetDataSource") @Nullable final String targetDataSource,
+      @JsonProperty("partitionedBy") @Nullable final Granularity partitionedBy,
+      @JsonProperty("clusteredBy") @Nullable final List<String> clusteredBy,
+      @JsonProperty("replaceTimeChunks") @Nullable final String replaceTimeChunks
+  )
   {
     this.statementType = statementType;
     this.targetDataSource = targetDataSource;
+    this.partitionedBy = partitionedBy;
+    this.clusteredBy = clusteredBy;
+    this.replaceTimeChunks = replaceTimeChunks;
   }
 
   /**
-   * @return the statement kind of a SQL statement. For example, SELECT, INSERT, or REPLACE.
+   * @return the SQL statement type. For example, SELECT, INSERT, or REPLACE.
    */
   @JsonProperty
   public String getStatementType()
@@ -53,13 +71,50 @@ public final class ExplainAttributes
 
   /**
    * @return the target datasource in a SQL statement. Returns null
-   * for SELECT/non-DML statements where there is no target datasource.
+   * for SELECT statements where there is no target datasource.
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getTargetDataSource()
   {
-    return targetDataSource == null ? null : targetDataSource.toString();
+    return targetDataSource;
+  }
+
+  /**
+   * @return the time-based partitioning granularity specified in the <code>PARTITIONED BY</code> clause
+   * for an INSERT or REPLACE statement. Returns null for SELECT statements.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Granularity getPartitionedBy()
+  {
+    return partitionedBy;
+  }
+
+  /**
+   * @return the clustering columns specified in the <code>CLUSTERED BY</code> clause
+   * for an INSERT or REPLACE statement. Returns null for SELECT statements.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<String> getClusteredBy()
+  {
+    return clusteredBy;
+  }
+
+  /**
+   * @return the time chunks specified in the <code>OVERWRITE</code> clause
+   * for a REPLACE statement. Returns null for INSERT and SELECT statements.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getReplaceTimeChunks()
+  {
+    return replaceTimeChunks;
   }
 
   @Override
@@ -68,6 +123,9 @@ public final class ExplainAttributes
     return "ExplainAttributes{" +
            "statementType='" + statementType + '\'' +
            ", targetDataSource=" + targetDataSource +
+           ", partitionedBy=" + partitionedBy +
+           ", clusteredBy=" + clusteredBy +
+           ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
   }
 }

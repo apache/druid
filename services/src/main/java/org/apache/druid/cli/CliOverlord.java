@@ -21,6 +21,7 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -32,12 +33,12 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
@@ -117,6 +118,7 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
@@ -134,7 +136,9 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -146,7 +150,8 @@ import java.util.Set;
 )
 public class CliOverlord extends ServerRunnable
 {
-  private static Logger log = new Logger(CliOverlord.class);
+  private static final Logger log = new Logger(CliOverlord.class);
+  private static final String DEFAULT_SERVICE_NAME = "druid/overlord";
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/druid/indexer/v1/isLeader",
@@ -181,7 +186,7 @@ public class CliOverlord extends ServerRunnable
             if (standalone) {
               binder.bindConstant()
                     .annotatedWith(Names.named("serviceName"))
-                    .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
+                    .to(DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
             }
@@ -353,6 +358,19 @@ public class CliOverlord extends ServerRunnable
               public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
               {
                 return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
+              }
+
+              @Provides
+              @LazySingleton
+              @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
+              public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster)
+              {
+                return () -> {
+                  Map<String, Object> heartbeatTags = new HashMap<>();
+                  heartbeatTags.put("leader", taskMaster.isLeader() ? 1 : 0);
+
+                  return heartbeatTags;
+                };
               }
             };
           }

@@ -197,8 +197,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -471,7 +469,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         false
     );
-    KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, null, OBJECT_MAPPER);
+    KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
         taskStorage,
         taskMaster,
@@ -1477,7 +1475,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testBeginPublishAndQueueNextTasks() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
 
@@ -1606,7 +1604,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTask() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
     final Map<String, Long> timeLag = ImmutableMap.of(SHARD_ID1, 0L, SHARD_ID0, 20000000L);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -1768,7 +1766,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
     final Map<String, Long> timeLag = ImmutableMap.of(SHARD_ID1, 9000L, SHARD_ID0, 1234L);
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -1918,8 +1916,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testDiscoverExistingPublishingAndReadingTask() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
     final Map<String, Long> timeLag = ImmutableMap.of(SHARD_ID0, 100L, SHARD_ID1, 200L);
 
@@ -2182,7 +2180,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhilePausing() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     supervisorRecordSupplier.assign(EasyMock.anyObject());
@@ -2290,7 +2288,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
   {
-    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
 
     supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     supervisorRecordSupplier.assign(EasyMock.anyObject());
@@ -2436,8 +2434,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testStopGracefully() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -2857,8 +2855,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testResetRunningTasks() throws Exception
   {
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -3107,9 +3105,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     final Collection workItems = new ArrayList();
-    workItems.add(new TestTaskRunnerWorkItem(id1, null, new TaskLocation(id1.getId(), 8100, 8100)));
-    workItems.add(new TestTaskRunnerWorkItem(id2, null, new TaskLocation(id2.getId(), 8100, 8100)));
-    workItems.add(new TestTaskRunnerWorkItem(id3, null, new TaskLocation(id3.getId(), 8100, 8100)));
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, TaskLocation.create(id1.getId(), 8100, 8100)));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, TaskLocation.create(id2.getId(), 8100, 8100)));
+    workItems.add(new TestTaskRunnerWorkItem(id3, null, TaskLocation.create(id3.getId(), 8100, 8100)));
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems);
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
@@ -3241,8 +3239,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null
     );
 
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     Collection workItems = new ArrayList<>();
     workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
@@ -3461,11 +3459,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
-    Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
+    Assert.assertEquals(ISE.class.getName(), serviceEmitter.getExceptionClass());
   }
 
   @Test
-  public void testSuspendedNoRunningTasks() throws Exception
+  public void testSuspendedNoRunningTasks()
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
 
@@ -3498,8 +3496,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     // graceful shutdown is expected to be called on running tasks since state is suspended
 
-    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, true);
@@ -3967,8 +3965,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -5041,7 +5037,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -5077,8 +5072,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -5185,7 +5178,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -5276,7 +5268,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
         null,
-        null,
         null
     )
     {
@@ -5365,7 +5356,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
-        null,
         null,
         null
     )

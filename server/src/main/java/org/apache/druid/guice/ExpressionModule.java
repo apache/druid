@@ -36,6 +36,7 @@ import org.apache.druid.query.expression.LikeExprMacro;
 import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.RegexpExtractExprMacro;
 import org.apache.druid.query.expression.RegexpLikeExprMacro;
+import org.apache.druid.query.expression.RegexpReplaceExprMacro;
 import org.apache.druid.query.expression.TimestampCeilExprMacro;
 import org.apache.druid.query.expression.TimestampExtractExprMacro;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -57,6 +58,7 @@ public class ExpressionModule implements Module
                    .add(LikeExprMacro.class)
                    .add(RegexpExtractExprMacro.class)
                    .add(RegexpLikeExprMacro.class)
+                   .add(RegexpReplaceExprMacro.class)
                    .add(ContainsExprMacro.class)
                    .add(CaseInsensitiveContainsExprMacro.class)
                    .add(TimestampCeilExprMacro.class)

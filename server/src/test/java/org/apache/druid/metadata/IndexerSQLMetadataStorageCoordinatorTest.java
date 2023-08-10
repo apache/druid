@@ -146,6 +146,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+  private final DataSegment defaultSegment2WithBiggerSize = new DataSegment(
+          "fooDataSource",
+          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+          "version",
+          ImmutableMap.of(),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(1),
+          9,
+          200
+  );
+
   private final DataSegment defaultSegment3 = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
@@ -920,6 +932,22 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
+  @Test
+  public void testSimpleUnusedListWithLimit() throws IOException
+  {
+    coordinator.announceHistoricalSegments(SEGMENTS);
+    markAllSegmentsUnused();
+    int limit = SEGMENTS.size() - 1;
+    Set<DataSegment> retreivedUnusedSegments = ImmutableSet.copyOf(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            defaultSegment.getDataSource(),
+            defaultSegment.getInterval(),
+            limit
+        )
+    );
+    Assert.assertEquals(limit, retreivedUnusedSegments.size());
+    Assert.assertTrue(SEGMENTS.containsAll(retreivedUnusedSegments));
+  }
 
   @Test
   public void testUsedOverlapLow() throws IOException
@@ -1411,6 +1439,46 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             )
         ).size()
     );
+  }
+
+  @Test
+  public void testUpdateSegmentsInMetaDataStorage() throws IOException
+  {
+    // Published segments to MetaDataStorage
+    coordinator.announceHistoricalSegments(SEGMENTS);
+
+    // check segments Published
+    Assert.assertEquals(
+            SEGMENTS,
+            ImmutableSet.copyOf(
+                    coordinator.retrieveUsedSegmentsForInterval(
+                            defaultSegment.getDataSource(),
+                            defaultSegment.getInterval(),
+                            Segments.ONLY_VISIBLE
+                    )
+            )
+    );
+
+    // update single metadata item
+    coordinator.updateSegmentMetadata(Collections.singleton(defaultSegment2WithBiggerSize));
+
+    Collection<DataSegment> updated = coordinator.retrieveUsedSegmentsForInterval(
+            defaultSegment.getDataSource(),
+            defaultSegment.getInterval(),
+            Segments.ONLY_VISIBLE);
+
+    Assert.assertEquals(SEGMENTS.size(), updated.size());
+
+    DataSegment defaultAfterUpdate = updated.stream().filter(s -> s.equals(defaultSegment)).findFirst().get();
+    DataSegment default2AfterUpdate = updated.stream().filter(s -> s.equals(defaultSegment2)).findFirst().get();
+
+    Assert.assertNotNull(defaultAfterUpdate);
+    Assert.assertNotNull(default2AfterUpdate);
+
+    // check that default did not change
+    Assert.assertEquals(defaultSegment.getSize(), defaultAfterUpdate.getSize());
+    // but that default 2 did change
+    Assert.assertEquals(defaultSegment2WithBiggerSize.getSize(), default2AfterUpdate.getSize());
   }
 
   @Test

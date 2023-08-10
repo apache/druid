@@ -25,7 +25,7 @@ title: "Kerberos"
 
 Apache Druid Extension to enable Authentication for Druid Processes using Kerberos.
 This extension adds an Authenticator which is used to protect HTTP Endpoints using the simple and protected GSSAPI negotiation mechanism [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO).
-Make sure to [include](../../development/extensions.md#loading-extensions) `druid-kerberos` in the extensions load list.
+Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-kerberos` in the extensions load list.
 
 
 ## Configuration
@@ -61,7 +61,7 @@ The special string _HOST will be replaced automatically with the value of config
 
 ### `druid.auth.authenticator.kerberos.excludedPaths`
 
-In older releases, the Kerberos authenticator had an `excludedPaths` property that allowed the user to specify a list of paths where authentication checks should be skipped. This property has been removed from the Kerberos authenticator because the path exclusion functionality is now handled across all authenticators/authorizers by setting `druid.auth.unsecuredPaths`, as described in the [main auth documentation](../../design/auth.md).
+In older releases, the Kerberos authenticator had an `excludedPaths` property that allowed the user to specify a list of paths where authentication checks should be skipped. This property has been removed from the Kerberos authenticator because the path exclusion functionality is now handled across all authenticators/authorizers by setting `druid.auth.unsecuredPaths`, as described in the [main auth documentation](../../operations/auth.md).
 
 ### Auth to Local Syntax
 `druid.auth.authenticator.kerberos.authToLocal` allows you to set a general rules for mapping principal names to local user names.

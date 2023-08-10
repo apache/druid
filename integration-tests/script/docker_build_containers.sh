@@ -36,7 +36,11 @@ else
     ;;
   15)
     echo "Build druid-cluster with Java 15"
-    docker build -t druid/cluster --build-arg JDK_VERSION=15-slim-buster --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg USE_MARIA --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
+    docker build -t druid/cluster --build-arg JDK_VERSION=15-slim-buster --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg MYSQL_DRIVER_CLASSNAME --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
+    ;;
+  17)
+    echo "Build druid-cluster with Java 17"
+    docker build -t druid/cluster --build-arg JDK_VERSION=17-slim-buster --build-arg ZK_VERSION --build-arg KAFKA_VERSION --build-arg CONFLUENT_VERSION --build-arg MYSQL_VERSION --build-arg MARIA_VERSION --build-arg MYSQL_DRIVER_CLASSNAME --build-arg APACHE_ARCHIVE_MIRROR_HOST $SHARED_DIR/docker
     ;;
   *)
     echo "Invalid JVM Runtime given. Stopping"

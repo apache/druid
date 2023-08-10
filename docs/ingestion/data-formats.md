@@ -1,6 +1,7 @@
 ---
 id: data-formats
-title: "Data formats"
+title: Source input formats
+sidebar_label: Source input formats
 ---
 
 <!--
@@ -27,7 +28,7 @@ We welcome any contributions to new formats.
 
 This page lists all default and core extension data formats supported by Druid.
 For additional data formats supported with community extensions,
-please see our [community extensions list](../development/extensions.md#community-extensions).
+please see our [community extensions list](../configuration/extensions.md#community-extensions).
 
 ## Formatting data
 
@@ -690,7 +691,7 @@ and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.
 Consider using the [input format](#input-format) instead for these types of ingestion.
 
 This section lists all default and core extension parsers.
-For community extension parsers, please see our [community extensions list](../development/extensions.md#community-extensions).
+For community extension parsers, please see our [community extensions list](../configuration/extensions.md#community-extensions).
 
 ### String Parser
 

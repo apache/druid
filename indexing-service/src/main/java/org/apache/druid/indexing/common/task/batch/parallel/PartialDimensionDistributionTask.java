@@ -228,7 +228,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
-    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
     InputFormat inputFormat = inputSource.needsFormat()
                               ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
                               : null;

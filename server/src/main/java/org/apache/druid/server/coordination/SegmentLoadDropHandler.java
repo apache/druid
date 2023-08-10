@@ -773,7 +773,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   // Future with cancel() implementation to remove it from "waitingFutures" list
-  private static class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeRequestAndStatus>>
+  private class CustomSettableFuture extends AbstractFuture<List<DataSegmentChangeRequestAndStatus>>
   {
     private final LinkedHashSet<CustomSettableFuture> waitingFutures;
     private final Map<DataSegmentChangeRequest, AtomicReference<Status>> statusRefs;
@@ -789,15 +789,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     public void resolve()
     {
-      synchronized (statusRefs) {
+      synchronized (requestStatusesLock) {
         if (isDone()) {
           return;
         }
 
-        List<DataSegmentChangeRequestAndStatus> result = new ArrayList<>(statusRefs.size());
-        statusRefs.forEach(
-            (request, statusRef) -> result.add(new DataSegmentChangeRequestAndStatus(request, statusRef.get()))
-        );
+        final List<DataSegmentChangeRequestAndStatus> result = new ArrayList<>(statusRefs.size());
+        statusRefs.forEach((request, statusRef) -> {
+          // Remove complete statuses from the cache
+          final Status status = statusRef.get();
+          if (status != null && status.getState() != Status.STATE.PENDING) {
+            requestStatuses.invalidate(request);
+          }
+          result.add(new DataSegmentChangeRequestAndStatus(request, status));
+        });
 
         set(result);
       }

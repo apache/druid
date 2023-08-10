@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -31,6 +32,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
@@ -39,8 +41,6 @@ import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
@@ -76,12 +76,11 @@ import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.server.audit.AuditManagerProvider;
-import org.apache.druid.server.coordinator.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
-import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
@@ -94,6 +93,7 @@ import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
@@ -114,13 +114,16 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -217,8 +220,6 @@ public class CliCoordinator extends ServerRunnable
                   .toProvider(AuditManagerProvider.class)
                   .in(ManageLifecycle.class);
 
-            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class);
             binder.bind(DruidCoordinator.class);
@@ -259,7 +260,7 @@ public class CliCoordinator extends ServerRunnable
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
                   + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration "
+                  + "https://druid.apache.org/docs/latest/api-reference/api-reference.html#compaction-configuration "
                   + "for more details about compaction."
               );
             }
@@ -330,6 +331,10 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(TaskStorage.class).toProvider(Providers.of(null));
               binder.bind(TaskMaster.class).toProvider(Providers.of(null));
               binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
+              // Bind HeartbeatSupplier only when the service operates independently of Overlord.
+              binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
+                  .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
+                  .toProvider(HeartbeatSupplier.class);
             }
 
             binder.bind(CoordinatorCustomDutyGroups.class)
@@ -457,6 +462,28 @@ public class CliCoordinator extends ServerRunnable
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  private static class HeartbeatSupplier implements Provider<Supplier<Map<String, Object>>>
+  {
+    private final DruidCoordinator coordinator;
+
+    @Inject
+    public HeartbeatSupplier(DruidCoordinator coordinator)
+    {
+      this.coordinator = coordinator;
+    }
+
+    @Override
+    public Supplier<Map<String, Object>> get()
+    {
+      return () -> {
+        Map<String, Object> heartbeatTags = new HashMap<>();
+        heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
+
+        return heartbeatTags;
+      };
     }
   }
 }

@@ -28,7 +28,7 @@ instance of a Druid [Overlord](../design/overlord.md). Please refer to our [Hado
 comparisons between Hadoop-based, native batch (simple), and native batch (parallel) ingestion.
 
 To run a Hadoop-based ingestion task, write an ingestion spec as specified below. Then POST it to the
-[`/druid/indexer/v1/task`](../operations/api-reference.md#tasks) endpoint on the Overlord, or use the
+[`/druid/indexer/v1/task`](../api-reference/tasks-api.md) endpoint on the Overlord, or use the
 `bin/post-index-task` script included with Druid.
 
 ## Tutorial
@@ -180,7 +180,7 @@ Once you install the GCS Connector jar in all MiddleManager and Indexer processe
 your Google Cloud Storage paths in the inputSpec with the below job properties.
 For more configurations, see the [instructions to configure Hadoop](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop),
 [GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)
-and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
+and [GCS core template](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/src/test/resources/core-site.xml).
 
 ```
 "paths" : "gs://billy-bucket/the/data/is/here/data.gz,gs://billy-bucket/the/data/is/here/moredata.gz,gs://billy-bucket/the/data/is/here/evenmoredata.gz"

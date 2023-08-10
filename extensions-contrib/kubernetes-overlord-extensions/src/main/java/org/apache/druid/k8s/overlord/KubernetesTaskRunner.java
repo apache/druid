@@ -31,16 +31,20 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -48,6 +52,7 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -100,6 +105,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ListeningExecutorService exec;
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
+  private final ServiceEmitter emitter;
 
 
   public KubernetesTaskRunner(
@@ -107,7 +113,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       KubernetesTaskRunnerConfig config,
       KubernetesPeonClient client,
       HttpClient httpClient,
-      PeonLifecycleFactory peonLifecycleFactory
+      PeonLifecycleFactory peonLifecycleFactory,
+      ServiceEmitter emitter
   )
   {
     this.adapter = adapter;
@@ -119,6 +126,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(config.getCapacity(), "k8s-task-runner-%d")
     );
+    this.emitter = emitter;
   }
 
   @Override
@@ -135,16 +143,16 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public ListenableFuture<TaskStatus> run(Task task)
   {
     synchronized (tasks) {
-      tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))));
-      return tasks.get(task.getId()).getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))))
+                  .getResult();
     }
   }
 
   protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
     synchronized (tasks) {
-      tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))));
-      return tasks.get(task.getId()).getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))))
+                  .getResult();
     }
   }
 
@@ -161,23 +169,26 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @VisibleForTesting
   protected TaskStatus doTask(Task task, boolean run)
   {
-    KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
-
-    synchronized (tasks) {
-      KubernetesWorkItem workItem = tasks.get(task.getId());
-
-      if (workItem == null) {
-        throw new ISE("Task [%s] disappeared", task.getId());
-      }
-
-      if (workItem.isShutdownRequested()) {
-        throw new ISE("Task [%s] has been shut down", task.getId());
-      }
-
-      workItem.setKubernetesPeonLifecycle(peonLifecycle);
-    }
-
     try {
+      KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
+          task,
+          this::emitTaskStateMetrics
+      );
+
+      synchronized (tasks) {
+        KubernetesWorkItem workItem = tasks.get(task.getId());
+
+        if (workItem == null) {
+          throw new ISE("Task [%s] disappeared", task.getId());
+        }
+
+        if (workItem.isShutdownRequested()) {
+          throw new ISE("Task [%s] has been shut down", task.getId());
+        }
+
+        workItem.setKubernetesPeonLifecycle(peonLifecycle);
+      }
+
       TaskStatus taskStatus;
       if (run) {
         taskStatus = peonLifecycle.run(
@@ -195,16 +206,41 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
       return taskStatus;
     }
-
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
     }
-
     finally {
       synchronized (tasks) {
         tasks.remove(task.getId());
       }
+    }
+  }
+
+  @VisibleForTesting
+  protected void emitTaskStateMetrics(KubernetesPeonLifecycle.State state, String taskId)
+  {
+    switch (state) {
+      case RUNNING:
+        KubernetesWorkItem workItem;
+        synchronized (tasks) {
+          workItem = tasks.get(taskId);
+          if (workItem == null) {
+            log.error("Task [%s] disappeared", taskId);
+            return;
+          }
+        }
+        ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+        IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
+        emitter.emit(
+            metricBuilder.build(
+                "task/pending/time",
+                new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
+            )
+        );
+      default:
+        // ignore other state transition now
+        return;
     }
   }
 
@@ -275,17 +311,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = new ArrayList<>();
+    List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
     for (Job job : client.getPeonJobs()) {
       try {
         Task task = adapter.toTask(job);
-        tasks.add(Pair.of(task, joinAsync(task)));
+        restoredTasks.add(Pair.of(task, joinAsync(task)));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
-    return tasks;
+    return restoredTasks;
   }
 
   @Override
@@ -322,11 +358,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    synchronized (tasks) {
-      return Lists.newArrayList(tasks.values());
-    }
+    return Lists.newArrayList(tasks.values());
   }
-
 
   @Override
   public Optional<ScalingStats> getScalingStats()
@@ -393,23 +426,19 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
-    synchronized (tasks) {
-      return tasks.values()
-          .stream()
-          .filter(KubernetesWorkItem::isRunning)
-          .collect(Collectors.toList());
-    }
+    return tasks.values()
+                .stream()
+                .filter(KubernetesWorkItem::isRunning)
+                .collect(Collectors.toList());
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
-    synchronized (tasks) {
-      return tasks.values()
-          .stream()
-          .filter(KubernetesWorkItem::isPending)
-          .collect(Collectors.toList());
-    }
+    return tasks.values()
+                .stream()
+                .filter(KubernetesWorkItem::isPending)
+                .collect(Collectors.toList());
   }
 
   @Nullable

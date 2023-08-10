@@ -149,6 +149,9 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
+    if (isAutoSchema()) {
+      return;
+    }
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(
           toInFilter("dim2", "b", "d"),
@@ -256,34 +259,34 @@ public class InFilterTest extends BaseFilterTest
     ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
           ImmutableList.of("a", "b", "c", "d", "f")
+      );
+      assertFilterMatchesSkipArrays(
+          toInFilterWithFn("dim2", yesNullFn, "YES"),
+          ImmutableList.of("b", "c", "f")
       );
       assertFilterMatches(
           toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
           ImmutableList.of("a", "b", "e")
       );
       assertFilterMatches(
-          toInFilterWithFn("dim2", yesNullFn, "YES"),
-          ImmutableList.of("b", "c", "f")
-      );
-      assertFilterMatches(
           toInFilterWithFn("dim1", yesNullFn, "NO"),
           ImmutableList.of("b", "c", "d", "e", "f")
       );
     } else {
-      assertFilterMatches(
+      assertFilterMatchesSkipArrays(
           toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
           ImmutableList.of("a", "b", "d", "f")
+      );
+      assertFilterMatchesSkipArrays(
+          toInFilterWithFn("dim2", yesNullFn, "YES"),
+          ImmutableList.of("b", "f")
       );
       assertFilterMatches(
           toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
           ImmutableList.of("b", "e")
-      );
-      assertFilterMatches(
-          toInFilterWithFn("dim2", yesNullFn, "YES"),
-          ImmutableList.of("b", "f")
       );
 
       assertFilterMatches(
@@ -322,9 +325,10 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn, "UNKNOWN"), ImmutableList.of("b", "d", "e", "f"));
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "HELLO"), ImmutableList.of("b", "e"));
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "N/A"), ImmutableList.of());
-    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
-    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
-    assertFilterMatches(
+
+    assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
+    assertFilterMatchesSkipArrays(
         toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );

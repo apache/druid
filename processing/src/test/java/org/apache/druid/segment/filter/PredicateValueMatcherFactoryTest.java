@@ -32,7 +32,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.selector.TestColumnValueSelector;
-import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
+import org.apache.druid.segment.serde.StringUtf8DictionaryEncodedColumnSupplier;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -67,8 +67,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   public void testDimensionProcessorMultiValuedDimensionMatchingValue()
   {
     // Emulate multi-valued dimension
-    final DictionaryEncodedColumnSupplier columnSupplier = new DictionaryEncodedColumnSupplier(
-        GenericIndexed.fromIterable(ImmutableList.of("v1", "v2", "v3"), GenericIndexed.STRING_STRATEGY),
+    final StringUtf8DictionaryEncodedColumnSupplier<?> columnSupplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
             ImmutableList.of(
                 ByteBuffer.wrap(StringUtils.toUtf8("v1")),
@@ -76,10 +75,9 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
                 ByteBuffer.wrap(StringUtils.toUtf8("v3"))
             ),
             GenericIndexed.UTF8_STRATEGY
-        ),
+        )::singleThreaded,
         null,
-        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
-        0
+        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1})))
     );
     final ValueMatcher matcher = forSelector("v2")
         .makeDimensionProcessor(columnSupplier.get().makeDimensionSelector(new SimpleAscendingOffset(1), null), true);
@@ -90,8 +88,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   public void testDimensionProcessorMultiValuedDimensionNotMatchingValue()
   {
     // Emulate multi-valued dimension
-    final DictionaryEncodedColumnSupplier columnSupplier = new DictionaryEncodedColumnSupplier(
-        GenericIndexed.fromIterable(ImmutableList.of("v1", "v2", "v3"), GenericIndexed.STRING_STRATEGY),
+    final StringUtf8DictionaryEncodedColumnSupplier<?> columnSupplier = new StringUtf8DictionaryEncodedColumnSupplier(
         GenericIndexed.fromIterable(
             ImmutableList.of(
                 ByteBuffer.wrap(StringUtils.toUtf8("v1")),
@@ -99,10 +96,9 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
                 ByteBuffer.wrap(StringUtils.toUtf8("v3"))
             ),
             GenericIndexed.UTF8_STRATEGY
-        ),
+        )::singleThreaded,
         null,
-        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
-        0
+        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1})))
     );
     final ValueMatcher matcher = forSelector("v3")
         .makeDimensionProcessor(columnSupplier.get().makeDimensionSelector(new SimpleAscendingOffset(1), null), true);

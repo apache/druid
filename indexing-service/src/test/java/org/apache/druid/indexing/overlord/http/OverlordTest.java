@@ -98,7 +98,7 @@ import java.util.concurrent.Executor;
 
 public class OverlordTest
 {
-  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000, -1);
+  private static final TaskLocation TASK_LOCATION = TaskLocation.create("dummy", 1000, -1);
 
   private TestingServer server;
   private Timing timing;
@@ -215,7 +215,7 @@ public class OverlordTest
 
     taskMaster = new TaskMaster(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, new Period(1), null, new Period(10)),
+        new TaskQueueConfig(null, new Period(1), null, new Period(10), null),
         new DefaultTaskConfig(),
         taskLockbox,
         taskStorage,
@@ -329,9 +329,12 @@ public class OverlordTest
 
     response = overlordResource.getCompleteTasks(1, req);
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
+    Assert.assertEquals(1, taskMaster.getStats().rowCount());
 
     taskMaster.stop();
     Assert.assertFalse(taskMaster.isLeader());
+    Assert.assertEquals(0, taskMaster.getStats().rowCount());
+
     EasyMock.verify(taskActionClientFactory);
   }
 

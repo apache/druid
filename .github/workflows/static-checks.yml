@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Static Checks CI
+name: "Static Checks CI"
 on:
   push:
     branches:
@@ -27,7 +27,7 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
 env:
@@ -69,9 +69,9 @@ jobs:
         if: ${{ matrix.java == 'jdk8' }}
         run: ./check_test_suite_test.py
 
-      - name: (openjdk11) strict compilation
-        if: ${{ matrix.java == 'jdk11' }}
-        # errorprone requires JDK 11
+      - name: (openjdk17) strict compilation
+        if: ${{ matrix.java == 'jdk17' }}
+        # errorprone requires JDK 11+
         # Strict compilation requires more than 2 GB
         run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
@@ -95,13 +95,6 @@ jobs:
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
-      - name: analyze dependencies for hadoop2
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop2
-        run: |
-          ./.github/scripts/analyze_dependencies_script.sh
-
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
@@ -122,12 +115,30 @@ jobs:
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
+  intellij-inspections:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: setup JDK8
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_8_X64" >> $GITHUB_ENV
+
+      - name: maven install
+        run: |
+          echo 'Running Maven install...' &&
+          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
       - name: intellij inspections
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           docker run --rm \
           -v $(pwd):/project \
           -v ~/.m2:/home/inspect/.m2 \
+          -v $(pwd)/.idea/misc-for-inspection.xml:/project/.idea/misc.xml \
           ccaominh/intellij-inspect:1.0.0 \
           /project/pom.xml \
           /project/.idea/inspectionProfiles/Druid.xml \
@@ -142,9 +153,9 @@ jobs:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: setup JDK11
+      - name: setup JDK17
         run: |
-          echo "JAVA_HOME=$JAVA_HOME_11_X64" >> $GITHUB_ENV
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
 
       - name: setup node
         uses: actions/setup-node@v3

@@ -18,8 +18,9 @@
 
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { SqlQuery, T } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { SqlQuery, T } from 'druid-query-toolkit';
+import { sum } from 'd3-array';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -56,6 +57,7 @@ import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../.
 import { Api, AppToaster } from '../../singletons';
 import type { NumberLike } from '../../utils';
 import {
+  assemble,
   compact,
   countBy,
   deepGet,
@@ -64,11 +66,13 @@ import {
   formatMillions,
   formatPercent,
   getDruidErrorMessage,
+  groupByAsMap,
   hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
+  moveToEnd,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
@@ -85,8 +89,9 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'full': [
     'Datasource name',
     'Availability',
-    'Availability detail',
+    'Historical load/drop queues',
     'Total data size',
+    'Running tasks',
     'Segment rows',
     'Segment size',
     'Segment granularity',
@@ -102,8 +107,9 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-sql': [
     'Datasource name',
     'Availability',
-    'Availability detail',
+    'Historical load/drop queues',
     'Total data size',
+    'Running tasks',
     'Compaction',
     '% Compacted',
     'Left to be compacted',
@@ -113,8 +119,9 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-proxy': [
     'Datasource name',
     'Availability',
-    'Availability detail',
+    'Historical load/drop queues',
     'Total data size',
+    'Running tasks',
     'Segment rows',
     'Segment size',
     'Segment granularity',
@@ -156,15 +163,16 @@ const PERCENT_BRACES = [formatPercent(1)];
 
 interface DatasourceQueryResultRow {
   readonly datasource: string;
-  readonly num_segments: NumberLike;
-  readonly num_segments_to_load: NumberLike;
-  readonly num_segments_to_drop: NumberLike;
-  readonly minute_aligned_segments: NumberLike;
-  readonly hour_aligned_segments: NumberLike;
-  readonly day_aligned_segments: NumberLike;
-  readonly month_aligned_segments: NumberLike;
-  readonly year_aligned_segments: NumberLike;
-  readonly all_granularity_segments: NumberLike;
+  readonly num_segments: number;
+  readonly num_zero_replica_segments: number;
+  readonly num_segments_to_load: number;
+  readonly num_segments_to_drop: number;
+  readonly minute_aligned_segments: number;
+  readonly hour_aligned_segments: number;
+  readonly day_aligned_segments: number;
+  readonly month_aligned_segments: number;
+  readonly year_aligned_segments: number;
+  readonly all_granularity_segments: number;
   readonly total_data_size: NumberLike;
   readonly replicated_size: NumberLike;
   readonly min_segment_rows: NumberLike;
@@ -181,6 +189,7 @@ function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryR
   return {
     datasource,
     num_segments: 0,
+    num_zero_replica_segments: 0,
     num_segments_to_load: 0,
     num_segments_to_drop: 0,
     minute_aligned_segments: 0,
@@ -214,6 +223,7 @@ function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
 }
 
 interface Datasource extends DatasourceQueryResultRow {
+  readonly runningTasks?: Record<string, number>;
   readonly rules?: Rule[];
   readonly compaction?: CompactionInfo;
   readonly unused?: boolean;
@@ -238,16 +248,64 @@ interface CompactionConfigDialogOpenOn {
   readonly compactionConfig?: CompactionConfig;
 }
 
+interface DatasourceQuery {
+  capabilities: Capabilities;
+  visibleColumns: LocalStorageBackedVisibility;
+  showUnused: boolean;
+}
+
+interface RunningTaskRow {
+  datasource: string;
+  type: string;
+  num_running_tasks: number;
+}
+
+function countRunningTasks(runningTasks: Record<string, number> | undefined): number {
+  if (!runningTasks) return -1;
+  return sum(Object.values(runningTasks));
+}
+
+function formatRunningTasks(runningTasks: Record<string, number> | undefined): string {
+  if (!runningTasks) return 'n/a';
+  const runningTaskEntries = Object.entries(runningTasks);
+  if (!runningTaskEntries.length) return 'No running tasks';
+  return moveToEnd(
+    runningTaskEntries.sort(([t1, c1], [t2, c2]) => {
+      const dc = c2 - c1;
+      if (dc) return dc;
+      return t1.localeCompare(t2);
+    }),
+    ([t]) => t === 'other',
+  )
+    .map(kv => kv.join(': '))
+    .join(', ');
+}
+
+function normalizeTaskType(taskType: string): string {
+  switch (taskType) {
+    case 'index_parallel':
+    case 'index_hadoop':
+    case 'index_kafka':
+    case 'index_kinesis':
+    case 'compact':
+    case 'kill':
+      return taskType;
+
+    default:
+      return 'other';
+  }
+}
+
 export interface DatasourcesViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToTask(datasource?: string, openDialog?: string): void;
+  goToTasks(datasource?: string): void;
   goToSegments(datasource: string, onlyUnavailable?: boolean): void;
   capabilities: Capabilities;
-  initDatasource?: string;
 }
 
 export interface DatasourcesViewState {
-  datasourceFilter: Filter[];
   datasourcesAndDefaultRulesState: QueryState<DatasourcesAndDefaultRules>;
 
   showUnused: boolean;
@@ -267,12 +325,6 @@ export interface DatasourcesViewState {
   actions: BasicAction[];
 }
 
-interface DatasourceQuery {
-  capabilities: Capabilities;
-  visibleColumns: LocalStorageBackedVisibility;
-  showUnused: boolean;
-}
-
 export class DatasourcesView extends React.PureComponent<
   DatasourcesViewProps,
   DatasourcesViewState
@@ -286,10 +338,13 @@ export class DatasourcesView extends React.PureComponent<
     const columns = compact(
       [
         visibleColumns.shown('Datasource name') && `datasource`,
-        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) &&
+        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) && [
           `COUNT(*) FILTER (WHERE is_active = 1) AS num_segments`,
-        (visibleColumns.shown('Availability') || visibleColumns.shown('Availability detail')) && [
-          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
+          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND replication_factor = 0) AS num_zero_replica_segments`,
+        ],
+        (visibleColumns.shown('Availability') ||
+          visibleColumns.shown('Historical load/drop queues')) && [
+          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0 AND replication_factor > 0) AS num_segments_to_load`,
           `COUNT(*) FILTER (WHERE is_available = 1 AND is_active = 0) AS num_segments_to_drop`,
         ],
         visibleColumns.shown('Total data size') &&
@@ -332,6 +387,11 @@ GROUP BY 1
 ORDER BY 1`;
   }
 
+  static RUNNING_TASK_SQL = `SELECT
+  "datasource", "type", COUNT(*) AS "num_running_tasks"
+FROM sys.tasks WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
+GROUP BY 1, 2`;
+
   static formatRules(rules: Rule[]): string {
     if (rules.length === 0) {
       return 'No rules';
@@ -347,16 +407,10 @@ ORDER BY 1`;
     DatasourcesAndDefaultRules
   >;
 
-  constructor(props: DatasourcesViewProps, context: any) {
-    super(props, context);
-
-    const datasourceFilter: Filter[] = [];
-    if (props.initDatasource) {
-      datasourceFilter.push({ id: 'datasource', value: `=${props.initDatasource}` });
-    }
+  constructor(props: DatasourcesViewProps) {
+    super(props);
 
     this.state = {
-      datasourceFilter,
       datasourcesAndDefaultRulesState: QueryState.INIT,
 
       showUnused: false,
@@ -397,6 +451,7 @@ ORDER BY 1`;
             return {
               datasource: d.name,
               num_segments: numSegments,
+              num_zero_replica_segments: 0,
               num_segments_to_load: segmentsToLoad,
               num_segments_to_drop: 0,
               minute_aligned_segments: -1,
@@ -419,6 +474,49 @@ ORDER BY 1`;
           });
         } else {
           throw new Error(`must have SQL or coordinator access`);
+        }
+
+        let runningTasksByDatasource: Record<string, Record<string, number>> = {};
+        if (visibleColumns.shown('Running tasks')) {
+          try {
+            if (capabilities.hasSql()) {
+              const runningTasks = await queryDruidSql<RunningTaskRow>({
+                query: DatasourcesView.RUNNING_TASK_SQL,
+              });
+
+              runningTasksByDatasource = groupByAsMap(
+                runningTasks,
+                x => x.datasource,
+                xs =>
+                  groupByAsMap(
+                    xs,
+                    x => normalizeTaskType(x.type),
+                    ys => sum(ys, y => y.num_running_tasks),
+                  ),
+              );
+            } else if (capabilities.hasOverlordAccess()) {
+              const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks?state=running`))
+                .data;
+              runningTasksByDatasource = groupByAsMap(
+                taskList,
+                (t: any) => t.dataSource,
+                xs =>
+                  groupByAsMap(
+                    xs,
+                    x => normalizeTaskType(x.type),
+                    ys => ys.length,
+                  ),
+              );
+            } else {
+              throw new Error(`must have SQL or overlord access`);
+            }
+          } catch (e) {
+            AppToaster.show({
+              icon: IconNames.ERROR,
+              intent: Intent.DANGER,
+              message: 'Could not get running task counts',
+            });
+          }
         }
 
         if (!capabilities.hasCoordinatorAccess()) {
@@ -500,6 +598,7 @@ ORDER BY 1`;
           datasources: datasources.concat(unused.map(makeUnusedDatasource)).map(ds => {
             return {
               ...ds,
+              runningTasks: runningTasksByDatasource[ds.datasource] || {},
               rules: rules[ds.datasource],
               compaction:
                 compactionConfigs && compactionStatuses
@@ -825,7 +924,7 @@ ORDER BY 1`;
     rules: Rule[] | undefined,
     compactionInfo: CompactionInfo | undefined,
   ): BasicAction[] {
-    const { goToQuery, goToTask, capabilities } = this.props;
+    const { goToQuery, capabilities } = this.props;
 
     const goToActions: BasicAction[] = [];
 
@@ -836,12 +935,6 @@ ORDER BY 1`;
         onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
       });
     }
-
-    goToActions.push({
-      icon: IconNames.GANTT_CHART,
-      title: 'Go to tasks',
-      onAction: () => goToTask(datasource),
-    });
 
     if (!capabilities.hasCoordinatorAccess()) {
       return goToActions;
@@ -945,7 +1038,7 @@ ORDER BY 1`;
     }
   }
 
-  private renderRetentionDialog(): JSX.Element | undefined {
+  private renderRetentionDialog() {
     const { capabilities } = this.props;
     const { retentionDialogOpenOn, datasourcesAndDefaultRulesState } = this.state;
     const defaultRules = datasourcesAndDefaultRulesState.data?.defaultRules;
@@ -989,9 +1082,8 @@ ORDER BY 1`;
   }
 
   private renderDatasourcesTable() {
-    const { goToSegments, capabilities } = this.props;
-    const { datasourcesAndDefaultRulesState, datasourceFilter, showUnused, visibleColumns } =
-      this.state;
+    const { goToSegments, goToTasks, capabilities, filters, onFiltersChange } = this.props;
+    const { datasourcesAndDefaultRulesState, showUnused, visibleColumns } = this.state;
 
     let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data || { datasources: [] };
 
@@ -1034,10 +1126,8 @@ ORDER BY 1`;
             : '')
         }
         filterable
-        filtered={datasourceFilter}
-        onFilteredChange={filtered => {
-          this.setState({ datasourceFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
         showPagination={datasources.length > STANDARD_TABLE_PAGE_SIZE}
@@ -1064,7 +1154,8 @@ ORDER BY 1`;
             accessor: 'num_segments',
             className: 'padded',
             Cell: ({ value: num_segments, original }) => {
-              const { datasource, unused, num_segments_to_load, rules } = original as Datasource;
+              const { datasource, unused, num_segments_to_load, num_zero_replica_segments, rules } =
+                original as Datasource;
               if (unused) {
                 return (
                   <span>
@@ -1074,12 +1165,17 @@ ORDER BY 1`;
                 );
               }
 
-              const hasCold = RuleUtil.hasColdRule(rules, defaultRules);
+              const hasZeroReplicationRule = RuleUtil.hasZeroReplicaRule(rules, defaultRules);
+              const descriptor = hasZeroReplicationRule ? 'pre-cached' : 'available';
               const segmentsEl = (
                 <a onClick={() => goToSegments(datasource)}>
                   {pluralIfNeeded(num_segments, 'segment')}
                 </a>
               );
+              const percentZeroReplica = (
+                Math.floor((num_zero_replica_segments / num_segments) * 1000) / 10
+              ).toFixed(1);
+
               if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
                 return '-';
               } else if (num_segments === 0) {
@@ -1089,17 +1185,19 @@ ORDER BY 1`;
                     Empty
                   </span>
                 );
-              } else if (num_segments_to_load === 0 || hasCold) {
-                const numAvailableSegments = num_segments - num_segments_to_load;
-                const percentHot = (
-                  Math.floor((numAvailableSegments / num_segments) * 1000) / 10
-                ).toFixed(1);
+              } else if (num_segments_to_load === 0) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
-                    Fully available{hasCold ? `, ${percentHot}% hot` : ''} ({segmentsEl})
+                    {assemble(
+                      num_segments !== num_zero_replica_segments
+                        ? `Fully ${descriptor}`
+                        : undefined,
+                      hasZeroReplicationRule ? `${percentZeroReplica}% async only` : '',
+                    ).join(', ')}{' '}
+                    ({segmentsEl})
                   </span>
                 );
               } else {
@@ -1112,7 +1210,10 @@ ORDER BY 1`;
                     <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
                       {numAvailableSegments ? '\u25cf' : '\u25cb'}&nbsp;
                     </span>
-                    {percentAvailable}% available ({segmentsEl})
+                    {`${percentAvailable}% ${descriptor}${
+                      hasZeroReplicationRule ? `, ${percentZeroReplica}% async only` : ''
+                    }`}{' '}
+                    ({segmentsEl})
                   </span>
                 );
               }
@@ -1124,17 +1225,14 @@ ORDER BY 1`;
             },
           },
           {
-            Header: twoLines('Availability', 'detail'),
-            show: visibleColumns.shown('Availability detail'),
+            Header: twoLines('Historical', 'load/drop queues'),
+            show: visibleColumns.shown('Historical load/drop queues'),
             accessor: 'num_segments_to_load',
             filterable: false,
             width: 180,
             className: 'padded',
             Cell: ({ original }) => {
-              const { num_segments_to_load, num_segments_to_drop, rules } = original as Datasource;
-              if (RuleUtil.hasColdRule(rules, defaultRules)) {
-                return pluralIfNeeded(num_segments_to_load, 'cold segment');
-              }
+              const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
               return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
             },
           },
@@ -1147,6 +1245,23 @@ ORDER BY 1`;
             className: 'padded',
             Cell: ({ value }) => (
               <BracedText text={formatTotalDataSize(value)} braces={totalDataSizeValues} />
+            ),
+          },
+          {
+            Header: 'Running tasks',
+            show: visibleColumns.shown('Running tasks'),
+            id: 'running_tasks',
+            accessor: d => countRunningTasks(d.runningTasks),
+            filterable: false,
+            width: 200,
+            Cell: ({ original }) => (
+              <TableClickableCell
+                onClick={() => goToTasks(original.datasource)}
+                hoverIcon={IconNames.ARROW_TOP_RIGHT}
+                title="Go to tasks"
+              >
+                {formatRunningTasks(original.runningTasks)}
+              </TableClickableCell>
             ),
           },
           {
@@ -1491,7 +1606,7 @@ ORDER BY 1`;
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const {
       showUnused,

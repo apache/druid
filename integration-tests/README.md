@@ -108,7 +108,7 @@ In such cases, a workaround is to build the code first, then use the next sectio
 individual tests. To build:
 
 ```bash
-mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -Dmaven.javadoc.skip=true -T1.0C -nsu
+mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -T1.0C -nsu
 ```
 
 #### Keep the local Maven cache fresh
@@ -122,9 +122,12 @@ Maven to only look locally for snapshot jars.
 
 1. Build docker images.
 
-   From root module run maven command, run the following command:
+   From the source root, run the following command:
    ```bash
-   mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true -Ddocker.build.hadoop=true
+   mvn clean install \
+     -Pintegration-tests,skip-static-checks,skip-tests \
+     -Ddocker.run.skip=true \
+     -Ddocker.build.hadoop=true
    ```
 
    > **NOTE**: `-Ddocker.build.hadoop=true` is optional if you don't run tests against Hadoop.
@@ -216,7 +219,7 @@ The values shown above are for the default docker compose cluster. For other clu
 
 - docker-compose.druid-hadoop.yml
 
-  For starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial.
+  For starting Apache Hadoop 3.3.6 cluster with the same setup as the Druid tutorial.
 
   ```bash
   docker-compose -f docker-compose.druid-hadoop.yml up
@@ -315,7 +318,7 @@ To run tests on any druid cluster that is already running, create a configuratio
     }
 
 Set the environment variable `CONFIG_FILE` to the name of the configuration file:
-```
+```bash
 export CONFIG_FILE=<config file name>
 ```
 

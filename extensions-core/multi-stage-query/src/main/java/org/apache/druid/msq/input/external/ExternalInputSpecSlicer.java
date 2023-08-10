@@ -19,8 +19,8 @@
 
 package org.apache.druid.msq.input.external;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
@@ -229,36 +229,13 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
       return Iterators.filter(
           SlicerUtils.makeSlicesDynamic(
               inputIterator,
-              item -> inputAttributeExtractor.apply(item).getSize(),
+              item -> inputAttributeExtractor.apply(item).getWeightedSize(),
               maxNumSlices,
               maxFilesPerSlice,
               maxBytesPerSlice
           ).iterator(),
           xs -> !xs.isEmpty()
       );
-    }
-  }
-
-  /**
-   * Assigns each input file to its own split.
-   */
-  @VisibleForTesting
-  static class FilePerSplitHintSpec implements SplitHintSpec
-  {
-    static FilePerSplitHintSpec INSTANCE = new FilePerSplitHintSpec();
-
-    private FilePerSplitHintSpec()
-    {
-      // Singleton.
-    }
-
-    @Override
-    public <T> Iterator<List<T>> split(
-        final Iterator<T> inputIterator,
-        final Function<T, InputFileAttribute> inputAttributeExtractor
-    )
-    {
-      return Iterators.transform(inputIterator, Collections::singletonList);
     }
   }
 }
