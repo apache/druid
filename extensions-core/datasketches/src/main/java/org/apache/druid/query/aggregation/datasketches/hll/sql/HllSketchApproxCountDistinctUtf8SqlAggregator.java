@@ -48,11 +48,11 @@ public class HllSketchApproxCountDistinctUtf8SqlAggregator
 {
   public static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL_UTF8";
   private static final SqlAggFunction FUNCTION_INSTANCE =
-      (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
+      OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "lgK", "tgtHllType")
                          .operandTypes(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
-                         .requiredOperandCount(1)
+                         .requiredOperands(1)
                          .literalOperands(1, 2)
                          .returnTypeNonNull(SqlTypeName.BIGINT)
                          .functionCategory(SqlFunctionCategory.NUMERIC)

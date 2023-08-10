@@ -34,11 +34,11 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
 {
   private static final String NAME = "DS_THETA";
   private static final SqlAggFunction FUNCTION_INSTANCE =
-      (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
+      OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "size")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
-                         .requiredOperandCount(1)
+                         .requiredOperands(1)
                          .literalOperands(1)
                          .returnTypeInference(ThetaSketchSqlOperators.RETURN_TYPE_INFERENCE)
                          .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)

@@ -52,11 +52,11 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 {
   private static final String NAME = "DS_QUANTILES_SKETCH";
   private static final SqlAggFunction FUNCTION_INSTANCE =
-      (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
+      OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "k")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
                          .returnTypeNonNull(SqlTypeName.OTHER)
-                         .requiredOperandCount(1)
+                         .requiredOperands(1)
                          .literalOperands(1)
                          .functionCategory(SqlFunctionCategory.NUMERIC)
                          .build();

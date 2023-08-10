@@ -27,7 +27,7 @@ sidebar_label: SQL JDBC driver
 > This document describes the SQL language.
 
 
-You can make [Druid SQL](./sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
+You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
 We recommend using Avatica JDBC driver version 1.22.0 or later.
 Once you've downloaded the Avatica client jar, add it to your classpath.
 
@@ -52,7 +52,7 @@ or if a Broker is restarted.
 Set `serialization` to `protobuf` if using the protobuf endpoint.
 
 Note that as of the time of this writing, Avatica 1.23.0, the latest version, does not support passing
-[connection context parameters](sql-query-context.md) from the JDBC connection string to Druid. These context parameters
+[connection context parameters](../querying/sql-query-context.md) from the JDBC connection string to Druid. These context parameters
 must be passed using a `Properties` object instead. Refer to the Java code below for an example.
 
 Example Java code:
