@@ -27,6 +27,7 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -96,6 +97,8 @@ public class FrameWriterUtils
    * @param multiValue if true, return an array that corresponds exactly to {@link DimensionSelector#getRow()}.
    *                   if false, always return a single-valued array. In particular, this means [] is
    *                   returned as [NULL_STRING_MARKER_ARRAY].
+   *
+   * @return UTF-8 strings. The list itself is never null.
    */
   public static List<ByteBuffer> getUtf8ByteBuffersFromStringSelector(
       final DimensionSelector selector,
@@ -130,14 +133,22 @@ public class FrameWriterUtils
    * selector you get for an {@code ARRAY<STRING>} column.
    *
    * Null strings are returned as {@link #NULL_STRING_MARKER_ARRAY}.
+   *
+   * If the entire array returned by {@link BaseObjectColumnValueSelector#getObject()} is null, returns either
+   * null or {@link #NULL_STRING_MARKER_ARRAY} depending on the value of "useNullArrays".
+   *
+   * @param selector array selector
+   *
+   * @return UTF-8 strings. The list itself may be null.
    */
+  @Nullable
   public static List<ByteBuffer> getUtf8ByteBuffersFromStringArraySelector(
-      @SuppressWarnings("rawtypes") final ColumnValueSelector selector
+      @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
   )
   {
     Object row = selector.getObject();
     if (row == null) {
-      return Collections.singletonList(getUtf8ByteBufferFromString(null));
+      return null;
     } else if (row instanceof String) {
       return Collections.singletonList(getUtf8ByteBufferFromString((String) row));
     }

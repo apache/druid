@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.Grant;
@@ -483,6 +484,45 @@ public class S3TaskLogsTest extends EasyMockSupport
         new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
         .lines()
         .collect(Collectors.joining("\n"));
+
+    Assert.assertEquals(STATUS_CONTENTS, report);
+  }
+
+  @Test
+  public void test_retryStatusFetch_whenExceptionThrown() throws IOException
+  {
+    EasyMock.reset(s3Client);
+    // throw exception on first call
+    AmazonS3Exception awsError = new AmazonS3Exception("AWS Error");
+    awsError.setErrorCode("503");
+    awsError.setStatusCode(503);
+    EasyMock.expect(s3Client.getObjectMetadata(EasyMock.anyString(), EasyMock.anyString())).andThrow(awsError);
+    EasyMock.expectLastCall().once();
+
+    String logPath = TEST_PREFIX + "/" + KEY_1 + "/status.json";
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setContentLength(STATUS_CONTENTS.length());
+    EasyMock.expect(s3Client.getObjectMetadata(TEST_BUCKET, logPath)).andReturn(objectMetadata);
+    S3Object s3Object = new S3Object();
+    s3Object.setObjectContent(new ByteArrayInputStream(STATUS_CONTENTS.getBytes(StandardCharsets.UTF_8)));
+    GetObjectRequest getObjectRequest = new GetObjectRequest(TEST_BUCKET, logPath);
+    getObjectRequest.setRange(0, STATUS_CONTENTS.length() - 1);
+    getObjectRequest.withMatchingETagConstraint(objectMetadata.getETag());
+    EasyMock.expect(s3Client.getObject(getObjectRequest)).andReturn(s3Object);
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    S3TaskLogs s3TaskLogs = getS3TaskLogs();
+
+    Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskStatus(KEY_1);
+    String report;
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+        inputStreamOptional.get(),
+        StandardCharsets.UTF_8
+    ))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(STATUS_CONTENTS, report);
   }

@@ -175,5 +175,5 @@
   "namespace/cache/numEntries" : { "dimensions" : [], "type" : "gauge" },
   "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" },
 
-  "service/heartbeat" : { "dimensions" : ["leader"], "type" : "gauge" }
+  "service/heartbeat" : { "dimensions" : ["leader"], "type" : "count" }
 }

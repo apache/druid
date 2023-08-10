@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -53,11 +54,14 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorSelectorUtils;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
@@ -755,6 +759,78 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+  {
+    if (FieldTypeInfo.convertToSet(variantTypes.getByteValue()).stream().allMatch(x -> x.isNumeric())) {
+      return new BaseDoubleVectorValueSelector(offset)
+      {
+        private final double[] valueVector = new double[offset.getMaxVectorSize()];
+        private final int[] idVector = new int[offset.getMaxVectorSize()];
+        @Nullable
+        private boolean[] nullVector = null;
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        @Nullable
+        private PeekableIntIterator nullIterator = nullValueBitmap != null ? nullValueBitmap.peekableIterator() : null;
+        private int offsetMark = -1;
+        @Override
+        public double[] getDoubleVector()
+        {
+          computeVectorsIfNeeded();
+          return valueVector;
+        }
+
+        @Nullable
+        @Override
+        public boolean[] getNullVector()
+        {
+          computeVectorsIfNeeded();
+          return nullVector;
+        }
+
+        private void computeVectorsIfNeeded()
+        {
+          if (id == offset.getId()) {
+            return;
+          }
+
+          if (offset.isContiguous()) {
+            if (offset.getStartOffset() < offsetMark) {
+              nullIterator = nullValueBitmap.peekableIterator();
+            }
+            offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
+            encodedValueColumn.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
+          } else {
+            final int[] offsets = offset.getOffsets();
+            if (offsets[offsets.length - 1] < offsetMark) {
+              nullIterator = nullValueBitmap.peekableIterator();
+            }
+            offsetMark = offsets[offsets.length - 1];
+            encodedValueColumn.get(idVector, offsets, offset.getCurrentVectorSize());
+          }
+          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+            int dictId = idVector[i];
+            if (dictId == 0) {
+              valueVector[i] = 0.0;
+            } else if (dictId < adjustDoubleId) {
+              valueVector[i] = longDictionary.get(dictId - adjustLongId).doubleValue();
+            } else {
+              valueVector[i] = doubleDictionary.get(dictId - adjustDoubleId).doubleValue();
+            }
+          }
+
+          if (nullIterator != null) {
+            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+          }
+
+          id = offset.getId();
+        }
+      };
+    }
+    throw DruidException.defensive("Cannot make vector value selector for variant typed [%s] column", variantTypes);
   }
 
   @Override

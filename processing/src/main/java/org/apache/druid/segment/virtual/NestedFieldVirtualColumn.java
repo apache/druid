@@ -54,6 +54,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
@@ -524,12 +525,26 @@ public class NestedFieldVirtualColumn implements VirtualColumn
           leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
         }
       }
+      if (leastRestrictiveType != null && leastRestrictiveType.isNumeric() && !Types.isNumeric(expectedType)) {
+        return ExpressionVectorSelectors.castValueSelectorToObject(
+            offset,
+            columnName,
+            complexColumn.makeVectorValueSelector(parts, offset),
+            leastRestrictiveType,
+            expectedType == null ? ColumnType.STRING : expectedType
+        );
+      }
       final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
-      if (leastRestrictiveType != null && leastRestrictiveType.isArray() && !expectedType.isArray()) {
+      if (leastRestrictiveType != null &&
+          leastRestrictiveType.isArray() &&
+          expectedType != null &&
+          !expectedType.isArray()
+      ) {
         final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
         final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
         return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
       }
+
       return objectSelector;
     }
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
@@ -564,6 +579,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
     if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
+      final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(
+          arrayColumn.getLogicalType().isArray() ? arrayColumn.getLogicalType().getElementType() : arrayColumn.getLogicalType()
+      );
+      final ExpressionType castTo = expectedType == null
+                                    ? ExpressionType.STRING
+                                    : ExpressionType.fromColumnTypeStrict(expectedType);
       VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -584,7 +605,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (maybeArray instanceof Object[]) {
                 Object[] anArray = (Object[]) maybeArray;
                 if (elementNumber < anArray.length) {
-                  elements[i] = anArray[elementNumber];
+                  elements[i] = ExprEval.ofType(elementType, anArray[elementNumber]).castTo(castTo).value();
                 } else {
                   elements[i] = null;
                 }
