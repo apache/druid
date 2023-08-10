@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
-import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
@@ -51,7 +50,6 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
-import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
@@ -125,21 +123,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   }
 
   @Override
-  public Task toTask(Job from) throws IOException
+  public String getTaskId(Job from) throws IOException
   {
-    PodSpec podSpec = from.getSpec().getTemplate().getSpec();
-    massageSpec(podSpec, "main");
-    List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
-    Optional<EnvVar> taskJson = envVars.stream().filter(x -> "TASK_JSON".equals(x.getName())).findFirst();
-    String contents = taskJson.map(envVar -> taskJson.get().getValue()).orElse(null);
-    if (contents == null) {
-      throw new IOException("No TASK_JSON environment variable found in pod: " + from.getMetadata().getName());
-    }
-    return mapper.readValue(Base64Compression.decompressBase64(contents), Task.class);
-  }
-
-  @Override
-  public String getTaskId(Job from) throws IOException {
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
       throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());

@@ -242,7 +242,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withoutAnnotations_throwsIOE() throws IOException
+  public void test_getTaskId_withoutAnnotations_throwsIOE() throws IOException
   {
     Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
     mapper.writeValue(templatePath.toFile(), podTemplateSpec);
@@ -261,11 +261,11 @@ public class PodTemplateTaskAdapterTest
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
 
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
+    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
   }
 
   @Test
-  public void test_fromTask_withoutTaskAnnotation_throwsIOE() throws IOException
+  public void test_getTaskId_withoutTaskAnnotation_throwsIOE() throws IOException
   {
     Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
     mapper.writeValue(templatePath.toFile(), podTemplateSpec);
@@ -292,31 +292,7 @@ public class PodTemplateTaskAdapterTest
         .endTemplate()
         .endSpec()
         .build();
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
-  }
-
-  @Test
-  public void test_fromTask() throws IOException
-  {
-    Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
-
-    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        taskRunnerConfig,
-        taskConfig,
-        node,
-        mapper,
-        props
-    );
-
-    Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
-    Task actual = adapter.toTask(job);
-    Task expected = NoopTask.create("id", 1);
-
-    Assertions.assertEquals(expected, actual);
+    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
   }
 
   @Test

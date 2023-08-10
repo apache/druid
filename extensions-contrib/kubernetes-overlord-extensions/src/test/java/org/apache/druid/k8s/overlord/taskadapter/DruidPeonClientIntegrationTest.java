@@ -154,8 +154,8 @@ public class DruidPeonClientIntegrationTest
     thread.start();
 
     // assert that the env variable is corret
-    Task taskFromEnvVar = adapter.toTask(job);
-    assertEquals(task, taskFromEnvVar);
+    String taskIdFromEnvVar = adapter.getTaskId(job);
+    assertEquals(task.getId(), taskIdFromEnvVar);
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected
     Path downloadPath = Paths.get(tempDir.toAbsolutePath().toString(), "task.json");

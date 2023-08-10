@@ -314,7 +314,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .build();
 
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
-    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
+    EasyMock.expect(taskAdapter.getTaskId(job)).andReturn(ID);
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(task));
 
     replayAll();
 
@@ -352,7 +353,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .build();
 
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
-    EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of());
+    EasyMock.expect(taskAdapter.getTaskId(job)).andThrow(new IOException());
 
     replayAll();
 

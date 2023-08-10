@@ -185,8 +185,8 @@ class K8sTaskAdapterTest
     assertEquals(2400000000L, Long.valueOf(amount));
     assertTrue(StringUtils.isBlank(containerMemory.getFormat())); // no units specified we talk in bytes
 
-    Task taskFromJob = adapter.toTask(Iterables.getOnlyElement(jobList.getItems()));
-    assertEquals(task, taskFromJob);
+    String taskId = adapter.getTaskId(Iterables.getOnlyElement(jobList.getItems()));
+    assertEquals(task.getId(), taskId);
   }
 
   @Test

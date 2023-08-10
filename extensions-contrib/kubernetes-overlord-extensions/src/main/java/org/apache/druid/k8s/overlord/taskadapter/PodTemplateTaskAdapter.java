@@ -30,7 +30,6 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
-import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -148,32 +147,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .build();
   }
 
-  /**
-   * Transform a {@link Pod} to a {@link Task}
-   *
-   * 1. Find task annotation on the pod
-   * 2. Base 64 decode and decompress task, read into {@link Task}
-   *
-   * @param from
-   * @return {@link Task}
-   * @throws IOException
-   */
   @Override
-  public Task toTask(Job from) throws IOException
+  public String getTaskId(Job from) throws IOException
   {
-    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
-    if (annotations == null) {
-      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
-    }
-    String task = annotations.get(DruidK8sConstants.TASK);
-    if (task == null) {
-      throw new IOE("No task annotation found on pod spec for job [%s]", from.getMetadata().getName());
-    }
-    return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
-  }
-
-  @Override
-  public String getTaskId(Job from) throws IOException {
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
       throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());

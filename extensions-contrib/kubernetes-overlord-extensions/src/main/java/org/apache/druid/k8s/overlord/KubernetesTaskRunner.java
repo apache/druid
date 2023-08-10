@@ -62,7 +62,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -317,10 +316,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
     List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
-    Map<String, Task> tasksFromStorage = new HashMap<>();
-    for (Task task: taskStorage.getActiveTasks()) {
-      tasksFromStorage.put(task.getId(), task);
-    }
+    Map<String, Task> tasksFromStorage = taskStorage.getActiveTasks().stream().collect(Collectors.toMap(Task::getId, task -> task));
     for (Job job : client.getPeonJobs()) {
       try {
         String taskId = adapter.getTaskId(job);
