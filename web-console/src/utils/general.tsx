@@ -302,8 +302,21 @@ export function formatDurationHybrid(ms: NumberLike): string {
   }
 }
 
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
+  } else {
+    return word + 's';
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 

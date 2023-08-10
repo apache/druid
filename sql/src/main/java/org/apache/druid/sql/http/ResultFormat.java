@@ -121,6 +121,8 @@ public enum ResultFormat
     return name;
   }
 
+  public static final ResultFormat DEFAULT_RESULT_FORMAT = OBJECT;
+
   public interface Writer extends Closeable
   {
     /**
