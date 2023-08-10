@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { AnchorButton, Button, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
@@ -106,7 +106,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
         } have been written to ${pluralIfNeeded(pages.length, 'page')}. `}
       </p>
       <p>
-        Format when downloading:
+        Format when downloading:{' '}
         <Popover2
           minimal
           position={Position.BOTTOM_LEFT}
@@ -127,15 +127,21 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           <Button
             text={RESULT_FORMAT_LABEL[desiredResultFormat]}
             rightIcon={IconNames.CARET_DOWN}
-            minimal
           />
-        </Popover2>
+        </Popover2>{' '}
+        {pages.length > 1 && (
+          <Button
+            intent={Intent.PRIMARY}
+            icon={IconNames.DOWNLOAD}
+            text={`Download all data (${pluralIfNeeded(pages.length, 'file')})`}
+            onClick={() => void downloadAllPages()}
+          />
+        )}
       </p>
       <ReactTable
         data={pages}
         loading={false}
-        sortable
-        defaultSorted={[{ id: 'id', desc: false }]}
+        sortable={false}
         defaultPageSize={clamp(pages.length, 1, SMALL_TABLE_PAGE_SIZE)}
         showPagination={pages.length > SMALL_TABLE_PAGE_SIZE}
         columns={[
@@ -166,12 +172,11 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             Header: '',
             id: 'download',
             accessor: 'id',
-            sortable: false,
             width: 300,
             Cell: ({ value }) => (
               <AnchorButton
                 icon={IconNames.DOWNLOAD}
-                text={`download .${desiredExtension}`}
+                text="Download"
                 minimal
                 href={getPageUrl(value)}
                 download={getPageFilename(value)}
@@ -180,16 +185,6 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           },
         ]}
       />
-      {pages.length > 1 && (
-        <p>
-          <Button
-            icon={IconNames.DOWNLOAD}
-            text={`Download all data (as ${pluralIfNeeded(pages.length, 'file')})`}
-            minimal
-            onClick={() => void downloadAllPages()}
-          />
-        </p>
-      )}
     </div>
   );
 });
