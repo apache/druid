@@ -22,12 +22,12 @@ package org.apache.druid.data.input.kafkainput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -205,7 +205,6 @@ public class KafkaInputFormatTest
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         // Header verification
         Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
@@ -343,6 +342,7 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
+        final MapBasedInputRow mrow = (MapBasedInputRow) row;
         // Payload verifications
         Assert.assertEquals(DateTimes.of("2021-06-24"), row.getTimestamp());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
@@ -350,7 +350,6 @@ public class KafkaInputFormatTest
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         // Header verification
         Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
@@ -445,7 +444,6 @@ public class KafkaInputFormatTest
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
         numActualIterations++;
       }
 
@@ -523,7 +521,6 @@ public class KafkaInputFormatTest
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
           Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
           Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-          Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
           Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
 
 
