@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.CountSumAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -92,6 +93,7 @@ public class AggregatorsModule extends SimpleModule
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = "count", value = CountAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "countSum", value = CountSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longSum", value = LongSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleSum", value = DoubleSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatSum", value = FloatSumAggregatorFactory.class),

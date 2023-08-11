@@ -94,14 +94,8 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name) {
-      @Override
-      protected boolean canHandleNulls()
-      {
-        return true;
-      }
-    };
-  }
+    return new CountSumAggregatorFactory(name);
+    }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
