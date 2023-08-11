@@ -1078,7 +1078,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.reset(null);
-    validateSupervisorStateForResetOffsets(supervisor, ImmutableMap.of(), 0);
+    validateSupervisorStateAfterResetOffsets(supervisor, ImmutableMap.of(), 0);
   }
 
   @Test
@@ -1140,7 +1140,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 0);
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 0);
   }
 
   @Test
@@ -1222,7 +1222,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 1);
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 1);
   }
 
   @Test
@@ -1295,7 +1295,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 1);
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 1);
   }
 
 
@@ -1364,7 +1364,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 2);
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 2);
   }
 
   @Test
@@ -1434,7 +1434,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 1);
+    validateSupervisorStateAfterResetOffsets(supervisor, resetOffsets, 1);
   }
 
   @Test
@@ -1474,25 +1474,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             "Reset dataSourceMetadata is required for resetOffsets."
         )
     );
-  }
-
-  private void validateSupervisorStateForResetOffsets(
-      final TestSeekableStreamSupervisor supervisor,
-      final ImmutableMap<String, String> expectedResetOffsets,
-      final int expectedActiveTaskCount
-  ) throws InterruptedException
-  {
-    // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
-    Thread.sleep(1200);
-    Assert.assertEquals(expectedActiveTaskCount, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(expectedResetOffsets.size(), supervisor.getPartitionOffsets().size());
-    for (Map.Entry<String, String> entry : expectedResetOffsets.entrySet()) {
-      Assert.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
-    }
-    verifyAll();
   }
 
   @Test
@@ -1564,6 +1545,25 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.emitLag();
     Assert.assertEquals(0, emitter.getEvents().size());
+  }
+
+  private void validateSupervisorStateAfterResetOffsets(
+      final TestSeekableStreamSupervisor supervisor,
+      final ImmutableMap<String, String> expectedResetOffsets,
+      final int expectedActiveTaskCount
+  ) throws InterruptedException
+  {
+    // Wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+    Thread.sleep(1000);
+    Assert.assertEquals(expectedActiveTaskCount, supervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(expectedResetOffsets.size(), supervisor.getPartitionOffsets().size());
+    for (Map.Entry<String, String> entry : expectedResetOffsets.entrySet()) {
+      Assert.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
+    }
+    verifyAll();
   }
 
   private List<Event> filterMetrics(List<Event> events, List<String> whitelist)

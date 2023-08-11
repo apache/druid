@@ -590,18 +590,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class ResetNotice implements Notice
   {
-    final DataSourceMetadata resetDataSourceMetadata;
+    final DataSourceMetadata dataSourceMetadata;
     private static final String TYPE = "reset_notice";
 
-    ResetNotice(final DataSourceMetadata resetDataSourceMetadata)
+    ResetNotice(DataSourceMetadata dataSourceMetadata)
     {
-      this.resetDataSourceMetadata = resetDataSourceMetadata;
+      this.dataSourceMetadata = dataSourceMetadata;
     }
 
     @Override
     public void handle()
     {
-      resetInternal(resetDataSourceMetadata);
+      resetInternal(dataSourceMetadata);
     }
 
     @Override
@@ -613,20 +613,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class ResetOffsetsNotice implements Notice
   {
-    final DataSourceMetadata resetDataSourceMetadata;
+    final DataSourceMetadata dataSourceMetadata;
     private static final String TYPE = "reset_offsets_notice";
 
     ResetOffsetsNotice(
-        final DataSourceMetadata resetDataSourceMetadata
+        final DataSourceMetadata dataSourceMetadata
     )
     {
-      this.resetDataSourceMetadata = resetDataSourceMetadata;
+      this.dataSourceMetadata = dataSourceMetadata;
     }
 
     @Override
     public void handle()
     {
-      resetOffsetsInternal(resetDataSourceMetadata);
+      resetOffsetsInternal(dataSourceMetadata);
     }
 
     @Override
@@ -1034,13 +1034,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Reset offsets with provided dataSource metadata. Validates {@code resetDataSourceMetadata},
-   * creates a {@code ResetNotice} with the metadata and adds it to the notice queue. The resulting stored offsets
-   * is a union of existing checkpointed offsets with provided offsets.
+   * creates a {@code ResetOffsetsNotice} with the metadata and adds it to the notice queue. The resulting stored offsets
+   * is a union of existing checkpointed offsets and provided offsets.
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
   @Override
-  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
+  public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
     if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
@@ -1056,7 +1056,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
         (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) resetDataSourceMetadata;
     String resetStream = resetMetadata.getSeekableStreamSequenceNumbers().getStream();
-    if (!resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
+    if (!ioConfig.getStream().equals(resetStream)) {
       throw InvalidInput.exception(
           "Stream[%s] doesn't exist in the supervisor[%s]. Supervisor is consuming stream[%s].",
           resetStream,
@@ -1665,6 +1665,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             dataSourceMetadata.getClass()
         );
       }
+      log.info("Reset dataSource[%s] with metadata[%s]", dataSource, dataSourceMetadata);
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
@@ -1758,9 +1759,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Reset offsets with the data source metadata. If checkpoints exist, the resulting stored offsets will be a union of
-   * existing checkpointed offsets with provided offsets; any checkpointed offsets not specified in the metadata will be
-   * preserved as-is. If checkpoints don't exist, the provided reset metdadata will simply be inserted for the datasource.
-   * In the end, any active tasks serving the partition offsets will be restarted.
+   * existing checkpointed offsets and provided offsets; any checkpointed offsets not specified in the metadata will be
+   * preserved as-is. If checkpoints don't exist, the provided reset datasource metdadata will be inserted into
+   * the metadata storage. Once the offsets are reset, any active tasks serving the partition offsets will be restarted.
    * @param dataSourceMetadata Required reset data source metdata. Assumed that the metadata is validated.
    */
   public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
@@ -1771,11 +1772,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
         (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
 
-    // metadata can be null
     final boolean metadataUpdateSuccess;
     final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
     if (metadata == null) {
-      log.info("Checkpointed metadata in null for dataSource [%s] - inserting metadata [%s]", dataSource, resetMetadata);
+      log.info("Checkpointed metadata in null for dataSource[%s] - inserting metadata[%s]", dataSource, resetMetadata);
       metadataUpdateSuccess = indexerMetadataStorageCoordinator.insertDataSourceMetadata(dataSource, resetMetadata);
     } else {
       if (!checkSourceMetadataMatch(metadata)) {
@@ -1788,18 +1788,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
           (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
       final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
-      log.info("Current checkpointed metadata [%s], new metadata [%s] for dataSource[%s]", currentMetadata, newMetadata, dataSource);
+      log.info("Current checkpointed metadata[%s], new metadata[%s] for dataSource[%s]", currentMetadata, newMetadata, dataSource);
       try {
         metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
       }
       catch (IOException e) {
-        log.error("Reset offsets for dataSource[%s] with metadata [%s] failed [%s]", dataSource, newMetadata, e.getMessage());
+        log.error("Reset offsets for dataSource[%s] with metadata[%s] failed [%s]", dataSource, newMetadata, e.getMessage());
         throw new RuntimeException(e);
       }
     }
 
     if (!metadataUpdateSuccess) {
-      throw new ISE("Unable to reset metadata for datasource[%s] with [%s]", dataSource, dataSourceMetadata);
+      throw new ISE("Unable to reset metadata[%s] for datasource[%s]", dataSource, dataSourceMetadata);
     }
 
     resetMetadata.getSeekableStreamSequenceNumbers()

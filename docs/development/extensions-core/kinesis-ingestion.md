@@ -595,8 +595,6 @@ stored offset.
 
 Use this endpoint with caution as it may result in skipped messages, leading to data loss or duplicate data.
 
-Note that the supervisor must be running for this endpoint to be available.
-
 ### Terminate a supervisor
 
 To terminate a supervisor and its associated indexing tasks, send a `POST` request to the `/druid/indexer/v1/supervisor/:supervisorId/terminate` endpoint.
