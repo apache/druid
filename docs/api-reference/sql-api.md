@@ -50,11 +50,13 @@ The request body takes the following properties:
   * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`.
   * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`. 
   * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP header `Content-Type: text/csv`. 
-* `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. 
+* `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
 * `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed. 
 * `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
-* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md). For example:
+* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
+
+    For example:
     ```
     "parameters": [
         {
