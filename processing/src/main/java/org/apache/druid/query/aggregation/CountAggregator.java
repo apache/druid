@@ -29,6 +29,15 @@ public class CountAggregator implements Aggregator
 
   static Object combineValues(Object lhs, Object rhs)
   {
+    if (lhs == null) {
+      if (rhs == null) {
+        return 0L;
+      }
+      return rhs;
+    }
+    if (rhs == null) {
+      return lhs;
+    }
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 
@@ -53,7 +62,7 @@ public class CountAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) count;
+    return count;
   }
 
   @Override
@@ -65,7 +74,7 @@ public class CountAggregator implements Aggregator
   @Override
   public double getDouble()
   {
-    return (double) count;
+    return count;
   }
 
   @Override
