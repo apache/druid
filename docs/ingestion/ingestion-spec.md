@@ -190,7 +190,7 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 ### `dimensionsSpec`
 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
-configuring [dimensions](./schema-model.md#dimensions). An example `dimensionsSpec` is:
+configuring [dimensions](./schema-model.md#dimensions).
 
 You can either manually specify the dimensions or take advantage of schema auto-discovery where you allow Druid to infer all or some of the schema for your data. This means that you don't have to explicitly specify your dimensions and their type. 
 
