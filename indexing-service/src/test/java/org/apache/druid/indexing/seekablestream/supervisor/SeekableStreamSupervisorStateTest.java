@@ -1078,14 +1078,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.reset(null);
-    // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(0, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
-    Assert.assertTrue(supervisor.isPartitionIdsEmpty());
-    verifyAll();
+    validateSupervisorStateForResetOffsets(supervisor, ImmutableMap.of(), 0);
   }
 
   @Test
@@ -1116,7 +1109,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         true
     );
 
-    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset");
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
     EasyMock.expectLastCall();
 
     replayAll();
@@ -1147,17 +1140,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(0, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(resetOffsets.size(), supervisor.getPartitionOffsets().size());
-    Assert.assertTrue(supervisor.isPartitionIdsEmpty());
-    for (Map.Entry<String, String> entry : resetOffsets.entrySet()) {
-      Assert.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
-    }
-    verifyAll();
+    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 0);
   }
 
   @Test
@@ -1185,10 +1168,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ImmutableSet.of()
         )
     ))).andReturn(true);
-    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset");
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
     EasyMock.expectLastCall();
 
-    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset");
+    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
     EasyMock.expectLastCall();
 
     replayAll();
@@ -1239,16 +1222,219 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.resetOffsets(resetMetadata);
 
-    // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(1, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(resetOffsets.size(), supervisor.getPartitionOffsets().size());
-    for (Map.Entry<String, String> entry : resetOffsets.entrySet()) {
-      Assert.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
-    }
-    verifyAll();
+    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 1);
+  }
+
+  @Test
+  public void testSupervisorResetOffsetsWithNoCheckpoints() throws InterruptedException
+  {
+    final ImmutableMap<String, String> resetOffsets = ImmutableMap.of("0", "10", "1", "8");
+    final ImmutableMap<String, String> expectedOffsets = ImmutableMap.copyOf(resetOffsets);
+
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null);
+    EasyMock.expect(indexerMetadataStorageCoordinator.insertDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            expectedOffsets,
+            ImmutableSet.of()
+        )
+    ))).andReturn(true);
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+
+    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // Spin off three active tasks with each task serving one partition.
+    supervisor.getIoConfig().setTaskCount(3);
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "6"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("2"),
+        ImmutableMap.of("2", "100"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task3"),
+        ImmutableSet.of()
+    );
+
+    final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            STREAM,
+            resetOffsets,
+            ImmutableSet.of()
+        )
+    );
+
+    Assert.assertEquals(3, supervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+
+    supervisor.resetOffsets(resetMetadata);
+
+    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 1);
+  }
+
+
+  @Test
+  public void testSupervisorResetWithNoPartitions() throws IOException, InterruptedException
+  {
+    final ImmutableMap<String, String> checkpointOffsets = ImmutableMap.of("0", "5", "1", "6");
+    final ImmutableMap<String, String> resetOffsets = ImmutableMap.of();
+    final ImmutableMap<String, String> expectedOffsets = ImmutableMap.of("0", "5", "1", "6");
+
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(
+                STREAM,
+                checkpointOffsets,
+                ImmutableSet.of()
+            )
+        )
+    );
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            expectedOffsets,
+            ImmutableSet.of()
+        )
+    ))).andReturn(true);
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // Spin off two active tasks with each task serving one partition.
+    supervisor.getIoConfig().setTaskCount(2);
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "6"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            STREAM,
+            resetOffsets,
+            ImmutableSet.of()
+        )
+    );
+
+    Assert.assertEquals(2, supervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+
+    supervisor.resetOffsets(resetMetadata);
+
+    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 2);
+  }
+
+  @Test
+  public void testSupervisorResetWithNewPartition() throws IOException, InterruptedException
+  {
+    final ImmutableMap<String, String> checkpointOffsets = ImmutableMap.of("0", "5", "1", "6");
+    final ImmutableMap<String, String> resetOffsets = ImmutableMap.of("2", "20");
+    final ImmutableMap<String, String> expectedOffsets = ImmutableMap.of("0", "5", "1", "6", "2", "20");
+
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(
+                STREAM,
+                checkpointOffsets,
+                ImmutableSet.of()
+            )
+        )
+    );
+    EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            expectedOffsets,
+            ImmutableSet.of()
+        )
+    ))).andReturn(true);
+    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // Spin off two active tasks with each task serving one partition.
+    supervisor.getIoConfig().setTaskCount(2);
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "5"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "6"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            STREAM,
+            resetOffsets,
+            ImmutableSet.of()
+        )
+    );
+
+    Assert.assertEquals(2, supervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+
+    supervisor.resetOffsets(resetMetadata);
+
+    validateSupervisorStateForResetOffsets(supervisor, resetOffsets, 1);
   }
 
   @Test
@@ -1288,6 +1474,25 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             "Reset dataSourceMetadata is required for resetOffsets."
         )
     );
+  }
+
+  private void validateSupervisorStateForResetOffsets(
+      final TestSeekableStreamSupervisor supervisor,
+      final ImmutableMap<String, String> expectedResetOffsets,
+      final int expectedActiveTaskCount
+  ) throws InterruptedException
+  {
+    // Let's wait for the notice queue to be drained asynchronously before we validate the supervisor's final state.
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+    Thread.sleep(1200);
+    Assert.assertEquals(expectedActiveTaskCount, supervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(expectedResetOffsets.size(), supervisor.getPartitionOffsets().size());
+    for (Map.Entry<String, String> entry : expectedResetOffsets.entrySet()) {
+      Assert.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
+    }
+    verifyAll();
   }
 
   @Test
@@ -1335,51 +1540,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             "Stream[i-am-not-real] doesn't exist in the supervisor[testSupervisorId]. Supervisor is consuming stream[stream]."
         )
     );
-  }
-
-  @Test
-  public void testSupervisorResetNonExistentPartition()
-  {
-    EasyMock.expect(spec.isSuspended()).andReturn(false);
-    replayAll();
-
-    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-
-    supervisor.start();
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition("0"),
-        ImmutableMap.of("0", "0"),
-        Optional.absent(),
-        Optional.absent(),
-        ImmutableSet.of("task1"),
-        ImmutableSet.of()
-    );
-
-    supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition("1"),
-        ImmutableMap.of("1", "0"),
-        Optional.absent(),
-        Optional.absent(),
-        ImmutableSet.of("task2"),
-        ImmutableSet.of()
-    );
-
-    final DataSourceMetadata dataSourceMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
-            STREAM,
-            ImmutableMap.of("0", "10", "1", "20", "2", "30"),
-            ImmutableSet.of()
-        )
-    );
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(dataSourceMetadata)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Partition[1] doesn't exist in checkpointed metadata for stream[stream] and supervisor[testSupervisorId]. Supervisor is consuming partitions[[0]]."
-        )
-    );
-    verifyAll();
   }
 
   @Test

@@ -1809,7 +1809,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                    final int groupId = getTaskGroupIdForPartition(partition);
                    killTaskGroupForPartitions(
                        ImmutableSet.of(partition),
-                       "DataSourceMetadata is updated while reset"
+                       "DataSourceMetadata is updated while reset offsets is called"
                    );
                    activelyReadingTaskGroups.remove(groupId);
                    // killTaskGroupForPartitions() cleans up partitionGroups.
