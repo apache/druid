@@ -56,7 +56,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
                          .operandNames("column", "k")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
                          .returnTypeNonNull(SqlTypeName.OTHER)
-                         .requiredOperands(1)
+                         .requiredOperandCount(1)
                          .literalOperands(1)
                          .functionCategory(SqlFunctionCategory.NUMERIC)
                          .build();

@@ -38,7 +38,7 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
                          .operandNames("column", "size")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
-                         .requiredOperands(1)
+                         .requiredOperandCount(1)
                          .literalOperands(1)
                          .returnTypeInference(ThetaSketchSqlOperators.RETURN_TYPE_INFERENCE)
                          .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)

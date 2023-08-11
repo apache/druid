@@ -512,7 +512,7 @@ public class OperatorConversions
      * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
     @Deprecated
-    public OperatorBuilder requiredOperandCount(final int requiredOperandCount)
+    public OperatorBuilder<T> requiredOperandCount(final int requiredOperandCount)
     {
       this.requiredOperandCount = requiredOperandCount;
       return this;

@@ -40,7 +40,7 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
                          .operandNames("column", "size")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
-                         .requiredOperands(1)
+                         .requiredOperandCount(1)
                          .literalOperands(1)
                          .returnTypeNonNull(SqlTypeName.BIGINT)
                          .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)

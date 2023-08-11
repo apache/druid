@@ -41,7 +41,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                          .operandNames("column", "lgK", "tgtHllType")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
-                         .requiredOperands(1)
+                         .requiredOperandCount(1)
                          .literalOperands(1, 2)
                          .returnTypeNonNull(SqlTypeName.BIGINT)
                          .functionCategory(SqlFunctionCategory.NUMERIC)

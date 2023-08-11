@@ -60,7 +60,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
                          .operandNames("column", "probability", "k")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
                          .returnTypeNonNull(SqlTypeName.DOUBLE)
-                         .requiredOperands(2)
+                         .requiredOperandCount(2)
                          .literalOperands(1, 2)
                          .functionCategory(SqlFunctionCategory.NUMERIC)
                          .build();
