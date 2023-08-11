@@ -25,13 +25,11 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.FilteredStorageAdapter;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.UnnestStorageAdapter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.WrappedSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -39,42 +37,23 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
- * The data source for representing an unnest operation.
- * An unnest data source has the following:
- * a base data source which is to be unnested
- * the column name of the MVD which will be unnested
- * the name of the column that will hold the unnested values
- * and an allowlist serving as a filter of which values in the MVD will be unnested.
+ * This class models a data source to be unnested which is present along with a filter.
+ * An example for this data source follows:
+ *
+ * Consider this query:
+ * SELECT d3 FROM (select * from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3))
+ *
+ * where the filter data source has numFoo as base and dim2='a' as the filter
+ *
+ * Without this data source, the planner was converting the inner query to a query data source
+ * putting more work to be done at the broker level. This pushes the operations down to the
+ * segments and is more performant.
  */
-public class UnnestDataSource implements DataSource
+public class FilteredDataSource implements DataSource
 {
+
   private final DataSource base;
-  private final VirtualColumn virtualColumn;
-
-  @Nullable
-  private final DimFilter unnestFilter;
-
-  private UnnestDataSource(
-      DataSource dataSource,
-      VirtualColumn virtualColumn,
-      DimFilter unnestFilter
-  )
-  {
-    this.base = dataSource;
-    this.virtualColumn = virtualColumn;
-    this.unnestFilter = unnestFilter;
-  }
-
-  @JsonCreator
-  public static UnnestDataSource create(
-      @JsonProperty("base") DataSource base,
-      @JsonProperty("virtualColumn") VirtualColumn virtualColumn,
-      @Nullable @JsonProperty("unnestFilter") DimFilter unnestFilter
-
-  )
-  {
-    return new UnnestDataSource(base, virtualColumn, unnestFilter);
-  }
+  private final DimFilter filter;
 
   @JsonProperty("base")
   public DataSource getBase()
@@ -82,16 +61,25 @@ public class UnnestDataSource implements DataSource
     return base;
   }
 
-  @JsonProperty("virtualColumn")
-  public VirtualColumn getVirtualColumn()
+  @JsonProperty("filter")
+  public DimFilter getFilter()
   {
-    return virtualColumn;
+    return filter;
   }
 
-  @JsonProperty("unnestFilter")
-  public DimFilter getUnnestFilter()
+  private FilteredDataSource(DataSource base, DimFilter filter)
   {
-    return unnestFilter;
+    this.base = base;
+    this.filter = filter;
+  }
+
+  @JsonCreator
+  public static FilteredDataSource create(
+      @JsonProperty("base") DataSource base,
+      @JsonProperty("filter") DimFilter f
+  )
+  {
+    return new FilteredDataSource(base, f);
   }
 
   @Override
@@ -113,7 +101,7 @@ public class UnnestDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return new UnnestDataSource(children.get(0), virtualColumn, unnestFilter);
+    return new FilteredDataSource(children.get(0), filter);
   }
 
   @Override
@@ -150,7 +138,7 @@ public class UnnestDataSource implements DataSource
             baseSegment ->
                 new WrappedSegmentReference(
                     segmentMapFn.apply(baseSegment),
-                    storageAdapter -> new UnnestStorageAdapter(storageAdapter, virtualColumn, unnestFilter)
+                    storageAdapter -> new FilteredStorageAdapter(storageAdapter, filter)
                 )
     );
   }
@@ -158,18 +146,22 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, virtualColumn, unnestFilter);
+    return new FilteredDataSource(newSource, filter);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FilteredDataSource{" +
+           "base=" + base +
+           ", filter='" + filter + '\'' +
+           '}';
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    // The column being unnested would need to be part of the cache key
-    // as the results are dependent on what column is being unnested.
-    // Currently, it is not cacheable.
-    // Future development should use the table name and column came to
-    // create an appropriate cac
-    return null;
+    return new byte[0];
   }
 
   @Override
@@ -177,17 +169,6 @@ public class UnnestDataSource implements DataSource
   {
     final DataSource current = this.getBase();
     return current.getAnalysis();
-  }
-
-
-  @Override
-  public String toString()
-  {
-    return "UnnestDataSource{" +
-           "base=" + base +
-           ", column='" + virtualColumn + '\'' +
-           ", unnestFilter='" + unnestFilter + '\'' +
-           '}';
   }
 
   @Override
@@ -199,18 +180,13 @@ public class UnnestDataSource implements DataSource
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    UnnestDataSource that = (UnnestDataSource) o;
-    return base.equals(that.base) && virtualColumn.equals(that.virtualColumn) && Objects.equals(
-        unnestFilter,
-        that.unnestFilter
-    );
+    FilteredDataSource that = (FilteredDataSource) o;
+    return Objects.equals(base, that.base) && Objects.equals(filter, that.filter);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, virtualColumn, unnestFilter);
+    return Objects.hash(base, filter);
   }
 }
-
-

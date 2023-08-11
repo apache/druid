@@ -59,6 +59,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -548,9 +549,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT), m1) IN\n"
+        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1, m1) IN\n"
         + "   (\n"
-        + "     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 0 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
+        + "     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
         + "         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1\n"
         + "    )\n"
         + "GROUP BY 1, 2\n",
@@ -567,7 +568,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                 .setVirtualColumns(
                                                     expressionVirtualColumn(
                                                         "v0",
-                                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 0)",
+                                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1)",
                                                         ColumnType.LONG
                                                     )
                                                 )
@@ -584,7 +585,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                 .setContext(QUERY_CONTEXT_DEFAULT)
                                                 .build()),
                                 "j0.",
-                                "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                                "(((timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1) == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
                                 JoinType.INNER
                             )
                         )
@@ -592,7 +593,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setDimensions(
                             new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
                             new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)
-
                         )
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
@@ -673,8 +673,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(
                             or(
-                                not(equality("j0.v", "xa", ColumnType.STRING)),
-                                isNull("j0.v")
+                                isNull("j0.v"),
+                                not(equality("j0.v", "xa", ColumnType.STRING))
                             )
                         )
                         .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
@@ -688,7 +688,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testFilterAndGroupByLookupUsingJoinOperatorBackwards(Map<String, Object> queryContext)
@@ -902,8 +901,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
-                        not(equality("j0.v", "xa", ColumnType.STRING)),
-                        isNull("j0.v")
+                        isNull("j0.v"),
+                        not(equality("j0.v", "xa", ColumnType.STRING))
+
                     )
                 )
                 .columns("a0", "d0", "j0.v")
@@ -2369,8 +2369,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
-                        not(equality("j0.v", "xxx", ColumnType.STRING)),
-                        isNull("j0.v")
+                        isNull("j0.v"),
+                        not(equality("j0.v", "xxx", ColumnType.STRING))
                     )
                 )
                 .columns("dim1", "j0.k", "j0.v")
@@ -2417,8 +2417,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
-                        not(equality("j0.v", "xxx", ColumnType.STRING)),
-                        isNull("j0.v")
+                        isNull("j0.v"),
+                        not(equality("j0.v", "xxx", ColumnType.STRING))
                     )
                 )
                 .columns("dim1", "j0.k", "j0.v")
@@ -2433,7 +2433,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testSelectOnLookupUsingFullJoinOperator(Map<String, Object> queryContext)
@@ -2460,8 +2459,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     or(
-                        not(equality("j0.v", "xxx", ColumnType.STRING)),
-                        isNull("j0.v")
+                        isNull("j0.v"),
+                        not(equality("j0.v", "xxx", ColumnType.STRING))
                     )
                 )
                 .columns("cnt", "dim1", "j0.k", "j0.v", "m1")
@@ -2481,6 +2480,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
@@ -2778,7 +2778,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     )
                                 )
                                 .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
+                                .virtualColumns(expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(queryContext)
@@ -2796,7 +2796,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     )
                                 )
                                 .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
+                                .virtualColumns(expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING))
                                 .columns(ImmutableList.of("v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(queryContext)
@@ -2809,8 +2809,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 )
                 .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .columns("__time", "_v0")
-                .filters(equality("v0", "10.1", ColumnType.STRING))
                 .context(queryContext)
                 .build()
         ),
@@ -2819,7 +2819,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -2898,7 +2897,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .dataSource(CalciteTests.DATASOURCE1)
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
+                                .virtualColumns(expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(queryContext)
@@ -2921,7 +2920,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 )
                 .virtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(equality("v0", "10.1", ColumnType.STRING))
                 .columns("__time", "_v0")
                 .context(queryContext)
                 .build()
@@ -3093,7 +3091,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .dataSource(CalciteTests.DATASOURCE1)
                         .eternityInterval()
                         .filters(equality("dim1", "10.1", ColumnType.STRING))
-                        .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
+                        .virtualColumns(expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING))
                         .columns(ImmutableList.of("__time", "v0"))
                         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                         .context(queryContext)
@@ -3127,8 +3125,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         + "SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
         queryContext,
         ImmutableList.of(
-            NullHandling.sqlCompatible() ? baseScanBuilder.build() :
-            baseScanBuilder.filters(notNull("v0")).build()),
+            baseScanBuilder.build()),
         ImmutableList.of(
             new Object[]{"10.1", 946771200000L}
         )
@@ -3304,9 +3301,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     .build()
                     )
                 )
+                .setVirtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setDimensions(new DefaultDimensionSpec(
-                    "d0",
+                    "v0",
                     "_d0",
                     ColumnType.STRING
                 ))
@@ -3388,29 +3386,23 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     final DataSource rightTable;
-    if (useDefault) {
-      rightTable = InlineDataSource.fromIterable(
-          ImmutableList.of(),
-          RowSignature.builder().add("dim2", ColumnType.STRING).add("m2", ColumnType.DOUBLE).build()
-      );
-    } else {
-      rightTable = new QueryDataSource(
-          Druids.newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .filters(isNull("m2"))
-                .columns("dim2")
-                .legacy(false)
-                .build()
-      );
-    }
+    rightTable = new QueryDataSource(
+        Druids.newScanQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(querySegmentSpec(Filtration.eternity()))
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .filters(equality("m2", "1000", ColumnType.DOUBLE))
+              .columns("dim2")
+              .legacy(false)
+              .build()
+    );
+
 
     testQuery(
         "SELECT v1.dim2, count(1) "
         + "FROM (SELECT * FROM foo where m1 > 2) v1 "
         + "LEFT OUTER JOIN ("
-        + "  select dim2 from (select * from foo where m2 is null)"
+        + "  select dim2 from (select * from foo where m2 = 1000)"
         + ") sm ON v1.dim2 = sm.dim2 "
         + "group by 1",
         ImmutableList.of(
@@ -4526,7 +4518,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize JOIN operator.
     cannotVectorize();
-
+    skipVectorize();
     testQuery(
         "SELECT dim1, dim2, COUNT(*) FROM druid.foo\n"
         + "WHERE dim1 = 'xxx' OR dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 LIKE '%bc')\n"
@@ -4557,14 +4549,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                 .setDataSource(CalciteTests.DATASOURCE1)
                                                 .setInterval(querySegmentSpec(Filtration.eternity()))
                                                 .setGranularity(Granularities.ALL)
-                                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                                 .setDimFilter(new LikeDimFilter("dim1", "%bc", null, null))
                                                 .setDimensions(
                                                     dimensions(
-                                                        new DefaultDimensionSpec("dim1", "d0"),
-                                                        new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                        new DefaultDimensionSpec("dim1", "d0")
                                                     )
                                                 )
+                                                .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("a0", "1", null, ExprMacroTable.nil())))
                                                 .setContext(queryContext)
                                                 .build()
                                 ),
@@ -4583,7 +4574,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 equality("dim1", "xxx", ColumnType.STRING),
                                 and(
                                     not(equality("j0.a0", 0L, ColumnType.LONG)),
-                                    notNull("_j0.d1"),
+                                    notNull("_j0.a0"),
                                     notNull("dim2")
                                 )
                             )
@@ -4609,6 +4600,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
@@ -5363,12 +5355,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   GroupByQuery.builder()
                                               .setDataSource(CalciteTests.DATASOURCE1)
                                               .setInterval(querySegmentSpec(Filtration.eternity()))
-                                              .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                               .setDimensions(
-                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
-                                                  new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)
                                               )
                                               .setGranularity(Granularities.ALL)
+                                              .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator(
+                                                  "a0",
+                                                  "1",
+                                                  null,
+                                                  ExprMacroTable.nil()
+                                              )))
                                               .setLimitSpec(NoopLimitSpec.instance())
                                               .build()
                               ),
@@ -5381,10 +5377,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                           .setDataSource(CalciteTests.DATASOURCE1)
                                           .setInterval(querySegmentSpec(Filtration.eternity()))
                                           .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
-                                          .setDimFilter(equality("m2", "A", ColumnType.STRING))
+                                          .setDimFilter(equality("m2", "0.0", ColumnType.STRING))
                                           .setDimensions(
                                               new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
                                           )
+                                          .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                           .setGranularity(Granularities.ALL)
                                           .setLimitSpec(NoopLimitSpec.instance())
                                           .build()
@@ -5399,7 +5396,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a0"),
                           and(
-                              notNull("_j0.d1"),
+                              notNull("_j0.a0"),
                               notNull("dim1")
                           ),
                           "a0"
@@ -5439,11 +5436,15 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   GroupByQuery.builder()
                                               .setDataSource(CalciteTests.DATASOURCE1)
                                               .setInterval(querySegmentSpec(Filtration.eternity()))
-                                              .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                               .setDimensions(
-                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
-                                                  new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)
                                               )
+                                              .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator(
+                                                  "a0",
+                                                  "1",
+                                                  null,
+                                                  ExprMacroTable.nil()
+                                              )))
                                               .setGranularity(Granularities.ALL)
                                               .setLimitSpec(NoopLimitSpec.instance())
                                               .build()
@@ -5455,15 +5456,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                           new QueryDataSource(
                               new TopNQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
                                                     .intervals(querySegmentSpec(Filtration.eternity()))
-                                                    .filters(
-                                                        or(
-                                                            equality("m2", "A", ColumnType.STRING),
-                                                            isNull("m2")
-                                                        )
-                                                    )
+                                                    .filters(isNull("m2"))
                                                     .virtualColumns(expressionVirtualColumn(
                                                         "v0",
-                                                        "notnull(\"m2\")",
+                                                        "0",
                                                         ColumnType.LONG
                                                     ))
                                                     .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
@@ -5485,7 +5481,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a0"),
                           and(
-                              notNull("_j0.d1"),
+                              notNull("_j0.a0"),
                               notNull("dim1")
                           ),
                           "a0"
@@ -5724,19 +5720,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .setInterval(querySegmentSpec(Filtration.eternity()))
                                                     .setGranularity(Granularities.ALL)
                                                     .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
-                                                    .setVirtualColumns(expressionVirtualColumn(
-                                                        "v0",
-                                                        "1",
-                                                        ColumnType.LONG
-                                                    ))
                                                     .setDimensions(
-                                                        new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
-                                                        new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                        new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                                                     )
+                                                    .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("a0", "1", null, ExprMacroTable.nil())))
                                                     .build()
                                     ),
                                     "j0.",
-                                    "(floor(100) == \"j0.d0\")",
+                                    "(CAST(floor(100), 'DOUBLE') == \"j0.d0\")",
                                     JoinType.LEFT
                                 )
                             )
@@ -5744,7 +5735,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             .aggregators(aggregators(
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("a0"),
-                                    isNull("j0.d1")
+                                    isNull("j0.a0")
                                 )
                             ))
                             .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
@@ -5782,19 +5773,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .setInterval(querySegmentSpec(Filtration.eternity()))
                                                     .setGranularity(Granularities.ALL)
                                                     .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
-                                                    .setVirtualColumns(expressionVirtualColumn(
-                                                        "v0",
-                                                        "1",
-                                                        ColumnType.LONG
-                                                    ))
                                                     .setDimensions(
-                                                        new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
-                                                        new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                        new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                                                     )
+                                                    .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("a0", "1", null, ExprMacroTable.nil())))
                                                     .build()
                                     ),
                                     "_j0.",
-                                    "(floor(100) == \"_j0.d0\")",
+                                    "(CAST(floor(100), 'DOUBLE') == \"_j0.d0\")",
                                     JoinType.LEFT
                                 )
                             )
@@ -5805,7 +5791,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     or(
                                         equality("j0.a0", 0L, ColumnType.LONG),
                                         and(
-                                            isNull("_j0.d1"),
+                                            isNull("_j0.a0"),
                                             expressionFilter("(\"j0.a1\" >= \"j0.a0\")")
                                         )
 

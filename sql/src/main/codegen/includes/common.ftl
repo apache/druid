@@ -73,19 +73,19 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
   }
 }
 
-SqlNodeList ClusterItems() :
+SqlNodeList ClusteredBy() :
 {
-  List<SqlNode> list;
+  final List<SqlNode> list = new ArrayList<SqlNode>();
   final Span s;
   SqlNode e;
 }
 {
-  e = OrderItem() {
+  <CLUSTERED> {
     s = span();
-    list = startList(e);
   }
+  <BY> AddOrderItem(list)
   (
-    LOOKAHEAD(2) <COMMA> e = OrderItem() { list.add(e); }
+    LOOKAHEAD(2) <COMMA> AddOrderItem(list)
   )*
   {
     return new SqlNodeList(list, s.addAll(list).pos());

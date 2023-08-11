@@ -214,7 +214,7 @@ public class DruidJoinRule extends RelOptRule
       return rexBuilder.makeLiteral(
           RexLiteral.value(rexNode),
           rexBuilder.getTypeFactory().createTypeWithNullability(rexNode.getType(), true),
-          false
+          true
       );
     } else {
       return rexNode;
