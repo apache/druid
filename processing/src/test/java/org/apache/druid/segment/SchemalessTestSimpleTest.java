@@ -196,7 +196,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()

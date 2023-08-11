@@ -24,6 +24,7 @@
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-arrays",
+      "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jupyter-index",
       "tutorials/tutorial-jupyter-docker",
       "tutorials/tutorial-jdbc"
@@ -98,6 +99,7 @@
         "label": "Druid SQL",
         "ids": [
           "querying/sql",
+          "querying/query-deep-storage",
           "querying/sql-data-types",
           "querying/sql-operators",
           "querying/sql-scalar",
@@ -200,6 +202,7 @@
     "Operations": [
       "operations/web-console",
       "operations/java",
+      "operations/durable-storage",
       {
         "type": "subcategory",
         "label": "Security",
