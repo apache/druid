@@ -94,8 +94,8 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CountSumAggregatorFactory(name);
-    }
+    return new CountSumAggregatorFactory(name, name);
+  }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()

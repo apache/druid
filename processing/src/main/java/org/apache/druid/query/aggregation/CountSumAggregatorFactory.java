@@ -18,11 +18,38 @@
 
 package org.apache.druid.query.aggregation;
 
+import javax.annotation.Nullable;
+
+import org.apache.druid.math.expr.ExprMacroTable;
+
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
+
 public class CountSumAggregatorFactory extends LongSumAggregatorFactory {
 
-  public CountSumAggregatorFactory(String name)
+  private final Supplier<byte[]> cacheKey;
+
+  @JsonCreator
+  public CountSumAggregatorFactory(
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
+  )
   {
-    super(name, name);
+    super(name, fieldName, expression, macroTable);
+    this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
+        AggregatorUtil.LONG_SUM_CACHE_TYPE_ID,
+        fieldName,
+        fieldExpression
+    );
+  }
+
+  public CountSumAggregatorFactory(String name, String fieldName)
+  {
+    this(name, fieldName, null, ExprMacroTable.nil());
   }
 
   protected boolean canHandleNulls()
