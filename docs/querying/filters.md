@@ -113,7 +113,6 @@ Druid's SQL planner uses the null filter by default instead of selector filter w
 { "type": "null", "column": "someColumn" }
 ```
 
-[bob](asdf.md)
 
 ## Column comparison filter
 
