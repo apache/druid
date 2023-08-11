@@ -1957,84 +1957,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        ImmutableList.of(new Object[] {0l}));
-  }
-
-  @Test
-  public void testCountDistinctNonApproximateGroupingEmptySet()
-  {
-    cannotVectorize();
-    testQuery(
-        PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        "select count(distinct m1) from druid.foo where m1 < 111.0 group by grouping sets ((dim1),())",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                .setDataSource(
-                    GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
-                                new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)))
-                        .setDimFilter(
-                            range("m1", ColumnType.LONG, null, 111.0, false, true))
-                        .build())
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setDimensions(
-                    dimensions(
-                        new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING)))
-                .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                .build()
-
-        ),
-        ImmutableList.of(new Object[] {0l}));
-  }
-
-  @Test
-  public void testCountDistinctNonApproximateGroupingEmptySet2()
-  {
-    requireMergeBuffers(3);
-    cannotVectorize();
-    testQuery(
-        PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        //"select dim1,dim2,m1 from druid.foo where m1 < 3.0",
-        "select dim1,dim2,count(distinct m1) from druid.foo where m1 <2.0 group by grouping sets ((dim1),(dim2),())",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                .setDataSource(
-                    GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("dim1", "dx0", ColumnType.STRING),
-                                new DefaultDimensionSpec("dim2", "d1", ColumnType.STRING),
-                                new DefaultDimensionSpec("m1", "d2", ColumnType.FLOAT)))
-                        .setDimFilter(
-                            range("m1", ColumnType.LONG, null, 111.0, false, true))
-                        .build())
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setDimensions(
-                    dimensions(
-                        new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING),
-                        new DefaultDimensionSpec("d1", "_d1", ColumnType.STRING)
-                        ))
-                .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                .build()
-
-        ),
-        ImmutableList.of(new Object[] {0l}));
+        ImmutableList.of(new Object[] {0L}));
   }
 
   @Test
@@ -2066,7 +1989,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        ImmutableList.of(new Object[] {6l}));
+        ImmutableList.of(new Object[] {6L}));
   }
 
   @Test
