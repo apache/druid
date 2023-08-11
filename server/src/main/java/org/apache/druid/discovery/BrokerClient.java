@@ -21,9 +21,9 @@ package org.apache.druid.discovery;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -50,16 +50,16 @@ public class BrokerClient
   private final Logger log = new Logger(BrokerClient.class);
   private static final int MAX_RETRIES = 5;
 
-  private final HttpClient httpClient;
+  private final HttpClient brokerHttpClient;
   private final DruidNodeDiscovery druidNodeDiscovery;
 
   @Inject
   public BrokerClient(
-      @EscalatedGlobal HttpClient httpClient,
+      @EscalatedGlobal HttpClient brokerHttpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
   )
   {
-    this.httpClient = httpClient;
+    this.brokerHttpClient = brokerHttpClient;
     this.druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER);
   }
 
@@ -71,7 +71,9 @@ public class BrokerClient
     String host = ClientUtils.pickOneHost(druidNodeDiscovery);
 
     if (host == null) {
-      throw new IOE("No known server.");
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("A leader node could not be found for [%s] service. Check the logs to validate that service is healthy.", NodeRole.BROKER);
     }
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", host, urlPath)));
   }
@@ -85,7 +87,7 @@ public class BrokerClient
 
       try {
         try {
-          fullResponseHolder = httpClient.go(request, responseHandler).get();
+          fullResponseHolder = brokerHttpClient.go(request, responseHandler).get();
         }
         catch (ExecutionException e) {
           // Unwrap IOExceptions and ChannelExceptions, re-throw others
@@ -132,9 +134,8 @@ public class BrokerClient
     }
     catch (MalformedURLException e) {
       // Not an IOException; this is our own fault.
-      throw new ISE(
-          e,
-          "failed to build url with path[%] and query string [%s].",
+      throw DruidException.defensive(
+          "Failed to build url with path[%] and query string [%s].",
           oldRequest.getUrl().getPath(),
           oldRequest.getUrl().getQuery()
       );

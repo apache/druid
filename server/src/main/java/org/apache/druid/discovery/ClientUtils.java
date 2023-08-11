@@ -51,7 +51,7 @@ public class ClientUtils
     Request req = new Request(old.getMethod(), url);
     req.addHeaderValues(old.getHeaders());
     if (old.hasContent()) {
-      req.setContent(old.getContent());
+      req.setContent(old.getContent().copy());
     }
     return req;
   }

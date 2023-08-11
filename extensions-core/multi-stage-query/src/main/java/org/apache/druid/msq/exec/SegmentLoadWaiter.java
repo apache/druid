@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,19 +75,7 @@ public class SegmentLoadWaiter
   private final boolean doWait;
   private volatile SegmentLoadWaiterStatus status;
 
-  public SegmentLoadWaiter(ControllerContext context, String datasource, Set<String> versionsToAwait, int initialSegmentCount)
-  {
-    this.brokerClient = context.injector().getInstance(BrokerClient.class);
-    this.objectMapper = context.jsonMapper();
-    this.datasource = datasource;
-    this.versionsToAwait = new TreeSet<>(versionsToAwait);
-    this.versionToLoadStatusMap = new HashMap<>();
-    this.status = new SegmentLoadWaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
-    this.doWait = true;
-  }
-
-  @VisibleForTesting
-  SegmentLoadWaiter(BrokerClient brokerClient, ObjectMapper objectMapper, String datasource, Set<String> versionsToAwait, int initialSegmentCount, boolean doWait)
+  public SegmentLoadWaiter(BrokerClient brokerClient, ObjectMapper objectMapper, String datasource, Set<String> versionsToAwait, int initialSegmentCount, boolean doWait)
   {
     this.brokerClient = brokerClient;
     this.objectMapper = objectMapper;

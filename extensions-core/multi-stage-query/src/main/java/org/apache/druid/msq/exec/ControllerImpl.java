@@ -44,6 +44,7 @@ import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
@@ -1316,7 +1317,14 @@ public class ControllerImpl implements Controller
         }
       } else {
         Set<String> versionsToAwait = segmentsWithTombstones.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-        segmentLoadWaiter = new SegmentLoadWaiter(context, task.getDataSource(), versionsToAwait, segmentsWithTombstones.size());
+        segmentLoadWaiter = new SegmentLoadWaiter(
+            context.injector().getInstance(BrokerClient.class),
+            context.jsonMapper(),
+            task.getDataSource(),
+            versionsToAwait,
+            segmentsWithTombstones.size(),
+            true
+        );
         performSegmentPublish(
             context.taskActionClient(),
             SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
@@ -1324,7 +1332,14 @@ public class ControllerImpl implements Controller
       }
     } else if (!segments.isEmpty()) {
       Set<String> versionsToAwait = segments.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-      segmentLoadWaiter = new SegmentLoadWaiter(context, task.getDataSource(), versionsToAwait, segments.size());
+      segmentLoadWaiter = new SegmentLoadWaiter(
+          context.injector().getInstance(BrokerClient.class),
+          context.jsonMapper(),
+          task.getDataSource(),
+          versionsToAwait,
+          segmentsWithTombstones.size(),
+          true
+      );
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
