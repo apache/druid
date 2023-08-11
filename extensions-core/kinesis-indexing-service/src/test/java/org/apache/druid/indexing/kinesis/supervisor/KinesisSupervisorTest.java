@@ -2634,7 +2634,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null, false);
+    supervisor.resetInternal(null);
     verifyAll();
   }
 
@@ -2704,7 +2704,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
     try {
-      supervisor.resetInternal(resetMetadata, false);
+      supervisor.resetInternal(resetMetadata);
     }
     catch (NullPointerException npe) {
       // Expected as there will be an attempt to EasyMock.reset partitionGroups sequences to NOT_SET
@@ -2748,7 +2748,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(resetMetadata, false);
+    supervisor.resetInternal(resetMetadata);
     verifyAll();
   }
 
@@ -3008,7 +3008,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null, false);
+    supervisor.resetInternal(null);
     verifyAll();
   }
 
@@ -3161,7 +3161,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null, false);
+    supervisor.resetInternal(null);
     verifyAll();
   }
 
@@ -3681,7 +3681,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null, false);
+    supervisor.resetInternal(null);
     verifyAll();
   }
 
