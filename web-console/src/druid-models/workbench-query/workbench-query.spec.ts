@@ -106,12 +106,6 @@ describe('WorkbenchQuery', () => {
 
   describe('.fromString', () => {
     const tabString = sane`
-      ===== Helper: q =====
-
-      SELECT *
-
-      FROM wikipedia
-
       ===== Query =====
 
       SELECT * FROM q
@@ -206,6 +200,7 @@ describe('WorkbenchQuery', () => {
       expect(apiQuery).toEqual({
         cancelQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
         engine: 'native',
+        prefixLines: 0,
         query: {
           aggregations: [
             {
@@ -257,6 +252,7 @@ describe('WorkbenchQuery', () => {
       expect(apiQuery).toEqual({
         cancelQueryId: 'lol',
         engine: 'native',
+        prefixLines: 0,
         query: {
           aggregations: [
             {
@@ -301,7 +297,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -327,7 +323,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -367,7 +363,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -406,7 +402,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -434,7 +430,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 

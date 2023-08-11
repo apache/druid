@@ -46,6 +46,8 @@ import {
 } from '../ingest-query-pattern/ingest-query-pattern';
 import type { QueryContext } from '../query-context/query-context';
 
+const ISSUE_MARKER = '--:ISSUE:';
+
 export interface TabEntry {
   id: string;
   tabName: string;
@@ -497,10 +499,13 @@ export class WorkbenchQuery {
       };
     }
 
-    const m = /--:ISSUE:(.+)(?:\n|$)/.exec(apiQuery.query);
-    if (m) {
+    const issueIndex = String(apiQuery.query).indexOf(ISSUE_MARKER);
+    if (issueIndex !== -1) {
+      const issueComment = String(apiQuery.query)
+        .slice(issueIndex + ISSUE_MARKER.length)
+        .split('\n')[0];
       throw new Error(
-        `This query contains an ISSUE comment: ${m[1]
+        `This query contains an ISSUE comment: ${issueComment
           .trim()
           .replace(
             /\.$/,
