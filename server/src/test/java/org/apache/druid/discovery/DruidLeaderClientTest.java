@@ -159,7 +159,9 @@ public class DruidLeaderClientTest extends BaseJettyTest
     druidLeaderClient.start();
 
     expectedException.expect(IOException.class);
-    expectedException.expectMessage("No known server");
+    expectedException.expectMessage(
+        "A leader node could not be found for [PEON] service. "
+        + "Check logs of service [PEON] to confirm it is healthy.");
     druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
   }
 
