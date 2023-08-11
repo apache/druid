@@ -98,7 +98,7 @@ import java.util.concurrent.Executor;
 
 public class OverlordTest
 {
-  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000, -1);
+  private static final TaskLocation TASK_LOCATION = TaskLocation.create("dummy", 1000, -1);
 
   private TestingServer server;
   private Timing timing;
