@@ -166,6 +166,7 @@ jobs:
         run: |
           (cd website && npm install)
           cd website
+          npm run build
           npm run spellcheck
 
       - name: web console
