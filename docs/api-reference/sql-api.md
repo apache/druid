@@ -315,3 +315,22 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Sample response
 
 A successful response results in an `HTTP 202` and an empty response body.
+
+## Query output format
+
+```
+| Format | typesHeader | sqlTypesHeader | Output                                                                             |
+|--------|-------------|----------------|------------------------------------------------------------------------------------|
+| object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "docs" } ]                        |
+| object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "docs" } ] |
+| object | false       | true           | [ { "user" : { "sqlType" : "VARCHAR" } }, { "user" : "docs" } ]                    |
+| object | false       | false          | [ { "user" : null }, { "user" : "docs" } ]                                         |
+| array  | true        | false          | [ [ "user" ], [ "STRING" ], [ "docs" ] ]                                           |
+| array  | true        | true           | [ [ "user" ], [ "STRING" ], [ "VARCHAR" ], [ "docs" ] ]                            |
+| array  | false       | true           | [ [ "user" ], [ "VARCHAR" ], [ "docs" ] ]                                          |
+| array  | false       | false          | [ [ "user" ], [ "docs" ] ]                                                         |
+| csv    | true        | false          | user STRING docs                                                                   |
+| csv    | true        | true           | user STRING VARCHAR docs                                                           |
+| csv    | false       | true           | user VARCHAR docs                                                                  |
+| csv    | false       | false          | user docs                                                                          |
+```
