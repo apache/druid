@@ -28,6 +28,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -131,12 +132,13 @@ public class FrameProcessorExecutorTest
           awaitStyle
       );
 
-      final FrameChannelMuxer muxer = new FrameChannelMuxer(
+      final FrameChannelMixer muxer = new FrameChannelMixer(
           ImmutableList.of(memoryChannel1.readable(), memoryChannel2.readable()),
           new WritableFrameFileChannel(
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(outFile.toPath())),
-                  null
+                  null,
+                  ByteTracker.unboundedTracker()
               )
           )
       );
@@ -150,7 +152,7 @@ public class FrameProcessorExecutorTest
       Assert.assertEquals(
           adapter.getNumRows() * 2,
           FrameTestUtil.readRowsFromFrameChannel(
-              new ReadableFileFrameChannel(FrameFile.open(outFile)),
+              new ReadableFileFrameChannel(FrameFile.open(outFile, null)),
               FrameReader.create(adapter.getRowSignature())
           ).toList().size()
       );
@@ -439,7 +441,8 @@ public class FrameProcessorExecutorTest
           writers.add(
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(files.get(i).toPath())),
-                  null
+                  null,
+                  ByteTracker.unboundedTracker()
               )
           );
         }
@@ -482,7 +485,7 @@ public class FrameProcessorExecutorTest
   private static ReadableFrameChannel openFileChannel(final File file)
   {
     try {
-      return new ReadableFileFrameChannel(FrameFile.open(file));
+      return new ReadableFileFrameChannel(FrameFile.open(file, null));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

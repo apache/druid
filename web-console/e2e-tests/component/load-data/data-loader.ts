@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
-import { ConfigureSchemaConfig } from './config/configure-schema';
-import { ConfigureTimestampConfig } from './config/configure-timestamp';
-import { PartitionConfig } from './config/partition';
-import { PublishConfig } from './config/publish';
-import { DataConnector } from './data-connector/data-connector';
+import type { ConfigureSchemaConfig } from './config/configure-schema';
+import type { ConfigureTimestampConfig } from './config/configure-timestamp';
+import type { PartitionConfig } from './config/partition';
+import type { PublishConfig } from './config/publish';
+import type { DataConnector } from './data-connector/data-connector';
 
 /**
  * Represents load data tab.

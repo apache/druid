@@ -45,6 +45,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.ParseExceptionReport;
@@ -69,6 +70,7 @@ import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -2243,6 +2245,24 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNull(newDataSchemaMetadata());
   }
 
+  @Test
+  public void testComputeFetchThreads()
+  {
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
+        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 2000);
+
+    Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, null));
+    Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 2));
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 0)
+    );
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, -1)
+    );
+  }
+
   private KinesisIndexTask createTask(
       int groupId,
       Map<String, String> startSequenceNumbers,
@@ -2466,7 +2486,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
 
     @Override
-    protected KinesisRecordSupplier newTaskRecordSupplier()
+    protected KinesisRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return localSupplier == null ? recordSupplier : localSupplier;
     }

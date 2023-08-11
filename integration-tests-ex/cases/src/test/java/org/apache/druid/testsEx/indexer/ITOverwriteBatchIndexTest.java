@@ -159,6 +159,7 @@ public class ITOverwriteBatchIndexTest extends AbstractITBatchIndexTest
         null,
         false,
         false,
+        false,
         true,
         new Pair<>(false, false)
     );

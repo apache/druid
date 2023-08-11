@@ -72,7 +72,7 @@ public class StripedReadablePartitions implements ReadablePartitions
   {
     final List<ReadablePartitions> retVal = new ArrayList<>();
 
-    for (List<Integer> entries : SlicerUtils.makeSlices(partitionNumbers.iterator(), maxNumSplits)) {
+    for (List<Integer> entries : SlicerUtils.makeSlicesStatic(partitionNumbers.iterator(), maxNumSplits)) {
       if (!entries.isEmpty()) {
         retVal.add(new StripedReadablePartitions(stageNumber, numWorkers, new IntAVLTreeSet(entries)));
       }

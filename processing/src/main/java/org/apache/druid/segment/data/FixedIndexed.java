@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -73,7 +75,7 @@ public class FixedIndexed<T> implements Indexed<T>
         valuesOffset
     );
 
-    bb.position(buffer.position() + (width * size));
+    bb.position(buffer.position() + (width * (hasNull ? size - 1 : size)));
     return fixedIndexed;
   }
 
@@ -168,26 +170,48 @@ public class FixedIndexed<T> implements Indexed<T>
     return IndexedIterable.create(this).iterator();
   }
 
+
+
+  public IntIntPair getRange(
+      @Nullable T startValue,
+      boolean startStrict,
+      @Nullable T endValue,
+      boolean endStrict
+  )
+  {
+    final int firstValue = hasNull ? 1 : 0;
+    int startIndex, endIndex;
+    if (startValue == null) {
+      startIndex = firstValue;
+    } else {
+      final int found = indexOf(startValue);
+      if (found >= firstValue) {
+        startIndex = startStrict ? found + 1 : found;
+      } else {
+        startIndex = -(found + 1);
+      }
+    }
+
+    if (endValue == null) {
+      endIndex = size();
+    } else {
+      final int found = indexOf(endValue);
+      if (found >= firstValue) {
+        endIndex = endStrict ? found : found + 1;
+      } else {
+        endIndex = -(found + 1);
+      }
+    }
+
+    endIndex = Math.max(startIndex, endIndex);
+    return new IntIntImmutablePair(startIndex, endIndex);
+  }
+
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("buffer", buffer);
     inspector.visit("typeStrategy", typeStrategy);
     inspector.visit("comparator", comparator);
-  }
-
-  @Override
-  public String toString()
-  {
-    StringBuilder sb = new StringBuilder("FixedIndexed[");
-    if (size() > 0) {
-      for (int i = 0; i < size(); i++) {
-        T value = get(i);
-        sb.append(value).append(',').append(' ');
-      }
-      sb.setLength(sb.length() - 2);
-    }
-    sb.append(']');
-    return sb.toString();
   }
 }

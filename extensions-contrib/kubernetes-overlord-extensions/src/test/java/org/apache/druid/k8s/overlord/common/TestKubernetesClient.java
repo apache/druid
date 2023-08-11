@@ -36,4 +36,10 @@ public class TestKubernetesClient implements KubernetesClientApi
   {
     return executor.executeRequest(client);
   }
+
+  @Override
+  public KubernetesClient getClient()
+  {
+    return client;
+  }
 }

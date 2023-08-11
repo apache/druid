@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
@@ -28,7 +28,7 @@ import java.util.Map;
 
 public class ExceptionCapturingServiceEmitter extends ServiceEmitter
 {
-  private volatile Class exceptionClass;
+  private volatile String exceptionClass;
   private volatile String exceptionMessage;
   private volatile String stackTrace;
 
@@ -42,10 +42,10 @@ public class ExceptionCapturingServiceEmitter extends ServiceEmitter
   {
     //noinspection unchecked
     final Map<String, Object> dataMap = (Map<String, Object>) event.toMap().get("data");
-    final Class exceptionClass = (Class) dataMap.get(EmittingLogger.EXCEPTION_TYPE_KEY);
+    final String exceptionClass = (String) dataMap.get(AlertBuilder.EXCEPTION_TYPE_KEY);
     if (exceptionClass != null) {
-      final String exceptionMessage = (String) dataMap.get(EmittingLogger.EXCEPTION_MESSAGE_KEY);
-      final String stackTrace = (String) dataMap.get(EmittingLogger.EXCEPTION_STACK_TRACE_KEY);
+      final String exceptionMessage = (String) dataMap.get(AlertBuilder.EXCEPTION_MESSAGE_KEY);
+      final String stackTrace = (String) dataMap.get(AlertBuilder.EXCEPTION_STACK_TRACE_KEY);
       this.exceptionClass = exceptionClass;
       this.exceptionMessage = exceptionMessage;
       this.stackTrace = stackTrace;
@@ -53,7 +53,7 @@ public class ExceptionCapturingServiceEmitter extends ServiceEmitter
   }
 
   @Nullable
-  public Class getExceptionClass()
+  public String getExceptionClass()
   {
     return exceptionClass;
   }

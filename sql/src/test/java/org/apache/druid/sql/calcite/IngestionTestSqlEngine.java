@@ -24,12 +24,12 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Map;
@@ -74,7 +74,7 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean feature(final EngineFeature feature, final PlannerContext plannerContext)
+  public boolean featureAvailable(final EngineFeature feature, final PlannerContext plannerContext)
   {
     switch (feature) {
       case CAN_SELECT:
@@ -88,9 +88,10 @@ public class IngestionTestSqlEngine implements SqlEngine
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
+      case ALLOW_BROADCAST_RIGHTY_JOIN:
         return true;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(IngestionTestSqlEngine.class.getSimpleName(), feature);
     }
   }
 

@@ -168,7 +168,11 @@ public class Initializer
       JsonConfigProvider.bind(binder, MetadataStorageTablesConfig.PROPERTY_BASE, MetadataStorageTablesConfig.class);
 
       // Build from properties provided in the config
-      JsonConfigProvider.bind(binder, MetadataStorageConnectorConfig.PROPERTY_BASE, MetadataStorageConnectorConfig.class);
+      JsonConfigProvider.bind(
+          binder,
+          MetadataStorageConnectorConfig.PROPERTY_BASE,
+          MetadataStorageConnectorConfig.class
+      );
     }
 
     @Provides
@@ -275,6 +279,7 @@ public class Initializer
       property("druid.client.https.certAlias", "druid");
       property("druid.client.https.keyManagerPassword", "druid123");
       property("druid.client.https.keyStorePassword", "druid123");
+      propertyEnvVarBinding("druid.metadata.mysql.driver.driverClassName", "MYSQL_DRIVER_CLASSNAME");
 
       // More env var bindings for properties formerly passed in via
       // a generated config file.
@@ -283,6 +288,7 @@ public class Initializer
       propertyEnvVarBinding(base + "cloudPath", "DRUID_CLOUD_PATH");
       propertyEnvVarBinding(base + "s3AccessKey", "AWS_ACCESS_KEY_ID");
       propertyEnvVarBinding(base + "s3SecretKey", "AWS_SECRET_ACCESS_KEY");
+      propertyEnvVarBinding(base + "s3Region", "AWS_REGION");
       propertyEnvVarBinding(base + "azureContainer", "AZURE_CONTAINER");
       propertyEnvVarBinding(base + "azureAccount", "AZURE_ACCOUNT");
       propertyEnvVarBinding(base + "azureKey", "AZURE_KEY");
@@ -325,7 +331,7 @@ public class Initializer
      * <p>
      * The builder registers {@code DruidNodeDiscoveryProvider} by default: add any
      * test-specific instances as needed.
-      */
+     */
     public Builder eagerInstance(Class<?> theClass)
     {
       this.eagerCreation.add(theClass);
@@ -341,7 +347,7 @@ public class Initializer
       return this;
     }
 
-    public Builder modules(Module...modules)
+    public Builder modules(Module... modules)
     {
       return modules(Arrays.asList(modules));
     }
@@ -399,7 +405,6 @@ public class Initializer
   private final ResolvedConfig clusterConfig;
   private final Injector injector;
   private final Lifecycle lifecycle;
-  private MetastoreClient metastoreClient;
   private DruidClusterClient clusterClient;
 
   private Initializer(Builder builder)

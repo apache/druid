@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import { SqlColumn, SqlExpression, SqlFunction, SqlLiteral, SqlStar } from 'druid-query-toolkit';
+import { SqlColumn, SqlExpression, SqlFunction, SqlLiteral, SqlStar } from '@druid-toolkit/query';
 
 export function timeFormatToSql(timeFormat: string): SqlExpression | undefined {
   switch (timeFormat) {
     case 'auto':
+      return SqlExpression.parse('TIME_PARSE(TRIM(?))');
+
     case 'iso':
       return SqlExpression.parse('TIME_PARSE(?)');
 

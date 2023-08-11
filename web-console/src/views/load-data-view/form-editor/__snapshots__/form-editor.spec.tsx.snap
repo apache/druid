@@ -30,6 +30,7 @@ exports[`FormEditor matches snapshot 1`] = `
               <svg
                 data-icon="info-sign"
                 height="14"
+                role="img"
                 viewBox="0 0 16 16"
                 width="14"
               >
@@ -73,11 +74,11 @@ exports[`FormEditor matches snapshot 1`] = `
         aria-hidden="true"
         class="bp4-icon bp4-icon-trash"
         icon="trash"
-        tabindex="0"
       >
         <svg
           data-icon="trash"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >

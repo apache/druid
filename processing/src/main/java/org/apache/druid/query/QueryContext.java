@@ -107,16 +107,6 @@ public class QueryContext
   }
 
   /**
-   * Return a value as a generic {@code Object}, returning the default value if the
-   * context value is not set.
-   */
-  public Object get(String key, Object defaultValue)
-  {
-    final Object val = get(key);
-    return val == null ? defaultValue : val;
-  }
-
-  /**
    * Return a value as an {@code String}, returning {@link null} if the
    * context value is not set.
    *
@@ -355,6 +345,16 @@ public class QueryContext
   public int getMaxSubqueryRows(int defaultSize)
   {
     return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
+  }
+
+  public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
+  {
+    return getLong(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
+  }
+
+  public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
+  {
+    return getBoolean(QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY, defaultUseNestedForUnkownTypeInSubquery);
   }
 
   public int getUncoveredIntervalsLimit()

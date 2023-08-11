@@ -84,30 +84,30 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
       Object {
         "Cell": [Function],
         "Header": <React.Fragment>
-          Data processed
+          Rows processed
           <br />
           <i>
-            rows   (size or files)
+            rows   (input files)
           </i>
         </React.Fragment>,
         "accessor": [Function],
         "className": "padded",
-        "id": "data_processed",
-        "width": 220,
+        "id": "rows_processed",
+        "width": 160,
       },
       Object {
         "Cell": [Function],
         "Header": <React.Fragment>
-          Data processing rate
+          Processing rate
           <br />
           <i>
-            rows/s   (data rate)
+            rows/s
           </i>
         </React.Fragment>,
         "accessor": [Function],
         "className": "padded",
-        "id": "data_processing_rate",
-        "width": 200,
+        "id": "processing_rate",
+        "width": 150,
       },
       Object {
         "Header": "Phase",
@@ -158,7 +158,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     Array [
       Object {
         "definition": Object {
-          "id": "b94caff0-f693-47ed-a242-ccf837550383_0",
+          "id": "ad318360-2ccf-4afc-b221-27c8704bf4fe_0",
           "input": Array [
             Object {
               "inputFormat": Object {
@@ -195,18 +195,43 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
               ],
               "context": Object {
                 "__timeColumn": "v0",
+                "__user": "allowAll",
+                "executionMode": "async",
                 "finalize": false,
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
-                "queryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
+                "maxNumTasks": 2,
+                "maxParseExceptions": 0,
+                "queryId": "93a855fa-c35a-48df-b596-6bc98eed1101",
                 "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
+                "sqlQueryId": "93a855fa-c35a-48df-b596-6bc98eed1101",
                 "sqlReplaceTimeChunks": "all",
               },
               "dataSource": Object {
-                "inputNumber": 0,
-                "type": "inputNumber",
+                "inputFormat": Object {
+                  "assumeNewlineDelimited": false,
+                  "keepNullColumns": false,
+                  "type": "json",
+                  "useJsonNodeReader": false,
+                },
+                "inputSource": Object {
+                  "type": "http",
+                  "uris": Array [
+                    "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
+                  ],
+                },
+                "signature": Array [
+                  Object {
+                    "name": "timestamp",
+                    "type": "STRING",
+                  },
+                  Object {
+                    "name": "agent_type",
+                    "type": "STRING",
+                  },
+                ],
+                "type": "external",
               },
               "granularity": Object {
                 "type": "all",
@@ -237,6 +262,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
               "columns": Array [
                 Object {
                   "columnName": "__boost",
+                  "order": "ASCENDING",
                 },
               ],
             },
@@ -258,17 +284,17 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             },
           ],
         },
-        "duration": 4887,
+        "duration": 21324,
         "partitionCount": 1,
         "phase": "FINISHED",
         "sort": true,
         "stageNumber": 0,
-        "startTime": "2022-10-31T16:11:15.380Z",
+        "startTime": "2023-08-01T03:12:59.865Z",
         "workerCount": 1,
       },
       Object {
         "definition": Object {
-          "id": "b94caff0-f693-47ed-a242-ccf837550383_1",
+          "id": "ad318360-2ccf-4afc-b221-27c8704bf4fe_1",
           "input": Array [
             Object {
               "stage": 0,
@@ -302,6 +328,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
                   },
                 ],
                 "includeAllDimensions": false,
+                "useSchemaDiscovery": false,
               },
               "granularitySpec": Object {
                 "intervals": Array [
@@ -333,11 +360,11 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
           },
           "signature": Array [],
         },
-        "duration": 1908,
+        "duration": 2070,
         "partitionCount": 1,
         "phase": "FINISHED",
         "stageNumber": 1,
-        "startTime": "2022-10-31T16:11:20.264Z",
+        "startTime": "2023-08-01T03:13:21.156Z",
         "workerCount": 1,
       },
     ]

@@ -20,13 +20,31 @@
 package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
+import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.catalog.model.table.TableFunction.ParameterDefn;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class BaseExternTableTest
 {
-  protected final ObjectMapper mapper = new ObjectMapper();
+  public static final Map<String, Object> CSV_FORMAT = ImmutableMap.of("type", CsvInputFormat.TYPE_KEY);
+  protected static final List<ColumnSpec> COLUMNS = Arrays.asList(
+      new ColumnSpec("x", Columns.VARCHAR, null),
+      new ColumnSpec("y", Columns.BIGINT, null)
+  );
+
+  protected final ObjectMapper mapper = DefaultObjectMapper.INSTANCE;
+  protected final TableDefnRegistry registry = new TableDefnRegistry(mapper);
 
   protected PropertyDefn<?> findProperty(List<PropertyDefn<?>> props, String name)
   {
@@ -36,5 +54,37 @@ public class BaseExternTableTest
       }
     }
     return null;
+  }
+
+  protected Map<String, Object> toMap(Object obj)
+  {
+    try {
+      return mapper.convertValue(obj, ExternalTableDefn.MAP_TYPE_REF);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "bad conversion");
+    }
+  }
+
+  protected Map<String, Object> formatToMap(InputFormat format)
+  {
+    Map<String, Object> formatMap = toMap(format);
+    formatMap.remove("columns");
+    return formatMap;
+  }
+
+  protected boolean hasParam(TableFunction fn, String key)
+  {
+    return hasParam(fn.parameters(), key);
+  }
+
+  protected boolean hasParam(List<ParameterDefn> params, String key)
+  {
+    for (ParameterDefn param : params) {
+      if (param.name().equals(key)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

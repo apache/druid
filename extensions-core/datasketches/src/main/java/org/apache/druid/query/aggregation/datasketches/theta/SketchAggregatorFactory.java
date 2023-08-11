@@ -22,10 +22,12 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import org.apache.datasketches.Family;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.common.Family;
+import org.apache.datasketches.common.Util;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
+import org.apache.datasketches.thetacommon.ThetaUtil;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -38,6 +40,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -52,7 +55,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
 
   // Smallest number of entries in an Aggregator. Each entry is a long. Based on the constructor of
   // HeapQuickSelectSketch and used by guessAggregatorHeapFootprint.
-  private static final int MIN_ENTRIES_PER_AGGREGATOR = 1 << Util.MIN_LG_ARR_LONGS;
+  private static final int MIN_ENTRIES_PER_AGGREGATOR = 1 << ThetaUtil.MIN_LG_ARR_LONGS;
 
   // Largest preamble size for the sketch stored in an Aggregator, in bytes. Based on Util.getMaxUnionBytes.
   private static final int LONGEST_POSSIBLE_PREAMBLE_BYTES = Family.UNION.getMaxPreLongs() << 3;
@@ -68,7 +71,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     this.fieldName = Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
     this.size = size == null ? DEFAULT_MAX_SKETCH_SIZE : size;
-    Util.checkIfPowerOf2(this.size, "size");
+    Util.checkIfIntPowerOf2(this.size, "size");
 
     this.cacheId = cacheId;
   }
@@ -77,6 +80,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && capabilities.isArray()) {
+      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
+    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchAggregator(selector, size);
   }
@@ -84,6 +91,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && capabilities.isArray()) {
+      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
+    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     final SketchAggregator aggregator = new SketchAggregator(selector, size);
     return new AggregatorAndSize(aggregator, aggregator.getInitialSizeBytes());
@@ -93,6 +104,10 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null && capabilities.isArray()) {
+      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
+    }
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
@@ -197,7 +212,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
       expectedEntries = maxEntries;
     } else {
       // rows is within int range since it's <= maxEntries, so casting is OK.
-      expectedEntries = Math.max(MIN_ENTRIES_PER_AGGREGATOR, Util.ceilingPowerOf2(Ints.checkedCast(rows)));
+      expectedEntries = Math.max(MIN_ENTRIES_PER_AGGREGATOR, Util.ceilingIntPowerOf2(Ints.checkedCast(rows)));
     }
 
     // 8 bytes per entry + largest possible preamble.

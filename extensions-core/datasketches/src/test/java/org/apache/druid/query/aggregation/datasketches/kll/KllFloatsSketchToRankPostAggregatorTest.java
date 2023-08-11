@@ -120,7 +120,7 @@ public class KllFloatsSketchToRankPostAggregatorTest
     final PostAggregator postAgg = new KllFloatsSketchToRankPostAggregator(
         "rank",
         new FieldAccessPostAggregator("field", "sketch"),
-        4
+        3
     );
 
     final double rank = (double) postAgg.compute(fields);

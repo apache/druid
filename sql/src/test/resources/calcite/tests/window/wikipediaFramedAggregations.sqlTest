@@ -1,13 +1,13 @@
 type: "operatorValidation"
 
-sql: "
+sql: |
     SELECT
       countryIsoCode, 
-      FLOOR(__time TO HOUR) t, 
+      CAST (FLOOR(__time TO HOUR) AS BIGINT) t,
       SUM(delta) delta, 
-      SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY SUM(delta) RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) windowedDelta
+      SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY CAST (FLOOR(__time TO HOUR) AS BIGINT) RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) windowedDelta
     FROM wikipedia
-    GROUP BY 1, 2"
+    GROUP BY 1, 2
 
 expectedOperators:
   - { type: "naivePartition",  partitionColumns: [ "d0" ] }

@@ -20,10 +20,14 @@
 package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import javax.annotation.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -31,11 +35,14 @@ import java.util.Objects;
  * the process of physically sorting data by a sort key. This class represents
  * one column of that sort key. The key consists of a name and a sort direction.
  * Sort direction is optional: omitted, ascending is assumed.
- * (In Druid, clustering is always {@code NULLS LOW} in SQL parlance, so that attribute
- * does not appear here.
+ * (In Druid, clustering is always {@code NULLS LOW} in SQL terms, so that attribute
+ * does not appear here.)
  */
 public class ClusterKeySpec
 {
+  public static final TypeReference<List<ClusterKeySpec>> CLUSTER_KEY_LIST_TYPE_REF =
+      new TypeReference<List<ClusterKeySpec>>() { };
+
   private final String expr;
   private final boolean desc;
 
@@ -56,6 +63,7 @@ public class ClusterKeySpec
   }
 
   @JsonProperty("desc")
+  @JsonInclude(Include.NON_DEFAULT)
   public boolean desc()
   {
     return desc;

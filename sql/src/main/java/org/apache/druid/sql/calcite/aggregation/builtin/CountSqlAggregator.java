@@ -73,6 +73,7 @@ public class CountSqlAggregator implements SqlAggregator
   )
   {
     final RexNode rexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         Iterables.getOnlyElement(aggregateCall.getArgList())
@@ -112,6 +113,7 @@ public class CountSqlAggregator implements SqlAggregator
   )
   {
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
+        rexBuilder,
         plannerContext,
         rowSignature,
         aggregateCall,

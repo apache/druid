@@ -112,7 +112,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getHandoffConditionTimeout(),
         base.isResetOffsetAutomatically(),
         base.isSkipSequenceNumberAvailabilityCheck(),
-        base.getRecordBufferSize(),
+        base.getRecordBufferSizeConfigured(),
         base.getRecordBufferOfferTimeout(),
         base.getRecordBufferFullWait(),
         base.getFetchThreads(),
@@ -120,7 +120,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.isLogParseExceptions(),
         base.getMaxParseExceptions(),
         base.getMaxSavedParseExceptions(),
-        base.getMaxRecordsPerPoll(),
+        base.getMaxRecordsPerPollConfigured(),
         base.getIntermediateHandoffPeriod()
     );
     this.extra = extra;

@@ -111,20 +111,20 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator<HllSketch> getComparator()
+  public Comparator<HllSketchHolder> getComparator()
   {
     return HllSketchAggregatorFactory.COMPARATOR;
   }
 
   @Override
-  public HllSketch compute(final Map<String, Object> combinedAggregators)
+  public HllSketchHolder compute(final Map<String, Object> combinedAggregators)
   {
     final Union union = new Union(lgK);
     for (final PostAggregator field : fields) {
-      final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
-      union.update(sketch);
+      final HllSketchHolder sketch = HllSketchHolder.fromObj(field.compute(combinedAggregators));
+      union.update(sketch.getSketch());
     }
-    return union.getResult(tgtHllType);
+    return HllSketchHolder.of(union.getResult(tgtHllType));
   }
 
   @Override

@@ -57,7 +57,7 @@ are designed to be lightweight and complete very quickly. This means that for mo
 more complex visualizations, multiple Druid queries may be required.
 
 Even though queries are typically made to Brokers or Routers, they can also be accepted by
-[Historical](../design/historical.md) processes and by [Peons (task JVMs)](../design/peons.md)) that are running
+[Historical](../design/historical.md) processes and by [Peons (task JVMs)](../design/peons.md) that are running
 stream ingestion tasks. This may be valuable if you want to query results for specific segments that are served by
 specific processes.
 
@@ -108,7 +108,7 @@ curl -X DELETE "http://host:port/druid/v2/abc123"
 
 ### Authentication and authorization failures
 
-For [secured](../design/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
+For [secured](../operations/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
 
 ### Query execution failures
 

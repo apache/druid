@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.frame.read.FrameReaderUtils;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -49,7 +50,7 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
     this.ascDescRunLengths = ascDescRunLengths;
   }
 
-  public static ByteRowKeyComparator create(final List<SortColumn> keyColumns)
+  public static ByteRowKeyComparator create(final List<KeyColumn> keyColumns)
   {
     return new ByteRowKeyComparator(
         computeFirstFieldPosition(keyColumns.size()),
@@ -74,18 +75,24 @@ public class ByteRowKeyComparator implements Comparator<byte[]>
    *
    * Public so {@link FrameComparisonWidgetImpl} can use it.
    */
-  public static int[] computeAscDescRunLengths(final List<SortColumn> sortColumns)
+  public static int[] computeAscDescRunLengths(final List<KeyColumn> keyColumns)
   {
     final IntList ascDescRunLengths = new IntArrayList(4);
 
-    boolean descending = false;
+    KeyOrder order = KeyOrder.ASCENDING;
     int runLength = 0;
 
-    for (final SortColumn column : sortColumns) {
-      if (column.descending() != descending) {
+    for (final KeyColumn column : keyColumns) {
+      if (column.order() == KeyOrder.NONE) {
+        throw new IAE("Key must be sortable");
+      }
+
+      if (column.order() != order) {
         ascDescRunLengths.add(runLength);
         runLength = 0;
-        descending = !descending;
+
+        // Invert "order".
+        order = order == KeyOrder.ASCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING;
       }
 
       runLength++;

@@ -20,29 +20,12 @@
 package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.rowsandcols.column.Column;
 
 import java.util.Collection;
 
 public abstract class AsOnlyTestRowsAndColumns implements RowsAndColumns
 {
-  private final WindowFrame theFrame;
-  private final AggregatorFactory[] theAggs;
-  private final MapOfColumnsRowsAndColumns rac;
-
-  public AsOnlyTestRowsAndColumns(
-      WindowFrame theFrame,
-      AggregatorFactory[] theAggs,
-      MapOfColumnsRowsAndColumns rac
-  )
-  {
-    this.theFrame = theFrame;
-    this.theAggs = theAggs;
-    this.rac = rac;
-  }
-
   @Override
   public Collection<String> getColumnNames()
   {

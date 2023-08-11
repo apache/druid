@@ -22,10 +22,12 @@ package org.apache.druid.indexing.input;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -161,5 +163,22 @@ public class GeneratorInputSourceTest
         new Long(2048L),
         ((GeneratorInputSource) inputSource.withSplit(new InputSplit<>(2048L))).getSeed()
     );
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    GeneratorInputSource inputSource = new GeneratorInputSource(
+        "basic",
+        null,
+        1000,
+        2,
+        1024L,
+        DateTimes.nowUtc().getMillis(),
+        1000,
+        1.0
+    );
+
+    Assert.assertEquals(ImmutableSet.of(IndexingServiceInputSourceModule.GENERATOR_SCHEME), inputSource.getTypes());
   }
 }

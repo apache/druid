@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
@@ -75,7 +75,7 @@ public class ProtobufInputFormatTest
   public void setUp() throws Exception
   {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
         new StringDimensionSchema("event"),
@@ -243,7 +243,6 @@ public class ProtobufInputFormatTest
                      .add("someFloatColumn")
                      .add("id")
                      .add("someBytesColumn")
-                     .add("timestamp")
                      .build(),
         row.getDimensions()
     );
@@ -270,14 +269,14 @@ public class ProtobufInputFormatTest
             timestampSpec,
             new DimensionsSpec(
                 Lists.newArrayList(
-                    new StringDimensionSchema("event"),
-                    new StringDimensionSchema("id"),
-                    new StringDimensionSchema("someOtherId"),
-                    new StringDimensionSchema("isValid"),
-                    new StringDimensionSchema("eventType"),
-                    new NestedDataDimensionSchema("foo"),
-                    new NestedDataDimensionSchema("bar"),
-                    new StringDimensionSchema("someBytesColumn")
+                    new AutoTypeColumnSchema("event"),
+                    new AutoTypeColumnSchema("id"),
+                    new AutoTypeColumnSchema("someOtherId"),
+                    new AutoTypeColumnSchema("isValid"),
+                    new AutoTypeColumnSchema("eventType"),
+                    new AutoTypeColumnSchema("foo"),
+                    new AutoTypeColumnSchema("bar"),
+                    new AutoTypeColumnSchema("someBytesColumn")
                 )
             ),
             null
@@ -312,6 +311,76 @@ public class ProtobufInputFormatTest
                      .add("bar")
                      .add("someBytesColumn")
                      .build(),
+        row.getDimensions()
+    );
+
+    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    Assert.assertEquals(
+        ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
+        row.getRaw("bar")
+    );
+    Assert.assertArrayEquals(
+        new byte[]{0x01, 0x02, 0x03, 0x04},
+        (byte[]) row.getRaw("someBytesColumn")
+    );
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+
+  }
+
+  @Test
+  public void testParseNestedDataSchemaless() throws Exception
+  {
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
+        JSONPathSpec.DEFAULT,
+        decoder
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputEntityReader reader = protobufInputFormat.createReader(
+        new InputRowSchema(
+            timestampSpec,
+            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+            null,
+            null
+        ),
+        entity,
+        null
+    );
+
+    TransformSpec transformSpec = new TransformSpec(
+        null,
+        Lists.newArrayList(
+            new ExpressionTransform("foobar", "JSON_VALUE(foo, '$.bar')", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("bar0", "JSON_VALUE(bar, '$[0].bar')", TestExprMacroTable.INSTANCE)
+        )
+    );
+    TransformingInputEntityReader transformingReader = new TransformingInputEntityReader(
+        reader,
+        transformSpec.toTransformer()
+    );
+
+
+    InputRow row = transformingReader.read().next();
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            "someOtherId",
+            "bar",
+            "someIntColumn",
+            "isValid",
+            "foo",
+            "description",
+            "someLongColumn",
+            "someFloatColumn",
+            "eventType",
+            "id",
+            "someBytesColumn"
+        ),
         row.getDimensions()
     );
 

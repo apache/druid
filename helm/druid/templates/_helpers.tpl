@@ -98,3 +98,69 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- define "druid.router.fullname" -}}
 {{ template "druid.fullname" . }}-{{ .Values.router.name }}
 {{- end -}}
+
+{{/*
+Create the name of the broker service account
+*/}}
+{{- define "druid.broker.serviceAccountName" -}}
+  {{- if .Values.broker.serviceAccount.create }}
+    {{- default (include "druid.broker.fullname" .) .Values.broker.serviceAccount.name }}
+  {{- else }}
+    {{- default "default" .Values.broker.serviceAccount.name }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Create the name of the historical service account
+*/}}
+{{- define "druid.historical.serviceAccountName" -}}
+  {{- if .Values.historical.serviceAccount.create }}
+    {{- default (include "druid.historical.fullname" .) .Values.historical.serviceAccount.name }}
+  {{- else }}
+    {{- default "default" .Values.historical.serviceAccount.name }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Create the name of the middleManager service account
+*/}}
+{{- define "druid.middleManager.serviceAccountName" -}}
+  {{- if .Values.middleManager.serviceAccount.create }}
+    {{- default (include "druid.middleManager.fullname" .) .Values.middleManager.serviceAccount.name }}
+  {{- else }}
+    {{- default "default" .Values.middleManager.serviceAccount.name }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Create the name of the coordinator service account
+*/}}
+{{- define "druid.coordinator.serviceAccountName" -}}
+  {{- if .Values.coordinator.serviceAccount.create }}
+    {{- default (include "druid.coordinator.fullname" .) .Values.coordinator.serviceAccount.name }}
+  {{- else }}
+    {{- default "default" .Values.coordinator.serviceAccount.name }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Create the name of the overlord service account
+*/}}
+{{- define "druid.overlord.serviceAccountName" -}}
+  {{- if .Values.overlord.serviceAccount.create }}
+    {{- default (include "druid.overlord.fullname" .) .Values.overlord.serviceAccount.name }}
+  {{- else }}
+    {{- default "default" .Values.overlord.serviceAccount.name }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Create the name of the router service account
+*/}}
+{{- define "druid.router.serviceAccountName" -}}
+  {{- if .Values.router.serviceAccount.create }}
+    {{- default (include "druid.router.fullname" .) .Values.router.serviceAccount.name }}
+  {{- else }}
+    {{- default "default" .Values.router.serviceAccount.name }}
+  {{- end }}
+{{- end }}

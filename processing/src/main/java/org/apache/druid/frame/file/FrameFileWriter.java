@@ -25,6 +25,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
 
@@ -50,7 +51,9 @@ public class FrameFileWriter implements Closeable
   private final WritableByteChannel channel;
   private final AppendableMemory tableOfContents;
   private final AppendableMemory partitions;
+  private final ByteTracker byteTracker;
   private long bytesWritten = 0;
+  private long trackedBytes = 0;
   private int numFrames = 0;
   private boolean usePartitions = true;
   private ByteBuffer compressionBuffer;
@@ -60,24 +63,30 @@ public class FrameFileWriter implements Closeable
       final WritableByteChannel channel,
       @Nullable final ByteBuffer compressionBuffer,
       final AppendableMemory tableOfContents,
-      final AppendableMemory partitions
+      final AppendableMemory partitions,
+      ByteTracker byteTracker
   )
   {
     this.channel = channel;
     this.compressionBuffer = compressionBuffer;
     this.tableOfContents = tableOfContents;
     this.partitions = partitions;
+    this.byteTracker = byteTracker;
   }
 
   /**
    * Opens a writer for a particular channel.
-   *
-   * @param channel           destination channel
+   *  @param channel           destination channel
    * @param compressionBuffer result of {@link Frame#compressionBufferSize} for the largest possible frame size that
    *                          will be written to this file, or null to allocate buffers dynamically.
    *                          Providing an explicit buffer here, if possible, improves performance.
+   * @param byteTracker       tracker to limit the number of bytes that can be written to the frame file
    */
-  public static FrameFileWriter open(final WritableByteChannel channel, @Nullable final ByteBuffer compressionBuffer)
+  public static FrameFileWriter open(
+      final WritableByteChannel channel,
+      @Nullable final ByteBuffer compressionBuffer,
+      ByteTracker byteTracker
+  )
   {
     // Unlimited allocator is for convenience. Only a few bytes per frame will be allocated.
     final HeapMemoryAllocator allocator = HeapMemoryAllocator.unlimited();
@@ -85,7 +94,8 @@ public class FrameFileWriter implements Closeable
         channel,
         compressionBuffer,
         AppendableMemory.create(allocator),
-        AppendableMemory.create(allocator)
+        AppendableMemory.create(allocator),
+        byteTracker
     );
   }
 
@@ -117,9 +127,13 @@ public class FrameFileWriter implements Closeable
 
     writeMagicIfNeeded();
 
+    byteTracker.reserve(1);
+    trackedBytes++;
     Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{MARKER_FRAME}));
     bytesWritten++;
-    bytesWritten += frame.writeTo(channel, true, getCompressionBuffer(frame.numBytes()));
+    long frameWrittenBytes = frame.writeTo(channel, true, getCompressionBuffer(frame.numBytes()), byteTracker);
+    bytesWritten += frameWrittenBytes;
+    trackedBytes += frameWrittenBytes;
 
     // Write *end* of frame to tableOfContents.
     final MemoryRange<WritableMemory> tocCursor = tableOfContents.cursor();
@@ -166,6 +180,7 @@ public class FrameFileWriter implements Closeable
       channel.close();
       compressionBuffer = null;
       closed = true;
+      byteTracker.release(trackedBytes);
     }
   }
 
@@ -206,6 +221,7 @@ public class FrameFileWriter implements Closeable
 
     // Write footer to the channel.
     Channels.writeFully(channel, footerBuf);
+    bytesWritten += footerMemory.getCapacity();
     channel.close();
     compressionBuffer = null;
     closed = true;

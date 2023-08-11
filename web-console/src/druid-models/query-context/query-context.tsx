@@ -28,6 +28,7 @@ export interface QueryContext {
   // Multi-stage query
   maxNumTasks?: number;
   finalizeAggregations?: boolean;
+  selectDestination?: string;
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
@@ -116,9 +117,8 @@ export function changeTimezone(context: QueryContext, timezone: string | undefin
 
 // maxNumTasks
 
-export function getMaxNumTasks(context: QueryContext): number {
-  const { maxNumTasks } = context;
-  return Math.max(typeof maxNumTasks === 'number' ? maxNumTasks : 0, 2);
+export function getMaxNumTasks(context: QueryContext): number | undefined {
+  return context.maxNumTasks;
 }
 
 export function changeMaxNumTasks(
@@ -162,7 +162,7 @@ export function changeFinalizeAggregations(
     : deepDelete(context, 'finalizeAggregations');
 }
 
-// finalizeAggregations
+// groupByEnableMultiValueUnnesting
 
 export function getGroupByEnableMultiValueUnnesting(context: QueryContext): boolean | undefined {
   const { groupByEnableMultiValueUnnesting } = context;

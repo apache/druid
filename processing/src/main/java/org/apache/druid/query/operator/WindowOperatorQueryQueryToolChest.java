@@ -35,7 +35,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
-import org.apache.druid.query.rowsandcols.column.NullColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.NullColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -165,7 +165,7 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
                       .getColumnType(columnName)
                       .orElse(ColumnType.UNKNOWN_COMPLEX);
 
-                  accessors[index] = new NullColumnAccessor(columnType, rac.numRows());
+                  accessors[index] = new NullColumn.Accessor(columnType, rac.numRows());
                 } else {
                   accessors[index] = column.toAccessor();
                 }

@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.column;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * An interface representing a Column of data.
@@ -37,7 +38,7 @@ public interface Column
 {
   /**
    * Returns the column as a {@link ColumnAccessor}.  Semantically, this would be equivalent to calling
-   * {@Code Column.as(ColumnAccessor.class)}.  However, being able to implement this interface is part of the explicit
+   * {@code Column.as(ColumnAccessor.class)}.  However, being able to implement this interface is part of the explicit
    * contract of implementing this interface, so instead of relying on {@link #as} which allows for returning null,
    * we define a top-level method that should never return null.
    *
@@ -58,6 +59,6 @@ public interface Column
    * @return A concrete implementation of the interface, or null if there is no meaningful optimization to be had
    * through a local implementation of the interface.
    */
-  @SuppressWarnings("unused")
+  @Nullable
   <T> T as(Class<? extends T> clazz);
 }

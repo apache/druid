@@ -20,8 +20,8 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.io.IOUtils;
@@ -43,6 +43,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Date;
 import java.util.zip.GZIPOutputStream;
 
@@ -59,25 +60,20 @@ public class S3DataSegmentPullerTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
+    String expectedKey = keyPrefix + "/renames-0.gz";
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
-    final S3ObjectSummary objectSummary = new S3ObjectSummary();
-    objectSummary.setBucketName(bucket);
-    objectSummary.setKey(keyPrefix + "/renames-0.gz");
-    objectSummary.setLastModified(new Date(0));
+    final ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setLastModified(new Date(0));
 
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setKeyCount(1);
-    result.getObjectSummaries().add(objectSummary);
-
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(result)
+    EasyMock.expect(s3Client.getObjectMetadata(bucket, expectedKey))
+            .andReturn(objectMetadata)
             .once();
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
     EasyMock.replay(s3Client);
 
-    String version = puller.getVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, objectSummary.getKey())));
+    String version = puller.getVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, expectedKey)));
 
     EasyMock.verify(s3Client);
 
@@ -236,7 +232,7 @@ public class S3DataSegmentPullerTest
 
     final File tmpFile = temporaryFolder.newFile("testObjectFile");
 
-    try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+    try (OutputStream outputStream = Files.newOutputStream(tmpFile.toPath())) {
       outputStream.write(value);
     }
 
@@ -244,19 +240,13 @@ public class S3DataSegmentPullerTest
     object0.setBucketName(bucket);
     object0.setKey(keyPrefix + "/test-object");
     object0.getObjectMetadata().setLastModified(new Date(0));
-    object0.setObjectContent(new FileInputStream(tmpFile));
+    object0.setObjectContent(Files.newInputStream(tmpFile.toPath()));
 
-    final S3ObjectSummary objectSummary = new S3ObjectSummary();
-    objectSummary.setBucketName(bucket);
-    objectSummary.setKey(keyPrefix + "/test-object");
-    objectSummary.setLastModified(new Date(0));
+    final ObjectMetadata objectMetadata = new ObjectMetadata();
+    objectMetadata.setLastModified(new Date(0));
 
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setKeyCount(1);
-    result.getObjectSummaries().add(objectSummary);
-
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
-            .andReturn(result)
+    EasyMock.expect(s3Client.getObjectMetadata(bucket, object0.getKey()))
+            .andReturn(objectMetadata)
             .once();
 
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);

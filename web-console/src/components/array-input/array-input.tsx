@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Position, TextArea } from '@blueprintjs/core';
+import type { Intent } from '@blueprintjs/core';
+import { Button, Position, TextArea } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { compact } from '../../utils';
-import { Suggestion, SuggestionMenu } from '../suggestion-menu/suggestion-menu';
+import type { Suggestion } from '../suggestion-menu/suggestion-menu';
+import { SuggestionMenu } from '../suggestion-menu/suggestion-menu';
 
 import './array-input.scss';
 

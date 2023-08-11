@@ -34,6 +34,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.FallbackVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 
 import javax.annotation.Nullable;
@@ -50,6 +51,7 @@ import java.util.List;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class),
+    @JsonSubTypes.Type(name = "fallback", value = FallbackVirtualColumn.class),
     @JsonSubTypes.Type(name = "mv-filtered", value = ListFilteredVirtualColumn.class)
 })
 public interface VirtualColumn extends Cacheable
@@ -255,10 +257,10 @@ public interface VirtualColumn extends Cacheable
 
   /**
    * Return the {@link ColumnCapabilities} which best describe the optimal selector to read from this virtual column.
-   *
+   * <p>
    * The {@link ColumnInspector} (most likely corresponding to an underlying {@link ColumnSelectorFactory} of a query)
    * allows the virtual column to consider this information if necessary to compute its output type details.
-   *
+   * <p>
    * Examples of this include the {@link ExpressionVirtualColumn}, which takes input from other columns and uses the
    * {@link ColumnInspector} to infer the output type of expressions based on the types of the inputs.
    *
@@ -266,6 +268,7 @@ public interface VirtualColumn extends Cacheable
    * @param columnName the name this virtual column was referenced with
    * @return capabilities, must not be null
    */
+  @Nullable
   default ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
     return capabilities(columnName);

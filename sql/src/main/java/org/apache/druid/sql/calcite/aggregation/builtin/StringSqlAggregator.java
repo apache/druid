@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -36,12 +37,14 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -51,7 +54,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -88,7 +90,7 @@ public class StringSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 
@@ -97,6 +99,7 @@ public class StringSqlAggregator implements SqlAggregator
     }
 
     RexNode separatorNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -115,6 +118,7 @@ public class StringSqlAggregator implements SqlAggregator
     Integer maxSizeBytes = null;
     if (arguments.size() > 2) {
       RexNode maxBytes = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -126,7 +130,7 @@ public class StringSqlAggregator implements SqlAggregator
       maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
     final DruidExpression arg = arguments.get(0);
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String initialvalue = "[]";
     final ColumnType elementType = ColumnType.STRING;
@@ -138,7 +142,11 @@ public class StringSqlAggregator implements SqlAggregator
     }
 
     final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
-    final NotDimFilter dimFilter = new NotDimFilter(new SelectorDimFilter(fieldName, null, null));
+    final NotDimFilter dimFilter = new NotDimFilter(
+        plannerContext.isUseBoundsAndSelectors()
+        ? new SelectorDimFilter(fieldName, NullHandling.defaultStringValue(), null)
+        : NullFilter.forColumn(fieldName)
+    );
     if (aggregateCall.isDistinct()) {
       return Aggregation.create(
           // string_agg ignores nulls
@@ -195,7 +203,16 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw new UnsupportedSQLQueryException("Cannot use STRING_AGG on complex inputs %s", type);
+        String columnName = "";
+        if (sqlOperatorBinding instanceof SqlCallBinding) {
+          columnName = ((SqlCallBinding) sqlOperatorBinding).getCall().operand(0).toString();
+        }
+
+        throw SimpleSqlAggregator.badTypeException(
+            columnName,
+            "STRING_AGG",
+            ((RowSignatures.ComplexSqlType) type).getColumnType()
+        );
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),
@@ -220,7 +237,7 @@ public class StringSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s'(expr, separator)", NAME),
+                      StringUtils.format("'%s(expr, separator)'", NAME),
                       OperandTypes.ANY,
                       OperandTypes.STRING
                   ),
@@ -228,7 +245,7 @@ public class StringSqlAggregator implements SqlAggregator
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s'(expr, separator, maxSizeBytes)", NAME),
+                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", NAME),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
                       OperandTypes.POSITIVE_INTEGER_LITERAL

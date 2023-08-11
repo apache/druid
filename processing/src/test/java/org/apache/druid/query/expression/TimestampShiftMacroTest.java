@@ -257,7 +257,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     @Override
     public ExprEval eval(ObjectBinding bindings)
     {
-      return ExprEval.bestEffortOf(bindings.get(name));
+      return ExprEval.ofType(bindings.getType(name), bindings.get(name));
     }
 
     @Override

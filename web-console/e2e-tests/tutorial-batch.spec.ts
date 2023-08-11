@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import { T } from 'druid-query-toolkit';
-import * as playwright from 'playwright-chromium';
+import { T } from '@druid-toolkit/query';
+import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
-import { IngestionOverview } from './component/ingestion/overview';
+import { TasksOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
 import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
@@ -143,10 +143,10 @@ function validateConnectLocalData(preview: string) {
 }
 
 async function validateTaskStatus(page: playwright.Page, datasourceName: string) {
-  const ingestionOverview = new IngestionOverview(page, UNIFIED_CONSOLE_URL);
+  const tasksOverview = new TasksOverview(page, UNIFIED_CONSOLE_URL);
 
   await retryIfJestAssertionError(async () => {
-    const tasks = await ingestionOverview.getTasks();
+    const tasks = await tasksOverview.getTasks();
     const task = tasks.find(t => t.datasource === datasourceName);
     expect(task).toBeDefined();
     expect(task!.status).toMatch('SUCCESS');

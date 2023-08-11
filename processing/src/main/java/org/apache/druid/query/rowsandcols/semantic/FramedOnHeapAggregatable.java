@@ -23,6 +23,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import javax.annotation.Nonnull;
+
 /**
  * A semantic interface used to aggregate a list of AggregatorFactories across a given set of data
  * <p>
@@ -53,5 +55,6 @@ public interface FramedOnHeapAggregatable
    * @return a RowsAndColumns that contains columns representing the results of the aggregation
    * from the AggregatorFactories
    */
+  @Nonnull
   RowsAndColumns aggregateAll(WindowFrame frame, AggregatorFactory[] aggFactories);
 }

@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class ArithmeticPostAggregator implements PostAggregator
 {
@@ -75,7 +76,11 @@ public class ArithmeticPostAggregator implements PostAggregator
   )
   {
     Preconditions.checkArgument(fnName != null, "fn cannot not be null");
-    Preconditions.checkArgument(fields != null && fields.size() > 1, "Illegal number of fields[%s], must be > 1");
+    Preconditions.checkArgument(
+        fields != null && fields.size() > 1,
+        "Illegal number of fields[%s], must be > 1",
+        fields.size()
+    );
 
     this.name = name;
     this.fnName = fnName;
@@ -204,6 +209,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       case MINUS:
       case DIV:
       case QUOTIENT:
+      case POW:
         return true;
       default:
         throw new IAE(op.fn);
@@ -245,6 +251,14 @@ public class ArithmeticPostAggregator implements PostAggregator
       public double compute(double lhs, double rhs)
       {
         return lhs / rhs;
+      }
+    },
+
+    POW("pow") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return Math.pow(lhs, rhs);
       }
     };
 

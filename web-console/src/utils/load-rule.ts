@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { sum } from 'd3-array';
+
 import { deepMove, deepSet } from './object-change';
 
 export type RuleType =
@@ -53,11 +55,14 @@ export class RuleUtil {
   ];
 
   static ruleToString(rule: Rule): string {
-    return [
-      rule.type,
-      rule.period ? `(${rule.period}${rule.includeFuture ? `+future` : ''})` : '',
-      rule.interval ? `(${rule.interval})` : '',
-    ].join('');
+    const params: string[] = [];
+
+    if (RuleUtil.hasPeriod(rule))
+      params.push(`${rule.period}${rule.includeFuture ? '+future' : ''}`);
+    if (RuleUtil.hasInterval(rule)) params.push(rule.interval || '?');
+    if (RuleUtil.canHaveTieredReplicants(rule)) params.push(`${RuleUtil.totalReplicas(rule)}x`);
+
+    return `${rule.type}(${params.join(', ')})`;
   }
 
   static changeRuleType(rule: Rule, type: RuleType): Rule {
@@ -76,7 +81,7 @@ export class RuleUtil {
       delete newRule.interval;
     }
 
-    if (RuleUtil.hasTieredReplicants(newRule)) {
+    if (RuleUtil.canHaveTieredReplicants(newRule)) {
       if (!newRule.tieredReplicants) newRule.tieredReplicants = { _default_tier: 2 };
     } else {
       delete newRule.tieredReplicants;
@@ -109,7 +114,7 @@ export class RuleUtil {
     return deepSet(rule, 'interval', interval);
   }
 
-  static hasTieredReplicants(rule: Rule): boolean {
+  static canHaveTieredReplicants(rule: Rule): boolean {
     return rule.type.startsWith('load');
   }
 
@@ -120,5 +125,20 @@ export class RuleUtil {
   static addTieredReplicant(rule: Rule, tier: string, replication: number): Rule {
     const newTieredReplicants = deepSet(rule.tieredReplicants || {}, tier, replication);
     return deepSet(rule, 'tieredReplicants', newTieredReplicants);
+  }
+
+  static totalReplicas(rule: Rule): number {
+    return sum(Object.values(rule.tieredReplicants || {}));
+  }
+
+  static isZeroReplicaRule(rule: Rule): boolean {
+    return RuleUtil.canHaveTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
+  }
+
+  static hasZeroReplicaRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {
+    return (
+      (rules || []).some(RuleUtil.isZeroReplicaRule) ||
+      (defaultRules || []).some(RuleUtil.isZeroReplicaRule)
+    );
   }
 }

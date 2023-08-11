@@ -32,6 +32,11 @@ public interface OutputChannelFactory
   OutputChannel openChannel(int partitionNumber) throws IOException;
 
   /**
+   * Create a channel pair tagged with a particular name and a flag to delete the channel data after its read.
+   */
+  PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException;
+
+  /**
    * Create a non-writable, always-empty channel pair tagged with a particular partition number.
    *
    * Calling {@link OutputChannel#getWritableChannel()} on this nil channel pair will result in an error. Calling

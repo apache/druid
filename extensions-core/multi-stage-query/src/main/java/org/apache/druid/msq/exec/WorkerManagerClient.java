@@ -32,7 +32,7 @@ import java.util.Set;
  */
 public interface WorkerManagerClient extends Closeable
 {
-  String run(String controllerId, MSQWorkerTask task);
+  String run(String taskId, MSQWorkerTask task);
 
   /**
    * @param workerId the task ID

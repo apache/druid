@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public class ColumnAccessorBasedColumn implements Column
 {
   private final ColumnAccessor base;
@@ -30,12 +33,14 @@ public class ColumnAccessorBasedColumn implements Column
     this.base = base;
   }
 
+  @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
     return base;
   }
 
+  @Nullable
   @Override
   public <T> T as(Class<? extends T> clazz)
   {

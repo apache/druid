@@ -31,11 +31,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.File;
 
 public class TaskAnnouncementTest
 {
@@ -50,15 +48,13 @@ public class TaskAnnouncementTest
   @Test
   public void testBackwardsCompatibleSerde() throws Exception
   {
+    final RealtimeIOConfig realtimeIOConfig = EasyMock.createNiceMock(RealtimeIOConfig.class);
     final Task task = new RealtimeIndexTask(
         "theid",
         new TaskResource("rofl", 2),
         new FireDepartment(
             new DataSchema("foo", null, new AggregatorFactory[0], null, null, new DefaultObjectMapper()),
-            new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null),
-                (schema, config, metrics) -> null
-            ),
+            realtimeIOConfig,
             null
         ),
         null

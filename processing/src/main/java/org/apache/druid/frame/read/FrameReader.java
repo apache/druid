@@ -25,7 +25,7 @@ import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.key.FrameComparisonWidget;
 import org.apache.druid.frame.key.FrameComparisonWidgetImpl;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.row.FrameCursorFactory;
@@ -71,6 +71,10 @@ public class FrameReader
   /**
    * Create a reader for frames with a given {@link RowSignature}. The signature must exactly match the frames to be
    * read, or else behavior is undefined.
+   * If the columnType is null, we store the data as {@link ColumnType#NESTED_DATA}. This can be done if we know that
+   * the data that we receive can be serded generically using the nested data. It is currently used in the brokers to
+   * store the data with unknown types into frames.
+   * @param signature signature used to generate the reader
    */
   public static FrameReader create(final RowSignature signature)
   {
@@ -151,21 +155,10 @@ public class FrameReader
    * Only possible for frames of type {@link org.apache.druid.frame.FrameType#ROW_BASED}. The provided
    * sortColumns must be a prefix of {@link #signature()}.
    */
-  public FrameComparisonWidget makeComparisonWidget(final Frame frame, final List<SortColumn> sortColumns)
+  public FrameComparisonWidget makeComparisonWidget(final Frame frame, final List<KeyColumn> keyColumns)
   {
-    FrameWriterUtils.verifySortColumns(sortColumns, signature);
+    FrameWriterUtils.verifySortColumns(keyColumns, signature);
 
-    // Verify that all sort columns are comparable.
-    for (final SortColumn sortColumn : sortColumns) {
-      if (!fieldReaders.get(signature.indexOf(sortColumn.columnName())).isComparable()) {
-        throw new IAE(
-            "Sort column [%s] is not comparable (type = [%s])",
-            sortColumn.columnName(),
-            signature.getColumnType(sortColumn.columnName()).orElse(null)
-        );
-      }
-    }
-
-    return FrameComparisonWidgetImpl.create(frame, this, sortColumns);
+    return FrameComparisonWidgetImpl.create(frame, signature, keyColumns, fieldReaders.subList(0, keyColumns.size()));
   }
 }

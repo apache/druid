@@ -31,13 +31,11 @@ exports[`LookupEditDialog matches snapshot 1`] = `
         value="test"
       >
         <option
-          key="__default"
           value="__default"
         >
           __default
         </option>
         <option
-          key="alt-tier"
           value="alt-tier"
         >
           alt-tier

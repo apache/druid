@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator.window;
 
 import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -32,6 +33,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RowsAndColumnsHelper
 {
@@ -70,6 +72,7 @@ public class RowsAndColumnsHelper
 
   private final Map<String, ColumnHelper> helpers = new LinkedHashMap<>();
   private Set<String> fullColumnSet;
+  private AtomicReference<Integer> expectedSize = new AtomicReference<>();
 
   public RowsAndColumnsHelper()
   {
@@ -96,15 +99,34 @@ public class RowsAndColumnsHelper
     return this;
   }
 
+  public RowsAndColumnsHelper expectColumn(String col, ColumnType type, Object... expectedVals)
+  {
+    return expectColumn(col, expectedVals, type);
+  }
+
   public RowsAndColumnsHelper expectColumn(String col, Object[] expectedVals, ColumnType type)
   {
+    IntArrayList nullPositions = new IntArrayList();
+    for (int i = 0; i < expectedVals.length; i++) {
+      if (expectedVals[i] == null) {
+        nullPositions.add(i);
+      }
+    }
+
     final ColumnHelper helper = columnHelper(col, expectedVals.length, type);
     helper.setExpectation(expectedVals);
+    if (!nullPositions.isEmpty()) {
+      helper.setNulls(nullPositions.toIntArray());
+    }
     return this;
   }
 
   public ColumnHelper columnHelper(String column, int expectedSize, ColumnType expectedType)
   {
+    if (this.expectedSize.get() == null) {
+      this.expectedSize.set(expectedSize);
+    }
+    Assert.assertEquals("Columns should be defined with same size", this.expectedSize.get().intValue(), expectedSize);
     ColumnHelper retVal = helpers.get(column);
     if (retVal == null) {
       retVal = new ColumnHelper(expectedSize, expectedType);
@@ -146,7 +168,9 @@ public class RowsAndColumnsHelper
     }
 
     for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {
-      entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), rac.findColumn(entry.getKey()));
+      final Column racColumn = rac.findColumn(entry.getKey());
+      Assert.assertNotNull(racColumn);
+      entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), racColumn);
     }
   }
 

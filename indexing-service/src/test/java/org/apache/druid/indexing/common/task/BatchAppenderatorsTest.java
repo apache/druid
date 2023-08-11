@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -173,7 +175,7 @@ public class BatchAppenderatorsTest
           maxRowsInMemory,
           maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
           skipBytesInMemoryOverheadCheck,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           0,
           false,
           0L,
@@ -183,10 +185,7 @@ public class BatchAppenderatorsTest
       );
       metrics = new FireDepartmentMetrics();
 
-      IndexIO indexIO = new IndexIO(
-          objectMapper,
-          () -> 0
-      );
+      IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
       IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
@@ -566,28 +565,14 @@ public class BatchAppenderatorsTest
         TaskConfig.BatchProcessingMode mode
     )
     {
+      TaskConfig config = new TaskConfigBuilder()
+          .setBatchProcessingMode(mode.name())
+          .build();
       return new TaskToolbox.Builder()
-          .config(
-              new TaskConfig(
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  false,
-                  null,
-                  null,
-                  null,
-                  false,
-                  false,
-                  mode.name(),
-                  null,
-                  false
-              )
-          )
+          .config(config)
           .joinableFactory(NoopJoinableFactory.INSTANCE)
           .jsonMapper(mapper)
-          .indexIO(new IndexIO(new ObjectMapper(), () -> 0))
+          .indexIO(new IndexIO(new ObjectMapper(), ColumnConfig.DEFAULT))
           .indexMergerV9(indexMergerV9)
           .taskReportFileWriter(new NoopTestTaskReportFileWriter())
           .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)

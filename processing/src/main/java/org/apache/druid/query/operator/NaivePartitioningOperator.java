@@ -19,13 +19,17 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.DefaultSortedGroupPartitioner;
-import org.apache.druid.query.rowsandcols.semantic.SortedGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This naive partitioning operator assumes that it's child operator always gives it RowsAndColumns objects that are
@@ -41,8 +45,6 @@ public class NaivePartitioningOperator implements Operator
   private final List<String> partitionColumns;
   private final Operator child;
 
-  private Iterator<RowsAndColumns> partitionsIter;
-
   public NaivePartitioningOperator(
       List<String> partitionColumns,
       Operator child
@@ -53,48 +55,122 @@ public class NaivePartitioningOperator implements Operator
   }
 
   @Override
-  public void open()
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    child.open();
-  }
+    if (continuation != null) {
+      Continuation cont = (Continuation) continuation;
 
-  @Override
-  public RowsAndColumns next()
-  {
-    if (partitionsIter != null && partitionsIter.hasNext()) {
-      return partitionsIter.next();
-    }
+      if (cont.iter != null) {
+        while (cont.iter.hasNext()) {
+          final Signal signal = receiver.push(cont.iter.next());
+          switch (signal) {
+            case GO:
+              break;
+            case PAUSE:
+              if (cont.iter.hasNext()) {
+                return cont;
+              }
 
-    if (child.hasNext()) {
-      final RowsAndColumns rac = child.next();
+              if (cont.subContinuation == null) {
+                // We were finished anyway
+                receiver.completed();
+                return null;
+              }
 
-      SortedGroupPartitioner groupPartitioner = rac.as(SortedGroupPartitioner.class);
-      if (groupPartitioner == null) {
-        groupPartitioner = new DefaultSortedGroupPartitioner(rac);
+              return new Continuation(null, cont.subContinuation);
+            case STOP:
+              receiver.completed();
+              try {
+                cont.close();
+              }
+              catch (IOException e) {
+                throw new RE(e, "Unable to close continutation");
+              }
+              return null;
+            default:
+              throw new RE("Unknown signal[%s]", signal);
+          }
+        }
+
+        if (cont.subContinuation == null) {
+          receiver.completed();
+          return null;
+        }
       }
 
-      partitionsIter = groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
-      return partitionsIter.next();
+      continuation = cont.subContinuation;
     }
 
-    throw new ISE("Asked for next when already complete");
+    AtomicReference<Iterator<RowsAndColumns>> iterHolder = new AtomicReference<>();
+
+    final Closeable retVal = child.goOrContinue(
+        continuation,
+        new Receiver()
+        {
+          @Override
+          public Signal push(RowsAndColumns rac)
+          {
+            if (rac == null) {
+              throw DruidException.defensive("Should never get a null rac here.");
+            }
+            ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
+            if (groupPartitioner == null) {
+              groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
+            }
+
+            Iterator<RowsAndColumns> partitionsIter =
+                groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
+
+            Signal keepItGoing = Signal.GO;
+            while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
+              keepItGoing = receiver.push(partitionsIter.next());
+            }
+
+            if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
+              iterHolder.set(partitionsIter);
+              return Signal.PAUSE;
+            }
+
+            return keepItGoing;
+          }
+
+          @Override
+          public void completed()
+          {
+            if (iterHolder.get() == null) {
+              receiver.completed();
+            }
+          }
+        }
+    );
+
+    if (iterHolder.get() != null || retVal != null) {
+      return new Continuation(
+          iterHolder.get(),
+          retVal
+      );
+    } else {
+      return null;
+    }
   }
 
-  @Override
-  public boolean hasNext()
+  private static class Continuation implements Closeable
   {
-    if (partitionsIter != null && partitionsIter.hasNext()) {
-      return true;
+    Iterator<RowsAndColumns> iter;
+    Closeable subContinuation;
+
+    public Continuation(Iterator<RowsAndColumns> iter, Closeable subContinuation)
+    {
+      this.iter = iter;
+      this.subContinuation = subContinuation;
     }
 
-    return child.hasNext();
-  }
-
-  @Override
-  public void close(boolean cascade)
-  {
-    if (cascade) {
-      child.close(cascade);
+    @Override
+    public void close() throws IOException
+    {
+      if (subContinuation != null) {
+        subContinuation.close();
+      }
     }
   }
 }

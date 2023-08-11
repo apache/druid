@@ -25,8 +25,8 @@ describe('RuleEditor', () => {
   it('matches snapshot no tier in rule', () => {
     const ruleEditor = (
       <RuleEditor
-        rule={{ type: 'loadForever' }}
-        tiers={['test', 'test', 'test']}
+        rule={{ type: 'loadForever', tieredReplicants: { test1: 1 } }}
+        tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={undefined}
@@ -42,7 +42,7 @@ describe('RuleEditor', () => {
       <RuleEditor
         rule={{
           type: 'loadByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
           tieredReplicants: { nonexist: 2 },
         }}
         tiers={['test1', 'test2', 'test3']}
@@ -61,7 +61,7 @@ describe('RuleEditor', () => {
       <RuleEditor
         rule={{
           type: 'loadByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
           tieredReplicants: { test1: 2 },
         }}
         tiers={['test1', 'test2', 'test3']}
@@ -80,7 +80,7 @@ describe('RuleEditor', () => {
       <RuleEditor
         rule={{
           type: 'loadByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
           tieredReplicants: {
             test1: 2,
             nonexist: 1,
@@ -102,7 +102,7 @@ describe('RuleEditor', () => {
       <RuleEditor
         rule={{
           type: 'broadcastByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
         }}
         tiers={[]}
         onChange={() => {}}

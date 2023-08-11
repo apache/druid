@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -80,14 +81,44 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testScanSignatureWithDimAsValuePrimitiveByteArr()
+  {
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT CAST(dim1 AS BIGINT) as dimX FROM foo2 limit 2",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE2)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .virtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "CAST(\"dim1\", 'LONG')",
+                    ColumnType.LONG
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(context)
+                .limit(2)
+                .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{0L}, new Object[]{0L}
+        ) : ImmutableList.of(
+            new Object[]{null}, new Object[]{null}
+        )
+    );
+  }
+
   @Override
   public SqlEngine createEngine(
       QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper
+      ObjectMapper queryJsonMapper,
+      Injector injector
   )
   {
     // Create an engine that says yes to EngineFeature.SCAN_NEEDS_SIGNATURE.
-    return new ScanSignatureTestSqlEngine(super.createEngine(qlf, queryJsonMapper));
+    return new ScanSignatureTestSqlEngine(super.createEngine(qlf, queryJsonMapper, injector));
   }
 
   private static class ScanSignatureTestSqlEngine implements SqlEngine
@@ -106,9 +137,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public boolean feature(EngineFeature feature, PlannerContext plannerContext)
+    public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
     {
-      return feature == EngineFeature.SCAN_NEEDS_SIGNATURE || parent.feature(feature, plannerContext);
+      return feature == EngineFeature.SCAN_NEEDS_SIGNATURE || parent.featureAvailable(feature, plannerContext);
     }
 
     @Override

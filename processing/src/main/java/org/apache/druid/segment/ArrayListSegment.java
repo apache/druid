@@ -106,8 +106,8 @@ public class ArrayListSegment<RowType> implements Segment
   @SuppressWarnings("unchecked")
   public <T> T as(Class<T> clazz)
   {
-    if (RowsAndColumns.class.equals(clazz)) {
-      return (T) asRowsAndColumns();
+    if (CloseableShapeshifter.class.equals(clazz)) {
+      return (T) new MyCloseableShapeshifter();
     }
     return null;
   }
@@ -120,7 +120,27 @@ public class ArrayListSegment<RowType> implements Segment
 
   private RowsAndColumns asRowsAndColumns()
   {
-    return new ArrayListRowsAndColumns(rows, rowAdapter, rowSignature);
+    return new ArrayListRowsAndColumns<>(rows, rowAdapter, rowSignature);
   }
 
+  private class MyCloseableShapeshifter implements CloseableShapeshifter
+  {
+
+    @Override
+    public void close()
+    {
+
+    }
+
+    @Nullable
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T as(Class<T> clazz)
+    {
+      if (RowsAndColumns.class.equals(clazz)) {
+        return (T) asRowsAndColumns();
+      }
+      return null;
+    }
+  }
 }

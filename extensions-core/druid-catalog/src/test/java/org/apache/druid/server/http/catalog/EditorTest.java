@@ -34,8 +34,7 @@ import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
-import org.apache.druid.catalog.model.table.DatasourceDefn.DatasourceColumnDefn;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
@@ -168,21 +167,21 @@ public class EditorTest
     cmd = new HideColumns(Arrays.asList("a", "b"));
     assertEquals(
         Arrays.asList("a", "b"),
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Hide starting from an empty list.
     Map<String, Object> props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.emptyList());
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.emptyList());
     catalog.tables().replace(table.withProperties(props));
     assertEquals(
         Arrays.asList("a", "b"),
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Hide, but all are duplicates
     props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b", "c"));
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b", "c"));
     catalog.tables().replace(table.withProperties(props));
     cmd = new HideColumns(Arrays.asList("b", "c"));
     assertEquals(0, new TableEditor(catalog, table.id(), cmd).go());
@@ -191,17 +190,17 @@ public class EditorTest
     cmd = new HideColumns(Arrays.asList("b", "d"));
     assertEquals(
         Arrays.asList("a", "b", "c", "d"),
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Hide with duplicates
     props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b"));
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b"));
     catalog.tables().replace(table.withProperties(props));
     cmd = new HideColumns(Arrays.asList("b", "d", "b", "d"));
     assertEquals(
         Arrays.asList("a", "b", "d"),
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
   }
 
@@ -227,24 +226,24 @@ public class EditorTest
 
     // Unhide starting from an empty list.
     Map<String, Object> props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.emptyList());
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.emptyList());
     catalog.tables().replace(table.withProperties(props));
     assertNull(
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Unhide starting with an empty list with (non-existing) columns to unhide
     props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.emptyList());
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Collections.emptyList());
     catalog.tables().replace(table.withProperties(props));
     cmd = new UnhideColumns(Collections.singletonList("a"));
     assertNull(
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Unhide columns which are not actually hidden.
     props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b", "c"));
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b", "c"));
     catalog.tables().replace(table.withProperties(props));
     cmd = new UnhideColumns(Arrays.asList("d", "e"));
     assertEquals(0, new TableEditor(catalog, table.id(), cmd).go());
@@ -253,16 +252,16 @@ public class EditorTest
     cmd = new UnhideColumns(Arrays.asList("a", "c", "a", "d"));
     assertEquals(
         Collections.singletonList("b"),
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
 
     // Unhide all hidden columns
     props = new HashMap<>(table.spec().properties());
-    props.put(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b", "c"));
+    props.put(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, Arrays.asList("a", "b", "c"));
     catalog.tables().replace(table.withProperties(props));
     cmd = new UnhideColumns(Arrays.asList("a", "c", "b", "d"));
     assertNull(
-        doEdit(tableName, cmd).spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        doEdit(tableName, cmd).spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
   }
 
@@ -329,7 +328,7 @@ public class EditorTest
 
     // Remove a required property
     Map<String, Object> updates1 = new HashMap<>();
-    updates1.put(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
+    updates1.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
     assertThrows(
         CatalogException.class,
         () -> new TableEditor(
@@ -342,11 +341,11 @@ public class EditorTest
 
     // Add and update properties
     Map<String, Object> updates = new HashMap<>();
-    updates.put(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H");
+    updates.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H");
     updates.put("foo", "bar");
     cmd = new UpdateProperties(updates);
     Map<String, Object> expected = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
         "foo", "bar"
     );
     assertEquals(
@@ -359,7 +358,7 @@ public class EditorTest
     updates.put("foo", "mumble");
     cmd = new UpdateProperties(updates);
     expected = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
         "foo", "mumble"
     );
     assertEquals(
@@ -372,7 +371,7 @@ public class EditorTest
     updates.put("foo", null);
     cmd = new UpdateProperties(updates);
     expected = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H"
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H"
     );
     assertEquals(
         expected,
@@ -402,7 +401,7 @@ public class EditorTest
     // Add a column
     cmd = new UpdateColumns(
         Collections.singletonList(
-            new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "d", Columns.VARCHAR, null)
+            new ColumnSpec("d", Columns.VARCHAR, null)
          )
     );
     TableMetadata revised = doEdit(tableName, cmd);
@@ -411,7 +410,6 @@ public class EditorTest
         CatalogUtils.columnNames(revised.spec().columns())
     );
     ColumnSpec colD = revised.spec().columns().get(3);
-    assertEquals(DatasourceColumnDefn.COLUMN_TYPE, colD.type());
     assertEquals("d", colD.name());
     assertEquals(Columns.VARCHAR, colD.sqlType());
 
@@ -419,7 +417,6 @@ public class EditorTest
     cmd = new UpdateColumns(
         Collections.singletonList(
             new ColumnSpec(
-                null,
                 "a",
                 Columns.BIGINT,
                 ImmutableMap.of("foo", "bar")
@@ -432,7 +429,6 @@ public class EditorTest
         CatalogUtils.columnNames(revised.spec().columns())
     );
     ColumnSpec colA = revised.spec().columns().get(0);
-    assertEquals(DatasourceColumnDefn.COLUMN_TYPE, colA.type());
     assertEquals("a", colA.name());
     assertEquals(Columns.BIGINT, colA.sqlType());
     assertEquals(ImmutableMap.of("foo", "bar"), colA.properties());
@@ -440,24 +436,16 @@ public class EditorTest
     // Duplicates
     UpdateColumns cmd2 = new UpdateColumns(
         Arrays.asList(
-            new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "e", Columns.VARCHAR, null),
-            new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, "e", null, null)
+            new ColumnSpec("e", Columns.VARCHAR, null),
+            new ColumnSpec("e", null, null)
          )
     );
     assertThrows(CatalogException.class, () -> doEdit(tableName, cmd2));
 
-    // Invalid __time column type
-    UpdateColumns cmd3 = new UpdateColumns(
-        Collections.singletonList(
-            new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, Columns.TIME_COLUMN, Columns.VARCHAR, null)
-         )
-    );
-    assertThrows(CatalogException.class, () -> doEdit(tableName, cmd3));
-
     // Valid time column type
     cmd = new UpdateColumns(
         Collections.singletonList(
-            new ColumnSpec(DatasourceColumnDefn.COLUMN_TYPE, Columns.TIME_COLUMN, Columns.TIMESTAMP, null)
+            new ColumnSpec(Columns.TIME_COLUMN, Columns.TIMESTAMP, null)
          )
     );
     revised = doEdit(tableName, cmd);

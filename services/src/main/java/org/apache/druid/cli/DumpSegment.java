@@ -85,15 +85,15 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
-import org.apache.druid.segment.nested.NestedFieldLiteralDictionaryEncodedColumn;
+import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.timeline.SegmentId;
@@ -241,7 +241,8 @@ public class DumpSegment extends GuiceRunnable
         null,
         EnumSet.allOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null
     );
     withOutputStream(
         new Function<OutputStream, Object>()
@@ -364,7 +365,7 @@ public class DumpSegment extends GuiceRunnable
     if (bitmapFactory instanceof ConciseBitmapFactory) {
       bitmapSerdeFactory = new ConciseBitmapSerdeFactory();
     } else if (bitmapFactory instanceof RoaringBitmapFactory) {
-      bitmapSerdeFactory = new RoaringBitmapSerdeFactory(null);
+      bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
     } else {
       throw new ISE(
           "Don't know which BitmapSerdeFactory to use for BitmapFactory[%s]!",
@@ -475,9 +476,9 @@ public class DumpSegment extends GuiceRunnable
                 }
                 jg.writeEndArray();
 
-                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getStringDictionary();
-                FixedIndexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
-                FixedIndexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
+                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getUtf8BytesDictionary();
+                Indexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
+                Indexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
                 jg.writeFieldName("dictionaries");
                 jg.writeStartObject();
                 {
@@ -565,7 +566,7 @@ public class DumpSegment extends GuiceRunnable
     if (bitmapFactory instanceof ConciseBitmapFactory) {
       bitmapSerdeFactory = new ConciseBitmapSerdeFactory();
     } else if (bitmapFactory instanceof RoaringBitmapFactory) {
-      bitmapSerdeFactory = new RoaringBitmapSerdeFactory(null);
+      bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
     } else {
       throw new ISE(
           "Don't know which BitmapSerdeFactory to use for BitmapFactory[%s]!",
@@ -590,8 +591,8 @@ public class DumpSegment extends GuiceRunnable
                 final ColumnIndexSupplier indexSupplier = nestedDataColumn.getColumnIndexSupplier(pathParts);
 
                 final ColumnHolder nestedPathColumnHolder = nestedDataColumn.getColumnHolder(pathParts);
-                final NestedFieldLiteralDictionaryEncodedColumn<?> nestedPathColumn =
-                    (NestedFieldLiteralDictionaryEncodedColumn<?>) nestedPathColumnHolder.getColumn();
+                final NestedFieldDictionaryEncodedColumn<?> nestedPathColumn =
+                    (NestedFieldDictionaryEncodedColumn<?>) nestedPathColumnHolder.getColumn();
                 final FixedIndexed<Integer> nestedPathDictionary = nestedPathColumn.getDictionary();
 
                 SimpleAscendingOffset offset = new SimpleAscendingOffset(index.getNumRows());
@@ -761,11 +762,6 @@ public class DumpSegment extends GuiceRunnable
                     return 1;
                   }
 
-                  @Override
-                  public int columnCacheSizeBytes()
-                  {
-                    return 25 * 1024 * 1024;
-                  }
                 }
             );
             binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);

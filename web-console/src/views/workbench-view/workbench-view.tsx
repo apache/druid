@@ -19,28 +19,23 @@
 import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
-import {
-  DruidEngine,
-  Execution,
-  guessDataSourceNameFromInputSource,
-  QueryWithContext,
-  TabEntry,
-  WorkbenchQuery,
-} from '../../druid-models';
+import type { DruidEngine, Execution, QueryWithContext, TabEntry } from '../../druid-models';
+import { guessDataSourceNameFromInputSource, WorkbenchQuery } from '../../druid-models';
+import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons';
 import { AceEditorStateCache } from '../../singletons/ace-editor-state-cache';
 import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
+import type { ColumnMetadata } from '../../utils';
 import {
-  ColumnMetadata,
   deepSet,
   generate8HexId,
   localStorageGet,
@@ -57,7 +52,7 @@ import { ColumnTree } from './column-tree/column-tree';
 import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
 import { getDemoQueries } from './demo-queries';
 import { ExecutionDetailsDialog } from './execution-details-dialog/execution-details-dialog';
-import { ExecutionDetailsTab } from './execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from './execution-details-pane/execution-details-pane';
 import { ExecutionSubmitDialog } from './execution-submit-dialog/execution-submit-dialog';
 import { ExplainDialog } from './explain-dialog/explain-dialog';
 import { MetadataChangeDetector } from './metadata-change-detector';
@@ -80,6 +75,7 @@ function externalDataTabId(tabId: string | undefined): boolean {
 }
 
 export interface WorkbenchViewProps {
+  capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
   initQueryWithContext: QueryWithContext | undefined;
@@ -87,7 +83,7 @@ export interface WorkbenchViewProps {
   mandatoryQueryContext?: Record<string, any>;
   queryEngines: DruidEngine[];
   allowExplain: boolean;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export interface WorkbenchViewState {
@@ -257,7 +253,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderExecutionDetailsDialog() {
-    const { goToIngestion } = this.props;
+    const { goToTask } = this.props;
     const { details } = this.state;
     if (!details) return;
 
@@ -266,7 +262,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         id={details.id}
         initTab={details.initTab}
         initExecution={details.initExecution}
-        goToIngestion={goToIngestion}
+        goToTask={goToTask}
         onClose={() => this.setState({ details: undefined })}
       />
     );
@@ -425,6 +421,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       <StringInputDialog
         title="Enter task ID"
         placeholder="taskId"
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onSubmit={async taskId => {
           let execution: Execution;
           try {
@@ -628,7 +625,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderCenterPanel() {
-    const { mandatoryQueryContext, queryEngines, allowExplain, goToIngestion } = this.props;
+    const { capabilities, mandatoryQueryContext, queryEngines, allowExplain, goToTask } =
+      this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
 
@@ -647,7 +645,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onQueryTab={this.handleNewTab}
           onDetails={this.handleDetails}
           queryEngines={queryEngines}
-          goToIngestion={goToIngestion}
+          clusterCapacity={capabilities.getClusterCapacity()}
+          goToTask={goToTask}
           runMoreMenu={
             <Menu>
               {allowExplain && (
@@ -757,7 +756,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     });
   };
 
-  render(): JSX.Element {
+  render() {
     const { queryEngines } = this.props;
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();

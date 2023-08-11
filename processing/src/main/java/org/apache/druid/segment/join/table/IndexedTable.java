@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
-import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -134,7 +134,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
      * If "key" is some type other than the natural type {@link #keyType()}, it will be converted before checking
      * the index.
      */
-    IntList find(Object key);
+    IntSortedSet find(Object key);
 
     /**
      * Returns the row number corresponding to "key" in this index, or {@link #NOT_FOUND} if the key does not exist

@@ -143,10 +143,17 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   }
 
   @Override
-  @Config(value = "${base_path}.columnCache.sizeBytes")
-  public int columnCacheSizeBytes()
+  @Config(value = "${base_path}.indexes.skipValueRangeIndexScale")
+  public double skipValueRangeIndexScale()
   {
-    return 0;
+    return ColumnConfig.super.skipValueRangeIndexScale();
+  }
+
+  @Override
+  @Config(value = "${base_path}.indexes.skipValuePredicateIndexScale")
+  public double skipValuePredicateIndexScale()
+  {
+    return ColumnConfig.super.skipValuePredicateIndexScale();
   }
 
   @Config(value = "${base_path}.fifo")

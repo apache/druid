@@ -25,19 +25,21 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+
 public class ClusterByTest
 {
   @Test
   public void test_keyComparator()
   {
-    final ImmutableList<SortColumn> sortColumns = ImmutableList.of(
-        new SortColumn("x", false),
-        new SortColumn("y", false)
+    final ImmutableList<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("x", KeyOrder.ASCENDING),
+        new KeyColumn("y", KeyOrder.ASCENDING)
     );
 
     Assert.assertEquals(
-        RowKeyComparator.create(sortColumns),
-        new ClusterBy(sortColumns, 1).keyComparator()
+        RowKeyComparator.create(keyColumns),
+        new ClusterBy(keyColumns, 1).keyComparator()
     );
   }
 
@@ -54,8 +56,8 @@ public class ClusterByTest
         Comparators.alwaysEqual(),
         new ClusterBy(
             ImmutableList.of(
-                new SortColumn("x", false),
-                new SortColumn("y", false)
+                new KeyColumn("x", KeyOrder.ASCENDING),
+                new KeyColumn("y", KeyOrder.ASCENDING)
             ),
             0
         ).bucketComparator()
@@ -66,11 +68,11 @@ public class ClusterByTest
   public void test_bucketComparator_withBucketKey()
   {
     Assert.assertEquals(
-        RowKeyComparator.create(ImmutableList.of(new SortColumn("x", false))),
+        RowKeyComparator.create(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING))),
         new ClusterBy(
             ImmutableList.of(
-                new SortColumn("x", false),
-                new SortColumn("y", false)
+                new KeyColumn("x", KeyOrder.ASCENDING),
+                new KeyColumn("y", KeyOrder.ASCENDING)
             ),
             1
         ).bucketComparator()
@@ -78,8 +80,37 @@ public class ClusterByTest
   }
 
   @Test
+  public void test_sortable()
+  {
+    Assert.assertFalse(
+        new ClusterBy(
+            ImmutableList.of(
+                new KeyColumn("x", KeyOrder.NONE),
+                new KeyColumn("y", KeyOrder.NONE)
+            ),
+            0
+        ).sortable()
+    );
+
+    Assert.assertTrue(
+        new ClusterBy(
+            ImmutableList.of(
+                new KeyColumn("x", KeyOrder.ASCENDING),
+                new KeyColumn("y", KeyOrder.ASCENDING)
+            ),
+            0
+        ).sortable()
+    );
+
+    Assert.assertTrue(new ClusterBy(Collections.emptyList(), 0).sortable());
+  }
+
+  @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(ClusterBy.class).usingGetClass().verify();
+    EqualsVerifier.forClass(ClusterBy.class)
+                  .usingGetClass()
+                  .withIgnoredFields("sortable")
+                  .verify();
   }
 }

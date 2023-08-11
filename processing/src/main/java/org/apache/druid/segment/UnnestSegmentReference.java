@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
@@ -28,7 +29,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.LinkedHashSet;
 import java.util.Optional;
 
 /**
@@ -40,16 +40,22 @@ public class UnnestSegmentReference implements SegmentReference
   private static final Logger log = new Logger(UnnestSegmentReference.class);
 
   private final SegmentReference baseSegment;
-  private final String dimension;
-  private final String renamedOutputDimension;
-  private final LinkedHashSet<String> allowSet;
+  private final VirtualColumn unnestColumn;
 
-  public UnnestSegmentReference(SegmentReference baseSegment, String dimension, String outputName, LinkedHashSet<String> allowList)
+  @Nullable
+  private final DimFilter unnestFilter;
+
+
+
+  public UnnestSegmentReference(
+      SegmentReference baseSegment,
+      VirtualColumn unnestColumn,
+      DimFilter unnestFilter
+  )
   {
     this.baseSegment = baseSegment;
-    this.dimension = dimension;
-    this.renamedOutputDimension = outputName;
-    this.allowSet = allowList;
+    this.unnestColumn = unnestColumn;
+    this.unnestFilter = unnestFilter;
   }
 
   @Override
@@ -101,9 +107,8 @@ public class UnnestSegmentReference implements SegmentReference
   {
     return new UnnestStorageAdapter(
         baseSegment.asStorageAdapter(),
-        dimension,
-        renamedOutputDimension,
-        allowSet
+        unnestColumn,
+        unnestFilter
     );
   }
 

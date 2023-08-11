@@ -56,6 +56,13 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
 
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
+  private final boolean discoverNestedFields;
+
+  public ProtobufFlattenerMaker(boolean discoverNestedFields)
+  {
+    this.discoverNestedFields = discoverNestedFields;
+  }
+
   @Override
   public JsonProvider getJsonProvider()
   {
@@ -65,7 +72,11 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
   @Override
   public Iterable<String> discoverRootFields(Map<String, Object> obj)
   {
-    // in the future we can just return obj.keySet(), but for now this doesnt expect nested fields...
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
+    if (discoverNestedFields) {
+      return obj.keySet();
+    }
     Set<String> rootFields = Sets.newHashSetWithExpectedSize(obj.keySet().size());
     for (Map.Entry<String, Object> entry : obj.entrySet()) {
       if (entry.getValue() instanceof List || entry.getValue() instanceof Map) {

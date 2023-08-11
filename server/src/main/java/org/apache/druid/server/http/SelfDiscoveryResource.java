@@ -25,6 +25,7 @@ import com.google.inject.Singleton;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
@@ -36,17 +37,18 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 /**
- * This class is annotated {@link Singleton} rather than {@link org.apache.druid.guice.LazySingleton} because it adds
+ * This class is annotated {@link Singleton} rather than {@link LazySingleton} because it adds
  * a lifecycle handler in the constructor. That should happen before the lifecycle is started, i. e. eagerly during the
  * DI configuration phase.
  */
-@Singleton
+@LazySingleton // To catch implicit instantiations in unit tests
 @Path("/status/selfDiscovered")
 public class SelfDiscoveryResource
 {

@@ -19,13 +19,19 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.OnHeapAggregatable;
+import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * An interface representing a chunk of RowsAndColumns.  Essentially a RowsAndColumns is just a batch of rows
@@ -39,8 +45,8 @@ import java.util.Collection;
  * with a Rows and columns, we rely on semantic interfaces using the {@link RowsAndColumns#as} method instead.
  * <p>
  * That is, the expectation is that anything that works with a RowsAndColumns will tend to first ask the RowsAndColumns
- * object to become some other interface, for example, an {@link OnHeapAggregatable}.  If a RowsAndColumns knows how
- * to do a good job as the requested interface, it can return its own concrete implementation of the interface and
+ * object to become some other interface, for example, a {@link FramedOnHeapAggregatable}.  If a RowsAndColumns knows
+ * how to do a good job as the requested interface, it can return its own concrete implementation of the interface and
  * run the necessary logic in its own optimized fashion.  If the RowsAndColumns instance does not know how to implement
  * the semantic interface, it is expected that a default implementation of the interface can be instantiated on top of
  * the default column access mechanisms that the RowsAndColumns provides.  Such default implementations should be
@@ -69,6 +75,31 @@ public interface RowsAndColumns
     return retVal;
   }
 
+  static <T> Map<Class<?>, Function<T, ?>> makeAsMap(Class<T> clazz)
+  {
+    Map<Class<?>, Function<T, ?>> retVal = new HashMap<>();
+
+    for (Method method : clazz.getMethods()) {
+      if (method.isAnnotationPresent(SemanticCreator.class)) {
+        if (method.getParameterCount() != 0) {
+          throw DruidException.defensive("Method [%s] annotated with SemanticCreator was not 0-argument.", method);
+        }
+
+        retVal.put(method.getReturnType(), arg -> {
+          try {
+            return method.invoke(arg);
+          }
+          catch (InvocationTargetException | IllegalAccessException e) {
+            throw DruidException.defensive().build(e, "Problem invoking method [%s]", method);
+          }
+        });
+      }
+    }
+
+    return retVal;
+  }
+
+
   /**
    * The set of column names available from the RowsAndColumns
    *
@@ -95,6 +126,7 @@ public interface RowsAndColumns
    * @param name the name of the column to find
    * @return the Column, if found.  null if not found.
    */
+  @Nullable
   Column findColumn(String name);
 
   /**

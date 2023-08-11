@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
@@ -132,9 +133,15 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
-   * Caller who want to coerce all ARRAY types to STRING can set `druid.expressions.allowArrayToStringCast`
-   * runtime property in {@link org.apache.druid.math.expr.ExpressionProcessingConfig}
+   * Convert {@link RelDataType} to the most appropriate {@link ColumnType}, or null if there is no {@link ColumnType}
+   * that is appropriate for this {@link RelDataType}.
+   *
+   * Equivalent to {@link #getValueTypeForRelDataTypeFull(RelDataType)}, except this method returns
+   * {@link ColumnType#STRING} when {@link ColumnType#isArray()} if
+   * {@link ExpressionProcessingConfig#processArraysAsMultiValueStrings()} is set via the server property
+   * {@code druid.expressions.allowArrayToStringCast}.
+   *
+   * @return type, or null if there is no matching type
    */
   @Nullable
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
@@ -148,7 +155,13 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   * Convert {@link RelDataType} to the most appropriate {@link ColumnType}, or null if there is no {@link ColumnType}
+   * that is appropriate for this {@link RelDataType}.
+   *
+   * Equivalent to {@link #getColumnTypeForRelDataType(RelDataType)}, but ignores
+   * {@link ExpressionProcessingConfig#processArraysAsMultiValueStrings()} (and acts as if it is false).
+   *
+   * @return type, or null if there is no matching type
    */
   @Nullable
   public static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
@@ -160,7 +173,7 @@ public class Calcites
       return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
       return ColumnType.LONG;
-    } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
+    } else if (isStringType(sqlTypeName)) {
       return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       if (type instanceof RowSignatures.ComplexSqlType) {
@@ -176,6 +189,12 @@ public class Calcites
     } else {
       return null;
     }
+  }
+
+  public static boolean isStringType(SqlTypeName sqlTypeName)
+  {
+    return SqlTypeName.CHAR_TYPES.contains(sqlTypeName) ||
+           SqlTypeName.INTERVAL_TYPES.contains(sqlTypeName);
   }
 
   public static boolean isDoubleType(SqlTypeName sqlTypeName)
@@ -257,9 +276,12 @@ public class Calcites
       final boolean nullable
   )
   {
-    final RelDataType dataType = typeFactory.createArrayType(
-        createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
-        -1
+    final RelDataType dataType = typeFactory.createTypeWithNullability(
+        typeFactory.createArrayType(
+            createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
+            -1
+        ),
+        true
     );
 
     return dataType;

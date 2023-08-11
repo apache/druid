@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
@@ -49,12 +50,14 @@ import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -164,6 +167,96 @@ public class ExpressionsTest extends ExpressionTestBase
             )
         ),
         3L
+    );
+  }
+
+  @Test
+  public void testSubstring()
+  {
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1),
+            testHelper.makeLiteral(2)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(0, 2)),
+            "substring(\"s\", 0, 2)"
+        ),
+        "fo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2),
+            testHelper.makeLiteral(1)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(1, 1)),
+            "substring(\"s\", 1, 1)"
+        ),
+        "o"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(0, null)),
+            "substring(\"s\", 0, -1)"
+        ),
+        "foo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(1, null)),
+            "substring(\"s\", 1, -1)"
+        ),
+        "oo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1),
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        makeExpression("substring(\"s\", 0, \"p\")"),
+        "foo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        makeExpression("substring(\"spacey\", (\"p\" - 1), -1)"),
+        "hey there  "
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeInputRef("p"), // p is 3
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        makeExpression("substring(\"spacey\", (\"p\" - 1), \"p\")"),
+        "hey"
     );
   }
 
@@ -295,6 +388,58 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         makeExpression("regexp_extract(null,'null')"),
         null
+    );
+  }
+
+  @Test
+  public void testRegexpReplace()
+  {
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("x(.)"),
+            testHelper.makeLiteral("z")
+        ),
+        makeExpression("regexp_replace(\"s\",'x(.)','z')"),
+        "foo"
+    );
+
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("(o)"),
+            testHelper.makeLiteral("z")
+        ),
+        makeExpression("regexp_replace(\"s\",'(o)','z')"),
+        "fzz"
+    );
+
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("Z"),
+                testHelper.makeInputRef("s")
+            ),
+            testHelper.makeLiteral("Zf(.)"),
+            testHelper.makeLiteral("z")
+        ),
+        makeExpression("regexp_replace(concat('Z',\"s\"),'Zf(.)','z')"),
+        "zo"
+    );
+
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f(.)"),
+            testHelper.makeLiteral("$1")
+        ),
+        makeExpression("regexp_replace(\"s\",'f(.)','$1')"),
+        "oo"
     );
   }
 
@@ -707,7 +852,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
             )
         ),
-        NullHandling.sqlCompatible() ? null : 0L
+        null
     );
   }
 
@@ -1087,7 +1232,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.LONG, "y")
             )
         ),
-        3.0
+        3L
     );
 
     testHelper.testExpression(
@@ -1751,8 +1896,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(" + args.get(0).getExpression() + " - " + args.get(1).getExpression() + ")",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                // RexNode type of "interval day to minute" is not converted to druid long... yet
-                DruidExpression.ofLiteral(null, "90060000")
+                DruidExpression.ofLiteral(ColumnType.STRING, "90060000")
             )
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
@@ -1779,8 +1923,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("timestamp_shift"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
-                // RexNode type "interval year to month" is not reported as ColumnType.STRING
-                DruidExpression.ofLiteral(null, DruidExpression.stringLiteral("P13M")),
+                DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral("P13M")),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1)),
                 DruidExpression.ofStringLiteral("UTC")
             )

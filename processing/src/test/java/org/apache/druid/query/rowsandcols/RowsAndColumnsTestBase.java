@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -35,14 +37,14 @@ import java.util.function.Function;
  * <p>
  * These test suites are combined a bit precariously, so there is work that the developer needs to do to make sure
  * that things are wired up correctly.  Specifically, a developer must register their RowsAndColumns implementation
- * by adding an entry to the static {@link #getMakers()} method on this base class.  The developer should *also*
+ * by adding an entry to the static {@link #makerFeeder()} method on this base class.  The developer should *also*
  * create a test class for their RowsAndColumns object that extends this class.  By creating the test class that
  * extends this class, there will be an extra validation done that ensures that the list of makers includes their
  * RowsAndColumns class.
  * <p>
  * The semantic interfaces, on the other hand, should all create a test that extends
  * {@link org.apache.druid.query.rowsandcols.semantic.SemanticTestBase}.  That test sets up a parameterized test,
- * using the results of {@link #getMakers()} to do the parameterization.
+ * using the results of {@link #makerFeeder()} to do the parameterization.
  */
 public abstract class RowsAndColumnsTestBase
 {
@@ -54,14 +56,22 @@ public abstract class RowsAndColumnsTestBase
 
   private static final AtomicReference<Iterable<Object[]>> MAKERS = new AtomicReference<>();
 
-  public static Iterable<Object[]> getMakers()
+  @Nonnull
+  private static ArrayList<Object[]> getMakers()
+  {
+    return Lists.newArrayList(
+        new Object[]{MapOfColumnsRowsAndColumns.class, Function.identity()},
+        new Object[]{ArrayListRowsAndColumns.class, ArrayListRowsAndColumnsTest.MAKER},
+        new Object[]{ConcatRowsAndColumns.class, ConcatRowsAndColumnsTest.MAKER},
+        new Object[]{RearrangedRowsAndColumns.class, RearrangedRowsAndColumnsTest.MAKER}
+    );
+  }
+
+  public static Iterable<Object[]> makerFeeder()
   {
     Iterable<Object[]> retVal = MAKERS.get();
     if (retVal == null) {
-      retVal = Lists.newArrayList(
-          new Object[]{MapOfColumnsRowsAndColumns.class, Function.identity()},
-          new Object[]{ArrayListRowsAndColumns.class, ArrayListRowsAndColumnsTest.MAKER}
-      );
+      retVal = getMakers();
       for (Object[] objects : retVal) {
         Class<?> aClazz = (Class<?>) objects[0];
         final String expectedName = aClazz.getName() + "Test";
@@ -92,7 +102,7 @@ public abstract class RowsAndColumnsTestBase
   public void testInListOfMakers()
   {
     boolean inList = false;
-    for (Object[] objs : getMakers()) {
+    for (Object[] objs : makerFeeder()) {
       if (expectedClass.equals(objs[0])) {
         inList = true;
         break;

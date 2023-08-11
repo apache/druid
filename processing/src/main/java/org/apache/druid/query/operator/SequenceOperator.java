@@ -20,20 +20,20 @@
 package org.apache.druid.query.operator;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.util.NoSuchElementException;
 
 public class SequenceOperator implements Operator
 {
+  private static final Logger log = new Logger(SequenceOperator.class);
+
   private final Sequence<RowsAndColumns> child;
-  private Yielder<RowsAndColumns> yielder;
-  private boolean closed = false;
 
   public SequenceOperator(
       Sequence<RowsAndColumns> child
@@ -42,46 +42,76 @@ public class SequenceOperator implements Operator
     this.child = child;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public void open()
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    if (closed) {
-      throw new ISE("Operator closed, cannot be re-opened");
-    }
-    yielder = Yielders.each(child);
-  }
-
-  @Override
-  public RowsAndColumns next()
-  {
-    if (closed) {
-      throw new NoSuchElementException();
-    }
-    final RowsAndColumns retVal = yielder.get();
-    yielder = yielder.next(null);
-    return retVal;
-  }
-
-  @Override
-  public boolean hasNext()
-  {
-    return !closed && !yielder.isDone();
-  }
-
-  @Override
-  public void close(boolean cascade)
-  {
-    if (closed) {
-      return;
-    }
+    Yielder<RowsAndColumns> yielder = null;
     try {
-      yielder.close();
+      if (continuation == null) {
+        yielder = Yielders.each(child);
+      } else {
+        yielder = (Yielder<RowsAndColumns>) continuation;
+      }
+
+      while (true) {
+        Signal signal;
+        if (yielder.isDone()) {
+          if (yielder.get() != null) {
+            throw new ISE("Got a non-null get()[%s] even though we were already done.", yielder.get().getClass());
+          }
+          signal = Signal.STOP;
+        } else {
+          signal = receiver.push(yielder.get());
+        }
+
+        if (signal != Signal.STOP) {
+          yielder = yielder.next(null);
+          if (yielder.isDone()) {
+            signal = Signal.STOP;
+          }
+        }
+
+        switch (signal) {
+          case STOP:
+            receiver.completed();
+
+            try {
+              yielder.close();
+            }
+            catch (IOException e) {
+              // We got an exception when closing after we received a STOP signal and successfully called completed().
+              // This means that the Receiver has already done what it needs, so instead of throw the exception and
+              // potentially impact processing, we log instead and allow processing to continue.
+              log.warn(
+                  e,
+                  "Exception thrown when closing yielder.  Logging and ignoring because results should be fine."
+              );
+            }
+            return null;
+          case PAUSE:
+            return yielder;
+          case GO:
+            continue;
+          default:
+            throw new ISE("Unknown signal[%s]", signal);
+        }
+      }
     }
-    catch (IOException e) {
-      throw new RE(e, "Exception when closing yielder from Sequence");
-    }
-    finally {
-      closed = true;
+    catch (RuntimeException re) {
+      try {
+        if (yielder != null) {
+          yielder.close();
+        } else if (continuation != null) {
+          // The yielder will be non-null in most cases, this can likely only happen if the continuation that we
+          // received was not able to be cast to a yielder.
+          continuation.close();
+        }
+      }
+      catch (IOException ioEx) {
+        re.addSuppressed(ioEx);
+      }
+      throw re;
     }
   }
 }

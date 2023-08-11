@@ -23,9 +23,9 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -64,7 +64,7 @@ public class DruidCalciteSchemaModule implements Module
   }
 
   @Provides
-  @Singleton
+  @LazySingleton
   private DruidSchemaCatalog getRootSchema(@Named(INCOMPLETE_SCHEMA) DruidSchemaCatalog rootSchema, InformationSchema informationSchema)
   {
     rootSchema.getRootSchema().add(INFORMATION_SCHEMA_NAME, informationSchema);

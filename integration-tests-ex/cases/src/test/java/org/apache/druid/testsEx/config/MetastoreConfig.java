@@ -58,7 +58,6 @@ public class MetastoreConfig extends ServiceConfig
 
   @JsonCreator
   public MetastoreConfig(
-      @JsonProperty("service") String service,
       @JsonProperty("driver") String driver,
       @JsonProperty("connectURI") String connectURI,
       @JsonProperty("user") String user,
@@ -67,7 +66,7 @@ public class MetastoreConfig extends ServiceConfig
       @JsonProperty("instances") List<ServiceInstance> instances
   )
   {
-    super(service, instances);
+    super(instances);
     this.driver = driver;
     this.connectURI = connectURI;
     this.user = user;

@@ -400,6 +400,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     return datasourceBundles;
   }
 
+  public WorkerConfig getWorkerConfig()
+  {
+    return workerConfig;
+  }
+
   private AppenderatorConfig rewriteAppenderatorConfigMemoryLimits(AppenderatorConfig baseConfig)
   {
     long perWorkerLimit = workerConfig.getGlobalIngestionHeapLimitBytes() / workerConfig.getCapacity();

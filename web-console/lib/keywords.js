@@ -64,6 +64,10 @@ exports.SQL_KEYWORDS = [
   'OVER',
   'PARTITION BY',
   'WINDOW',
+  'RANGE',
+  'PRECEDING',
+  'FOLLOWING',
+  'EXTEND',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [

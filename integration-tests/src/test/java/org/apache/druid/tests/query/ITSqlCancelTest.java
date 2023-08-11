@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
@@ -107,10 +106,10 @@ public class ITSqlCancelTest
         throw new ISE("Query is not canceled after cancel request");
       }
       QueryException queryException = jsonMapper.readValue(queryResponse.getContent(), QueryException.class);
-      if (!QueryInterruptedException.QUERY_CANCELED.equals(queryException.getErrorCode())) {
+      if (!"Query cancelled".equals(queryException.getErrorCode())) {
         throw new ISE(
             "Expected error code [%s], actual [%s]",
-            QueryInterruptedException.QUERY_CANCELED,
+            "Query cancelled",
             queryException.getErrorCode()
         );
       }
@@ -138,7 +137,11 @@ public class ITSqlCancelTest
 
     final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
     if (!queryResponse.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE("Cancel request failed with status[%s] and content[%s]", queryResponse.getStatus(), queryResponse.getContent());
+      throw new ISE(
+          "Cancel request failed with status[%s] and content[%s]",
+          queryResponse.getStatus(),
+          queryResponse.getContent()
+      );
     }
   }
 }

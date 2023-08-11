@@ -29,9 +29,7 @@ import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.ExternalTableDefn.FormattedExternalTableDefn;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,32 +45,40 @@ import java.util.Map;
  */
 public class TableBuilder
 {
-  private TableId id;
+  private final TableId id;
+  private final String tableType;
   private TableDefn defn;
-  private String tableType;
   private Map<String, Object> properties = new HashMap<>();
   private List<ColumnSpec> columns = new ArrayList<>();
 
-  public static TableBuilder datasource(String name, String granularity)
+  public TableBuilder(TableId id, String tableType)
   {
-    return new TableBuilder()
-        .datasource(name)
-        .type(DatasourceDefn.TABLE_TYPE)
-        .segmentGranularity(granularity);
+    this.id = id;
+    this.tableType = tableType;
   }
 
-  public static TableBuilder external(String type, String name)
+  public static TableBuilder datasource(String name, String granularity)
   {
-    return new TableBuilder()
-        .external(name)
-        .type(type);
+    return new TableBuilder(
+        TableId.datasource(name),
+        DatasourceDefn.TABLE_TYPE
+    ).segmentGranularity(granularity);
+  }
+
+  public static TableBuilder external(String name)
+  {
+    return new TableBuilder(
+        TableId.of(TableId.EXTERNAL_SCHEMA, name),
+        ExternalTableDefn.TABLE_TYPE
+    );
   }
 
   public static TableBuilder updateFor(TableMetadata table)
   {
-    return new TableBuilder()
-        .id(table.id())
-        .type(table.spec().type());
+    return new TableBuilder(
+        table.id(),
+        table.spec().type()
+    );
   }
 
   public static TableBuilder copyOf(TableMetadata table)
@@ -82,60 +88,25 @@ public class TableBuilder
 
   public static TableBuilder copyOf(TableId newId, TableSpec from)
   {
-    return new TableBuilder()
-        .id(newId)
-        .type(from.type())
+    return new TableBuilder(newId, from.type())
         .properties(new HashMap<>(from.properties()))
         .columns(new ArrayList<>(from.columns()));
   }
 
-  public static TableBuilder of(TableDefn defn)
+  public static TableBuilder of(TableId id, TableDefn defn)
   {
-    TableBuilder builder = new TableBuilder();
+    TableBuilder builder = new TableBuilder(id, defn.typeValue());
     builder.defn = defn;
-    builder.tableType = defn.typeValue();
     return builder;
   }
 
   public TableBuilder copy()
   {
-    TableBuilder builder = new TableBuilder();
+    TableBuilder builder = new TableBuilder(id, tableType);
     builder.defn = defn;
-    builder.tableType = tableType;
-    builder.id = id;
     builder.properties.putAll(properties);
     builder.columns.addAll(columns);
     return builder;
-  }
-
-  public TableBuilder id(TableId id)
-  {
-    this.id = id;
-    return this;
-  }
-
-  public TableBuilder datasource(String name)
-  {
-    this.id = TableId.datasource(name);
-    return this;
-  }
-
-  public TableBuilder external(String name)
-  {
-    this.id = TableId.of(TableId.EXTERNAL_SCHEMA, name);
-    return this;
-  }
-
-  public TableBuilder path(String schema, String name)
-  {
-    this.id = TableId.of(schema, name);
-    return this;
-  }
-
-  public TableBuilder type(String tableType)
-  {
-    this.tableType = tableType;
-    return this;
   }
 
   public TableBuilder properties(Map<String, Object> properties)
@@ -162,12 +133,37 @@ public class TableBuilder
 
   public TableBuilder segmentGranularity(String segmentGranularity)
   {
-    return property(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, segmentGranularity);
+    return property(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, segmentGranularity);
   }
 
   public TableBuilder clusterColumns(ClusterKeySpec...clusterKeys)
   {
-    return property(AbstractDatasourceDefn.CLUSTER_KEYS_PROPERTY, Arrays.asList(clusterKeys));
+    return property(DatasourceDefn.CLUSTER_KEYS_PROPERTY, Arrays.asList(clusterKeys));
+  }
+
+  public TableBuilder hiddenColumns(List<String> hiddenColumns)
+  {
+    return property(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY, hiddenColumns);
+  }
+
+  public TableBuilder sealed(boolean sealed)
+  {
+    return property(DatasourceDefn.SEALED_PROPERTY, sealed);
+  }
+
+  public TableBuilder hiddenColumns(String...hiddenColumns)
+  {
+    return hiddenColumns(Arrays.asList(hiddenColumns));
+  }
+
+  public TableBuilder inputSource(Map<String, Object> inputSource)
+  {
+    return property(ExternalTableDefn.SOURCE_PROPERTY, inputSource);
+  }
+
+  public TableBuilder inputFormat(Map<String, Object> format)
+  {
+    return property(ExternalTableDefn.FORMAT_PROPERTY, format);
   }
 
   public TableBuilder columns(List<ColumnSpec> columns)
@@ -197,58 +193,13 @@ public class TableBuilder
 
   public TableBuilder column(String name, String sqlType)
   {
+    return column(name, sqlType, null);
+  }
+
+  public TableBuilder column(String name, String sqlType, Map<String, Object> properties)
+  {
     Preconditions.checkNotNull(tableType);
-    String colType;
-    if (isInputTable(tableType)) {
-      colType = ExternalTableDefn.EXTERNAL_COLUMN_TYPE;
-    } else if (DatasourceDefn.TABLE_TYPE.equals(tableType)) {
-      colType = DatasourceDefn.DatasourceColumnDefn.COLUMN_TYPE;
-    } else {
-      throw new ISE("Unknown table type: %s", tableType);
-    }
-    return column(colType, name, sqlType);
-  }
-
-  public static boolean isInputTable(String tableType)
-  {
-    switch (tableType) {
-      case InlineTableDefn.TABLE_TYPE:
-      case HttpTableDefn.TABLE_TYPE:
-      case LocalTableDefn.TABLE_TYPE:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  public TableBuilder column(String colType, String name, String sqlType)
-  {
-    return column(new ColumnSpec(colType, name, sqlType, null));
-  }
-
-  public TableBuilder hiddenColumns(List<String> hiddenColumns)
-  {
-    return property(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY, hiddenColumns);
-  }
-
-  public TableBuilder hiddenColumns(String...hiddenColumns)
-  {
-    return hiddenColumns(Arrays.asList(hiddenColumns));
-  }
-
-  public TableBuilder format(String format)
-  {
-    return property(FormattedExternalTableDefn.FORMAT_PROPERTY, format);
-  }
-
-  public TableBuilder data(List<String> data)
-  {
-    return property(InlineTableDefn.DATA_PROPERTY, data);
-  }
-
-  public TableBuilder data(String...data)
-  {
-    return data(Arrays.asList(data));
+    return column(new ColumnSpec(name, sqlType, properties));
   }
 
   public TableSpec buildSpec()

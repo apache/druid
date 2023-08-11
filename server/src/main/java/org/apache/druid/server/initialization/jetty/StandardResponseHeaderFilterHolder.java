@@ -37,6 +37,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -48,7 +49,9 @@ import java.util.Set;
  */
 public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
 {
-  private static final Set<String> STANDARD_HEADERS = ImmutableSet.of("Cache-Control", "Content-Security-Policy");
+  private static final Set<String> STANDARD_HEADERS = ImmutableSet.of("Cache-Control",
+      "Content-Security-Policy",
+      "Strict-Transport-Security");
   private static final String DEFAULT_CONTENT_SECURITY_POLICY = "frame-ancestors 'none'";
 
   private final String contentSecurityPolicy;

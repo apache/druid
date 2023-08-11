@@ -82,12 +82,20 @@ public class AzureTaskLogs implements TaskLogs
     pushTaskFile(reportFile, taskKey);
   }
 
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile)
+  {
+    final String taskKey = getTaskStatusKey(taskid);
+    log.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
+  }
+
   private void pushTaskFile(final File logFile, String taskKey)
   {
     try {
       AzureUtils.retryAzureOperation(
           () -> {
-            azureStorage.uploadBlob(logFile, config.getContainer(), taskKey);
+            azureStorage.uploadBlockBlob(logFile, config.getContainer(), taskKey);
             return null;
           },
           config.getMaxTries()
@@ -110,17 +118,23 @@ public class AzureTaskLogs implements TaskLogs
     return streamTaskFile(taskid, 0, getTaskReportsKey(taskid));
   }
 
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    return streamTaskFile(taskid, 0, getTaskStatusKey(taskid));
+  }
+
   private Optional<InputStream> streamTaskFile(final String taskid, final long offset, String taskKey)
       throws IOException
   {
     final String container = config.getContainer();
     try {
-      if (!azureStorage.getBlobExists(container, taskKey)) {
+      if (!azureStorage.getBlockBlobExists(container, taskKey)) {
         return Optional.absent();
       }
       try {
         final long start;
-        final long length = azureStorage.getBlobLength(container, taskKey);
+        final long length = azureStorage.getBlockBlobLength(container, taskKey);
 
         if (offset > 0 && offset < length) {
           start = offset;
@@ -130,7 +144,7 @@ public class AzureTaskLogs implements TaskLogs
           start = 0;
         }
 
-        InputStream stream = azureStorage.getBlobInputStream(container, taskKey);
+        InputStream stream = azureStorage.getBlockBlobInputStream(container, taskKey);
         stream.skip(start);
 
         return Optional.of(stream);
@@ -152,6 +166,11 @@ public class AzureTaskLogs implements TaskLogs
   private String getTaskReportsKey(String taskid)
   {
     return StringUtils.format("%s/%s/report.json", config.getPrefix(), taskid);
+  }
+
+  private String getTaskStatusKey(String taskid)
+  {
+    return StringUtils.format("%s/%s/status.json", config.getPrefix(), taskid);
   }
 
   @Override

@@ -40,9 +40,9 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
+import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.QueryableIndexVectorColumnSelectorFactory;
@@ -176,8 +176,9 @@ public class FrameCursorFactory implements CursorFactory
   )
   {
     final Filter filterToUse = FrameCursorUtils.buildFilter(filter, interval);
-    final Offset baseOffset = descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
-    final Offset offset;
+    final SimpleSettableOffset baseOffset =
+        descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
+    final SimpleSettableOffset offset;
 
     final QueryableIndexColumnSelectorFactory columnSelectorFactory =
         new QueryableIndexColumnSelectorFactory(virtualColumns, descending, baseOffset, columnSelector);

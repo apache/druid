@@ -32,6 +32,7 @@ import java.io.IOException;
 public class WritableFrameFileChannel implements WritableFrameChannel
 {
   private final FrameFileWriter writer;
+  private boolean closed;
 
   public WritableFrameFileChannel(final FrameFileWriter writer)
   {
@@ -55,6 +56,13 @@ public class WritableFrameFileChannel implements WritableFrameChannel
   public void close() throws IOException
   {
     writer.close();
+    closed = true;
+  }
+
+  @Override
+  public boolean isClosed()
+  {
+    return closed;
   }
 
   @Override

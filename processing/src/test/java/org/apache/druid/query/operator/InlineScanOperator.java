@@ -20,54 +20,70 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.io.Closeable;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 public class InlineScanOperator implements Operator
 {
-  public static InlineScanOperator make(RowsAndColumns item)
+  public static InlineScanOperator make(RowsAndColumns... item)
   {
-    return new InlineScanOperator(Iterators.singletonIterator(item));
+    return new InlineScanOperator(Arrays.asList(item));
   }
 
   public static InlineScanOperator make(List<RowsAndColumns> items)
   {
-    return new InlineScanOperator(items.iterator());
+    return new InlineScanOperator(items);
   }
 
-  private Iterator<RowsAndColumns> iter;
+  private Iterable<RowsAndColumns> iterable;
 
   public InlineScanOperator(
-      Iterator<RowsAndColumns> iter
+      Iterable<RowsAndColumns> iterable
   )
   {
-    Preconditions.checkNotNull(iter);
-    this.iter = iter;
+    Preconditions.checkNotNull(iterable);
+    this.iterable = iterable;
   }
 
   @Override
-  public void open()
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
+    final Iterator<RowsAndColumns> iter;
+    if (continuation == null) {
+      iter = iterable.iterator();
+    } else {
+      iter = ((Continuation) continuation).iter;
+    }
+
+    Signal keepItGoing = Signal.GO;
+    while (keepItGoing == Signal.GO && iter.hasNext()) {
+      keepItGoing = receiver.push(iter.next());
+    }
+    if (keepItGoing == Signal.PAUSE && iter.hasNext()) {
+      return new Continuation(iter);
+    } else {
+      receiver.completed();
+      return null;
+    }
   }
 
-  @Override
-  public RowsAndColumns next()
+  private static class Continuation implements Closeable
   {
-    return iter.next();
-  }
+    private final Iterator<RowsAndColumns> iter;
 
-  @Override
-  public boolean hasNext()
-  {
-    return iter.hasNext();
-  }
+    public Continuation(Iterator<RowsAndColumns> iter)
+    {
+      this.iter = iter;
+    }
 
-  @Override
-  public void close(boolean cascade)
-  {
-    iter = null;
+    @Override
+    public void close()
+    {
+      // We don't actually have anything to close
+    }
   }
 }

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.IAE;
 
@@ -40,12 +41,6 @@ import java.util.Objects;
 @UnstableApi
 public class ColumnSpec
 {
-  /**
-   * The type of column spec (not the column data type). For example, in a
-   * cube, dimensions and measures have distinct sets of properties.
-   */
-  private final String type;
-
   /**
    * The name of the column as known to the SQL layer. At present, there is no
    * support for column aliases, so this is also the column name as physically
@@ -73,22 +68,19 @@ public class ColumnSpec
 
   @JsonCreator
   public ColumnSpec(
-      @JsonProperty("type")final String type,
       @JsonProperty("name")final String name,
       @JsonProperty("sqlType") @Nullable final String sqlType,
       @JsonProperty("properties") @Nullable final Map<String, Object> properties
   )
   {
-    this.type = type;
     this.name = name;
     this.sqlType = sqlType;
     this.properties = properties == null ? Collections.emptyMap() : properties;
   }
 
-  @JsonProperty("type")
-  public String type()
+  public ColumnSpec(ColumnSpec from)
   {
-    return type;
+    this(from.name, from.sqlType, from.properties);
   }
 
   @JsonProperty("name")
@@ -113,12 +105,34 @@ public class ColumnSpec
 
   public void validate()
   {
-    if (Strings.isNullOrEmpty(type)) {
-      throw new IAE("Column type is required");
-    }
     if (Strings.isNullOrEmpty(name)) {
       throw new IAE("Column name is required");
     }
+    // Validate type in the next PR
+  }
+
+  /**
+   * Merges an updated version of this column with an existing version.
+   * <p>
+   * The name cannot be changed (it is what links the existing column and the
+   * update). The SQL type will be that provided in the update, if non-null, else
+   * the original type. Properties are merged using standard rules: those in the
+   * update take precedence. Null values in the update remove the existing property,
+   * non-null values update the property. Any properties in the update but not in
+   * the existing set, are inserted (if non-null).
+   */
+  public ColumnSpec merge(
+      final Map<String, PropertyDefn<?>> columnProperties,
+      final ColumnSpec update
+  )
+  {
+    String revisedType = update.sqlType() == null ? sqlType() : update.sqlType();
+    Map<String, Object> revisedProps = CatalogUtils.mergeProperties(
+        columnProperties,
+        properties(),
+        update.properties()
+    );
+    return new ColumnSpec(name(), revisedType, revisedProps);
   }
 
   @Override
@@ -137,8 +151,7 @@ public class ColumnSpec
       return false;
     }
     ColumnSpec other = (ColumnSpec) o;
-    return Objects.equals(this.type, other.type)
-        && Objects.equals(this.name, other.name)
+    return Objects.equals(this.name, other.name)
         && Objects.equals(this.sqlType, other.sqlType)
         && Objects.equals(this.properties, other.properties);
   }
@@ -147,7 +160,6 @@ public class ColumnSpec
   public int hashCode()
   {
     return Objects.hash(
-        type,
         name,
         sqlType,
         properties

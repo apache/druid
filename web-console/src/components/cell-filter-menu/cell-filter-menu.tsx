@@ -18,20 +18,12 @@
 
 import { Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  C,
-  Column,
-  L,
-  SqlComparison,
-  SqlExpression,
-  SqlLiteral,
-  SqlQuery,
-  SqlRecord,
-  trimString,
-} from 'druid-query-toolkit';
+import type { Column, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, L, SqlComparison, SqlLiteral, SqlRecord, trimString } from '@druid-toolkit/query';
 import React from 'react';
 
-import { copyAndAlert, prettyPrintSql, QueryAction, stringifyValue } from '../../utils';
+import type { QueryAction } from '../../utils';
+import { copyAndAlert, prettyPrintSql, stringifyValue } from '../../utils';
 
 function sqlLiteralForColumnValue(column: Column, value: unknown): SqlLiteral | undefined {
   if (column.sqlType === 'TIMESTAMP') {
@@ -156,7 +148,6 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
 
     const updatedClause =
       currentClauses.length === 1 && val ? addToClause(currentClauses[0], val) : undefined;
-    console.log(updatedClause, currentClauses);
 
     const jsonColumn = column.nativeType === 'COMPLEX<json>';
     return (

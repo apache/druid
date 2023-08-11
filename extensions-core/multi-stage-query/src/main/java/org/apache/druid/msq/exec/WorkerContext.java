@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -73,4 +74,9 @@ public interface WorkerContext
   DruidNode selfNode();
 
   Bouncer processorBouncer();
+
+  default File tempDir(int stageNumber, String id)
+  {
+    return new File(StringUtils.format("%s/stage_%02d/%s", tempDir(), stageNumber, id));
+  }
 }

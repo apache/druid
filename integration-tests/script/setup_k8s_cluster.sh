@@ -16,19 +16,13 @@
 
 set -e
 
-# Set Necessary ENV
-export CHANGE_MINIKUBE_NONE_USER=true
-export MINIKUBE_WANTUPDATENOTIFICATION=false
-export MINIKUBE_WANTREPORTERRORPROMPT=false
-export MINIKUBE_HOME=$HOME
+export INSTALL_K3S_VERSION=v1.21.14+k3s1
 export KUBECONFIG=$HOME/.kube/config
 
-sudo apt install -y conntrack
-
-# Lacunch K8S cluster
+# Launch K8S cluster
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.8.1/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-sudo /usr/local/bin/minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.18.1
-sudo /usr/local/bin/minikube update-context
-
+curl -sfL https://get.k3s.io | bash /dev/stdin  --docker
+mkdir -p $HOME/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml $KUBECONFIG
+sudo chmod 777 $KUBECONFIG
 echo "Setup K8S Cluster Done!"

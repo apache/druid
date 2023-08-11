@@ -29,18 +29,18 @@ import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
+import org.apache.calcite.plan.volcano.DruidVolcanoCost;
 import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
@@ -52,7 +52,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import java.util.Map;
 import java.util.Properties;
 
-public class PlannerFactory
+public class PlannerFactory extends PlannerToolbox
 {
   static final SqlParser.Config PARSER_CONFIG = SqlParser
       .configBuilder()
@@ -61,18 +61,8 @@ public class PlannerFactory
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
-
-  private final DruidSchemaCatalog rootSchema;
-  private final DruidOperatorTable operatorTable;
-  private final ExprMacroTable macroTable;
-  private final PlannerConfig plannerConfig;
-  private final ObjectMapper jsonMapper;
-  private final AuthorizerMapper authorizerMapper;
-  private final String druidSchemaName;
-  private final CalciteRulesManager calciteRuleManager;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
 
   @Inject
   public PlannerFactory(
@@ -84,18 +74,24 @@ public class PlannerFactory
       final @Json ObjectMapper jsonMapper,
       final @DruidSchemaName String druidSchemaName,
       final CalciteRulesManager calciteRuleManager,
-      final JoinableFactoryWrapper joinableFactoryWrapper
+      final JoinableFactoryWrapper joinableFactoryWrapper,
+      final CatalogResolver catalog,
+      final AuthConfig authConfig
   )
   {
-    this.rootSchema = rootSchema;
-    this.operatorTable = operatorTable;
-    this.macroTable = macroTable;
-    this.plannerConfig = plannerConfig;
-    this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
-    this.druidSchemaName = druidSchemaName;
-    this.calciteRuleManager = calciteRuleManager;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
+    super(
+        operatorTable,
+        macroTable,
+        jsonMapper,
+        plannerConfig,
+        rootSchema,
+        joinableFactoryWrapper,
+        catalog,
+        druidSchemaName,
+        calciteRuleManager,
+        authorizerMapper,
+        authConfig
+    );
   }
 
   /**
@@ -109,15 +105,11 @@ public class PlannerFactory
   )
   {
     final PlannerContext context = PlannerContext.create(
+        this,
         sql,
-        operatorTable,
-        macroTable,
-        jsonMapper,
-        plannerConfig,
-        rootSchema,
         engine,
         queryContext,
-        joinableFactoryWrapper
+        hook
     );
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
@@ -133,12 +125,7 @@ public class PlannerFactory
     final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
-    try {
-      thePlanner.validate();
-    }
-    catch (SqlParseException | ValidationException e) {
-      throw new RuntimeException(e);
-    }
+    thePlanner.validate();
     thePlanner.authorize(ra -> Access.OK, ImmutableSet.of());
     return thePlanner;
   }
@@ -159,7 +146,7 @@ public class PlannerFactory
             plannerContext.queryContext().getInSubQueryThreshold()
         )
         .build();
-    return Frameworks
+    Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
@@ -198,7 +185,15 @@ public class PlannerFactory
               return null;
             }
           }
-        })
-        .build();
+        });
+
+    if (PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+        .equals(plannerConfig().getNativeQuerySqlPlanningMode())
+    ) {
+      frameworkConfigBuilder.costFactory(new DruidVolcanoCost.Factory());
+    }
+
+    return frameworkConfigBuilder.build();
+
   }
 }

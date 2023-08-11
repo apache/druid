@@ -374,7 +374,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final IndexSpec segmentIndexSpec = objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class);
     final IndexSpec configuredIndexSpec;
     if (tuningConfig.getIndexSpec() == null) {
-      configuredIndexSpec = new IndexSpec();
+      configuredIndexSpec = IndexSpec.DEFAULT;
     } else {
       configuredIndexSpec = tuningConfig.getIndexSpec();
     }

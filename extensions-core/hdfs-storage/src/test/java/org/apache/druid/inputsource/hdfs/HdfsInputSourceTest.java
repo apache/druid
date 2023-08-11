@@ -163,6 +163,20 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                      .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
                      .build();
     }
+
+    @Test
+    public void testGetTypes()
+    {
+      final Configuration conf = new Configuration();
+      conf.set("fs.default.name", "hdfs://localhost:7020");
+      HdfsInputSource inputSource = HdfsInputSource.builder()
+                     .paths("/foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      Assert.assertEquals(Collections.singleton(HdfsInputSource.TYPE_KEY), inputSource.getTypes());
+    }
   }
 
   public static class SerializeDeserializeTest

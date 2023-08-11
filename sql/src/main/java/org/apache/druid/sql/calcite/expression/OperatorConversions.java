@@ -32,6 +32,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.CalciteException;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -49,6 +50,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
+import org.apache.calcite.util.Optionality;
 import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -57,12 +59,14 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -268,7 +272,7 @@ public class OperatorConversions
       );
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                              .lookupOperatorConversion(operator);
 
       if (conversion != null) {
@@ -299,7 +303,7 @@ public class OperatorConversions
             postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
             druidExpression.getExpression(),
             null,
-            plannerContext.getExprMacroTable()
+            plannerContext.parseExpression(druidExpression.getExpression())
         );
       }
     }
@@ -316,23 +320,33 @@ public class OperatorConversions
    * Returns a builder that helps {@link SqlOperatorConversion} implementations create the {@link SqlFunction}
    * objects they need to return from {@link SqlOperatorConversion#calciteOperator()}.
    */
-  public static OperatorBuilder operatorBuilder(final String name)
+  public static OperatorBuilder<SqlFunction> operatorBuilder(final String name)
   {
-    return new OperatorBuilder(name);
+    return new OperatorBuilder<>(name);
   }
 
-  public static class OperatorBuilder
+  /**
+   * Returns a builder that helps {@link SqlAggregator} implementations create the {@link SqlAggFunction} objects
+   * they need to return from {@link SqlAggregator#calciteFunction()}.
+   */
+  public static OperatorBuilder<SqlAggFunction> aggregatorBuilder(final String name)
   {
-    private final String name;
-    private SqlKind kind = SqlKind.OTHER_FUNCTION;
-    private SqlReturnTypeInference returnTypeInference;
-    private SqlFunctionCategory functionCategory = SqlFunctionCategory.USER_DEFINED_FUNCTION;
+    return new AggregatorBuilder(name);
+  }
+
+  public static class OperatorBuilder<T extends SqlFunction>
+  {
+    protected final String name;
+    protected SqlKind kind = SqlKind.OTHER_FUNCTION;
+    protected SqlReturnTypeInference returnTypeInference;
+    protected SqlFunctionCategory functionCategory = SqlFunctionCategory.USER_DEFINED_FUNCTION;
 
     // For operand type checking
     private SqlOperandTypeChecker operandTypeChecker;
+    private List<String> operandNames = Collections.emptyList();
     private List<SqlTypeFamily> operandTypes;
-    private Integer requiredOperands = null;
-    private int[] literalOperands = null;
+    private Integer requiredOperandCount;
+    private int[] literalOperands;
     private SqlOperandTypeInference operandTypeInference;
 
     private OperatorBuilder(final String name)
@@ -348,7 +362,7 @@ public class OperatorConversions
      * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
      * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeNonNull(final SqlTypeName typeName)
+    public OperatorBuilder<T> returnTypeNonNull(final SqlTypeName typeName)
     {
       Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
@@ -365,7 +379,7 @@ public class OperatorConversions
      * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
      * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeNullable(final SqlTypeName typeName)
+    public OperatorBuilder<T> returnTypeNullable(final SqlTypeName typeName)
     {
       Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
@@ -382,7 +396,7 @@ public class OperatorConversions
      * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
      * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeCascadeNullable(final SqlTypeName typeName)
+    public OperatorBuilder<T> returnTypeCascadeNullable(final SqlTypeName typeName)
     {
       Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
       this.returnTypeInference = ReturnTypes.cascade(ReturnTypes.explicit(typeName), SqlTypeTransforms.TO_NULLABLE);
@@ -396,7 +410,7 @@ public class OperatorConversions
      * {@link #returnTypeArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be
      * used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeArrayWithNullableElements(final SqlTypeName elementTypeName)
+    public OperatorBuilder<T> returnTypeArrayWithNullableElements(final SqlTypeName elementTypeName)
     {
       Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
@@ -413,7 +427,7 @@ public class OperatorConversions
      * {@link #returnTypeArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be
      * used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeNullableArrayWithNullableElements(final SqlTypeName elementTypeName)
+    public OperatorBuilder<T> returnTypeNullableArrayWithNullableElements(final SqlTypeName elementTypeName)
     {
       this.returnTypeInference = ReturnTypes.cascade(
           opBinding -> Calcites.createSqlArrayTypeWithNullability(
@@ -434,7 +448,7 @@ public class OperatorConversions
      * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
      * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeInference(final SqlReturnTypeInference returnTypeInference)
+    public OperatorBuilder<T> returnTypeInference(final SqlReturnTypeInference returnTypeInference)
     {
       Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
@@ -447,7 +461,7 @@ public class OperatorConversions
      *
      * The default, if not provided, is {@link SqlFunctionCategory#USER_DEFINED_FUNCTION}.
      */
-    public OperatorBuilder functionCategory(final SqlFunctionCategory functionCategory)
+    public OperatorBuilder<T> functionCategory(final SqlFunctionCategory functionCategory)
     {
       this.functionCategory = functionCategory;
       return this;
@@ -459,21 +473,32 @@ public class OperatorConversions
      * One of {@link #operandTypes(SqlTypeFamily...)} or {@link #operandTypeChecker(SqlOperandTypeChecker)} must be used
      * before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder operandTypeChecker(final SqlOperandTypeChecker operandTypeChecker)
+    public OperatorBuilder<T> operandTypeChecker(final SqlOperandTypeChecker operandTypeChecker)
     {
       this.operandTypeChecker = operandTypeChecker;
       return this;
     }
 
     /**
+     * Signifies that a function accepts operands with the provided names. This is used to implement
+     * {@link SqlOperandTypeChecker#getAllowedSignatures(SqlOperator, String)}. If not provided, the
+     * {@link #operandTypes} are used instead.
+     */
+    public OperatorBuilder<T> operandNames(final String... operandNames)
+    {
+      this.operandNames = Arrays.asList(operandNames);
+      return this;
+    }
+
+    /**
      * Signifies that a function accepts operands of type family given by {@param operandTypes}.
      *
-     * May be used in conjunction with {@link #requiredOperands(int)} and {@link #literalOperands(int...)} in order
+     * May be used in conjunction with {@link #requiredOperandCount(int)} and {@link #literalOperands(int...)} in order
      * to further refine operand checking logic.
      *
      * For deeper control, use {@link #operandTypeChecker(SqlOperandTypeChecker)} instead.
      */
-    public OperatorBuilder operandTypes(final SqlTypeFamily... operandTypes)
+    public OperatorBuilder<T> operandTypes(final SqlTypeFamily... operandTypes)
     {
       this.operandTypes = Arrays.asList(operandTypes);
       return this;
@@ -489,10 +514,22 @@ public class OperatorConversions
      * Must be used in conjunction with {@link #operandTypes(SqlTypeFamily...)}; this method is not compatible with
      * {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
-    public OperatorBuilder requiredOperands(final int requiredOperands)
+    public OperatorBuilder<T> requiredOperandCount(final int requiredOperandCount)
     {
-      this.requiredOperands = requiredOperands;
+      this.requiredOperandCount = requiredOperandCount;
       return this;
+    }
+
+    /**
+     * Alias for {@link #requiredOperandCount(int)}. Deprecated because it means "operand count" rather than
+     * "specific operands", and therefore the name can cause confusion with {@link #literalOperands(int...)}. The latter
+     * really does mean "specific operands".
+     */
+    @Deprecated
+    @SuppressWarnings("unused") // For compatibility with existing extensions
+    public OperatorBuilder<T> requiredOperands(final int requiredOperands)
+    {
+      return requiredOperandCount(requiredOperands);
     }
 
     /**
@@ -501,13 +538,13 @@ public class OperatorConversions
      * Must be used in conjunction with {@link #operandTypes(SqlTypeFamily...)}; this method is not compatible with
      * {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
-    public OperatorBuilder literalOperands(final int... literalOperands)
+    public OperatorBuilder<T> literalOperands(final int... literalOperands)
     {
       this.literalOperands = literalOperands;
       return this;
     }
 
-    public OperatorBuilder operandTypeInference(SqlOperandTypeInference operandTypeInference)
+    public OperatorBuilder<T> operandTypeInference(SqlOperandTypeInference operandTypeInference)
     {
       this.operandTypeInference = operandTypeInference;
       return this;
@@ -516,34 +553,58 @@ public class OperatorConversions
     /**
      * Creates a {@link SqlFunction} from this builder.
      */
-    public SqlFunction build()
+    @SuppressWarnings("unchecked")
+    public T build()
+    {
+      final IntSet nullableOperands = buildNullableOperands();
+      return (T) new SqlFunction(
+          name,
+          kind,
+          Preconditions.checkNotNull(returnTypeInference, "returnTypeInference"),
+          buildOperandTypeInference(nullableOperands),
+          buildOperandTypeChecker(nullableOperands),
+          functionCategory
+      );
+    }
+
+    protected IntSet buildNullableOperands()
     {
       // Create "nullableOperands" set including all optional arguments.
       final IntSet nullableOperands = new IntArraySet();
-      if (requiredOperands != null) {
-        IntStream.range(requiredOperands, operandTypes.size()).forEach(nullableOperands::add);
+      if (requiredOperandCount != null) {
+        IntStream.range(requiredOperandCount, operandTypes.size()).forEach(nullableOperands::add);
       }
+      return nullableOperands;
+    }
 
-      final SqlOperandTypeChecker theOperandTypeChecker;
-
+    protected SqlOperandTypeChecker buildOperandTypeChecker(final IntSet nullableOperands)
+    {
       if (operandTypeChecker == null) {
-        theOperandTypeChecker = new DefaultOperandTypeChecker(
+        return new DefaultOperandTypeChecker(
+            operandNames,
             operandTypes,
-            requiredOperands == null ? operandTypes.size() : requiredOperands,
+            requiredOperandCount == null ? operandTypes.size() : requiredOperandCount,
             nullableOperands,
             literalOperands
         );
-      } else if (operandTypes == null && requiredOperands == null && literalOperands == null) {
-        theOperandTypeChecker = operandTypeChecker;
+      } else if (operandNames.isEmpty()
+                 && operandTypes == null
+                 && requiredOperandCount == null
+                 && literalOperands == null) {
+        return operandTypeChecker;
       } else {
         throw new ISE(
-            "Cannot have both 'operandTypeChecker' and 'operandTypes' / 'requiredOperands' / 'literalOperands'"
+            "Cannot have both 'operandTypeChecker' and "
+            + "'operandNames' / 'operandTypes' / 'requiredOperands' / 'literalOperands'"
         );
       }
+    }
 
+    protected SqlOperandTypeInference buildOperandTypeInference(final IntSet nullableOperands)
+    {
       if (operandTypeInference == null) {
         SqlOperandTypeInference defaultInference = new DefaultOperandTypeInference(operandTypes, nullableOperands);
-        operandTypeInference = (callBinding, returnType, types) -> {
+        return (callBinding, returnType, types) -> {
           for (int i = 0; i < types.length; i++) {
             // calcite sql validate tries to do bad things to dynamic parameters if the type is inferred to be a string
             if (callBinding.operand(i).isA(ImmutableSet.of(SqlKind.DYNAMIC_PARAM))) {
@@ -556,15 +617,49 @@ public class OperatorConversions
             }
           }
         };
+      } else {
+        return operandTypeInference;
       }
-      return new SqlFunction(
-          name,
-          kind,
-          Preconditions.checkNotNull(returnTypeInference, "returnTypeInference"),
-          operandTypeInference,
-          theOperandTypeChecker,
-          functionCategory
-      );
+    }
+  }
+
+  public static class AggregatorBuilder extends OperatorBuilder<SqlAggFunction>
+  {
+    public AggregatorBuilder(String name)
+    {
+      super(name);
+    }
+
+    /**
+     * Create a {@link SqlAggFunction} from this builder.
+     */
+    @Override
+    public SqlAggFunction build()
+    {
+      final IntSet nullableOperands = buildNullableOperands();
+      final SqlOperandTypeInference operandTypeInference = buildOperandTypeInference(nullableOperands);
+      final SqlOperandTypeChecker operandTypeChecker = buildOperandTypeChecker(nullableOperands);
+
+      class DruidSqlAggFunction extends SqlAggFunction
+      {
+        public DruidSqlAggFunction()
+        {
+          super(
+              name,
+              null,
+              AggregatorBuilder.this.kind,
+              returnTypeInference,
+              operandTypeInference,
+              operandTypeChecker,
+              functionCategory,
+              false,
+              false,
+              Optionality.FORBIDDEN
+          );
+        }
+      }
+
+      return new DruidSqlAggFunction();
     }
   }
 
@@ -649,6 +744,11 @@ public class OperatorConversions
   @VisibleForTesting
   static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
   {
+    /**
+     * Operand names for {@link #getAllowedSignatures(SqlOperator, String)}. May be empty, in which case the
+     * {@link #operandTypes} are used instead.
+     */
+    private final List<String> operandNames;
     private final List<SqlTypeFamily> operandTypes;
     private final int requiredOperands;
     private final IntSet nullableOperands;
@@ -656,6 +756,7 @@ public class OperatorConversions
 
     @VisibleForTesting
     DefaultOperandTypeChecker(
+        final List<String> operandNames,
         final List<SqlTypeFamily> operandTypes,
         final int requiredOperands,
         final IntSet nullableOperands,
@@ -663,9 +764,14 @@ public class OperatorConversions
     )
     {
       Preconditions.checkArgument(requiredOperands <= operandTypes.size() && requiredOperands >= 0);
+      this.operandNames = Preconditions.checkNotNull(operandNames, "operandNames");
       this.operandTypes = Preconditions.checkNotNull(operandTypes, "operandTypes");
       this.requiredOperands = requiredOperands;
       this.nullableOperands = Preconditions.checkNotNull(nullableOperands, "nullableOperands");
+
+      if (!operandNames.isEmpty() && operandNames.size() != operandTypes.size()) {
+        throw new ISE("Operand name count[%s] and type count[%s] must match", operandNames.size(), operandTypes.size());
+      }
 
       if (literalOperands == null) {
         this.literalOperands = IntSets.EMPTY_SET;
@@ -682,8 +788,8 @@ public class OperatorConversions
         final SqlNode operand = callBinding.operands().get(i);
 
         if (literalOperands.contains(i)) {
-          // Verify that 'operand' is a literal.
-          if (!SqlUtil.isLiteral(operand)) {
+          // Verify that 'operand' is a literal. Allow CAST, since we can reduce these away later.
+          if (!SqlUtil.isLiteral(operand, true)) {
             return throwOrReturn(
                 throwOnFailure,
                 callBinding,
@@ -733,7 +839,25 @@ public class OperatorConversions
     @Override
     public String getAllowedSignatures(SqlOperator op, String opName)
     {
-      return SqlUtil.getAliasedSignature(op, opName, operandTypes);
+      final List<?> operands = !operandNames.isEmpty() ? operandNames : operandTypes;
+      final StringBuilder ret = new StringBuilder();
+      ret.append("'");
+      ret.append(opName);
+      ret.append("(");
+      for (int i = 0; i < operands.size(); i++) {
+        if (i > 0) {
+          ret.append(", ");
+        }
+        if (i >= requiredOperands) {
+          ret.append("[");
+        }
+        ret.append("<").append(operands.get(i)).append(">");
+      }
+      for (int i = requiredOperands; i < operands.size(); i++) {
+        ret.append("]");
+      }
+      ret.append(")'");
+      return ret.toString();
     }
 
     @Override
@@ -766,7 +890,7 @@ public class OperatorConversions
   {
     return new DirectOperatorConversion(
         operatorBuilder(sqlOperator)
-            .requiredOperands(1)
+            .requiredOperandCount(1)
             .operandTypes(SqlTypeFamily.NUMERIC)
             .returnTypeNullable(SqlTypeName.BIGINT)
             .functionCategory(SqlFunctionCategory.NUMERIC)
@@ -779,7 +903,7 @@ public class OperatorConversions
   {
     return new DirectOperatorConversion(
         operatorBuilder(sqlOperator)
-            .requiredOperands(2)
+            .requiredOperandCount(2)
             .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC)
             .returnTypeNullable(SqlTypeName.BIGINT)
             .functionCategory(SqlFunctionCategory.NUMERIC)
@@ -792,7 +916,7 @@ public class OperatorConversions
   {
     return new DirectOperatorConversion(
         operatorBuilder(StringUtils.toUpperCase(sqlOperator))
-            .requiredOperands(1)
+            .requiredOperandCount(1)
             .operandTypes(SqlTypeFamily.NUMERIC)
             .returnTypeNullable(SqlTypeName.DOUBLE)
             .functionCategory(SqlFunctionCategory.NUMERIC)

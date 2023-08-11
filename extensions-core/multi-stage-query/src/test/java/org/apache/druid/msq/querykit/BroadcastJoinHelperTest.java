@@ -28,6 +28,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
@@ -47,7 +48,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
@@ -119,8 +119,8 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
     channels.add(new ExplodingReadableFrameChannel());
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1)));
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile2)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, null)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile2, null)));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(null);
@@ -131,7 +131,6 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
         sideStageChannelNumberMap,
         channels,
         channelReaders,
-        new JoinableFactoryWrapper(joinableFactory),
         25_000_000L // High enough memory limit that we won't hit it
     );
 
@@ -212,7 +211,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     sideStageChannelNumberMap.put(0, 0);
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker())));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(frameReader1);
@@ -221,7 +220,6 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
         sideStageChannelNumberMap,
         channels,
         channelReaders,
-        new JoinableFactoryWrapper(joinableFactory),
         100_000 // Low memory limit; we will hit this
     );
 

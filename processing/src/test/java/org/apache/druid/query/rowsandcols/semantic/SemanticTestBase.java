@@ -48,7 +48,7 @@ public abstract class SemanticTestBase
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> parameterFeed()
   {
-    return FluentIterable.from(RowsAndColumnsTestBase.getMakers())
+    return FluentIterable.from(RowsAndColumnsTestBase.makerFeeder())
                          .transformAndConcat(input -> {
                            final String name = ((Class<?>) input[0]).getSimpleName();
                            return Arrays.asList(

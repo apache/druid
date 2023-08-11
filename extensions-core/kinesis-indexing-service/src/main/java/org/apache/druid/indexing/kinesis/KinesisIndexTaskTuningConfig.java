@@ -20,9 +20,11 @@
 package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -36,16 +38,32 @@ import java.util.Objects;
 @JsonTypeName("KinesisTuningConfig")
 public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
 {
-  private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
+  // Assumed record buffer size is larger when dealing with aggregated messages, because aggregated messages tend to
+  // be larger, up to 1MB in size.
+  static final int ASSUMED_RECORD_SIZE = 10_000;
+  static final int ASSUMED_RECORD_SIZE_AGGREGATE = 1_000_000;
+
+  /**
+   * Together with {@link KinesisIndexTaskIOConfig#MAX_RECORD_FETCH_MEMORY}, don't take up more than 200MB per task.
+   */
+  private static final int MAX_RECORD_BUFFER_MEMORY = 100_000_000;
+
+  /**
+   * Together with {@link KinesisIndexTaskIOConfig#RECORD_FETCH_MEMORY_MAX_HEAP_FRACTION}, don't take up more
+   * than 15% of the heap per task.
+   */
+  private static final double RECORD_BUFFER_MEMORY_MAX_HEAP_FRACTION = 0.1;
+
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
   private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
+  private static final int DEFAULT_MAX_RECORDS_PER_POLL_AGGREGATE = 1;
 
-  private final int recordBufferSize;
+  private final Integer recordBufferSize;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
   private final Integer fetchThreads;
-  private final int maxRecordsPerPoll;
+  private final Integer maxRecordsPerPoll;
 
   public KinesisIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -97,13 +115,13 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxParseExceptions,
         maxSavedParseExceptions
     );
-    this.recordBufferSize = recordBufferSize == null ? DEFAULT_RECORD_BUFFER_SIZE : recordBufferSize;
+    this.recordBufferSize = recordBufferSize;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout == null
                                     ? DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT
                                     : recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait == null ? DEFAULT_RECORD_BUFFER_FULL_WAIT : recordBufferFullWait;
     this.fetchThreads = fetchThreads; // we handle this being null later
-    this.maxRecordsPerPoll = maxRecordsPerPoll == null ? DEFAULT_MAX_RECORDS_PER_POLL : maxRecordsPerPoll;
+    this.maxRecordsPerPoll = maxRecordsPerPoll;
 
     Preconditions.checkArgument(
         !(super.isResetOffsetAutomatically() && super.isSkipSequenceNumberAvailabilityCheck()),
@@ -168,10 +186,27 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     );
   }
 
-  @JsonProperty
-  public int getRecordBufferSize()
+  @Nullable
+  @JsonProperty("recordBufferSize")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getRecordBufferSizeConfigured()
   {
     return recordBufferSize;
+  }
+
+  public int getRecordBufferSizeOrDefault(final long maxHeapSize, final boolean deaggregate)
+  {
+    if (recordBufferSize != null) {
+      return recordBufferSize;
+    } else {
+      final long memoryToUse = Math.min(
+          MAX_RECORD_BUFFER_MEMORY,
+          (long) (maxHeapSize * RECORD_BUFFER_MEMORY_MAX_HEAP_FRACTION)
+      );
+
+      final int assumedRecordSize = deaggregate ? ASSUMED_RECORD_SIZE_AGGREGATE : ASSUMED_RECORD_SIZE;
+      return Ints.checkedCast(Math.max(1, memoryToUse / assumedRecordSize));
+    }
   }
 
   @JsonProperty
@@ -186,16 +221,25 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return recordBufferFullWait;
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getFetchThreads()
   {
     return fetchThreads;
   }
 
-  @JsonProperty
-  public int getMaxRecordsPerPoll()
+  @Nullable
+  @JsonProperty("maxRecordsPerPoll")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getMaxRecordsPerPollConfigured()
   {
     return maxRecordsPerPoll;
+  }
+
+  public int getMaxRecordsPerPollOrDefault(final boolean deaggregate)
+  {
+    return deaggregate ? DEFAULT_MAX_RECORDS_PER_POLL_AGGREGATE : DEFAULT_MAX_RECORDS_PER_POLL;
   }
 
   @Override
@@ -217,7 +261,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
         isSkipSequenceNumberAvailabilityCheck(),
-        getRecordBufferSize(),
+        getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
         getFetchThreads(),
@@ -225,7 +269,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         isLogParseExceptions(),
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
-        getMaxRecordsPerPoll(),
+        getMaxRecordsPerPollConfigured(),
         getIntermediateHandoffPeriod()
     );
   }
@@ -243,10 +287,10 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       return false;
     }
     KinesisIndexTaskTuningConfig that = (KinesisIndexTaskTuningConfig) o;
-    return recordBufferSize == that.recordBufferSize &&
+    return Objects.equals(recordBufferSize, that.recordBufferSize) &&
            recordBufferOfferTimeout == that.recordBufferOfferTimeout &&
            recordBufferFullWait == that.recordBufferFullWait &&
-           maxRecordsPerPoll == that.maxRecordsPerPoll &&
+           Objects.equals(maxRecordsPerPoll, that.maxRecordsPerPoll) &&
            Objects.equals(fetchThreads, that.fetchThreads);
   }
 

@@ -151,6 +151,24 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   /**
+   * Get the ResultSet for indexInfo for given table
+   *
+   * @param databaseMetaData DatabaseMetaData
+   * @param tableName        Name of table
+   * @return ResultSet with index info
+   */
+  @Override
+  public ResultSet getIndexInfo(DatabaseMetaData databaseMetaData, String tableName) throws SQLException
+  {
+    return databaseMetaData.getIndexInfo(
+        null,
+        null,
+        StringUtils.toUpperCase(tableName),  // tableName needs to be uppercase in derby default setting
+        false,
+        false
+    );
+  }
+  /**
    * Interrogate table metadata and return true or false depending on the existance of the indicated column
    *
    * public visibility because DerbyConnector needs to override thanks to uppercase table and column names.
