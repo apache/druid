@@ -52,7 +52,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericAggregator(aggregator, selector);
+    return canHandleNulls() ? aggregator : new NullableNumericAggregator(aggregator, selector);
   }
 
   @Override
@@ -60,7 +60,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericBufferAggregator(aggregator, selector);
+    return canHandleNulls() ? aggregator : new NullableNumericBufferAggregator(aggregator, selector);
   }
 
   @Override
@@ -69,14 +69,14 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericVectorAggregator(aggregator, selector);
+    return canHandleNulls() ? aggregator : new NullableNumericVectorAggregator(aggregator, selector);
   }
 
   @Override
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
     AggregateCombiner combiner = makeAggregateCombiner();
-    return NullHandling.replaceWithDefault() ? combiner : new NullableNumericAggregateCombiner(combiner);
+    return canHandleNulls() ? combiner : new NullableNumericAggregateCombiner(combiner);
   }
 
   @Override
@@ -84,6 +84,12 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     return getMaxIntermediateSize() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
   }
+
+  protected boolean canHandleNulls()
+  {
+    return NullHandling.replaceWithDefault();
+  }
+
 
   // ---- ABSTRACT METHODS BELOW ------
 
