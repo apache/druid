@@ -36,6 +36,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -46,10 +47,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Locale;
 
 
 public class SQLMetadataConnectorTest
@@ -101,7 +102,7 @@ public class SQLMetadataConnectorTest
           for (String column : Arrays.asList("type", "group_id")) {
             Assert.assertTrue(
                 StringUtils.format("Tasks table column %s was not created!", column),
-                connector.tableHasColumn(handle, taskTable, column)
+                connector.tableHasColumn(taskTable, column)
             );
           }
 
