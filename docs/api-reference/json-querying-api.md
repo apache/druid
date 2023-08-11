@@ -231,8 +231,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2" \
 ```
 
 </TabItem>
-<TabItem value="6" label="HTTP">
 
+<TabItem value="6" label="HTTP">
 
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
@@ -278,6 +278,7 @@ Content-Length: 817
 
 <details>
   <summary>Click to show sample response</summary>
+
 ```json
 [
     {
