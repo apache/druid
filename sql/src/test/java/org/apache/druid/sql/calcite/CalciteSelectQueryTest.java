@@ -31,7 +31,6 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -1949,11 +1948,16 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                             dimensions(
                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
                         .setDimFilter(
-                            range("m1", ColumnType.LONG, null, -1.0, false, true))
+                            range("m1", ColumnType.DOUBLE, null, -1.0, false, true))
                         .build())
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setAggregatorSpecs(aggregators(
+                    useDefault
+                        ? new CountAggregatorFactory("a0")
+                        : new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("a0"),
+                            notNull("d0"))))
                 .build()
 
         ),
@@ -1995,8 +1999,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilter()
   {
-    long expectedCount;
-    AggregatorFactory aggregate;
     cannotVectorize();
 
     testQuery(
@@ -2031,7 +2033,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
         ),
         // returning 1 is incorrect result; but with nulls as default that should be expected
-        ImmutableList.of(new Object[] {useDefault ? 1l : 0l}));
+        ImmutableList.of(new Object[] {useDefault ? 1L : 0L}));
   }
 
 }
