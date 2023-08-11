@@ -378,7 +378,7 @@ public class VectorGroupByEngine
       }
 
       grouper.initVectorized(cursor.getMaxVectorSize());
-
+      grouper.aggregateVector(keySpace, cardinalityForArrayAggregation, cardinalityForArrayAggregation);
       return grouper;
     }
 

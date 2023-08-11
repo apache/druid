@@ -94,7 +94,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name);
+    return new CountAggregatorFactory(name);
   }
 
   @Override
