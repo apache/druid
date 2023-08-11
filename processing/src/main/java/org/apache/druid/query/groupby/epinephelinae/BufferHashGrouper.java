@@ -158,12 +158,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     offsetList.reset();
     hashTable.reset();
     keySerde.reset();
+    addEmptyAggregateIfNeeded();
   }
 
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
-    addEmptyAggregateIfNeeded();
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
