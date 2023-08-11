@@ -597,7 +597,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
               class="bp4-form-content"
             >
               <p>
-                The cluster default rules are applied if no datasource specific rule matches.
+                The cluster default rules are evaluated if none of the above rules match.
               </p>
               <div
                 class="rule-editor"
