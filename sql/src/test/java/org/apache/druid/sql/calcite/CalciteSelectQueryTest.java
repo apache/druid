@@ -1985,11 +1985,15 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                             dimensions(
                                 new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
                         .setDimFilter(
-                            range("m1", ColumnType.LONG, null, 111.0, false, true))
+                            range("m1", ColumnType.DOUBLE, null, 111.0, false, true))
                         .build())
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setAggregatorSpecs(aggregators(useDefault
+                    ? new CountAggregatorFactory("a0")
+                    : new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"),
+                        notNull("d0"))))
                 .build()
 
         ),
