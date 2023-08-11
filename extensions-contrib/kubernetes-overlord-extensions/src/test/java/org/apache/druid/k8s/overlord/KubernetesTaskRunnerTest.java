@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
@@ -355,6 +356,46 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of());
     EasyMock.expect(taskAdapter.getTaskId(job)).andThrow(new IOException());
+
+    replayAll();
+
+    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = runner.restore();
+
+    verifyAll();
+
+    Assert.assertNotNull(tasks);
+    Assert.assertEquals(0, tasks.size());
+  }
+
+  @Test
+  public void test_restore_missingFromTaskStorage_cleanupJob() throws IOException
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter,
+        taskStorage
+    ) {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return new KubernetesWorkItem(task, null).getResult();
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.getTaskId(job)).andReturn(ID);
+    EasyMock.expect(peonClient.deletePeonJob(new K8sTaskId(ID))).andReturn(true);
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of());
 
     replayAll();
 

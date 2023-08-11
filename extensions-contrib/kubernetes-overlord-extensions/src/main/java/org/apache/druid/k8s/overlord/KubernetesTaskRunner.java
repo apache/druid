@@ -49,6 +49,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -322,7 +323,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         String taskId = adapter.getTaskId(job);
         Task task = tasksFromStorage.get(taskId);
         if (task == null) {
-          log.warn("Found K8s job running task id %s that was not in taskStorage during restore, ignoring it.", taskId);
+          log.warn("Found K8s job running task id %s that was not in taskStorage during restore, deleting it.", taskId);
+          client.deletePeonJob(new K8sTaskId(taskId));
           continue;
         }
         restoredTasks.add(Pair.of(tasksFromStorage.get(taskId), joinAsync(task)));
