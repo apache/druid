@@ -23,7 +23,6 @@
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-msq-convert-spec",
-      "tutorials/tutorial-jdbc",
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-jupyter-index",
