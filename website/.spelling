@@ -347,6 +347,7 @@ interruptible
 isAllowList
 jackson-jq
 javadoc
+javascript
 joinable
 jsonCompression
 json_keys
@@ -812,7 +813,6 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
 ambari-metrics
@@ -878,6 +878,8 @@ P1D
 cycleSize
 doubleMax
 doubleAny
+doubleFirst
+doubleLast
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -887,6 +889,8 @@ druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
+longFirst
+longLast
 longMean
 longMeanNoNulls
 longMin
@@ -1030,7 +1034,6 @@ PT17S
 GCS
 StaticGoogleBlobStoreFirehose
 gcs-connector
-hadoop2
 hdfs
 Aotearoa
 Czechia
@@ -1503,6 +1506,8 @@ str1
 str2
 string_to_array
 stringAny
+stringFirst
+stringLast
 Strlen
 strlen
 strpos
@@ -1762,6 +1767,8 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
+floatFirst
+floatLast
 floatSum
 joinFilterRewriteMaxSize
 maxQueuedBytes

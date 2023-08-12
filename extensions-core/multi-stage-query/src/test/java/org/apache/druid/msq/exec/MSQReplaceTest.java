@@ -329,8 +329,7 @@ public class MSQReplaceTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(invalidSqlContains(
-            "Missing time chunk information in OVERWRITE clause for REPLACE. "
-            + "Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
+            "Incorrect syntax near the keyword 'OVERWRITE'"
         ))
         .verifyPlanningErrors();
   }
