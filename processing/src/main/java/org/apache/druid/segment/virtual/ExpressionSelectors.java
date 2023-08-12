@@ -344,11 +344,16 @@ public class ExpressionSelectors
       final boolean homogenizeNullMultiValueStringArrays =
           plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
 
-      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
-        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
+      if (capabilities == null || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, or implicitly mapped mvd, use Object selector and see if that gives anything useful
         supplier = supplierFromObjectSelector(
             columnSelectorFactory.makeColumnValueSelector(columnName),
             homogenizeNullMultiValueStringArrays
+        );
+      } else if (capabilities.isArray()) {
+        supplier = supplierFromObjectSelector(
+            columnSelectorFactory.makeColumnValueSelector(columnName),
+            false
         );
       } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);

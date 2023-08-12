@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -53,11 +54,14 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorSelectorUtils;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
@@ -367,7 +371,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       @Nullable ExtractionFn extractionFn
   )
   {
-    if (logicalType.isArray()) {
+    if (variantTypes == null && logicalType.isArray()) {
       throw new IAE("Dimension selector is currently unsupported for [%s]", logicalType);
     }
     // copy everywhere all the time
@@ -628,9 +632,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
           return f == null ? 0f : f;
         } else if (id < adjustDoubleId) {
           return longDictionary.get(id - adjustLongId).floatValue();
-        } else {
+        } else if (id < adjustArrayId) {
           return doubleDictionary.get(id - adjustDoubleId).floatValue();
         }
+        return 0L;
       }
 
       @Override
@@ -646,9 +651,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
           return d == null ? 0.0 : d;
         } else if (id < adjustDoubleId) {
           return longDictionary.get(id - adjustLongId).doubleValue();
-        } else {
+        } else if (id < adjustArrayId) {
           return doubleDictionary.get(id - adjustDoubleId);
         }
+        return 0.0;
       }
 
       @Override
@@ -664,8 +670,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
           return l == null ? 0L : l;
         } else if (id < adjustDoubleId) {
           return longDictionary.get(id - adjustLongId);
-        } else {
+        } else if (id < adjustArrayId) {
           return doubleDictionary.get(id - adjustDoubleId).longValue();
+        } else {
+          return 0L;
         }
       }
 
@@ -688,7 +696,16 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
         if (nullMark == offsetMark) {
           return true;
         }
-        return DimensionHandlerUtils.isNumericNull(getObject());
+        final int id = encodedValueColumn.get(offset.getOffset());
+        // zero is always null
+        if (id == 0) {
+          return true;
+        } else if (id < adjustLongId) {
+          final String value = StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+          return GuavaUtils.tryParseLong(value) == null && Doubles.tryParse(value) == null;
+        }
+        // if id is less than array ids, its definitely a number and not null (since null is 0)
+        return id >= adjustArrayId;
       }
 
       @Override
@@ -745,59 +762,106 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   }
 
   @Override
-  public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
+  public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
   {
-    return new VectorObjectSelector()
-    {
-      private final int[] vector = new int[offset.getMaxVectorSize()];
-      private final Object[] objects = new Object[offset.getMaxVectorSize()];
-      private int offsetId = ReadableVectorInspector.NULL_ID;
-
-      @Override
-
-      public Object[] getObjectVector()
+    if (FieldTypeInfo.convertToSet(variantTypes.getByteValue()).stream().allMatch(x -> x.isNumeric())) {
+      return new BaseDoubleVectorValueSelector(offset)
       {
-        if (offsetId == offset.getId()) {
-          return objects;
+        private final double[] valueVector = new double[offset.getMaxVectorSize()];
+        private final int[] idVector = new int[offset.getMaxVectorSize()];
+        @Nullable
+        private boolean[] nullVector = null;
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        @Nullable
+        private PeekableIntIterator nullIterator = nullValueBitmap != null ? nullValueBitmap.peekableIterator() : null;
+        private int offsetMark = -1;
+        @Override
+        public double[] getDoubleVector()
+        {
+          computeVectorsIfNeeded();
+          return valueVector;
         }
 
-        if (offset.isContiguous()) {
-          encodedValueColumn.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-        } else {
-          encodedValueColumn.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
+        @Nullable
+        @Override
+        public boolean[] getNullVector()
+        {
+          computeVectorsIfNeeded();
+          return nullVector;
         }
-        for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-          final int dictionaryId = vector[i];
-          if (dictionaryId < adjustArrayId) {
-            objects[i] = lookupScalarValueStrict(dictionaryId);
+
+        private void computeVectorsIfNeeded()
+        {
+          if (id == offset.getId()) {
+            return;
+          }
+
+          if (offset.isContiguous()) {
+            if (offset.getStartOffset() < offsetMark) {
+              nullIterator = nullValueBitmap.peekableIterator();
+            }
+            offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
+            encodedValueColumn.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
-            int[] arr = arrayDictionary.get(dictionaryId - adjustArrayId);
-            if (arr == null) {
-              objects[i] = null;
+            final int[] offsets = offset.getOffsets();
+            if (offsets[offsets.length - 1] < offsetMark) {
+              nullIterator = nullValueBitmap.peekableIterator();
+            }
+            offsetMark = offsets[offsets.length - 1];
+            encodedValueColumn.get(idVector, offsets, offset.getCurrentVectorSize());
+          }
+          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+            int dictId = idVector[i];
+            if (dictId == 0) {
+              valueVector[i] = 0.0;
+            } else if (dictId < adjustDoubleId) {
+              valueVector[i] = longDictionary.get(dictId - adjustLongId).doubleValue();
             } else {
-              final Object[] array = new Object[arr.length];
-              for (int j = 0; j < arr.length; j++) {
-                array[j] = lookupScalarValue(arr[j]);
-              }
-              objects[i] = ExprEval.ofType(logicalExpressionType, array).asArray();
+              valueVector[i] = doubleDictionary.get(dictId - adjustDoubleId).doubleValue();
             }
           }
+
+          if (nullIterator != null) {
+            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
+          }
+
+          id = offset.getId();
         }
-        offsetId = offset.getId();
+      };
+    }
+    throw DruidException.defensive("Cannot make vector value selector for variant typed [%s] column", variantTypes);
+  }
 
-        return objects;
+  @Override
+  public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
+  {
+    return new VariantVectorObjectSelector(
+        offset,
+        encodedValueColumn,
+        arrayDictionary,
+        logicalExpressionType,
+        adjustArrayId
+    )
+    {
+      @Override
+      public int adjustDictionaryId(int id)
+      {
+        return id;
       }
 
+      @Nullable
       @Override
-      public int getMaxVectorSize()
+      public Object lookupScalarValue(int dictionaryId)
       {
-        return offset.getMaxVectorSize();
+        return VariantColumn.this.lookupScalarValue(dictionaryId);
       }
 
+      @Nullable
       @Override
-      public int getCurrentVectorSize()
+      public Object lookupScalarValueAndCast(int dictionaryId)
       {
-        return offset.getCurrentVectorSize();
+        return VariantColumn.this.lookupScalarValueAndCast(dictionaryId);
       }
     };
   }
@@ -815,7 +879,8 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
    * This method should NEVER be used when values must round trip to be able to be looked up from the array value
    * dictionary since it might coerce element values to a different type
    */
-  private Object lookupScalarValueStrict(int id)
+  @Nullable
+  private Object lookupScalarValueAndCast(int id)
   {
     if (id == 0) {
       return null;
@@ -828,6 +893,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     }
   }
 
+  @Nullable
   private Object lookupScalarValue(int id)
   {
     if (id < adjustLongId) {
@@ -838,5 +904,91 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       return doubleDictionary.get(id - adjustDoubleId);
     }
     throw new IllegalArgumentException("not a scalar in the dictionary");
+  }
+
+  /**
+   * Make a {@link VectorObjectSelector} for a dictionary encoded column that coerces mixed types to a common type
+   */
+  public abstract static class VariantVectorObjectSelector implements VectorObjectSelector
+  {
+    private final int[] vector;
+    private final Object[] objects;
+    private int offsetId = ReadableVectorInspector.NULL_ID;
+    private final ReadableVectorOffset offset;
+    private final ColumnarInts encodedValueColumn;
+    private final FrontCodedIntArrayIndexed arrayDictionary;
+    private final ExpressionType logicalExpressionType;
+    private final int adjustArrayId;
+
+    protected VariantVectorObjectSelector(
+        ReadableVectorOffset offset,
+        ColumnarInts encodedValueColumn,
+        FrontCodedIntArrayIndexed arrayDictionary,
+        ExpressionType logicalExpressionType,
+        int adjustArrayId
+    )
+    {
+      this.offset = offset;
+      this.encodedValueColumn = encodedValueColumn;
+      this.arrayDictionary = arrayDictionary;
+      this.logicalExpressionType = logicalExpressionType;
+      this.adjustArrayId = adjustArrayId;
+      this.objects = new Object[offset.getMaxVectorSize()];
+      this.vector = new int[offset.getMaxVectorSize()];
+    }
+
+    public abstract int adjustDictionaryId(int id);
+
+    @Nullable
+    public abstract Object lookupScalarValue(int dictionaryId);
+
+    @Nullable
+    public abstract Object lookupScalarValueAndCast(int dictionaryId);
+
+    @Override
+    public Object[] getObjectVector()
+    {
+      if (offsetId == offset.getId()) {
+        return objects;
+      }
+
+      if (offset.isContiguous()) {
+        encodedValueColumn.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
+      } else {
+        encodedValueColumn.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
+      }
+      for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+        final int dictionaryId = adjustDictionaryId(vector[i]);
+        if (dictionaryId < adjustArrayId) {
+          objects[i] = lookupScalarValueAndCast(dictionaryId);
+        } else {
+          int[] arr = arrayDictionary.get(dictionaryId - adjustArrayId);
+          if (arr == null) {
+            objects[i] = null;
+          } else {
+            final Object[] array = new Object[arr.length];
+            for (int j = 0; j < arr.length; j++) {
+              array[j] = lookupScalarValue(arr[j]);
+            }
+            objects[i] = ExprEval.ofType(logicalExpressionType, array).asArray();
+          }
+        }
+      }
+      offsetId = offset.getId();
+
+      return objects;
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return offset.getMaxVectorSize();
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return offset.getCurrentVectorSize();
+    }
   }
 }

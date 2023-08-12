@@ -32,7 +32,6 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * Helper used to write field values to row-based frames or {@link RowKey}.
@@ -128,8 +127,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    //noinspection unchecked
-    final ColumnValueSelector<List<String>> selector = selectorFactory.makeColumnValueSelector(columnName);
+    //noinspection rawtypes
+    final ColumnValueSelector selector = selectorFactory.makeColumnValueSelector(columnName);
     return new StringArrayFieldWriter(selector);
   }
 

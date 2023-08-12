@@ -259,7 +259,7 @@ export class DruidError extends Error {
   public position?: RowColumn;
   public suggestion?: QuerySuggestion;
 
-  // Depricated
+  // Deprecated
   public error?: string;
   public errorClass?: string;
   public host?: string;

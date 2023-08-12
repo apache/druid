@@ -28,6 +28,7 @@ export interface QueryContext {
   // Multi-stage query
   maxNumTasks?: number;
   finalizeAggregations?: boolean;
+  selectDestination?: string;
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
@@ -161,7 +162,7 @@ export function changeFinalizeAggregations(
     : deepDelete(context, 'finalizeAggregations');
 }
 
-// finalizeAggregations
+// groupByEnableMultiValueUnnesting
 
 export function getGroupByEnableMultiValueUnnesting(context: QueryContext): boolean | undefined {
   const { groupByEnableMultiValueUnnesting } = context;
