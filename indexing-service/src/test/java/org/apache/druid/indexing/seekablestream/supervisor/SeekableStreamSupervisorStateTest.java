@@ -1092,18 +1092,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
-                checkpointOffsets,
-                ImmutableSet.of()
+                checkpointOffsets
             )
         )
     );
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             STREAM,
-            expectedOffsets,
-            ImmutableSet.of()
+            expectedOffsets
         ))
     )).andReturn(
         true
@@ -1127,10 +1125,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             STREAM,
-            resetOffsets,
-            ImmutableSet.of()
+            resetOffsets
         )
     );
 
@@ -1154,18 +1151,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
-                checkpointOffsets,
-                ImmutableSet.of()
+                checkpointOffsets
             )
         )
     );
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             "stream",
-            expectedOffsets,
-            ImmutableSet.of()
+            expectedOffsets
         )
     ))).andReturn(true);
     taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
@@ -1209,10 +1204,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             STREAM,
-            resetOffsets,
-            ImmutableSet.of()
+            resetOffsets
         )
     );
 
@@ -1235,10 +1229,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null);
     EasyMock.expect(indexerMetadataStorageCoordinator.insertDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             "stream",
-            expectedOffsets,
-            ImmutableSet.of()
+            expectedOffsets
         )
     ))).andReturn(true);
     taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
@@ -1282,10 +1275,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             STREAM,
-            resetOffsets,
-            ImmutableSet.of()
+            resetOffsets
         )
     );
 
@@ -1310,18 +1302,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
-                checkpointOffsets,
-                ImmutableSet.of()
+                checkpointOffsets
             )
         )
     );
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             "stream",
-            expectedOffsets,
-            ImmutableSet.of()
+            expectedOffsets
         )
     ))).andReturn(true);
 
@@ -1351,10 +1341,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             STREAM,
-            resetOffsets,
-            ImmutableSet.of()
+            resetOffsets
         )
     );
 
@@ -1378,18 +1367,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
-                checkpointOffsets,
-                ImmutableSet.of()
+                checkpointOffsets
             )
         )
     );
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(DATASOURCE, new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             "stream",
-            expectedOffsets,
-            ImmutableSet.of()
+            expectedOffsets
         )
     ))).andReturn(true);
     taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
@@ -1421,10 +1408,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
 
     final DataSourceMetadata resetMetadata = new TestSeekableStreamDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(
+        new SeekableStreamEndSequenceNumbers<>(
             STREAM,
-            resetOffsets,
-            ImmutableSet.of()
+            resetOffsets
         )
     );
 
@@ -1477,7 +1463,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testSupervisorResetInvalidStream()
+  public void testSupervisorResetWithInvalidStartSequenceMetadata()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     replayAll();
@@ -1510,6 +1496,55 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             "i-am-not-real",
             ImmutableMap.of("0", "10", "1", "20", "2", "30"),
             ImmutableSet.of()
+        )
+    );
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () ->
+            supervisor.resetOffsets(dataSourceMetadata)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            StringUtils.format(
+                "Provided datasourceMetadata[%s] is invalid. Sequence numbers can only be of type[SeekableStreamEndSequenceNumbers], but found[SeekableStreamStartSequenceNumbers].",
+                dataSourceMetadata
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testSupervisorResetInvalidStream()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition("0"),
+        ImmutableMap.of("0", "0"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition("1"),
+        ImmutableMap.of("1", "0"),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    verifyAll();
+
+    final DataSourceMetadata dataSourceMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(
+            "i-am-not-real",
+            ImmutableMap.of("0", "10", "1", "20", "2", "30")
         )
     );
 

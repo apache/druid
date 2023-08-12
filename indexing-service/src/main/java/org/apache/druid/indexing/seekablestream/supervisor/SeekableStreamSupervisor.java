@@ -63,6 +63,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientAsyncImpl;
@@ -1055,7 +1056,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @SuppressWarnings("unchecked")
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
         (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) resetDataSourceMetadata;
-    String resetStream = resetMetadata.getSeekableStreamSequenceNumbers().getStream();
+
+    final SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> streamSequenceNumbers = resetMetadata.getSeekableStreamSequenceNumbers();
+    if (!(streamSequenceNumbers instanceof SeekableStreamEndSequenceNumbers)) {
+      throw InvalidInput.exception(
+          "Provided datasourceMetadata[%s] is invalid. Sequence numbers can only be of type[%s], but found[%s].",
+          resetMetadata,
+          SeekableStreamEndSequenceNumbers.class.getSimpleName(),
+          streamSequenceNumbers.getClass().getSimpleName()
+      );
+    }
+
+    final String resetStream = streamSequenceNumbers.getStream();
     if (!ioConfig.getStream().equals(resetStream)) {
       throw InvalidInput.exception(
           "Stream[%s] doesn't exist in the supervisor[%s]. Supervisor is consuming stream[%s].",
