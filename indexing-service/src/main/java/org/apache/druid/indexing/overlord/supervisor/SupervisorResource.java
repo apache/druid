@@ -506,7 +506,7 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response resetOffsets(
       @PathParam("id") final String id,
-      @Nullable final DataSourceMetadata resetDataSourceMetadata
+      final DataSourceMetadata resetDataSourceMetadata
   )
   {
     return handleResetRequest(id, resetDataSourceMetadata);

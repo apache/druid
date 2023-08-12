@@ -1934,7 +1934,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     protected int getTaskGroupIdForPartition(String partition)
     {
-      return Integer.parseInt(partition) % spec.getIoConfig().getTaskCount();
+      try {
+        return Integer.parseInt(partition) % spec.getIoConfig().getTaskCount();
+      }
+      catch (NumberFormatException e) {
+        return 0;
+      }
     }
 
     @Override
