@@ -263,8 +263,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     }
 
     runCoordinatorCycle();
-    verifyValue(Metric.PICKED_FOR_MOVE, 1900L);
-    verifyValue(Metric.MOVED_COUNT, 1900L);
+    verifyValue(Metric.PICKED_FOR_MOVE, 500L);
+    verifyValue(Metric.MOVED_COUNT, 500L);
   }
 
 }

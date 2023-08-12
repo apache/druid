@@ -146,7 +146,7 @@ public class SegmentToMoveCalculatorTest
     Assert.assertEquals(100, minSegmentsToMove);
 
     final int segmentsToMoveToFixSkew = SegmentToMoveCalculator
-        .computeNumSegmentsToMoveInTierToFixSkew(TIER, historicals);
+        .computeNumSegmentsToMoveToBalanceTier(TIER, historicals);
     Assert.assertEquals(0, segmentsToMoveToFixSkew);
 
     // Find segmentsToMove with no limit on maxSegmentsToMove
@@ -168,7 +168,7 @@ public class SegmentToMoveCalculatorTest
     Assert.assertEquals(100, minSegmentsToMove);
 
     final int segmentsToMoveToFixSkew = SegmentToMoveCalculator
-        .computeNumSegmentsToMoveInTierToFixSkew(TIER, historicals);
+        .computeNumSegmentsToMoveToBalanceTier(TIER, historicals);
     Assert.assertEquals(5_000, segmentsToMoveToFixSkew);
 
     // Find segmentsToMove with no limit on maxSegmentsToMove

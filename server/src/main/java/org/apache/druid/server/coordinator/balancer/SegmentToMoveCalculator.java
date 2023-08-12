@@ -26,7 +26,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.SegmentCountsPerInterval;
 import org.apache.druid.server.coordinator.ServerHolder;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * Calculates the maximum, minimum and required number of segments to move in a
@@ -67,7 +71,7 @@ public class SegmentToMoveCalculator
     final int minSegmentsToMove = SegmentToMoveCalculator
         .computeMinSegmentsToMoveInTier(totalSegments);
     final int segmentsToMoveToFixDeviation = SegmentToMoveCalculator
-        .computeNumSegmentsToMoveInTierToFixSkew(tier, historicals);
+        .computeNumSegmentsToMoveToBalanceTier(tier, historicals);
     log.info(
         "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
         segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxSegmentsToMoveInTier
@@ -158,31 +162,16 @@ public class SegmentToMoveCalculator
    * @param tier        Name of the tier used only for logging purposes
    * @param historicals List of historicals in the tier
    */
-  public static int computeNumSegmentsToMoveInTierToFixSkew(String tier, List<ServerHolder> historicals)
+  public static int computeNumSegmentsToMoveToBalanceTier(String tier, List<ServerHolder> historicals)
   {
     if (historicals.isEmpty()) {
       return 0;
     }
 
-    final long totalUsageBytes = getTotalUsageBytes(historicals);
-    final Object2IntMap<String> datasourceToTotalSegments = getTotalSegmentsPerDatasource(historicals);
-
-    final int totalSegments = datasourceToTotalSegments.values().intStream().sum();
-    if (totalSegments <= 0) {
-      return 0;
-    }
-
-    final Object2IntMap<String> datasourceToTotalDeviation
-        = computeDatasourceToTotalDeviation(historicals, datasourceToTotalSegments);
-    findAndLogMostSkewedDatasource(tier, historicals, datasourceToTotalDeviation);
-
-    final int totalDeviationByCounts = datasourceToTotalDeviation.values().intStream().sum();
-
-    final int totalDeviationByUsage
-        = computeTotalDeviationBasedOnDiskUsage(tier, historicals, totalUsageBytes, totalSegments);
-
-    // Move half of the total absolute deviation
-    return Math.max(totalDeviationByCounts, totalDeviationByUsage) / 2;
+    return Math.max(
+        computeSegmentsToMoveToBalanceCounts(tier, historicals),
+        computeSegmentsToMoveToBalanceDiskUsage(tier, historicals)
+    );
   }
 
   private static Object2IntMap<String> getTotalSegmentsPerDatasource(List<ServerHolder> servers)
@@ -203,101 +192,123 @@ public class SegmentToMoveCalculator
                   .sum();
   }
 
+  private static int getTotalSegmentCount(List<ServerHolder> servers)
+  {
+    return servers.stream()
+                  .mapToInt(server -> server.getProjectedSegments().getTotalSegmentCount())
+                  .sum();
+  }
+
   /**
-   * Computes the sum of absolute deviations from the average number of segments
-   * for each datasource.
+   * Computes the number of segments to move across the servers of the tier in
+   * order to balance the segment counts of the most unbalanced datasource.
    */
-  private static Object2IntMap<String> computeDatasourceToTotalDeviation(
-      List<ServerHolder> servers,
-      Object2IntMap<String> datasourceToTotalSegments
+  private static int computeSegmentsToMoveToBalanceCounts(
+      String tier,
+      List<ServerHolder> servers
   )
   {
-    final int numServers = servers.size();
-    final Object2IntMap<String> datasourceToAverageSegments = new Object2IntOpenHashMap<>();
-    datasourceToTotalSegments.object2IntEntrySet().forEach(
-        entry -> datasourceToAverageSegments.put(entry.getKey(), entry.getIntValue() / numServers)
-    );
+    // Find all the datasources
+    final Set<String> datasources = servers.stream().flatMap(
+        s -> s.getProjectedSegments().getDatasourceToTotalSegmentCount().keySet().stream()
+    ).collect(Collectors.toSet());
+    if (datasources.isEmpty()) {
+      return 0;
+    }
 
-    final Object2IntMap<String> datasourceToTotalDeviation = new Object2IntOpenHashMap<>();
+    // Compute the min and max number of segments for each datasource
+    final Object2IntMap<String> datasourceToMaxSegments = new Object2IntOpenHashMap<>();
+    final Object2IntMap<String> datasourceToMinSegments = new Object2IntOpenHashMap<>();
     for (ServerHolder server : servers) {
-      SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
-      for (Object2IntMap.Entry<String> entry :
-          projectedSegments.getDatasourceToTotalSegmentCount().object2IntEntrySet()) {
-        final String datasource = entry.getKey();
-        int averageSegmentsForDatasource = datasourceToAverageSegments.getInt(datasource);
-        datasourceToTotalDeviation.mergeInt(
-            datasource,
-            Math.abs(entry.getIntValue() - averageSegmentsForDatasource),
-            Integer::sum
-        );
+      final Object2IntMap<String> datasourceToSegmentCount
+          = server.getProjectedSegments().getDatasourceToTotalSegmentCount();
+      for (String datasource : datasources) {
+        int count = datasourceToSegmentCount.getInt(datasource);
+        datasourceToMaxSegments.mergeInt(datasource, count, Math::max);
+        datasourceToMinSegments.mergeInt(datasource, count, Math::min);
       }
     }
 
-    return datasourceToTotalDeviation;
-  }
+    // Compute the gap between min and max
+    final TreeMap<String, Integer> datasourceToCountDifference = new TreeMap<>(Comparator.reverseOrder());
+    datasourceToMaxSegments.object2IntEntrySet().forEach(entry -> {
+      String datasource = entry.getKey();
+      int maxCount = entry.getIntValue();
+      int minCount = datasourceToMinSegments.getInt(datasource);
+      datasourceToCountDifference.put(datasource, maxCount - minCount);
+    });
 
-  private static int computeTotalDeviationBasedOnDiskUsage(
-      String tier,
-      List<ServerHolder> servers,
-      long totalUsageBytes,
-      int totalSegments
-  )
-  {
-    final long averageUsageBytes = totalUsageBytes / servers.size();
-
-    long totalDeviationInUsageBytes = 0;
-    double maxDiskUsage = 0.0;
-    double minDiskUsage = 100.0;
-    for (ServerHolder server : servers) {
-      final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
-
-      long serverUsageBytes = projectedSegments.getTotalSegmentBytes();
-      totalDeviationInUsageBytes += Math.abs(serverUsageBytes - averageUsageBytes);
-
-      double diskUsage = (100.0 * projectedSegments.getTotalSegmentBytes()) / server.getMaxSize();
-      maxDiskUsage = Math.max(diskUsage, maxDiskUsage);
-      minDiskUsage = Math.min(diskUsage, minDiskUsage);
-    }
-
-    log.info(
-        "Disk usages in tier[%s] are in the range[min=%.1f%%, max=%.1f%%].",
-        tier, minDiskUsage, maxDiskUsage
-    );
-
-    final double averageSegmentSize = (1.0 * totalUsageBytes) / totalSegments;
-    return (int) (totalDeviationInUsageBytes / averageSegmentSize);
-  }
-
-  private static void findAndLogMostSkewedDatasource(
-      String tier,
-      List<ServerHolder> servers,
-      Object2IntMap<String> datasourceToTotalDeviation
-  )
-  {
-    String mostSkewedDatasource = null;
-    int maxDeviation = 0;
-    for (Object2IntMap.Entry<String> entry : datasourceToTotalDeviation.object2IntEntrySet()) {
-      if (entry.getIntValue() > maxDeviation) {
-        maxDeviation = entry.getIntValue();
-        mostSkewedDatasource = entry.getKey();
-      }
-    }
-
+    // Identify the most unbalanced datasource
+    String mostUnbalancedDatasource = datasourceToCountDifference.firstKey();
     int minNumSegments = Integer.MAX_VALUE;
     int maxNumSegments = 0;
     for (ServerHolder server : servers) {
       int countForSkewedDatasource = server.getProjectedSegments()
                                            .getDatasourceToTotalSegmentCount()
-                                           .getInt(mostSkewedDatasource);
+                                           .getInt(mostUnbalancedDatasource);
 
       minNumSegments = Math.min(minNumSegments, countForSkewedDatasource);
       maxNumSegments = Math.max(maxNumSegments, countForSkewedDatasource);
     }
 
-    log.info(
-        "Most unbalanced datasource[%s] in tier[%s] has counts[min=%,d, max=%,d].",
-        mostSkewedDatasource, tier, minNumSegments, maxNumSegments
-    );
+    final int numSegmentsToMove = datasourceToCountDifference.getOrDefault(mostUnbalancedDatasource, 0) / 2;
+    if (numSegmentsToMove >= 0) {
+      log.info(
+          "Need to move [%,d] segments of datasource[%s] in tier[%s] to fix gap between min[%,d] and max[%,d].",
+          numSegmentsToMove, mostUnbalancedDatasource, tier, minNumSegments, maxNumSegments
+      );
+    }
+    return numSegmentsToMove;
+  }
+
+  private static int computeSegmentsToMoveToBalanceDiskUsage(
+      String tier,
+      List<ServerHolder> servers
+  )
+  {
+    if (servers.isEmpty()) {
+      return 0;
+    }
+
+    double maxUsagePercent = 0.0;
+    double minUsagePercent = 100.0;
+
+    long maxUsageBytes = 0;
+    long minUsageBytes = Long.MAX_VALUE;
+    for (ServerHolder server : servers) {
+      final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
+
+      // Track the maximum and minimum values
+      long serverUsageBytes = projectedSegments.getTotalSegmentBytes();
+      maxUsageBytes = Math.max(serverUsageBytes, maxUsageBytes);
+      minUsageBytes = Math.min(serverUsageBytes, minUsageBytes);
+
+      double diskUsage = server.getMaxSize() <= 0
+                         ? 0 : (100.0 * projectedSegments.getTotalSegmentBytes()) / server.getMaxSize();
+      maxUsagePercent = Math.max(diskUsage, maxUsagePercent);
+      minUsagePercent = Math.min(diskUsage, minUsagePercent);
+    }
+
+    final int totalSegments = getTotalSegmentCount(servers);
+    final long totalUsageBytes = getTotalUsageBytes(servers);
+    if (totalSegments <= 0 || totalUsageBytes <= 0) {
+      return 0;
+    }
+
+    final double averageSegmentSize = (1.0 * totalUsageBytes) / totalSegments;
+    final long differenceInUsageBytes = maxUsageBytes - minUsageBytes;
+    final int numSegmentsToMove = averageSegmentSize <= 0
+                                  ? 0 : (int) (differenceInUsageBytes / averageSegmentSize) / 2;
+
+    if (numSegmentsToMove > 0) {
+      log.info(
+          "Need to move [%,d] segments of avg size [%,d MB] in tier[%s] to fix"
+          + " disk usage gap between min[%d GB][%.1f%%] and max[%d GB][%.1f%%].",
+          numSegmentsToMove, ((long) averageSegmentSize) >> 20, tier,
+          minUsageBytes >> 30, minUsagePercent, maxUsageBytes >> 30, maxUsagePercent
+      );
+    }
+    return numSegmentsToMove;
   }
 
   private SegmentToMoveCalculator()
