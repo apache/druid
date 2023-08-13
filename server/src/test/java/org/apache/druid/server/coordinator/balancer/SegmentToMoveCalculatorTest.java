@@ -30,6 +30,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +46,15 @@ public class SegmentToMoveCalculatorTest
                           .forIntervals(100, Granularities.DAY)
                           .withNumPartitions(100)
                           .eachOfSizeInMb(500);
+
+  /**
+   * 10 days * 1 partitions = 10 segments.
+   */
+  private static final List<DataSegment> KOALA_SEGMENTS
+      = CreateDataSegments.ofDatasource("koala")
+                          .forIntervals(10, Granularities.DAY)
+                          .eachOfSizeInMb(500);
+
   private static final String TIER = "tier1";
 
   @Test
@@ -135,11 +145,11 @@ public class SegmentToMoveCalculatorTest
   }
 
   @Test
-  public void testMinSegmentsArePickedForMovedWhenNoSkew()
+  public void testMinSegmentsArePickedForMoveWhenNoSkew()
   {
     final List<ServerHolder> historicals = Arrays.asList(
         createServer("A", WIKI_SEGMENTS),
-        createServer("A", WIKI_SEGMENTS)
+        createServer("B", WIKI_SEGMENTS)
     );
 
     final int minSegmentsToMove = SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(20_000);
@@ -157,11 +167,11 @@ public class SegmentToMoveCalculatorTest
   }
 
   @Test
-  public void testHalfSegmentsArePickedForMovedWhenFullSkew()
+  public void testHalfSegmentsArePickedForMoveWhenFullSkew()
   {
     final List<ServerHolder> historicals = Arrays.asList(
         createServer("A", WIKI_SEGMENTS),
-        createServer("A", Collections.emptyList())
+        createServer("B", Collections.emptyList())
     );
 
     final int minSegmentsToMove = SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(10_000);
@@ -176,6 +186,24 @@ public class SegmentToMoveCalculatorTest
         .computeNumSegmentsToMoveInTier(TIER, historicals, Integer.MAX_VALUE);
 
     Assert.assertEquals(segmentsToMoveToFixSkew, segmentsToMove);
+  }
+
+  @Test
+  public void testDatasourceWithLargestGapDeterminesNumToBalanceCounts()
+  {
+    // Both servers have all koala segments but only A has wiki segments
+    List<DataSegment> segmentsForServerA = new ArrayList<>(WIKI_SEGMENTS);
+    segmentsForServerA.addAll(KOALA_SEGMENTS);
+
+    final List<ServerHolder> historicals = Arrays.asList(
+        createServer("A", segmentsForServerA),
+        createServer("B", KOALA_SEGMENTS)
+    );
+
+    // Verify that half the wiki segments need to be moved for balance
+    int numToMoveToBalanceCount = SegmentToMoveCalculator
+        .computeSegmentsToMoveToBalanceCountsPerDatasource(TIER, historicals);
+    Assert.assertEquals(WIKI_SEGMENTS.size() / 2, numToMoveToBalanceCount);
   }
 
   private static int computeMaxSegmentsToMove(int totalSegments, int numThreads)

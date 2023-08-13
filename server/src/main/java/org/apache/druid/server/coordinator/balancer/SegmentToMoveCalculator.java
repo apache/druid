@@ -28,6 +28,7 @@ import org.apache.druid.server.coordinator.ServerHolder;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -169,20 +170,9 @@ public class SegmentToMoveCalculator
     }
 
     return Math.max(
-        computeSegmentsToMoveToBalanceCounts(tier, historicals),
+        computeSegmentsToMoveToBalanceCountsPerDatasource(tier, historicals),
         computeSegmentsToMoveToBalanceDiskUsage(tier, historicals)
     );
-  }
-
-  private static Object2IntMap<String> getTotalSegmentsPerDatasource(List<ServerHolder> servers)
-  {
-    final Object2IntMap<String> datasourceToTotalSegments = new Object2IntOpenHashMap<>();
-    for (ServerHolder server : servers) {
-      server.getProjectedSegments().getDatasourceToTotalSegmentCount().object2IntEntrySet().forEach(
-          entry -> datasourceToTotalSegments.mergeInt(entry.getKey(), entry.getIntValue(), Integer::sum)
-      );
-    }
-    return datasourceToTotalSegments;
   }
 
   private static long getTotalUsageBytes(List<ServerHolder> servers)
@@ -203,7 +193,7 @@ public class SegmentToMoveCalculator
    * Computes the number of segments to move across the servers of the tier in
    * order to balance the segment counts of the most unbalanced datasource.
    */
-  private static int computeSegmentsToMoveToBalanceCounts(
+  static int computeSegmentsToMoveToBalanceCountsPerDatasource(
       String tier,
       List<ServerHolder> servers
   )
@@ -229,17 +219,18 @@ public class SegmentToMoveCalculator
       }
     }
 
-    // Compute the gap between min and max
-    final TreeMap<String, Integer> datasourceToCountDifference = new TreeMap<>(Comparator.reverseOrder());
+    // Compute the gap between min and max for each datasource and order by largest first
+    final TreeMap<Integer, String> countDiffToDatasource = new TreeMap<>(Comparator.reverseOrder());
     datasourceToMaxSegments.object2IntEntrySet().forEach(entry -> {
       String datasource = entry.getKey();
       int maxCount = entry.getIntValue();
       int minCount = datasourceToMinSegments.getInt(datasource);
-      datasourceToCountDifference.put(datasource, maxCount - minCount);
+      countDiffToDatasource.put(maxCount - minCount, datasource);
     });
 
     // Identify the most unbalanced datasource
-    String mostUnbalancedDatasource = datasourceToCountDifference.firstKey();
+    final Map.Entry<Integer, String> maxCountDifference = countDiffToDatasource.firstEntry();
+    String mostUnbalancedDatasource = maxCountDifference.getValue();
     int minNumSegments = Integer.MAX_VALUE;
     int maxNumSegments = 0;
     for (ServerHolder server : servers) {
@@ -251,8 +242,8 @@ public class SegmentToMoveCalculator
       maxNumSegments = Math.max(maxNumSegments, countForSkewedDatasource);
     }
 
-    final int numSegmentsToMove = datasourceToCountDifference.getOrDefault(mostUnbalancedDatasource, 0) / 2;
-    if (numSegmentsToMove >= 0) {
+    final int numSegmentsToMove = maxCountDifference.getKey() / 2;
+    if (numSegmentsToMove > 0) {
       log.info(
           "Need to move [%,d] segments of datasource[%s] in tier[%s] to fix gap between min[%,d] and max[%,d].",
           numSegmentsToMove, mostUnbalancedDatasource, tier, minNumSegments, maxNumSegments
