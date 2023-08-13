@@ -993,8 +993,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
-            sequences.remove(sequenceMetadata);
-            publishingSequences.remove(sequenceMetadata.getSequenceName());
+            synchronized (sequences) {
+              sequences.remove(sequenceMetadata);
+              publishingSequences.remove(sequenceMetadata.getSequenceName());
+            }
 
             try {
               persistSequences();
@@ -1137,23 +1139,31 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws InterruptedException
   {
-    for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
-      sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
-      if (!sequenceMetadata.isOpen() && !publishingSequences.contains(sequenceMetadata.getSequenceName())) {
-        publishingSequences.add(sequenceMetadata.getSequenceName());
-        try {
-          final Object result = driver.persist(committerSupplier.get());
-          log.debug(
-              "Persist completed with metadata [%s], adding sequence [%s] to publish queue.",
-              result,
-              sequenceMetadata.getSequenceName()
-          );
-          publishAndRegisterHandoff(sequenceMetadata);
+    List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> waitForPublishingSequences = new ArrayList<>();
+
+    synchronized (sequences) {
+      for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
+        sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
+        if (!sequenceMetadata.isOpen() && !publishingSequences.contains(sequenceMetadata.getSequenceName())) {
+          publishingSequences.add(sequenceMetadata.getSequenceName());
+          waitForPublishingSequences.add(sequenceMetadata);
         }
-        catch (InterruptedException e) {
-          log.warn("Interrupted while persisting metadata for sequence [%s].", sequenceMetadata.getSequenceName());
-          throw e;
-        }
+      }
+    }
+
+    for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : waitForPublishingSequences) {
+      try {
+        final Object result = driver.persist(committerSupplier.get());
+        log.debug(
+                "Persist completed with metadata [%s], adding sequence [%s] to publish queue.",
+                result,
+                sequenceMetadata.getSequenceName()
+        );
+        publishAndRegisterHandoff(sequenceMetadata);
+      }
+      catch (InterruptedException e) {
+        log.warn("Interrupted while persisting metadata for sequence [%s].", sequenceMetadata.getSequenceName());
+        throw e;
       }
     }
   }
