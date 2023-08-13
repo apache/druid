@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.TableMetadata.TableState;
-import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.Test;
@@ -66,7 +65,7 @@ public class TableMetadataTest
   public void testTableMetadata()
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     {
@@ -87,6 +86,7 @@ public class TableMetadataTest
     }
 
     {
+      // Missing schema
       TableMetadata table = TableMetadata.newTable(
           TableId.of(null, "foo"),
           spec
@@ -95,6 +95,7 @@ public class TableMetadataTest
     }
 
     {
+      // Missing table name
       TableMetadata table = TableMetadata.newTable(
           TableId.of(TableId.DRUID_SCHEMA, null),
           spec
@@ -106,7 +107,7 @@ public class TableMetadataTest
   public void testConversions()
   {
     Map<String, Object> props = ImmutableMap.of(
-        AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"
     );
     TableSpec spec = new TableSpec(DatasourceDefn.TABLE_TYPE, props, null);
     TableMetadata table = TableMetadata.newTable(

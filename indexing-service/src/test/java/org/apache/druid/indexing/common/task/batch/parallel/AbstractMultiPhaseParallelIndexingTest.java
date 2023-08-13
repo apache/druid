@@ -25,7 +25,6 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -59,7 +58,6 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -241,24 +239,22 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           tuningConfig
       );
     } else {
-      Preconditions.checkArgument(inputFormat == null);
+      Preconditions.checkArgument(inputFormat == null && parseSpec != null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalFirehoseFactory(inputDirectory, filter, null),
+          null,
+          new LocalInputSource(inputDirectory, filter),
+          createInputFormatFromParseSpec(parseSpec),
           appendToExisting,
           dropExisting
       );
-      //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
-              "dataSource",
-              getObjectMapper().convertValue(
-                  new StringInputRowParser(parseSpec, null),
-                  Map.class
-              ),
+              DATASOURCE,
+              parseSpec.getTimestampSpec(),
+              parseSpec.getDimensionsSpec(),
               DEFAULT_METRICS_SPEC,
               granularitySpec,
-              null,
-              getObjectMapper()
+              null
           ),
           ioConfig,
           tuningConfig

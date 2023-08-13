@@ -48,7 +48,6 @@ public class LocalLoadSpec implements LoadSpec
   {
     Preconditions.checkNotNull(path);
     this.path = Paths.get(path);
-    Preconditions.checkArgument(Files.exists(Paths.get(path)), "[%s] does not exist", path);
     this.puller = puller;
   }
 
@@ -61,6 +60,7 @@ public class LocalLoadSpec implements LoadSpec
   @Override
   public LoadSpecResult loadSegment(final File outDir) throws SegmentLoadingException
   {
+    Preconditions.checkArgument(Files.exists(path), "[%s] does not exist", path);
     return new LoadSpecResult(puller.getSegmentFiles(path.toFile(), outDir).size());
   }
 }

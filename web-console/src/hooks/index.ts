@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './use-clock';
 export * from './use-constant';
 export * from './use-global-event-listener';
 export * from './use-interval';

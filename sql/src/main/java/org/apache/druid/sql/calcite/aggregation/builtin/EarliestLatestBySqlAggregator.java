@@ -89,7 +89,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     final List<RexNode> rexNodes = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
 
     final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
@@ -108,7 +108,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
       );
     }
 
-    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(
+        plannerContext,
+        virtualColumnRegistry,
+        args.get(0),
+        rexNodes.get(0)
+    );
 
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
@@ -116,7 +121,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(
+                plannerContext,
+                virtualColumnRegistry,
+                args.get(1),
+                rexNodes.get(1)
+            ),
             outputType,
             -1
         );
@@ -127,13 +137,22 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(2));
         }
         catch (AssertionError ae) {
-          plannerContext.setPlanningError("The third argument '%s' to function '%s' is not a number", rexNodes.get(2), aggregateCall.getName());
+          plannerContext.setPlanningError(
+              "The third argument '%s' to function '%s' is not a number",
+              rexNodes.get(2),
+              aggregateCall.getName()
+          );
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(
+                plannerContext,
+                virtualColumnRegistry,
+                args.get(1),
+                rexNodes.get(1)
+            ),
             outputType,
             maxStringBytes
         );
@@ -168,12 +187,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
+                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn)'",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP)
               ),
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn, maxBytesPerString)'\n",
+                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn, maxBytesPerString)'",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP),
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)

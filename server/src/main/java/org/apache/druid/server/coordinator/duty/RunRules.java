@@ -19,153 +19,169 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
+ * Duty to run retention rules for all used non-overshadowed segments.
+ * Overshadowed segments are marked unused by {@link MarkOvershadowedSegmentsAsUnused}
+ * duty and are eventually unloaded from all servers by {@link UnloadUnusedSegments}.
+ * <p>
+ * The params returned from {@code run()} must have these fields initialized:
+ * <ul>
+ *   <li>{@link DruidCoordinatorRuntimeParams#getBroadcastDatasources()}</li>
+ * </ul>
+ * These fields are used by the downstream coordinator duty, {@link BalanceSegments}.
  */
 public class RunRules implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
-  private static final int MAX_MISSING_RULES = 10;
 
-  private final ReplicationThrottler replicatorThrottler;
+  private final SegmentDeleteHandler deleteHandler;
 
-  private final DruidCoordinator coordinator;
-
-  public RunRules(DruidCoordinator coordinator)
+  public RunRules(SegmentDeleteHandler deleteHandler)
   {
-    this(
-        new ReplicationThrottler(
-            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-            coordinator.getDynamicConfigs().getReplicantLifetime(),
-            false
-        ),
-        coordinator
-    );
-  }
-
-  public RunRules(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator)
-  {
-    this.replicatorThrottler = replicatorThrottler;
-    this.coordinator = coordinator;
+    this.deleteHandler = deleteHandler;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    replicatorThrottler.updateParams(
-        coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-        coordinator.getDynamicConfigs().getReplicantLifetime(),
-        false
-    );
-
-    CoordinatorStats stats = new CoordinatorStats();
-    DruidCluster cluster = params.getDruidCluster();
-
+    final DruidCluster cluster = params.getDruidCluster();
     if (cluster.isEmpty()) {
-      log.warn("Uh... I have no servers. Not assigning anything...");
+      log.warn("Cluster has no servers. Not running any rules.");
       return params;
     }
 
-    // Get used segments which are overshadowed by other used segments. Those would not need to be loaded and
-    // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
-    // as unused in MarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to Historical nodes
-    // to unload such segments in UnloadUnusedSegments.
-    Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
+    final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
+    final Set<DataSegment> usedSegments = params.getUsedSegments();
+    log.info(
+        "Applying retention rules on [%,d] used segments, skipping [%,d] overshadowed segments.",
+        usedSegments.size(), overshadowed.size()
+    );
 
-    for (String tier : cluster.getTierNames()) {
-      replicatorThrottler.updateReplicationState(tier);
-    }
+    final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    final MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
 
-    DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutSegmentsMetadata()
-        .withReplicationManager(replicatorThrottler)
-        .build();
-
-    // Run through all matched rules for used segments
-    DateTime now = DateTimes.nowUtc();
-    MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
-
-    final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
-    int missingRules = 0;
-
-    final Set<String> broadcastDatasources = new HashSet<>();
-    for (ImmutableDruidDataSource dataSource : params.getDataSourcesSnapshot().getDataSourcesMap().values()) {
-      List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSource.getName());
-      for (Rule rule : rules) {
-        // A datasource is considered a broadcast datasource if it has any broadcast rules.
-        // The set of broadcast datasources is used by BalanceSegments, so it's important that RunRules
-        // executes before BalanceSegments.
-        if (rule instanceof BroadcastDistributionRule) {
-          broadcastDatasources.add(dataSource.getName());
-          break;
-        }
-      }
-    }
-
-    for (DataSegment segment : params.getUsedSegments()) {
+    final DateTime now = DateTimes.nowUtc();
+    final Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule = new Object2IntOpenHashMap<>();
+    for (DataSegment segment : usedSegments) {
+      // Do not apply rules on overshadowed segments as they will be
+      // marked unused and eventually unloaded from all historicals
       if (overshadowed.contains(segment)) {
-        // Skipping overshadowed segments
         continue;
       }
+
+      // Find and apply matching rule
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
-          if (
-              stats.getGlobalStat(
-                  "totalNonPrimaryReplicantsLoaded") >= paramsWithReplicationManager.getCoordinatorDynamicConfig()
-                                                                                   .getMaxNonPrimaryReplicantsToLoad()
-              && !paramsWithReplicationManager.getReplicationManager().isLoadPrimaryReplicantsOnly()
-          ) {
-            log.info(
-                "Maximum number of non-primary replicants [%d] have been loaded for the current RunRules execution. Only loading primary replicants from here on for this coordinator run cycle.",
-                paramsWithReplicationManager.getCoordinatorDynamicConfig().getMaxNonPrimaryReplicantsToLoad()
-            );
-            paramsWithReplicationManager.getReplicationManager().setLoadPrimaryReplicantsOnly(true);
-          }
-          stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
+          rule.run(segment, segmentAssigner);
           foundMatchingRule = true;
           break;
         }
       }
 
       if (!foundMatchingRule) {
-        if (segmentsWithMissingRules.size() < MAX_MISSING_RULES) {
-          segmentsWithMissingRules.add(segment.getId());
-        }
-        missingRules++;
+        datasourceToSegmentsWithNoRule.addTo(segment.getDataSource(), 1);
       }
     }
 
-    if (!segmentsWithMissingRules.isEmpty()) {
-      log.makeAlert("Unable to find matching rules!")
-         .addData("segmentsWithMissingRulesCount", missingRules)
-         .addData("segmentsWithMissingRules", segmentsWithMissingRules)
-         .emit();
-    }
+    processSegmentDeletes(segmentAssigner, params.getCoordinatorStats());
+    alertForSegmentsWithNoRules(datasourceToSegmentsWithNoRule);
+    alertForInvalidRules(segmentAssigner);
 
     return params.buildFromExisting()
-                 .withCoordinatorStats(stats)
-                 .withBroadcastDatasources(broadcastDatasources)
+                 .withBroadcastDatasources(getBroadcastDatasources(params))
                  .build();
+  }
+
+  private void processSegmentDeletes(
+      StrategicSegmentAssigner segmentAssigner,
+      CoordinatorRunStats runStats
+  )
+  {
+    segmentAssigner.getSegmentsToDelete().forEach((datasource, segmentIds) -> {
+      final Stopwatch stopwatch = Stopwatch.createStarted();
+      int numUpdatedSegments = deleteHandler.markSegmentsAsUnused(segmentIds);
+
+      RowKey rowKey = RowKey.of(Dimension.DATASOURCE, datasource);
+      runStats.add(Stats.Segments.DELETED, rowKey, numUpdatedSegments);
+
+      log.info(
+          "Successfully marked [%d] segments of datasource[%s] as unused in [%d]ms.",
+          numUpdatedSegments, datasource, stopwatch.millisElapsed()
+      );
+    });
+  }
+
+  private void alertForSegmentsWithNoRules(Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule)
+  {
+    datasourceToSegmentsWithNoRule.object2IntEntrySet().fastForEach(
+        entry -> log.noStackTrace().makeAlert(
+            "No matching retention rule for [%d] segments in datasource[%s]",
+            entry.getIntValue(), entry.getKey()
+        ).emit()
+    );
+  }
+
+  private void alertForInvalidRules(StrategicSegmentAssigner segmentAssigner)
+  {
+    segmentAssigner.getDatasourceToInvalidLoadTiers().forEach(
+        (datasource, invalidTiers) -> log.makeAlert(
+            "Load rules for datasource[%s] refer to invalid tiers[%s]."
+            + " Update the load rules or add servers for these tiers.",
+            datasource, invalidTiers
+        ).emit()
+    );
+  }
+
+  private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
+  {
+    final Set<String> broadcastDatasources =
+        params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
+              .map(ImmutableDruidDataSource::getName)
+              .filter(datasource -> isBroadcastDatasource(datasource, params))
+              .collect(Collectors.toSet());
+
+    if (!broadcastDatasources.isEmpty()) {
+      log.info("Found broadcast datasources [%s] which will not participate in balancing.", broadcastDatasources);
+    }
+
+    return broadcastDatasources;
+  }
+
+  /**
+   * A datasource is considered a broadcast datasource if it has even one
+   * Broadcast Rule. Segments of broadcast datasources:
+   * <ul>
+   *   <li>Do not participate in balancing</li>
+   *   <li>Are unloaded if unused, even from realtime servers</li>
+   * </ul>
+   */
+  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
+  {
+    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
+                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

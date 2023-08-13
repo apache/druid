@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -69,6 +70,7 @@ public class GroupingSqlAggregator implements SqlAggregator
                                               rowSignature,
                                               project,
                                               virtualColumnRegistry,
+                                              rexBuilder.getTypeFactory(),
                                               i
                                           ))
                                           .filter(Objects::nonNull)
@@ -100,10 +102,11 @@ public class GroupingSqlAggregator implements SqlAggregator
       RowSignature rowSignature,
       Project project,
       VirtualColumnRegistry virtualColumnRegistry,
+      RelDataTypeFactory typeFactory,
       int fieldNumber
   )
   {
-    RexNode node = Expressions.fromFieldAccess(rowSignature, project, fieldNumber);
+    RexNode node = Expressions.fromFieldAccess(typeFactory, rowSignature, project, fieldNumber);
     if (null == node) {
       return null;
     }

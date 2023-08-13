@@ -238,7 +238,7 @@ public class SegmentManager
   private TableDataSource getTableDataSource(DataSourceAnalysis analysis)
   {
     return analysis.getBaseTableDataSource()
-                   .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                   .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
   public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)

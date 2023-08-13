@@ -133,6 +133,7 @@ public class ExpressionPlan
    */
   public Expr getExpression()
   {
+    Parser.validateExpr(expression, analysis);
     return expression;
   }
 
@@ -145,9 +146,11 @@ public class ExpressionPlan
   public Expr getAppliedExpression()
   {
     if (is(Trait.NEEDS_APPLIED)) {
-      return Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      final Expr applied = Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      Parser.validateExpr(applied, applied.analyzeInputs());
+      return applied;
     }
-    return expression;
+    return getExpression();
   }
 
   /**
@@ -165,9 +168,11 @@ public class ExpressionPlan
           "Accumulator cannot be implicitly transformed, if it is an ARRAY or multi-valued type it must"
           + " be used explicitly as such"
       );
-      return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      final Expr folded = Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      Parser.validateExpr(folded, folded.analyzeInputs());
+      return folded;
     }
-    return expression;
+    return getExpression();
   }
 
   /**
@@ -245,7 +250,7 @@ public class ExpressionPlan
 
       // null constants can sometimes trip up the type inference to report STRING, so check if explicitly supplied
       // output type is numeric and stick with that if so
-      if (outputTypeHint != null && outputTypeHint.isNumeric()) {
+      if (Types.isNumeric(outputTypeHint)) {
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(outputTypeHint);
       }
 

@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,9 +38,9 @@ public class MSQTestFileUtils
   /**
    * Helper method that copies a resource to a temporary file, then returns it.
    */
-  public static File getResourceAsTemporaryFile(Object object, final String resource) throws IOException
+  public static File getResourceAsTemporaryFile(TemporaryFolder temporaryFolder, Object object, final String resource) throws IOException
   {
-    final File file = BaseCalciteQueryTest.temporaryFolder.newFile();
+    final File file = temporaryFolder.newFile();
     final InputStream stream = object.getClass().getResourceAsStream(resource);
 
     if (stream == null) {
@@ -55,9 +55,9 @@ public class MSQTestFileUtils
    * Helper method that populates a temporary file with {@code numRows} rows and {@code numColumns} columns where the
    * first column is a string 'timestamp' while the rest are string columns with junk value
    */
-  public static File generateTemporaryNdJsonFile(final int numRows, final int numColumns) throws IOException
+  public static File generateTemporaryNdJsonFile(TemporaryFolder temporaryFolder, final int numRows, final int numColumns) throws IOException
   {
-    final File file = BaseCalciteQueryTest.temporaryFolder.newFile();
+    final File file = temporaryFolder.newFile();
     for (int currentRow = 0; currentRow < numRows; ++currentRow) {
       StringBuilder sb = new StringBuilder();
       sb.append("{");

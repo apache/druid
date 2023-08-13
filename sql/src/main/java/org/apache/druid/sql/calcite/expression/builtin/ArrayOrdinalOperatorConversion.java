@@ -38,7 +38,7 @@ public class ArrayOrdinalOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_ORDINAL")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,expr)",
+              "'ARRAY_ORDINAL(array, expr)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)
@@ -62,7 +62,7 @@ public class ArrayOrdinalOperatorConversion extends DirectOperatorConversion
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (SqlTypeUtil.isArray(type)) {
-        type.getComponentType();
+        return type.getComponentType();
       }
       return type;
     }

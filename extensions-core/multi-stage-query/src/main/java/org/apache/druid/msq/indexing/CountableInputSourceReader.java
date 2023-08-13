@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.msq.counters.ChannelCounters;
 
@@ -42,9 +43,9 @@ public class CountableInputSourceReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read() throws IOException
+  public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
-    return inputSourceReader.read().map(inputRow -> {
+    return inputSourceReader.read(inputStats).map(inputRow -> {
       channelCounters.incrementRowCount();
       return inputRow;
     });

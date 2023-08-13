@@ -47,7 +47,7 @@ public interface ControllerClient extends AutoCloseable
    * Client-side method to update the controller with counters for a particular stage and worker. The controller uses
    * this to compile live reports, track warnings generated etc.
    */
-  void postCounters(CounterSnapshotsTree snapshotsTree) throws IOException;
+  void postCounters(String workerId, CounterSnapshotsTree snapshotsTree) throws IOException;
 
   /**
    * Client side method to update the controller with the result object for a particular stage and worker. This also

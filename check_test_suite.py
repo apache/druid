@@ -22,13 +22,13 @@ import sys
 # this script does some primitive examination of git diff to determine if a test suite needs to be run or not
 
 # these jobs should always be run, no matter what
-always_run_jobs = ['license checks', 'license checks with Hadoop3', '(openjdk8) packaging check', '(openjdk11) packaging check']
+always_run_jobs = ['license checks', '(openjdk8) packaging check', '(openjdk11) packaging check']
 
 # ignore changes to these files completely since they don't impact CI, if the changes are only to these files then all
 # of CI can be skipped. however, jobs which are always run will still be run even if only these files are changed
 ignore_prefixes = ['.github', '.idea', '.asf.yaml', '.backportrc.json', '.codecov.yml', '.dockerignore', '.gitignore',
                    '.lgtm.yml', 'CONTRIBUTING.md', 'setup-hooks.sh', 'upload.sh', 'dev', 'distribution/docker',
-                   'distribution/asf-release-process-guide.md', '.travis.yml',
+                   'distribution/asf-release-process-guide.md',
                    'owasp-dependency-check-suppressions.xml', 'licenses']
 
 script_prefixes = ['check_test_suite.py', 'check_test_suite_test.py']

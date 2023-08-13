@@ -27,13 +27,17 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -43,6 +47,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -60,7 +65,6 @@ import java.util.stream.IntStream;
 
 public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 {
-
   private static final int NUM_COLS = 16;
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
@@ -88,7 +92,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     );
 
     int read = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read()) {
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         final InputRow inputRow = iterator.next();
         Assert.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
@@ -96,6 +101,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       }
     }
 
+    Assert.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
     Assert.assertEquals(NUM_ROWS, read);
     Assert.assertTrue(supplier.isClosed());
   }
@@ -120,13 +126,33 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     );
 
     int read = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read()) {
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         iterator.next();
       }
     }
+    Assert.assertEquals(0, inputStats.getProcessedBytes());
     Assert.assertEquals(0, read);
     Assert.assertTrue(supplier.isClosed());
+  }
+
+  @Test
+  public void testRecordSupplierInputSourceThrowsSamplerExceptionWhenExceptionDuringSeek()
+  {
+    final RecordSupplier<?, ?, ?> supplier = Mockito.mock(RecordSupplier.class);
+    Mockito.when(supplier.getPartitionIds("test-stream"))
+           .thenThrow(new StreamException(new Exception("Something bad happened")));
+
+    //noinspection ResultOfObjectAllocationIgnored
+    final SamplerException exception = Assert.assertThrows(
+        SamplerException.class,
+        () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null)
+    );
+    Assert.assertEquals(
+        "Exception while seeking to the [latest] offset of partitions in topic [test-stream]: Something bad happened",
+        exception.getMessage()
+    );
   }
 
   private static class RandomCsvSupplier implements RecordSupplier<Integer, Integer, ByteEntity>
@@ -254,6 +280,11 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     public Integer getPosition(StreamPartition<Integer> partition)
     {
       throw new UnsupportedOperationException();
+    }
+
+    private long getMinRowSize()
+    {
+      return TIMESTAMP_STRING.length() + (NUM_COLS - 1) * STR_LEN;
     }
   }
 }

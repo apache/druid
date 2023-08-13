@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
  *   <li>When the query is rejected by QueryScheduler.</li>
  *   <li>When the query cannot acquire enough merge buffers for groupBy v2</li>
  * </ul>
- *
+ * <p>
  * As a {@link QueryException} it is expected to be serialied to a json response, but will be mapped to
  * {@link #STATUS_CODE} instead of the default HTTP 500 status.
  */
@@ -43,17 +43,16 @@ public class QueryCapacityExceededException extends QueryException
   private static final String LANE_ERROR_MESSAGE_TEMPLATE =
       "Too many concurrent queries for lane '%s', query capacity of %s exceeded. Please try your query again later.";
   private static final String ERROR_CLASS = QueryCapacityExceededException.class.getName();
-  public static final String ERROR_CODE = "Query capacity exceeded";
   public static final int STATUS_CODE = 429;
 
   public QueryCapacityExceededException(int capacity)
   {
-    super(ERROR_CODE, makeTotalErrorMessage(capacity), ERROR_CLASS, null);
+    super(QUERY_CAPACITY_EXCEEDED_ERROR_CODE, makeTotalErrorMessage(capacity), ERROR_CLASS, null);
   }
 
   public QueryCapacityExceededException(String lane, int capacity)
   {
-    super(ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null);
+    super(QUERY_CAPACITY_EXCEEDED_ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null);
   }
 
   /**
@@ -62,7 +61,12 @@ public class QueryCapacityExceededException extends QueryException
    */
   public static QueryCapacityExceededException withErrorMessageAndResolvedHost(String errorMessage)
   {
-    return new QueryCapacityExceededException(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+    return new QueryCapacityExceededException(
+        QUERY_CAPACITY_EXCEEDED_ERROR_CODE,
+        errorMessage,
+        ERROR_CLASS,
+        resolveHostname()
+    );
   }
 
   @JsonCreator

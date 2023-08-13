@@ -36,6 +36,7 @@ import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -128,6 +129,13 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   {
     this(server, config, zkPaths, () -> announcer, jsonMapper, ZkEnablementConfig.ENABLED);
   }
+
+  @LifecycleStop
+  public void stop()
+  {
+    changes.stop();
+  }
+
 
   @Override
   public void announceSegment(DataSegment segment) throws IOException

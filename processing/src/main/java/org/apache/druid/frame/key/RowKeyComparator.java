@@ -36,7 +36,7 @@ public class RowKeyComparator implements Comparator<RowKey>
     this.byteRowKeyComparatorDelegate = byteRowKeyComparatorDelegate;
   }
 
-  public static RowKeyComparator create(final List<SortColumn> keyColumns)
+  public static RowKeyComparator create(final List<KeyColumn> keyColumns)
   {
     return new RowKeyComparator(ByteRowKeyComparator.create(keyColumns));
   }

@@ -26,12 +26,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -70,7 +72,7 @@ public class InlineDataSource implements DataSource
   private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
       @JsonProperty("columnTypes") List<ColumnType> columnTypes,
-      @JsonProperty("rows") List<Object[]> rows
+      @JsonProperty("rows") ArrayList<Object[]> rows
   )
   {
     Preconditions.checkNotNull(columnNames, "'columnNames' must be nonnull");
@@ -188,6 +190,7 @@ public class InlineDataSource implements DataSource
   @JsonProperty("rows")
   public List<Object[]> getRowsAsList()
   {
+    Iterable<Object[]> rows = getRows();
     return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
   }
 
@@ -198,6 +201,11 @@ public class InlineDataSource implements DataSource
   public Iterable<Object[]> getRows()
   {
     return rows;
+  }
+
+  public boolean rowsAreArrayList()
+  {
+    return rows instanceof ArrayList;
   }
 
   @Override
@@ -253,6 +261,12 @@ public class InlineDataSource implements DataSource
   public byte[] getCacheKey()
   {
     return null;
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
   /**

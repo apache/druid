@@ -22,7 +22,7 @@ package org.apache.druid.frame.write;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.key.FrameComparisonWidget;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.ISE;
 
@@ -44,19 +44,19 @@ public class FrameSort
    *
    * @param frame       frame to sort
    * @param frameReader frame reader
-   * @param sortColumns list of columns to sort by; must be nonempty.
+   * @param keyColumns list of columns to sort by; must be nonempty.
    */
   public static void sort(
       final Frame frame,
       final FrameReader frameReader,
-      final List<SortColumn> sortColumns
+      final List<KeyColumn> keyColumns
   )
   {
     if (!frame.isPermuted()) {
       throw new ISE("Cannot sort nonpermuted frame");
     }
 
-    if (sortColumns.isEmpty()) {
+    if (keyColumns.isEmpty()) {
       throw new ISE("Cannot sort with an empty column list");
     }
 
@@ -69,8 +69,8 @@ public class FrameSort
       rows[i] = i;
     }
 
-    final FrameComparisonWidget comparisonWidget1 = frameReader.makeComparisonWidget(frame, sortColumns);
-    final FrameComparisonWidget comparisonWidget2 = frameReader.makeComparisonWidget(frame, sortColumns);
+    final FrameComparisonWidget comparisonWidget1 = frameReader.makeComparisonWidget(frame, keyColumns);
+    final FrameComparisonWidget comparisonWidget2 = frameReader.makeComparisonWidget(frame, keyColumns);
 
     Arrays.sort(
         rows,

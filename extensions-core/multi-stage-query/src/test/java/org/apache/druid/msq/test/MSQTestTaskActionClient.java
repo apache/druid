@@ -21,6 +21,7 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
@@ -40,18 +41,29 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class MSQTestTaskActionClient implements TaskActionClient
 {
 
-  private static final String VERSION = "test";
+  public static final String VERSION = "test";
   private final ObjectMapper mapper;
   private final ConcurrentHashMap<SegmentId, AtomicInteger> segmentIdPartitionIdMap = new ConcurrentHashMap<>();
+  private final Map<String, List<Interval>> usedIntervals = ImmutableMap.of(
+      "foo", ImmutableList.of(Intervals.of("2001-01-01/2001-01-04"), Intervals.of("2000-01-01/2000-01-04")),
+      "foo2", ImmutableList.of(Intervals.of("2000-01-01/P1D"))
+  );
+  private final Set<DataSegment> publishedSegments = new HashSet<>();
 
-  public MSQTestTaskActionClient(ObjectMapper mapper)
+  public MSQTestTaskActionClient(
+      ObjectMapper mapper
+  )
   {
     this.mapper = mapper;
   }
@@ -94,13 +106,32 @@ public class MSQTestTaskActionClient implements TaskActionClient
           0
       ));
     } else if (taskAction instanceof RetrieveUsedSegmentsAction) {
-      return (RetType) ImmutableSet.of();
+      String dataSource = ((RetrieveUsedSegmentsAction) taskAction).getDataSource();
+      if (!usedIntervals.containsKey(dataSource)) {
+        return (RetType) ImmutableSet.of();
+      } else {
+        return (RetType) usedIntervals.get(dataSource)
+                                      .stream()
+                                      .map(interval -> DataSegment.builder()
+                                                                 .dataSource(dataSource)
+                                                                 .interval(interval)
+                                                                 .version(VERSION)
+                                                                 .size(1)
+                                                                 .build()
+                                     ).collect(Collectors.toSet());
+      }
     } else if (taskAction instanceof SegmentTransactionalInsertAction) {
       // Always OK.
       final Set<DataSegment> segments = ((SegmentTransactionalInsertAction) taskAction).getSegments();
+      publishedSegments.addAll(segments);
       return (RetType) SegmentPublishResult.ok(segments);
     } else {
       return null;
     }
+  }
+
+  public Set<DataSegment> getPublishedSegments()
+  {
+    return publishedSegments;
   }
 }

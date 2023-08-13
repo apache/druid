@@ -51,6 +51,7 @@ export * from './show-json/show-json';
 export * from './show-log/show-log';
 export * from './show-value/show-value';
 export * from './suggestion-menu/suggestion-menu';
+export * from './supervisor-history-panel/supervisor-history-panel';
 export * from './table-cell/table-cell';
 export * from './table-cell-unparseable/table-cell-unparseable';
 export * from './table-clickable-cell/table-clickable-cell';

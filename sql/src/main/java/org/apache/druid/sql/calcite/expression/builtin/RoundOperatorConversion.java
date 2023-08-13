@@ -35,7 +35,7 @@ public class RoundOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("ROUND")
       .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.INTEGER)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .returnTypeInference(ReturnTypes.ARG0)
       .functionCategory(SqlFunctionCategory.NUMERIC)
       .build();

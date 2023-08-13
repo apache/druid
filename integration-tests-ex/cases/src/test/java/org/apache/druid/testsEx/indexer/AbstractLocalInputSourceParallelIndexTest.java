@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
@@ -49,6 +50,28 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws Exception
   {
+    doIndexTest(
+        inputFormatDetails,
+        INDEX_TASK,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        Collections.emptyMap(),
+        extraInputFormatMap,
+        segmentAvailabilityConfirmationPair
+    );
+  }
+
+
+  public void doIndexTest(
+      InputFormatDetails inputFormatDetails,
+      String ingestSpecTemplate,
+      String queries,
+      boolean useSqlQueries,
+      @Nonnull Map<String, Object> templateValues,
+      @Nonnull Map<String, Object> extraInputFormatMap,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws Exception
+  {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     Map<String, Object> inputFormatMap = new ImmutableMap.Builder<String, Object>().putAll(extraInputFormatMap)
                                                                  .put("type", inputFormatDetails.getInputFormatType())
@@ -58,6 +81,13 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
     ) {
       final Function<String, String> sqlInputSourcePropsTransform = spec -> {
         try {
+          for (Map.Entry<String, Object> entry : templateValues.entrySet()) {
+            spec = StringUtils.replace(
+                spec,
+                "%%" + entry.getKey() + "%%",
+                jsonMapper.writeValueAsString(entry.getValue())
+            );
+          }
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
@@ -102,11 +132,12 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
 
       doIndexTest(
           indexDatasource,
-          INDEX_TASK,
+          ingestSpecTemplate,
           sqlInputSourcePropsTransform,
-          INDEX_QUERIES_RESOURCE,
+          queries,
           false,
           true,
+          useSqlQueries,
           true,
           segmentAvailabilityConfirmationPair
       );

@@ -25,9 +25,9 @@ describe('ExamplePicker', () => {
   it('matches snapshot', () => {
     const examplePicker = (
       <ExamplePicker
-        exampleManifests={[
-          { name: 'Wikipedia', description: 'stuff stuff', spec: {} },
-          { name: 'Ex 2', description: 'stuff stuff', spec: {} },
+        exampleSpecs={[
+          { name: 'Wikipedia', description: 'stuff stuff', spec: {} as any },
+          { name: 'Ex 2', description: 'stuff stuff', spec: {} as any },
         ]}
         onSelectExample={() => {}}
       />

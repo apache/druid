@@ -211,7 +211,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_numFrames() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       Assert.assertEquals(computeExpectedNumFrames(), frameFile.numFrames());
     }
   }
@@ -219,7 +219,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_numPartitions() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       Assert.assertEquals(computeExpectedNumPartitions(), frameFile.numPartitions());
     }
   }
@@ -227,7 +227,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_first() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       // Skip test for empty files.
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
@@ -239,7 +239,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_last() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       // Skip test for empty files.
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
@@ -256,7 +256,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_outOfBoundsNegative() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage("Frame [-1] out of bounds");
       frameFile.frame(-1);
@@ -266,7 +266,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_frame_outOfBoundsTooLarge() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage(StringUtils.format("Frame [%,d] out of bounds", frameFile.numFrames()));
       frameFile.frame(frameFile.numFrames());
@@ -278,7 +278,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   {
     final FrameReader frameReader = FrameReader.create(adapter.getRowSignature());
 
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       final Sequence<List<Object>> frameFileRows = Sequences.concat(
           () -> IntStream.range(0, frameFile.numFrames())
                          .mapToObj(frameFile::frame)
@@ -295,7 +295,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_getPartitionStartFrame() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       if (partitioned) {
         for (int partitionNum = 0; partitionNum < frameFile.numPartitions(); partitionNum++) {
           Assert.assertEquals(
@@ -320,7 +320,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_file() throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize)) {
+    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       Assert.assertEquals(file, frameFile.file());
     }
   }
@@ -328,17 +328,17 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Test
   public void test_open_withDeleteOnClose() throws IOException
   {
-    FrameFile.open(file, maxMmapSize).close();
+    FrameFile.open(file, maxMmapSize, null).close();
     Assert.assertTrue(file.exists());
 
-    FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE).close();
+    FrameFile.open(file, null, FrameFile.Flag.DELETE_ON_CLOSE).close();
     Assert.assertFalse(file.exists());
   }
 
   @Test
   public void test_newReference() throws IOException
   {
-    final FrameFile frameFile1 = FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE);
+    final FrameFile frameFile1 = FrameFile.open(file, null, FrameFile.Flag.DELETE_ON_CLOSE);
     final FrameFile frameFile2 = frameFile1.newReference();
     final FrameFile frameFile3 = frameFile2.newReference();
 

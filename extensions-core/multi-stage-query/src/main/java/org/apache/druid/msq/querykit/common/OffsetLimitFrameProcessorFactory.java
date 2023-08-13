@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
@@ -122,10 +123,12 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
       }
 
       // Note: OffsetLimitFrameProcessor does not use allocator from the outputChannel; it uses unlimited instead.
+      // This ensures that a single, limited output frame can always be generated from an input frame.
       return new OffsetLimitFrameProcessor(
           ReadableConcatFrameChannel.open(Iterators.transform(readableInputs.iterator(), ReadableInput::getChannel)),
           outputChannel.getWritableChannel(),
           readableInputs.frameReader(),
+          stageDefinition.createFrameWriterFactory(HeapMemoryAllocator.unlimited()),
           offset,
           // Limit processor will add limit + offset at various points; must avoid overflow
           limit == null ? Long.MAX_VALUE - offset : limit

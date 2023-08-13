@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
 export * from './column-metadata';
 export * from './date';
 export * from './download';

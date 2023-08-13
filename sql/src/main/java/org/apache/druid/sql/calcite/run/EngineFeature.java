@@ -23,7 +23,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Arguments to {@link SqlEngine#feature(EngineFeature, PlannerContext)}.
+ * Arguments to {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}.
  */
 public enum EngineFeature
 {
@@ -78,5 +78,29 @@ public enum EngineFeature
    * Planner is permitted to use a {@link org.apache.calcite.runtime.Bindable} plan on local resources, instead
    * of {@link QueryMaker}, for SELECT query implementation. Used for system tables and the like.
    */
-  ALLOW_BINDABLE_PLAN
+  ALLOW_BINDABLE_PLAN,
+
+  /**
+   * Queries can use GROUPING SETS.
+   */
+  GROUPING_SETS,
+
+  /**
+   * Queries can use window functions.
+   */
+  WINDOW_FUNCTIONS,
+
+  /**
+   * Queries can use {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
+   */
+  UNNEST,
+
+  /**
+   * Planner is permitted to use {@link org.apache.druid.sql.calcite.planner.JoinAlgorithm#BROADCAST} with RIGHT
+   * and FULL join. Not guaranteed to produce correct results in either the native or MSQ engines, but we allow
+   * it in native for two reasons: legacy (the docs caution against it, but it's always been allowed), and the fact
+   * that it actually *does* generate correct results in native when the join is processed on the Broker. It is much
+   * less likely that MSQ will plan in such a way that generates correct results.
+   */
+  ALLOW_BROADCAST_RIGHTY_JOIN;
 }

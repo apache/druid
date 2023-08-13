@@ -44,7 +44,7 @@ public class DurableStorageConfigurationFault extends BaseMSQFault
         + "Check the documentation on how to enable durable storage mode. "
         + "If you want to still query without durable storage mode, set %s to false in the query context. Got error %s",
         MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_ENABLED,
-        MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
+        MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
         errorMessage
     );
     this.errorMessage = errorMessage;

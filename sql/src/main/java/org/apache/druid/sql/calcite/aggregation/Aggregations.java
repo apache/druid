@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -57,6 +58,7 @@ public class Aggregations
    */
   @Nullable
   public static List<DruidExpression> getArgumentsForSimpleAggregator(
+      final RexBuilder rexBuilder,
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final AggregateCall call,
@@ -66,7 +68,7 @@ public class Aggregations
     final List<DruidExpression> args = call
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 

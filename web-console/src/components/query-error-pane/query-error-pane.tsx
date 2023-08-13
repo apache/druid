@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
-import { DruidError, RowColumn } from '../../utils';
+import type { DruidError, RowColumn } from '../../utils';
 import { HighlightText } from '../highlight-text/highlight-text';
 
 import './query-error-pane.scss';
@@ -61,22 +62,26 @@ export const QueryErrorPane = React.memo(function QueryErrorPane(props: QueryErr
   return (
     <div className="query-error-pane">
       {suggestionElement}
-      {error.error && <p>{`Error: ${error.error}`}</p>}
+      {error.error && (
+        <p>{`Error: ${error.category}${
+          error.persona && error.persona !== 'USER' ? ` (${error.persona})` : ''
+        }`}</p>
+      )}
       {error.errorMessageWithoutExpectation && (
         <p>
           {position ? (
             <HighlightText
               text={error.errorMessageWithoutExpectation}
-              find={position.match}
-              replace={
+              find={/\(line \[\d+], column \[\d+]\)/}
+              replace={found => (
                 <a
                   onClick={() => {
                     moveCursorTo(position);
                   }}
                 >
-                  {position.match}
+                  {found}
                 </a>
-              }
+              )}
             />
           ) : (
             error.errorMessageWithoutExpectation

@@ -22,11 +22,11 @@ package org.apache.druid.sql.calcite.view;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngines;
 
 import java.util.Map;
 
@@ -50,7 +50,7 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean feature(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
   {
     switch (feature) {
       // Use most permissive set of SELECT features, since our goal is to get the row type of the view.
@@ -60,6 +60,9 @@ public class ViewSqlEngine implements SqlEngine
       case ALLOW_BINDABLE_PLAN:
       case READ_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
+      case GROUPING_SETS:
+      case WINDOW_FUNCTIONS:
+      case UNNEST:
         return true;
 
       // Views can't sit on top of INSERT or REPLACE.
@@ -75,7 +78,7 @@ public class ViewSqlEngine implements SqlEngine
         return false;
 
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(ViewSqlEngine.class.getSimpleName(), feature);
     }
   }
 

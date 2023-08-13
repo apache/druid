@@ -671,14 +671,14 @@ export const STAGES = new Stages(
               maxTotalRows: null,
             },
             indexSpec: {
-              bitmap: { type: 'roaring', compressRunOnSerialization: true },
+              bitmap: { type: 'roaring' },
               dimensionCompression: 'lz4',
               metricCompression: 'lz4',
               longEncoding: 'longs',
               segmentLoader: null,
             },
             indexSpecForIntermediatePersists: {
-              bitmap: { type: 'roaring', compressRunOnSerialization: true },
+              bitmap: { type: 'roaring' },
               dimensionCompression: 'lz4',
               metricCompression: 'lz4',
               longEncoding: 'longs',

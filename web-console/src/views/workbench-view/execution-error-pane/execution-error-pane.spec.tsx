@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
 import { EXECUTION_INGEST_ERROR } from '../../../druid-models/execution/execution-ingest-error.mock';
+import { shallow } from '../../../utils/shallow-renderer';
 
 import { ExecutionErrorPane } from './execution-error-pane';
 

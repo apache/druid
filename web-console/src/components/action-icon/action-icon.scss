@@ -23,4 +23,9 @@
   &:hover {
     color: #4891d2;
   }
+
+  &.disabled {
+    pointer-events: none;
+    opacity: 0.25;
+  }
 }

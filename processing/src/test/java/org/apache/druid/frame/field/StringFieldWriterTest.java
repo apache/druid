@@ -113,15 +113,15 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     // Non-UTF8 test
     {
       final long written = writeToMemory(fieldWriter);
-      final Object valuesRead = readFromMemory(written);
-      Assert.assertEquals("values read (non-UTF8)", values, valuesRead);
+      final Object[] valuesRead = readFromMemory(written);
+      Assert.assertEquals("values read (non-UTF8)", values, Arrays.asList(valuesRead));
     }
 
     // UTF8 test
     {
       final long writtenUtf8 = writeToMemory(fieldWriterUtf8);
-      final Object valuesReadUtf8 = readFromMemory(writtenUtf8);
-      Assert.assertEquals("values read (UTF8)", values, valuesReadUtf8);
+      final Object[] valuesReadUtf8 = readFromMemory(writtenUtf8);
+      Assert.assertEquals("values read (UTF8)", values, Arrays.asList(valuesReadUtf8));
     }
   }
 
@@ -177,7 +177,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     throw new ISE("Could not write in memory with capacity [%,d]", memory.getCapacity() - MEMORY_POSITION);
   }
 
-  private List<String> readFromMemory(final long written)
+  private Object[] readFromMemory(final long written)
   {
     final byte[] bytes = new byte[(int) written];
     memory.getByteArray(MEMORY_POSITION, bytes, 0, (int) written);
@@ -186,7 +186,6 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
-    //noinspection unchecked
-    return (List<String>) selector.getObject();
+    return (Object[]) selector.getObject();
   }
 }

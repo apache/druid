@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@use 'sass:math';
+
 @import '../../variables';
 
 $control-bar-width: 300px;
@@ -130,7 +132,7 @@ $actual-icon-height: 400px;
 
         img {
           width: $icon-width;
-          height: $icon-width * ($actual-icon-height / $actual-icon-width);
+          height: $icon-width * math.div($actual-icon-height, $actual-icon-width);
           display: inline-block;
         }
       }
@@ -313,5 +315,9 @@ $actual-icon-height: 400px;
     position: absolute;
     width: 100%;
     height: 100% !important;
+  }
+
+  .parse-metadata {
+    border-top: 1px solid $gray1;
   }
 }

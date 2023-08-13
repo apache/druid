@@ -20,7 +20,7 @@
 # Maven Structure
 
 The integration tests are built and run as part of Druid's Maven script.
-Maven itself is used by hand, and as part of the [Travis](travis.md) build
+Maven itself is used by hand, and as part of the [GHA](../../.github/workflows/revised-its.yml) build
 proces. Running integration tests in maven is a multi-part process.
 
 * Build the product `distribution`.

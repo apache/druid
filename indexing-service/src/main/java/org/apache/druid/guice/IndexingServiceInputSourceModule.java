@@ -32,6 +32,8 @@ import java.util.List;
 
 public class IndexingServiceInputSourceModule implements DruidModule
 {
+  public static final String GENERATOR_SCHEME = "generator";
+
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -39,7 +41,7 @@ public class IndexingServiceInputSourceModule implements DruidModule
         new SimpleModule("IndexingServiceInputSourceModule")
             .registerSubtypes(
                 new NamedType(DruidInputSource.class, "druid"),
-                new NamedType(GeneratorInputSource.class, "generator")
+                new NamedType(GeneratorInputSource.class, GENERATOR_SCHEME)
             )
     );
   }

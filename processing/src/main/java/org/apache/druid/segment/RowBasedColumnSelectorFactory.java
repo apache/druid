@@ -33,6 +33,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
+import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -500,9 +501,13 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Nullable
         private Number getCurrentValueAsNumber()
         {
+          final Object currentValue = getCurrentValue();
+          if (currentValue instanceof StructuredData) {
+            return Rows.objectToNumber(columnName, ((StructuredData) currentValue).getValue(), throwParseExceptions);
+          }
           return Rows.objectToNumber(
               columnName,
-              getCurrentValue(),
+              currentValue,
               throwParseExceptions
           );
         }

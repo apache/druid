@@ -2,7 +2,7 @@
 
 exports[`ShowValue matches snapshot 1`] = `
 <div
-  class="show-json"
+  class="show-value"
 >
   <div
     class="top-actions"

@@ -129,7 +129,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean useMaxMemoryEstimates
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, preserveExistingMetrics, useMaxMemoryEstimates);
+    super(
+        incrementalIndexSchema,
+        deserializeComplexMetrics,
+        concurrentEventAdd,
+        preserveExistingMetrics,
+        useMaxMemoryEstimates
+    );
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
@@ -683,7 +689,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         final @JsonProperty("preserveExistingMetrics") @Nullable Boolean preserveExistingMetrics
     )
     {
-      this.preserveExistingMetrics = preserveExistingMetrics != null ? preserveExistingMetrics : DEFAULT_PRESERVE_EXISTING_METRICS;
+      this.preserveExistingMetrics = preserveExistingMetrics != null
+                                     ? preserveExistingMetrics
+                                     : DEFAULT_PRESERVE_EXISTING_METRICS;
     }
 
     @JsonProperty

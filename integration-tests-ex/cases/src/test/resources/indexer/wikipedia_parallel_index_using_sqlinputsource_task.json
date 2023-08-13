@@ -71,7 +71,7 @@
         "database": {
           "type": "mysql",
           "connectorConfig": {
-            "connectURI": "jdbc:mysql://druid-metadata-storage/sqlinputsource",
+            "connectURI": "jdbc:mysql://metadata/druid",
             "user": "druid",
             "password": "diurd"
           }

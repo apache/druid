@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import axios, { Canceler, CancelToken } from 'axios';
+import type { Canceler, CancelToken } from 'axios';
+import axios from 'axios';
 import debounce from 'lodash.debounce';
 
 import { wait } from './general';
@@ -46,6 +47,10 @@ export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
 export class QueryManager<Q, R, I = never, E extends Error = Error> {
   static TERMINATION_MESSAGE = 'QUERY_MANAGER_TERMINATED';
 
+  static remapAxiosCancellationIntoError(e: any) {
+    return axios.isCancel(e) ? new Error(e.message ?? 'Browser request canceled') : e;
+  }
+
   private readonly processQuery: (
     query: Q,
     cancelToken: CancelToken,
@@ -71,8 +76,8 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private state: QueryState<R, E, I>;
   private currentQueryId = 0;
 
-  private readonly runWhenIdle: () => void;
-  private readonly runWhenLoading: () => void;
+  private readonly runWhenIdle: () => void | Promise<void>;
+  private readonly runWhenLoading: () => void | Promise<void>;
 
   constructor(options: QueryManagerOptions<Q, R, I, E>) {
     this.processQuery = options.processQuery;
@@ -125,7 +130,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
       this.currentRunCancelFn = undefined;
       this.setState(
         new QueryState<R, E>({
-          error: axios.isCancel(e) ? new Error(`canceled.`) : e, // remap cancellation into a simple error to hide away the axios implementation specifics
+          error: QueryManager.remapAxiosCancellationIntoError(e),
           lastData: this.state.getSomeData(),
         }),
       );
@@ -173,7 +178,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
           this.currentRunCancelFn = undefined;
           this.setState(
             new QueryState<R, E>({
-              error: axios.isCancel(e) ? new Error(`canceled.`) : e, // remap cancellation into a simple error to hide away the axios implementation specifics
+              error: QueryManager.remapAxiosCancellationIntoError(e),
               lastData: this.state.getSomeData(),
             }),
           );
@@ -197,7 +202,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private trigger() {
     if (this.currentRunCancelFn) {
       // Currently loading
-      this.runWhenLoading();
+      void this.runWhenLoading();
     } else {
       this.setState(
         new QueryState<R, E>({
@@ -206,7 +211,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
         }),
       );
 
-      this.runWhenIdle();
+      void this.runWhenIdle();
     }
   }
 
@@ -218,17 +223,18 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
 
   public rerunLastQuery(runInBackground = false): void {
     if (this.terminated) return;
+    if (runInBackground && this.currentRunCancelFn) return;
     this.nextQuery = this.lastQuery;
     if (runInBackground) {
-      this.runWhenIdle();
+      void this.runWhenIdle();
     } else {
       this.trigger();
     }
   }
 
-  public cancelCurrent(): void {
+  public cancelCurrent(message?: string): void {
     if (!this.currentRunCancelFn) return;
-    this.currentRunCancelFn();
+    this.currentRunCancelFn(message);
     this.currentRunCancelFn = undefined;
   }
 

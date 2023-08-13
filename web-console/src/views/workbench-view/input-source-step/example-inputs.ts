@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import { InputFormat, InputSource } from '../../../druid-models';
+import type { InputFormat, InputSource } from '../../../druid-models';
 
 export interface ExampleInput {
   name: string;
   description: string;
   inputSource: InputSource;
   inputFormat?: InputFormat;
+  partitionedByHint?: string;
 }
 
 const TRIPS_INPUT_FORMAT: InputFormat = {
@@ -122,6 +123,7 @@ export const EXAMPLE_INPUTS: ExampleInput[] = [
       ],
     },
     inputFormat: TRIPS_INPUT_FORMAT,
+    partitionedByHint: 'month',
   },
   {
     name: 'NYC Taxi cabs (all files)',
@@ -206,6 +208,7 @@ export const EXAMPLE_INPUTS: ExampleInput[] = [
       ],
     },
     inputFormat: TRIPS_INPUT_FORMAT,
+    partitionedByHint: 'month',
   },
   {
     name: 'FlightCarrierOnTime (1 month)',

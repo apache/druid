@@ -36,6 +36,10 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -127,6 +131,14 @@ public class KinesisIndexTaskSerdeTest
     Assert.assertEquals(ACCESS_KEY, awsCredentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SECRET_KEY, awsCredentialsConfig.getSecretKey().getPassword());
     Assert.assertEquals(FILE_SESSION_CREDENTIALS, awsCredentialsConfig.getFileSessionCredentials());
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                KinesisIndexingServiceModule.SCHEME,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        target.getInputSourceResources()
+    );
   }
 
   private static ObjectMapper createObjectMapper()

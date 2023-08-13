@@ -21,9 +21,10 @@ package org.apache.druid.catalog.model.facade;
 
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ResolvedTable;
-import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +36,9 @@ import java.util.List;
  */
 public class DatasourceFacade extends TableFacade
 {
+  private static final Logger LOG = new Logger(DatasourceFacade.class);
+
+
   public DatasourceFacade(ResolvedTable resolved)
   {
     super(resolved);
@@ -42,30 +46,47 @@ public class DatasourceFacade extends TableFacade
 
   public String segmentGranularityString()
   {
-    return stringProperty(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
+    return stringProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
   }
 
   public Granularity segmentGranularity()
   {
-    String value = stringProperty(AbstractDatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
-    return value == null ? null : CatalogUtils.asDruidGranularity(value);
+    String definedGranularity = segmentGranularityString();
+    return definedGranularity == null ? null : CatalogUtils.asDruidGranularity(definedGranularity);
   }
 
   public Integer targetSegmentRows()
   {
-    return intProperty(AbstractDatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY);
+    return intProperty(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY);
   }
 
-  @SuppressWarnings("unchecked")
   public List<ClusterKeySpec> clusterKeys()
   {
-    return (List<ClusterKeySpec>) property(AbstractDatasourceDefn.CLUSTER_KEYS_PROPERTY);
+    Object value = property(DatasourceDefn.CLUSTER_KEYS_PROPERTY);
+    if (value == null) {
+      return Collections.emptyList();
+    }
+    try {
+      return jsonMapper().convertValue(value, ClusterKeySpec.CLUSTER_KEY_LIST_TYPE_REF);
+    }
+    catch (Exception e) {
+      LOG.error("Failed to convert a catalog %s property of value [%s]",
+          DatasourceDefn.CLUSTER_KEYS_PROPERTY,
+          value
+      );
+      return Collections.emptyList();
+    }
   }
 
   @SuppressWarnings("unchecked")
   public List<String> hiddenColumns()
   {
-    Object value = property(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
+    Object value = property(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY);
     return value == null ? Collections.emptyList() : (List<String>) value;
+  }
+
+  public boolean isSealed()
+  {
+    return booleanProperty(DatasourceDefn.SEALED_PROPERTY);
   }
 }

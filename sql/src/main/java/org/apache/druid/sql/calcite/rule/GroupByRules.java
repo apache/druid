@@ -34,6 +34,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -51,10 +52,11 @@ public class GroupByRules
    *
    * @return translated aggregation, or null if translation failed.
    */
+  @Nullable
   public static Aggregation translateAggregateCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
-      final VirtualColumnRegistry virtualColumnRegistry,
+      @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final Project project,
       final List<Aggregation> existingAggregations,
@@ -63,6 +65,10 @@ public class GroupByRules
       final boolean finalizeAggregations
   )
   {
+    if (!call.getCollation().getFieldCollations().isEmpty()) {
+      return null;
+    }
+
     final DimFilter filter;
 
     if (call.filterArg >= 0) {
@@ -72,7 +78,7 @@ public class GroupByRules
         return null;
       }
 
-      final RexNode expression = project.getChildExps().get(call.filterArg);
+      final RexNode expression = project.getProjects().get(call.filterArg);
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
           rowSignature,
@@ -90,7 +96,7 @@ public class GroupByRules
       filter = null;
     }
 
-    final SqlAggregator sqlAggregator = plannerContext.getOperatorTable()
+    final SqlAggregator sqlAggregator = plannerContext.getPlannerToolbox().operatorTable()
                                                       .lookupAggregator(call.getAggregation());
 
     if (sqlAggregator == null) {

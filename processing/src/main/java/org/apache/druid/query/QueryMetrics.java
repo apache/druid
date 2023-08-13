@@ -397,6 +397,30 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs);
 
   /**
+   * Reports broker total "wall" time in nanoseconds from parallel merge start sequence creation to total
+   * consumption.
+   */
+  QueryMetrics<QueryType> reportParallelMergeTotalTime(long timeNs);
+
+  /**
+   * Reports broker "wall" time in nanoseconds for the fastest parallel merge sequence partition to be 'initialized',
+   * where 'initialized' is time to the first result batch is populated from data servers and merging can begin.
+   *
+   * Similar to query 'time to first byte' metrics, except is a composite of the whole group of data servers which are
+   * present in the merge partition, which all must supply an initial result batch before merging can actually begin.
+   */
+  QueryMetrics<QueryType> reportParallelMergeFastestPartitionTime(long timeNs);
+
+  /**
+   * Reports broker "wall" time in nanoseconds for the slowest parallel merge sequence partition to be 'initialized',
+   * where 'initialized' is time to the first result batch is populated from data servers and merging can begin.
+   *
+   * Similar to query 'time to first byte' metrics, except is a composite of the whole group of data servers which are
+   * present in the merge partition, which all must supply an initial result batch before merging can actually begin.
+   */
+  QueryMetrics<QueryType> reportParallelMergeSlowestPartitionTime(long timeNs);
+
+  /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
    */
   void emit(ServiceEmitter emitter);

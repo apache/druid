@@ -20,23 +20,31 @@
 package org.apache.druid.msq.exec;
 
 /**
- * Mode which dictates how {@link WorkerSketchFetcher} gets sketches for the partition boundaries from workers.
+ * If a query requires key statistics to generate partition boundaries, key statistics are gathered by the workers while
+ * reading rows from the datasource. These statistics must be transferred to the controller to be merged together.
+ * The modes below dictates how {@link WorkerSketchFetcher} gets sketches for the partition boundaries from workers.
  */
 public enum ClusterStatisticsMergeMode
 {
   /**
-   * Fetches sketch in sequential order based on time. Slower due to overhead, but more accurate.
+   * Fetches the sketches in ascending order of time and generates the partition boundaries for one time
+   * chunk at a time. This gives more working memory to the controller for merging sketches, which results in less
+   * down sampling and thus, more accuracy. There is, however, a time overhead on fetching sketches in sequential order. This is
+   * good for cases where accuracy is important.
    */
   SEQUENTIAL,
 
   /**
-   * Fetch all sketches from the worker at once. Faster to generate partitions, but less accurate.
+   * Fetche the key statistics for all time chunks from all workers together. The controller then downsamples
+   * the sketch if it does not fit in memory. This is faster than `SEQUENTIAL` mode as there is less over head in fetching sketches
+   * for all time chunks together. This is good for small sketches which won't be down sampled even if merged together or if
+   * accuracy in segment sizing for the ingestion is not very important.
    */
   PARALLEL,
 
   /**
-   * Tries to decide between sequential and parallel modes based on the number of workers and size of the input
-   *
+   * Tries to decide between sequential and parallel modes based on the number of workers and size of the input.
+   * <p>
    * If there are more than 100 workers or if the combined sketch size among all workers is more than
    * 1,000,000,000 bytes, SEQUENTIAL mode is chosen, otherwise, PARALLEL mode is chosen.
    */

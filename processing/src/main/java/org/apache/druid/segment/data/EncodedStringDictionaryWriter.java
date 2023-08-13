@@ -75,6 +75,12 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   }
 
   @Override
+  public int getCardinality()
+  {
+    return delegate.getCardinality();
+  }
+
+  @Override
   public long getSerializedSize() throws IOException
   {
     return 2 + delegate.getSerializedSize();

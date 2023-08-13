@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -102,26 +101,7 @@ public class ObjectDefn
       final Map<String, Object> update
   )
   {
-    if (update == null) {
-      return source;
-    }
-    if (source == null) {
-      return update;
-    }
-    Map<String, Object> merged = new HashMap<>(source);
-    for (Map.Entry<String, Object> entry : update.entrySet()) {
-      if (entry.getValue() == null) {
-        merged.remove(entry.getKey());
-      } else {
-        PropertyDefn<?> propDefn = property(entry.getKey());
-        Object value = entry.getValue();
-        if (propDefn != null) {
-          value = propDefn.merge(merged.get(entry.getKey()), entry.getValue());
-        }
-        merged.put(entry.getKey(), value);
-      }
-    }
-    return merged;
+    return CatalogUtils.mergeProperties(properties, source, update);
   }
 
   /**

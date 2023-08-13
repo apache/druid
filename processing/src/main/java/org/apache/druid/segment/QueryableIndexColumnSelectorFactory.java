@@ -27,8 +27,10 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.nested.NestedDataComplexColumn;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -122,6 +124,8 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
 
     if (column instanceof DictionaryEncodedColumn) {
       return ((DictionaryEncodedColumn<?>) column).makeDimensionSelector(offset, extractionFn);
+    } else if (column instanceof NestedDataComplexColumn) {
+      return ((NestedDataComplexColumn) column).makeDimensionSelector(Collections.emptyList(), offset, extractionFn);
     } else {
       return DimensionSelector.constant(null, extractionFn);
     }

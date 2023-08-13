@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.LongSupplier;
@@ -172,6 +173,9 @@ public class StructuredData implements Comparable<StructuredData>
       return false;
     }
     StructuredData that = (StructuredData) o;
+    if (value instanceof Object[] && that.value instanceof Object[]) {
+      return Arrays.deepEquals((Object[]) value, (Object[]) that.value);
+    }
     return Objects.equals(value, that.value);
   }
 

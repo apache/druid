@@ -19,6 +19,7 @@
 
 package org.apache.druid.catalog.model;
 
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 
 import java.util.List;
@@ -33,37 +34,6 @@ import java.util.Map;
  */
 public interface ParameterizedDefn
 {
-  interface ParameterDefn
-  {
-    String name();
-    Class<?> valueClass();
-  }
-
-  class ParameterImpl implements ParameterDefn
-  {
-    private final String name;
-    private final Class<?> type;
-
-    public ParameterImpl(final String name, final Class<?> type)
-    {
-      this.name = name;
-      this.type = type;
-    }
-
-    @Override
-    public String name()
-    {
-      return name;
-    }
-
-    @Override
-    public Class<?> valueClass()
-    {
-      return type;
-    }
-  }
-
-  List<ParameterDefn> parameters();
-  ParameterDefn parameter(String name);
+  List<PropertyDefn<?>> parameters();
   ExternalTableSpec applyParameters(ResolvedTable table, Map<String, Object> parameters);
 }

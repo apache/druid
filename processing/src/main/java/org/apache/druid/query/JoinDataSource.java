@@ -33,6 +33,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.Triple;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -56,6 +57,7 @@ import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -112,14 +114,10 @@ public class JoinDataSource implements DataSource
     this.rightPrefix = JoinPrefixUtils.validatePrefix(rightPrefix);
     this.conditionAnalysis = Preconditions.checkNotNull(conditionAnalysis, "conditionAnalysis");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
-    //TODO: Add support for union data sources
-    Preconditions.checkArgument(
-        leftFilter == null || left instanceof TableDataSource,
-        "left filter is only supported if left data source is direct table access"
-    );
-    this.leftFilter = leftFilter;
+    this.leftFilter = validateLeftFilter(left, leftFilter);
     this.joinableFactoryWrapper = joinableFactoryWrapper;
-    this.analysis = DataSourceAnalysis.forDataSource(this);
+
+    this.analysis = this.getAnalysisForDataSource();
   }
 
   /**
@@ -457,7 +455,7 @@ public class JoinDataSource implements DataSource
   {
     final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key for data source [%s]", analysis.getDataSource());
+      throw new IAE("No join clauses to build the cache key for data source [%s]", this);
     }
 
     final CacheKeyBuilder keyBuilder;
@@ -466,7 +464,9 @@ public class JoinDataSource implements DataSource
       keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
     }
     for (PreJoinableClause clause : clauses) {
-      Optional<byte[]> bytes = joinableFactoryWrapper.getJoinableFactory().computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+      final Optional<byte[]> bytes =
+          joinableFactoryWrapper.getJoinableFactory()
+                                .computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
       if (!bytes.isPresent()) {
         // Encountered a data source which didn't support cache yet
         log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
@@ -478,5 +478,67 @@ public class JoinDataSource implements DataSource
       keyBuilder.appendString(clause.getJoinType().name());
     }
     return keyBuilder.build();
+  }
+
+  private DataSourceAnalysis getAnalysisForDataSource()
+  {
+    final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
+    return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return analysis;
+  }
+
+  /**
+   * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
+   * clauses, if any.
+   *
+   * @throws IllegalArgumentException if dataSource cannot be fully flattened.
+   */
+  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
+  {
+    DataSource current = dataSource;
+    DimFilter currentDimFilter = null;
+    final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
+
+    while (current instanceof JoinDataSource) {
+      final JoinDataSource joinDataSource = (JoinDataSource) current;
+      current = joinDataSource.getLeft();
+      currentDimFilter = validateLeftFilter(current, joinDataSource.getLeftFilter());
+      preJoinableClauses.add(
+          new PreJoinableClause(
+              joinDataSource.getRightPrefix(),
+              joinDataSource.getRight(),
+              joinDataSource.getJoinType(),
+              joinDataSource.getConditionAnalysis()
+          )
+      );
+    }
+
+    // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
+    // going-up order. So reverse them.
+    Collections.reverse(preJoinableClauses);
+
+    return Triple.of(current, currentDimFilter, preJoinableClauses);
+  }
+
+  /**
+   * Validates whether the provided leftFilter is permitted to apply to the provided left-hand datasource. Throws an
+   * exception if the combination is invalid. Returns the filter if the combination is valid.
+   */
+  @Nullable
+  private static DimFilter validateLeftFilter(final DataSource leftDataSource, @Nullable final DimFilter leftFilter)
+  {
+    // Currently we only support leftFilter when applied to concrete leaf datasources (ones with no children).
+    // Note that this mean we don't support unions of table, even though this would be reasonable to add in the future.
+    Preconditions.checkArgument(
+        leftFilter == null || (leftDataSource.isConcrete() && leftDataSource.getChildren().isEmpty()),
+        "left filter is only supported if left data source is direct table access"
+    );
+
+    return leftFilter;
   }
 }

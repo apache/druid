@@ -23,9 +23,7 @@ import { ShowLog } from './show-log';
 
 describe('ShowLog', () => {
   it('describe show log', () => {
-    const showLog = (
-      <ShowLog status="RUNNING" endpoint="/druid/index/test/log" downloadFilename="test" />
-    );
+    const showLog = <ShowLog tail endpoint="/druid/index/test/log" downloadFilename="test" />;
     const { container } = render(showLog);
     expect(container.firstChild).toMatchSnapshot();
   });

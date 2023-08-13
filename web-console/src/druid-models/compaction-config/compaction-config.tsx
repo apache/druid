@@ -19,11 +19,31 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../../components';
-import { deepGet, deepSet, oneOf } from '../../utils';
+import type { Field } from '../../components';
+import { deepGet, deepSet, oneOfKnown } from '../../utils';
 
-export type CompactionConfig = Record<string, any>;
+export interface CompactionConfig {
+  dataSource: string;
+  skipOffsetFromLatest?: string;
+  tuningConfig?: any;
+  [key: string]: any;
 
+  // Deprecated:
+  inputSegmentSizeBytes?: number;
+}
+
+export const NOOP_INPUT_SEGMENT_SIZE_BYTES = 100000000000000;
+
+export function compactionConfigHasLegacyInputSegmentSizeBytesSet(
+  config: CompactionConfig,
+): boolean {
+  return (
+    typeof config.inputSegmentSizeBytes === 'number' &&
+    config.inputSegmentSizeBytes < NOOP_INPUT_SEGMENT_SIZE_BYTES
+  );
+}
+
+const KNOWN_PARTITION_TYPES = ['dynamic', 'hashed', 'single_dim', 'range'];
 export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   {
     name: 'skipOffsetFromLatest',
@@ -55,14 +75,16 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
     type: 'number',
     defaultValue: 5000000,
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
+    defined: t =>
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'dynamic'),
     info: <>Determines how many rows are in each segment.</>,
   },
   {
     name: 'tuningConfig.partitionsSpec.maxTotalRows',
     type: 'number',
     defaultValue: 20000000,
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
+    defined: t =>
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'dynamic'),
     info: <>Total number of rows in segments waiting for being pushed.</>,
   },
   // partitionsSpec type: hashed
@@ -72,7 +94,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     zeroMeansUndefined: true,
     placeholder: `(defaults to 500000)`,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'hashed') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.numShards') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
@@ -102,7 +124,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'hashed') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.numShards') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     info: (
@@ -131,7 +153,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'hashed') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     info: (
@@ -157,21 +179,28 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.partitionDimensions',
     type: 'string-array',
     placeholder: '(all dimensions)',
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
+    defined: t =>
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'hashed'),
     info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
   },
   // partitionsSpec type: single_dim, range
   {
     name: 'tuningConfig.partitionsSpec.partitionDimension',
     type: 'string',
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    defined: t =>
+      oneOfKnown(
+        deepGet(t, 'tuningConfig.partitionsSpec.type'),
+        KNOWN_PARTITION_TYPES,
+        'single_dim',
+      ),
     required: true,
     info: <p>The dimension to partition on.</p>,
   },
   {
     name: 'tuningConfig.partitionsSpec.partitionDimensions',
     type: 'string-array',
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'range',
+    defined: t =>
+      oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'range'),
     required: true,
     info: <p>The dimensions to partition on.</p>,
   },
@@ -180,9 +209,13 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
-      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
-    required: (t: CompactionConfig) =>
+      oneOfKnown(
+        deepGet(t, 'tuningConfig.partitionsSpec.type'),
+        KNOWN_PARTITION_TYPES,
+        'single_dim',
+        'range',
+      ) && !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
+    required: t =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
@@ -203,9 +236,13 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
-      !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
-    required: (t: CompactionConfig) =>
+      oneOfKnown(
+        deepGet(t, 'tuningConfig.partitionsSpec.type'),
+        KNOWN_PARTITION_TYPES,
+        'single_dim',
+        'range',
+      ) && !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
+    required: t =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
@@ -222,7 +259,13 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.assumeGrouped',
     type: 'boolean',
     defaultValue: false,
-    defined: t => oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range'),
+    defined: t =>
+      oneOfKnown(
+        deepGet(t, 'tuningConfig.partitionsSpec.type'),
+        KNOWN_PARTITION_TYPES,
+        'single_dim',
+        'range',
+      ),
     info: (
       <p>
         Assume that input data has already been grouped on time and dimensions. Ingestion will run
@@ -268,7 +311,13 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defaultValue: 10,
     min: 1,
     defined: t =>
-      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
+      oneOfKnown(
+        deepGet(t, 'tuningConfig.partitionsSpec.type'),
+        KNOWN_PARTITION_TYPES,
+        'hashed',
+        'single_dim',
+        'range',
+      ),
     info: <>Maximum number of merge tasks which can be run at the same time.</>,
   },
   {
@@ -277,7 +326,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defaultValue: 1073741824,
     min: 1000000,
     hideInMore: true,
-    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
+    adjustment: t => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of bytes of input segments to process in a single task. If a single segment
@@ -293,7 +342,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defaultValue: 1000,
     min: 1,
     hideInMore: true,
-    adjustment: (t: CompactionConfig) => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
+    adjustment: t => deepSet(t, 'tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of input segments to process in a single subtask. This limit is to avoid task

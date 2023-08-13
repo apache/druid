@@ -1,6 +1,6 @@
 [
     {
-        "description": "timeseries, 1 agg, all",
+        "description": "timeboundary",
         "query":{
             "queryType" : "timeBoundary",
             "dataSource": "%%DATASOURCE%%"

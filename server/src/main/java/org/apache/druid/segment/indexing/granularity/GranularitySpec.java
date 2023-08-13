@@ -49,8 +49,6 @@ public interface GranularitySpec
    */
   Iterable<Interval> sortedBucketIntervals();
 
-
-
   /**
    * Returns user provided intervals as-is state. used for configuring granular path spec
    *

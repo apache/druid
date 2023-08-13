@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
+
+import { shallow } from '../../utils/shallow-renderer';
 
 import { JsonCollapse } from './json-collapse';
 

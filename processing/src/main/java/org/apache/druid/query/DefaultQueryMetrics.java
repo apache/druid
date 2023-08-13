@@ -353,6 +353,27 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportParallelMergeTotalTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeFastestPartitionTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeSlowestPartitionTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount)
   {
     // Don't emit by default.

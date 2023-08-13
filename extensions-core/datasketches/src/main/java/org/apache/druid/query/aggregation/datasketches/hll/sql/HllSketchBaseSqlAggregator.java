@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
@@ -53,10 +54,12 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
   private static final boolean ROUND = true;
 
   private final boolean finalizeSketch;
+  private final StringEncoding stringEncoding;
 
-  protected HllSketchBaseSqlAggregator(boolean finalizeSketch)
+  protected HllSketchBaseSqlAggregator(boolean finalizeSketch, StringEncoding stringEncoding)
   {
     this.finalizeSketch = finalizeSketch;
+    this.stringEncoding = stringEncoding;
   }
 
   @Nullable
@@ -76,6 +79,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(0)
@@ -89,6 +93,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final int logK;
     if (aggregateCall.getArgList().size() >= 2) {
       final RexNode logKarg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
@@ -107,6 +112,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final String tgtHllType;
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode tgtHllTypeArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -134,6 +140,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
           columnArg.getDirectColumn(),
           logK,
           tgtHllType,
+
+          // For HllSketchMergeAggregatorFactory, stringEncoding is only advisory to aid in detection of mismatched
+          // merges. It does not affect the results of the aggregator. At this point in the code, we do not know what
+          // the input encoding of the original sketches was, so we set it to the default.
+          HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
           finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           ROUND
       );
@@ -166,6 +177,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             dimensionSpec.getOutputName(),
             logK,
             tgtHllType,
+
+            // For HllSketchMergeAggregatorFactory, stringEncoding is only advisory to aid in detection of mismatched
+            // merges. It does not affect the results of the aggregator. At this point in the code, we do not know what
+            // the input encoding of the original sketches was, so we set it to the default.
+            HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING,
             finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
             ROUND
         );
@@ -175,6 +191,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             dimensionSpec.getDimension(),
             logK,
             tgtHllType,
+            stringEncoding,
             finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
             ROUND
         );

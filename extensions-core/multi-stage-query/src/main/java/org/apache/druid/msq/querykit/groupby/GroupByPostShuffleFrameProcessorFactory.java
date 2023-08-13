@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -86,8 +86,8 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
     // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
     final GroupByStrategySelector strategySelector = frameContext.groupByStrategySelector();
+    final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
-    final Int2ObjectMap<OutputChannel> outputChannels = new Int2ObjectOpenHashMap<>();
     for (final ReadablePartition partition : slice.getPartitions()) {
       outputChannels.computeIfAbsent(
           partition.getPartitionNumber(),
@@ -115,10 +115,9 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
               strategySelector,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
               readableInput.getChannelFrameReader(),
-              stageDefinition.getSignature(),
-              stageDefinition.getClusterBy(),
-              outputChannel.getFrameMemoryAllocator()
+              frameContext.jsonMapper()
           );
         }
     );

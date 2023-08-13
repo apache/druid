@@ -42,7 +42,8 @@ import java.util.function.Function;
     @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
-    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest")
+    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
+    @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter")
 })
 public interface DataSource
 {
@@ -73,12 +74,12 @@ public interface DataSource
   /**
    * Returns true if all servers have a full copy of this datasource. True for things like inline, lookup, etc, or
    * for queries of those.
-   *
+   * <p>
    * Currently this is coupled with joinability - if this returns true then the query engine expects there exists a
    * {@link org.apache.druid.segment.join.JoinableFactory} which might build a
    * {@link org.apache.druid.segment.join.Joinable} for this datasource directly. If a subquery 'inline' join is
    * required to join this datasource on the right hand side, then this value must be false for now.
-   *
+   * <p>
    * In the future, instead of directly using this method, the query planner and engine should consider
    * {@link org.apache.druid.segment.join.JoinableFactory#isDirectlyJoinable(DataSource)} when determining if the
    * right hand side is directly joinable, which would allow decoupling this property from joins.
@@ -86,18 +87,24 @@ public interface DataSource
   boolean isGlobal();
 
   /**
-   * Returns true if this datasource represents concrete data that can be scanned via a
-   * {@link org.apache.druid.segment.Segment} adapter of some kind. True for e.g. 'table' but not for 'query' or 'join'.
+   * Returns true if this datasource can be the base datasource of query processing.
+   *
+   * Base datasources drive query processing. If the base datasource is {@link TableDataSource}, for example, queries
+   * are processed in parallel on data servers. If the base datasource is {@link InlineDataSource}, queries are
+   * processed on the Broker. See {@link DataSourceAnalysis#getBaseDataSource()} for further discussion.
+   *
+   * Datasources that are *not* concrete must be pre-processed in some way before they can be processed by the main
+   * query stack. For example, {@link QueryDataSource} must be executed first and substituted with its results.
    *
    * @see DataSourceAnalysis#isConcreteBased() which uses this
-   * @see DataSourceAnalysis#isConcreteTableBased() which uses this
+   * @see DataSourceAnalysis#isConcreteAndTableBased() which uses this
    */
   boolean isConcrete();
 
   /**
    * Returns a segment function on to how to segment should be modified.
    *
-   * @param query the input query
+   * @param query      the input query
    * @param cpuTimeAcc the cpu time accumulator
    * @return the segment function
    */
@@ -124,4 +131,10 @@ public interface DataSource
    */
   byte[] getCacheKey();
 
+  /**
+   * Get the analysis for a data source
+   *
+   * @return The {@link DataSourceAnalysis} object for the callee data source
+   */
+  DataSourceAnalysis getAnalysis();
 }

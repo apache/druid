@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -36,10 +37,15 @@ import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmen
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
@@ -55,7 +61,7 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = "kill", value = KillUnusedSegmentsTask.class),
+    @Type(name = KillUnusedSegmentsTask.TYPE, value = KillUnusedSegmentsTask.class),
     @Type(name = "move", value = MoveTask.class),
     @Type(name = "archive", value = ArchiveTask.class),
     @Type(name = "restore", value = RestoreTask.class),
@@ -139,6 +145,33 @@ public interface Task
   String getDataSource();
 
   /**
+   * @return The types of {@link org.apache.druid.data.input.InputSource} that the task uses. Empty set is returned if
+   * the task does not use any. Users can be given permission to access particular types of
+   * input sources but not others, using the
+   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
+   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
+   * would be the case, if the task uses firehose.
+   */
+  @JsonIgnore
+  @Nonnull
+  default Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    throw new UOE(StringUtils.format(
+        "Task type [%s], does not support input source based security",
+        getType()
+    ));
+  }
+
+  default UOE getInputSecurityOnFirehoseUnsupportedError()
+  {
+    throw new UOE(StringUtils.format(
+        "Input source based security cannot be performed '%s' task because it uses firehose."
+        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
+        getType()
+    ));
+  }
+
+  /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.
    *
@@ -149,7 +182,12 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
-   * @return true if this Task type is queryable, such as streaming ingestion tasks
+   * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
+   * that may be needed by queries.
+   *
+   * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
+   * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
+   * even though it is not directly queryable via HTTP.
    */
   boolean supportsQueries();
 
@@ -178,7 +216,7 @@ public interface Task
   boolean isReady(TaskActionClient taskActionClient) throws Exception;
 
   /**
-   * Returns whether or not this task can restore its progress from its on-disk working directory. Restorable tasks
+   * Returns whether this task can restore its progress from its on-disk working directory. Restorable tasks
    * may be started with a non-empty working directory. Tasks that exit uncleanly may still have a chance to attempt
    * restores, meaning that restorable tasks should be able to deal with potentially partially written on-disk state.
    */

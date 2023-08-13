@@ -28,6 +28,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -50,6 +51,8 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -68,6 +71,7 @@ import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -160,12 +164,11 @@ public class QueryStackTests
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactoryWrapper joinableFactoryWraper,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, joinableFactoryWraper, conglomerate, scheduler);
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler);
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
@@ -348,6 +351,7 @@ public class QueryStackTests
             )
             .put(GroupByQuery.class, groupByQueryRunnerFactory)
             .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
+            .put(WindowOperatorQuery.class, new WindowOperatorQueryQueryRunnerFactory())
             .build()
     );
 
@@ -370,8 +374,9 @@ public class QueryStackTests
     ImmutableSet.Builder<JoinableFactory> setBuilder = ImmutableSet.builder();
     ImmutableMap.Builder<Class<? extends JoinableFactory>, Class<? extends DataSource>> mapBuilder =
         ImmutableMap.builder();
-    setBuilder.add(new InlineJoinableFactory());
+    setBuilder.add(new InlineJoinableFactory(), new FrameBasedInlineJoinableFactory());
     mapBuilder.put(InlineJoinableFactory.class, InlineDataSource.class);
+    mapBuilder.put(FrameBasedInlineJoinableFactory.class, FrameBasedInlineDataSource.class);
     if (lookupProvider != null) {
       setBuilder.add(new LookupJoinableFactory(lookupProvider));
       mapBuilder.put(LookupJoinableFactory.class, LookupDataSource.class);

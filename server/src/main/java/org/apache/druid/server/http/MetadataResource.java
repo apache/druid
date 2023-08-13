@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -27,18 +26,18 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -69,18 +68,20 @@ public class MetadataResource
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidCoordinator coordinator;
 
   @Inject
   public MetadataResource(
       SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
-      @Json ObjectMapper jsonMapper
+      DruidCoordinator coordinator
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
+    this.coordinator = coordinator;
   }
 
   @GET
@@ -140,7 +141,7 @@ public class MetadataResource
   )
   {
     if (includeOvershadowedStatus != null) {
-      return getAllUsedSegmentsWithOvershadowedStatus(req, dataSources);
+      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources);
     }
 
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
@@ -165,7 +166,7 @@ public class MetadataResource
     return builder.entity(authorizedSegments).build();
   }
 
-  private Response getAllUsedSegmentsWithOvershadowedStatus(
+  private Response getAllUsedSegmentsWithAdditionalDetails(
       HttpServletRequest req,
       @Nullable Set<String> dataSources
   )
@@ -184,15 +185,21 @@ public class MetadataResource
         .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
-    final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(segment, overshadowedSegments.contains(segment)));
+    final Stream<SegmentStatusInCluster> segmentStatus = usedSegments.map(segment -> {
+      // The replication factor for unloaded segments is 0 as they will be unloaded soon
+      boolean isOvershadowed = overshadowedSegments.contains(segment);
+      Integer replicationFactor = isOvershadowed ? (Integer) 0
+                                                 : coordinator.getReplicationFactor(segment.getId());
 
-    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+      return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor);
+    });
+
+    final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+    final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        usedSegmentsWithOvershadowedStatus::iterator,
+        segmentStatus::iterator,
         raGenerator,
         authorizerMapper
     );
@@ -272,7 +279,7 @@ public class MetadataResource
   @Path("/datasources/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response isSegmentUsed(
+  public Response getUsedSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
   )

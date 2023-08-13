@@ -20,15 +20,9 @@
 package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
-import io.fabric8.kubernetes.api.model.PodTemplateSpec;
-import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import org.apache.commons.text.CharacterPredicates;
-import org.apache.commons.text.RandomStringGenerator;
+import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
@@ -50,30 +44,7 @@ import java.io.File;
 public class K8sTestUtils
 {
 
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
-
-
-  /*
-   * The k8s mock server can't launch pods from jobs, so we will fake it out by taking a job
-   * grabbing the podSpec and launching it ourselves for testing.
-   */
-  @SuppressWarnings("javadoc")
-  public static Pod createPodFromJob(Job job)
-  {
-    RandomStringGenerator random = new RandomStringGenerator.Builder().withinRange('0', 'z')
-                                                                      .filteredBy(CharacterPredicates.LETTERS).build();
-    PodTemplateSpec podTemplate = job.getSpec().getTemplate();
-    return new PodBuilder()
-        .withNewMetadata()
-        .withName(new K8sTaskId(job.getMetadata().getName()).getK8sTaskId() + "-" + random.generate(5))
-        .withLabels(ImmutableMap.of("job-name", new K8sTaskId(job.getMetadata().getName()).getK8sTaskId(),
-                                    DruidK8sConstants.LABEL_KEY, "true"
-                    )
-        )
-        .endMetadata()
-        .withSpec(podTemplate.getSpec())
-        .build();
-  }
+  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
   public static PodSpec getDummyPodSpec()
   {
@@ -142,4 +113,11 @@ public class K8sTestUtils
     );
   }
 
+  public static <T> T fileToResource(String contents, Class<T> type)
+  {
+    return Serialization.unmarshal(
+        K8sTestUtils.class.getClassLoader().getResourceAsStream(contents),
+        type
+    );
+  }
 }

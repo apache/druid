@@ -124,7 +124,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
   {
-    return new StringDimensionSchema(dimensionName);
+    return new StringDimensionSchema(dimensionName, multiValueHandling, hasBitmapIndexes);
   }
 
   @Override

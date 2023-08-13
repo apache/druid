@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Ace } from 'ace-builds';
+import type { Ace } from 'ace-builds';
 
 interface EditorState {
   undoManager: Ace.UndoManager;

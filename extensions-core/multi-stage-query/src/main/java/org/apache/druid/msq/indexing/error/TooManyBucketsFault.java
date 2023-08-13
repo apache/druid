@@ -41,7 +41,7 @@ public class TooManyBucketsFault extends BaseMSQFault
     super(
         CODE,
         "Too many partition buckets (max = %,d); try breaking your query up into smaller queries or "
-        + "using a wider segmentGranularity",
+        + "using a wider PARTITIONED BY",
         maxBuckets
     );
     this.maxBuckets = maxBuckets;

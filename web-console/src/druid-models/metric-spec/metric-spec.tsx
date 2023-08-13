@@ -19,11 +19,12 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { filterMap, typeIs } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
-import { guessColumnTypeFromHeaderAndRows } from '../ingestion-spec/ingestion-spec';
+import { filterMap, typeIsKnown } from '../../utils';
+import type { SampleResponse } from '../../utils/sampler';
+import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
 
 export interface MetricSpec {
   readonly type: string;
@@ -47,6 +48,29 @@ export interface MetricSpec {
   readonly k?: number;
 }
 
+const KNOWN_TYPES = [
+  'count',
+  'longSum',
+  'doubleSum',
+  'floatSum',
+  'longMin',
+  'doubleMin',
+  'floatMin',
+  'longMax',
+  'doubleMax',
+  'floatMax',
+  'stringFirst',
+  'stringLast',
+  'thetaSketch',
+  'arrayOfDoublesSketch',
+  'HLLSketchBuild',
+  'HLLSketchMerge',
+  'quantilesDoublesSketch',
+  'momentSketch',
+  'fixedBucketsHistogram',
+  'hyperUnique',
+  'filtered',
+];
 export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'name',
@@ -78,6 +102,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       // Should the first / last aggregators become usable at ingestion time, reverse the changes made in:
       // https://github.com/apache/druid/pull/10794
       'thetaSketch',
+      'arrayOfDoublesSketch',
       {
         group: 'HLLSketch',
         suggestions: ['HLLSketchBuild', 'HLLSketchMerge'],
@@ -93,7 +118,8 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'fieldName',
     type: 'string',
-    defined: typeIs(
+    defined: typeIsKnown(
+      KNOWN_TYPES,
       'longSum',
       'doubleSum',
       'floatSum',
@@ -104,6 +130,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       'doubleMax',
       'floatMax',
       'thetaSketch',
+      'arrayOfDoublesSketch',
       'HLLSketchBuild',
       'HLLSketchMerge',
       'quantilesDoublesSketch',
@@ -119,32 +146,32 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
     name: 'maxStringBytes',
     type: 'number',
     defaultValue: 1024,
-    defined: typeIs('stringFirst', 'stringLast'),
+    defined: typeIsKnown(KNOWN_TYPES, 'stringFirst', 'stringLast'),
   },
   {
     name: 'filterNullValues',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('stringFirst', 'stringLast'),
+    defined: typeIsKnown(KNOWN_TYPES, 'stringFirst', 'stringLast'),
   },
   // filtered
   {
     name: 'filter',
     type: 'json',
-    defined: typeIs('filtered'),
+    defined: typeIsKnown(KNOWN_TYPES, 'filtered'),
     required: true,
   },
   {
     name: 'aggregator',
     type: 'json',
-    defined: typeIs('filtered'),
+    defined: typeIsKnown(KNOWN_TYPES, 'filtered'),
     required: true,
   },
   // thetaSketch
   {
     name: 'size',
     type: 'number',
-    defined: typeIs('thetaSketch'),
+    defined: typeIsKnown(KNOWN_TYPES, 'thetaSketch'),
     defaultValue: 16384,
     info: (
       <>
@@ -168,7 +195,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'isInputThetaSketch',
     type: 'boolean',
-    defined: typeIs('thetaSketch'),
+    defined: typeIsKnown(KNOWN_TYPES, 'thetaSketch'),
     defaultValue: false,
     info: (
       <>
@@ -178,11 +205,52 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       </>
     ),
   },
+  // arrayOfDoublesSketch
+  {
+    name: 'nominalEntries',
+    type: 'number',
+    defined: typeIsKnown(KNOWN_TYPES, 'arrayOfDoublesSketch'),
+    defaultValue: 16384,
+    info: (
+      <>
+        <p>
+          Parameter that determines the accuracy and size of the sketch. Higher k means higher
+          accuracy but more space to store sketches.
+        </p>
+        <p>Must be a power of 2.</p>
+        <p>
+          See the{' '}
+          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaErrorTable">
+            Theta sketch accuracy
+          </ExternalLink>{' '}
+          for details.
+        </p>
+      </>
+    ),
+  },
+  {
+    name: 'metricColumns',
+    type: 'string-array',
+    defined: typeIsKnown(KNOWN_TYPES, 'arrayOfDoublesSketch'),
+    info: (
+      <>
+        If building sketches from raw data, an array of names of the input columns containing
+        numeric values to be associated with each distinct key.
+      </>
+    ),
+  },
+  {
+    name: 'numberOfValues',
+    type: 'number',
+    defined: typeIsKnown(KNOWN_TYPES, 'arrayOfDoublesSketch'),
+    placeholder: 'metricColumns length or 1',
+    info: <>Number of values associated with each distinct key.</>,
+  },
   // HLLSketchBuild & HLLSketchMerge
   {
     name: 'lgK',
     type: 'number',
-    defined: typeIs('HLLSketchBuild', 'HLLSketchMerge'),
+    defined: typeIsKnown(KNOWN_TYPES, 'HLLSketchBuild', 'HLLSketchMerge'),
     defaultValue: 12,
     info: (
       <>
@@ -197,7 +265,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'tgtHllType',
     type: 'string',
-    defined: typeIs('HLLSketchBuild', 'HLLSketchMerge'),
+    defined: typeIsKnown(KNOWN_TYPES, 'HLLSketchBuild', 'HLLSketchMerge'),
     defaultValue: 'HLL_4',
     suggestions: ['HLL_4', 'HLL_6', 'HLL_8'],
     info: (
@@ -211,7 +279,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'k',
     type: 'number',
-    defined: typeIs('quantilesDoublesSketch'),
+    defined: typeIsKnown(KNOWN_TYPES, 'quantilesDoublesSketch'),
     defaultValue: 128,
     info: (
       <>
@@ -233,7 +301,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'k',
     type: 'number',
-    defined: typeIs('momentSketch'),
+    defined: typeIsKnown(KNOWN_TYPES, 'momentSketch'),
     required: true,
     info: (
       <>
@@ -245,7 +313,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'compress',
     type: 'boolean',
-    defined: typeIs('momentSketch'),
+    defined: typeIsKnown(KNOWN_TYPES, 'momentSketch'),
     defaultValue: true,
     info: (
       <>
@@ -259,21 +327,21 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'lowerLimit',
     type: 'number',
-    defined: typeIs('fixedBucketsHistogram'),
+    defined: typeIsKnown(KNOWN_TYPES, 'fixedBucketsHistogram'),
     required: true,
     info: <>Lower limit of the histogram.</>,
   },
   {
     name: 'upperLimit',
     type: 'number',
-    defined: typeIs('fixedBucketsHistogram'),
+    defined: typeIsKnown(KNOWN_TYPES, 'fixedBucketsHistogram'),
     required: true,
     info: <>Upper limit of the histogram.</>,
   },
   {
     name: 'numBuckets',
     type: 'number',
-    defined: typeIs('fixedBucketsHistogram'),
+    defined: typeIsKnown(KNOWN_TYPES, 'fixedBucketsHistogram'),
     defaultValue: 10,
     required: true,
     info: (
@@ -286,7 +354,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'outlierHandlingMode',
     type: 'string',
-    defined: typeIs('fixedBucketsHistogram'),
+    defined: typeIsKnown(KNOWN_TYPES, 'fixedBucketsHistogram'),
     required: true,
     suggestions: ['ignore', 'overflow', 'clip'],
     info: (
@@ -312,7 +380,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
   {
     name: 'isInputHyperUnique',
     type: 'boolean',
-    defined: typeIs('hyperUnique'),
+    defined: typeIsKnown(KNOWN_TYPES, 'hyperUnique'),
     defaultValue: false,
     info: (
       <>
@@ -344,16 +412,17 @@ export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefi
 }
 
 export function getMetricSpecs(
-  headerAndRows: SampleHeaderAndRows,
+  sampleResponse: SampleResponse,
   typeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
 ): MetricSpec[] {
   return [{ name: 'count', type: 'count' }].concat(
-    filterMap(headerAndRows.header, h => {
+    filterMap(sampleResponse.logicalSegmentSchema, s => {
+      const h = s.name;
       if (h === '__time') return;
       const type =
         typeHints[h] ||
-        guessColumnTypeFromHeaderAndRows(headerAndRows, h, guessNumericStringsAsNumbers);
+        guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
       switch (type) {
         case 'double':
           return { name: `sum_${h}`, type: 'doubleSum', fieldName: h };

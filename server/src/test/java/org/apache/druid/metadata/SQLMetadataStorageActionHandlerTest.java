@@ -44,15 +44,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -131,7 +127,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testEntryAndStatus() throws Exception
+  public void testEntryAndStatus()
   {
     Map<String, Object> entry = ImmutableMap.of("numericId", 1234);
     Map<String, Object> status1 = ImmutableMap.of("count", 42);
@@ -260,7 +256,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test(timeout = 60_000L)
-  public void testRepeatInsert() throws Exception
+  public void testRepeatInsert()
   {
     final String entryId = "abcd";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -273,7 +269,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testLogs() throws Exception
+  public void testLogs()
   {
     final String entryId = "abcd";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -305,7 +301,7 @@ public class SQLMetadataStorageActionHandlerTest
 
 
   @Test
-  public void testLocks() throws Exception
+  public void testLocks()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -408,7 +404,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testRemoveTasksOlderThan() throws Exception
+  public void testRemoveTasksOlderThan()
   {
     final String entryId1 = "1234";
     Map<String, Object> entry1 = ImmutableMap.of("numericId", 1234);
@@ -553,18 +549,14 @@ public class SQLMetadataStorageActionHandlerTest
   private Integer getUnmigratedTaskCount()
   {
     return handler.getConnector().retryWithHandle(
-        new HandleCallback<Integer>()
-        {
-          @Override
-          public Integer withHandle(Handle handle) throws SQLException
-          {
-            String sql = String.format(Locale.ENGLISH,
-                                       "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
-                                       entryTable);
-            ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
-            resultSet.next();
-            return resultSet.getInt(1);
-          }
+        handle -> {
+          String sql = StringUtils.format(
+              "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
+              entryTable
+          );
+          ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
+          resultSet.next();
+          return resultSet.getInt(1);
         }
     );
   }

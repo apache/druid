@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-import { Icon, IconName } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Icon } from '@blueprintjs/core';
 import classNames from 'classnames';
-import React, { MouseEventHandler, ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
+import React from 'react';
 
 import './table-clickable-cell.scss';
 

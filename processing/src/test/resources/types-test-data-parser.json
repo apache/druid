@@ -1,0 +1,16 @@
+{
+  "type": "string",
+  "parseSpec": {
+    "format": "json",
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": [],
+      "dimensionExclusions": [],
+      "spatialDimensions": [],
+      "useSchemaDiscovery": true
+    }
+  }
+}

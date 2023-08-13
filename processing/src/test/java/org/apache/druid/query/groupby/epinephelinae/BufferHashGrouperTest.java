@@ -52,7 +52,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testSimple()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<IntKey> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(1000)),
         GrouperTestUtil.intKeySerde(),
@@ -99,7 +99,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testGrowing()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     try (final ResourceHolder<Grouper<IntKey>> grouperHolder = makeGrouper(columnSelectorFactory, 10000, 2, 0.75f)) {
       final Grouper<IntKey> grouper = grouperHolder.get();
       final int expectedMaxSize = NullHandling.replaceWithDefault() ? 219 : 210;
@@ -132,7 +132,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
     // This test checks the bug reported in https://github.com/apache/druid/pull/4333 only when
     // NullHandling.replaceWithDefault() is true
     if (NullHandling.replaceWithDefault()) {
-      final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+      final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
       // the buffer size below is chosen to test integer overflow in ByteBufferHashTable.adjustTableWhenFull().
       try (final ResourceHolder<Grouper<IntKey>> holder = makeGrouper(columnSelectorFactory, 1_900_000_000, 2, 0.3f)) {
         final Grouper<IntKey> grouper = holder.get();
@@ -150,7 +150,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
   @Test
   public void testNoGrowing()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     try (final ResourceHolder<Grouper<IntKey>> grouperHolder =
              makeGrouper(columnSelectorFactory, 10000, Integer.MAX_VALUE, 0.75f)) {
       final Grouper<IntKey> grouper = grouperHolder.get();
@@ -179,7 +179,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
   }
 
   private ResourceHolder<Grouper<IntKey>> makeGrouper(
-      TestColumnSelectorFactory columnSelectorFactory,
+      GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
       int initialBuckets,
       float maxLoadFactor

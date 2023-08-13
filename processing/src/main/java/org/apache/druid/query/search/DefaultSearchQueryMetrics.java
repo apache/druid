@@ -304,6 +304,24 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportParallelMergeTotalTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeTotalTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeFastestPartitionTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeFastestPartitionTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeSlowestPartitionTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeSlowestPartitionTime(timeNs);
+  }
+
+  @Override
   public QueryMetrics reportQueriedSegmentCount(long segmentCount)
   {
     return delegateQueryMetrics.reportQueriedSegmentCount(segmentCount);

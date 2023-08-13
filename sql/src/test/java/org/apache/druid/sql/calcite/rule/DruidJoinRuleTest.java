@@ -31,6 +31,7 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,6 +69,7 @@ public class DruidJoinRuleTest
   {
     PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
     Mockito.when(plannerContext.queryContext()).thenReturn(QueryContext.empty());
+    Mockito.when(plannerContext.getJoinAlgorithm()).thenReturn(JoinAlgorithm.BROADCAST);
     druidJoinRule = DruidJoinRule.instance(plannerContext);
   }
 
@@ -82,7 +84,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(joinType, 1)
             ),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }
@@ -102,7 +105,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
             ),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }
@@ -122,7 +126,8 @@ public class DruidJoinRuleTest
                 )
             ),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }
@@ -138,7 +143,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0)
             ),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }
@@ -154,7 +160,8 @@ public class DruidJoinRuleTest
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
             ),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }
@@ -166,7 +173,8 @@ public class DruidJoinRuleTest
         druidJoinRule.canHandleCondition(
             rexBuilder.makeLiteral(true),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }
@@ -178,7 +186,8 @@ public class DruidJoinRuleTest
         druidJoinRule.canHandleCondition(
             rexBuilder.makeLiteral(false),
             leftType,
-            null
+            null,
+            rexBuilder
         )
     );
   }

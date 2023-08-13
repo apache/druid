@@ -448,18 +448,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       }
 
       @Override
-      public boolean getChatAsync()
-      {
-        return false;
-      }
-
-      @Override
-      public Integer getChatThreads()
-      {
-        return 1;
-      }
-
-      @Override
       public Long getChatRetries()
       {
         return 1L;
@@ -674,14 +662,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(ingestionSchema);
 
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
-            .andReturn(mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis",
-                                                           "1",
-                                                           "enableTaskAutoScaler",
-                                                           true,
-                                                           "taskCountMax",
-                                                           "4",
-                                                           "taskCountMin",
-                                                           "1"
+            .andReturn(mapper.convertValue(ImmutableMap.of(
+                "lagCollectionIntervalMillis",
+                "1",
+                "enableTaskAutoScaler",
+                true,
+                "taskCountMax",
+                "4",
+                "taskCountMin",
+                "1"
             ), AutoScalerConfig.class))
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
@@ -876,6 +865,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -930,8 +920,10 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        new IdleConfig(true, null)
-    ){
+        new IdleConfig(true, null),
+        null
+    )
+    {
     };
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -981,6 +973,83 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertTrue(Objects.requireNonNull(spec.getIoConfig().getIdleConfig()).isEnabled());
   }
 
+  @Test
+  public void testGetContextVauleWithNullContextShouldReturnNull()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    Assert.assertNull(spec.getContextValue("key"));
+  }
+
+  @Test
+  public void testGetContextVauleForNonExistentKeyShouldReturnNull()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    Assert.assertNull(spec.getContextValue("key_not_exists"));
+  }
+
+  @Test
+  public void testGetContextVauleForKeyShouldReturnValue()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    Assert.assertEquals("value", spec.getContextValue("key"));
+  }
+
+  private void mockIngestionSchema()
+  {
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+  }
+
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();
@@ -1018,6 +1087,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
           null,
+          null,
           null
       )
       {
@@ -1036,6 +1106,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
+          null,
           null,
           null
       )

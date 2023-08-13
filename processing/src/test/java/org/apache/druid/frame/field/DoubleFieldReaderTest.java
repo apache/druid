@@ -69,6 +69,20 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_isNull_defaultOrNull()
+  {
+    writeToMemory(NullHandling.defaultDoubleValue());
+    Assert.assertEquals(NullHandling.sqlCompatible(), new DoubleFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_aValue()
+  {
+    writeToMemory(5.1d);
+    Assert.assertFalse(new DoubleFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
   public void test_makeColumnValueSelector_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultDoubleValue());

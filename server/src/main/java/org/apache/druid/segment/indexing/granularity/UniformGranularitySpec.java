@@ -105,7 +105,6 @@ public class UniformGranularitySpec extends BaseGranularitySpec
     }
 
     return true;
-
   }
 
   @Override
