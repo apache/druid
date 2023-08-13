@@ -328,6 +328,7 @@ public class JdbcExtractionNamespaceTest
         null,
         new Period(0),
         null,
+        null,
         new JdbcAccessSecurityConfig()
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
@@ -360,6 +361,7 @@ public class JdbcExtractionNamespaceTest
         tsColumn,
         FILTER_COLUMN + "='1'",
         new Period(0),
+        null,
         null,
         new JdbcAccessSecurityConfig()
     );
@@ -436,6 +438,7 @@ public class JdbcExtractionNamespaceTest
         "some filter",
         new Period(10),
         null,
+        null,
         securityConfig
     );
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -460,6 +463,7 @@ public class JdbcExtractionNamespaceTest
         tsColumn,
         null,
         new Period(10),
+        null,
         null,
         new JdbcAccessSecurityConfig()
     );

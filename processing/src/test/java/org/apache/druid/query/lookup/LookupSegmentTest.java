@@ -83,6 +83,17 @@ public class LookupSegmentTest
         }
 
         @Override
+        public void awaitToInitialise()
+        {
+        }
+
+        @Override
+        public boolean isCacheLoaded()
+        {
+          return true;
+        }
+
+        @Override
         public LookupExtractor get()
         {
           return new MapLookupExtractor(LOOKUP_MAP, false);

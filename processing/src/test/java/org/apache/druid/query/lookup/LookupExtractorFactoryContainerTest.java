@@ -105,6 +105,17 @@ public class LookupExtractorFactoryContainerTest
     }
 
     @Override
+    public void awaitToInitialise()
+    {
+    }
+
+    @Override
+    public boolean isCacheLoaded()
+    {
+      return true;
+    }
+
+    @Override
     public LookupExtractor get()
     {
       return null;

@@ -41,4 +41,9 @@ public interface ExtractionNamespace
   {
     return -1L;
   }
+
+  default long getLoadTimeout()
+  {
+    return 60 * 1000;
+  }
 }

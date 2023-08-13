@@ -129,6 +129,17 @@ public class PollingLookupFactory implements LookupExtractorFactory
   }
 
   @Override
+  public void awaitToInitialise()
+  {
+  }
+
+  @Override
+  public boolean isCacheLoaded()
+  {
+    return true;
+  }
+
+  @Override
   public PollingLookup get()
   {
     return pollingLookup;

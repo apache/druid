@@ -61,6 +61,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private final Period pollPeriod;
   @JsonProperty
   private final long maxHeapPercentage;
+  @JsonProperty
+  private final long loadTimeout;
 
   @JsonCreator
   public JdbcExtractionNamespace(
@@ -73,6 +75,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @JsonProperty(value = "filter") @Nullable final String filter,
       @Min(0) @JsonProperty(value = "pollPeriod") @Nullable final Period pollPeriod,
       @JsonProperty(value = "maxHeapPercentage") @Nullable final Long maxHeapPercentage,
+      @JsonProperty(value = "loadTimeout") @Nullable final Long loadTimeout,
       @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
@@ -96,6 +99,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       this.pollPeriod = pollPeriod;
     }
     this.maxHeapPercentage = maxHeapPercentage == null ? DEFAULT_MAX_HEAP_PERCENTAGE : maxHeapPercentage;
+    this.loadTimeout = loadTimeout == null ? getLoadTimeout() : loadTimeout;
   }
 
   /**

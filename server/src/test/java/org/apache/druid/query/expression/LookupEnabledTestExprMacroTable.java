@@ -99,6 +99,17 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
           }
 
           @Override
+          public void awaitToInitialise()
+          {
+          }
+
+          @Override
+          public boolean isCacheLoaded()
+          {
+            return true;
+          }
+
+          @Override
           public LookupExtractor get()
           {
             return new MapLookupExtractor(theLookup, false);

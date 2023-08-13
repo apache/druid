@@ -298,6 +298,18 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
+  public void awaitToInitialise() throws InterruptedException, TimeoutException
+  {
+
+  }
+
+  @Override
+  public boolean isCacheLoaded()
+  {
+    return true;
+  }
+
+  @Override
   public LookupExtractor get()
   {
     final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
