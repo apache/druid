@@ -1402,7 +1402,6 @@ export interface TuningConfig {
   handoffConditionTimeout?: number;
   resetOffsetAutomatically?: boolean;
   workerThreads?: number;
-  chatThreads?: number;
   chatRetries?: number;
   httpTimeout?: string;
   shutdownTimeout?: string;
@@ -1975,14 +1974,6 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
-  },
-  {
-    name: 'spec.tuningConfig.chatThreads',
-    type: 'number',
-    placeholder: 'min(10, taskCount * replicas)',
-    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
-    hideInMore: true,
-    info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
   {
     name: 'spec.tuningConfig.chatRetries',

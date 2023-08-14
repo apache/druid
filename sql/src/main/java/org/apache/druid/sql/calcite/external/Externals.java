@@ -34,7 +34,7 @@ import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlTypeNameSpec;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
-import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
@@ -130,7 +130,7 @@ public class Externals
    * declared types. We catch missing required parameters at conversion time,
    * where we also catch invalid values, incompatible values, and so on.
    */
-  public static SqlOperandTypeChecker variadic(List<FunctionParameter> params)
+  public static SqlOperandMetadata variadic(List<FunctionParameter> params)
   {
     int min = 0;
     for (FunctionParameter param : params) {
@@ -139,12 +139,13 @@ public class Externals
       }
     }
     SqlOperandCountRange range = SqlOperandCountRanges.between(min, params.size());
-    return new SqlOperandTypeChecker()
+    return new SqlOperandMetadata()
     {
       @Override
       public boolean checkOperandTypes(
           SqlCallBinding callBinding,
-          boolean throwOnFailure)
+          boolean throwOnFailure
+      )
       {
         return range.isValidCount(callBinding.getOperandCount());
       }
@@ -153,6 +154,12 @@ public class Externals
       public SqlOperandCountRange getOperandCountRange()
       {
         return range;
+      }
+
+      @Override
+      public boolean isFixedParameters()
+      {
+        return true;
       }
 
       @Override
@@ -172,6 +179,26 @@ public class Externals
       {
         return Consistency.NONE;
       }
+
+      @Override
+      public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
+      {
+        final List<RelDataType> types = new ArrayList<>(params.size());
+        for (FunctionParameter param : params) {
+          types.add(param.getType(typeFactory));
+        }
+        return types;
+      }
+
+      @Override
+      public List<String> paramNames()
+      {
+        final List<String> names = new ArrayList<>(params.size());
+        for (FunctionParameter param : params) {
+          names.add(param.getName());
+        }
+        return names;
+      }
     };
   }
 
@@ -181,7 +208,7 @@ public class Externals
    */
   public static Map<String, Object> convertArguments(
       final TableFunction fn,
-      final List<Object> arguments
+      final List<?> arguments
   )
   {
     final List<TableFunction.ParameterDefn> params = fn.parameters();
@@ -221,7 +248,8 @@ public class Externals
     if (!ident.isSimple()) {
       throw new IAE(StringUtils.format(
           "Column [%s] must have a simple name",
-          ident));
+          ident
+      ));
     }
     return ident.getSimple();
   }
@@ -274,7 +302,8 @@ public class Externals
     return new IAE(StringUtils.format(
         "Column [%s] has an unsupported type: [%s]",
         name,
-        dataType));
+        dataType
+    ));
   }
 
   /**
@@ -318,7 +347,7 @@ public class Externals
             spec.inputSource,
             spec.inputFormat,
             spec.signature
-          ),
+        ),
         spec.signature,
         jsonMapper,
         inputSourceTypesSupplier
