@@ -26,6 +26,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -110,6 +111,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   public void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
     sim.coordinator().setDynamicConfig(dynamicConfig);
+  }
+
+  @Override
+  public void setRetentionRules(String datasource, Rule... rules)
+  {
+    sim.coordinator().setRetentionRules(datasource, rules);
   }
 
   @Override
@@ -211,6 +218,8 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
+    static final String OVERSHADOWED_COUNT = "segment/overshadowed/count";
+    static final String DELETED_COUNT = "segment/deleted/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
@@ -286,6 +295,17 @@ public abstract class CoordinatorSimulationBaseTest implements
     static Rule forever()
     {
       return new ForeverBroadcastDistributionRule();
+    }
+  }
+
+  /**
+   * Builder for a drop rule.
+   */
+  static class Drop
+  {
+    static Rule forever()
+    {
+      return new ForeverDropRule();
     }
   }
 }

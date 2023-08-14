@@ -27,6 +27,8 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment>>
@@ -37,14 +39,19 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   @JsonIgnore
   private final Interval interval;
 
+  @JsonIgnore
+  private final Integer limit;
+
   @JsonCreator
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("limit") @Nullable Integer limit
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
+    this.limit = limit;
   }
 
   @JsonProperty
@@ -59,6 +66,13 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return interval;
   }
 
+  @Nullable
+  @JsonProperty
+  public Integer getLimit()
+  {
+    return limit;
+  }
+
   @Override
   public TypeReference<List<DataSegment>> getReturnTypeReference()
   {
@@ -68,7 +82,8 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   @Override
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    return toolbox.getIndexerMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(dataSource, interval);
+    return toolbox.getIndexerMetadataStorageCoordinator()
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit);
   }
 
   @Override
@@ -83,6 +98,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
+           ", limit=" + limit +
            '}';
   }
 }

@@ -33,8 +33,8 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -61,10 +61,10 @@ public class UnloadUnusedSegmentsTest
   private ImmutableDruidServer historicalServerTier2;
   private ImmutableDruidServer brokerServer;
   private ImmutableDruidServer indexerServer;
-  private LoadQueuePeonTester historicalPeon;
-  private LoadQueuePeonTester historicalTier2Peon;
-  private LoadQueuePeonTester brokerPeon;
-  private LoadQueuePeonTester indexerPeon;
+  private TestLoadQueuePeon historicalPeon;
+  private TestLoadQueuePeon historicalTier2Peon;
+  private TestLoadQueuePeon brokerPeon;
+  private TestLoadQueuePeon indexerPeon;
   private DataSegment segment1;
   private DataSegment segment2;
   private List<DataSegment> segments;
@@ -143,10 +143,10 @@ public class UnloadUnusedSegmentsTest
     segmentsForRealtime.add(realtimeOnlySegment);
     segmentsForRealtime.add(broadcastSegment);
 
-    historicalPeon = new LoadQueuePeonTester();
-    historicalTier2Peon = new LoadQueuePeonTester();
-    brokerPeon = new LoadQueuePeonTester();
-    indexerPeon = new LoadQueuePeonTester();
+    historicalPeon = new TestLoadQueuePeon();
+    historicalTier2Peon = new TestLoadQueuePeon();
+    brokerPeon = new TestLoadQueuePeon();
+    indexerPeon = new TestLoadQueuePeon();
 
     final ImmutableDruidDataSource dataSource1 = new ImmutableDruidDataSource(
         "datasource1",

@@ -340,6 +340,11 @@ public class DruidException extends RuntimeException
      * Means that an action that was attempted is forbidden
      */
     FORBIDDEN(403),
+
+    /**
+     * Means that the requsted requested resource cannot be found.
+     */
+    NOT_FOUND(404),
     /**
      * Means that some capacity limit was exceeded, this could be due to throttling or due to some system limit
      */
@@ -412,6 +417,12 @@ public class DruidException extends RuntimeException
     public DruidExceptionBuilder forPersona(Persona targetPersona)
     {
       this.targetPersona = targetPersona;
+      return this;
+    }
+
+    public DruidExceptionBuilder withErrorCode(String errorCode)
+    {
+      this.errorCode = errorCode;
       return this;
     }
 

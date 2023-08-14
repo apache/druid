@@ -338,13 +338,6 @@ public class DruidCoordinator
     return CoordinatorCompactionConfig.current(configManager);
   }
 
-  public void markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
-  {
-    log.debug("Marking [%d] segments of datasource [%s] as unused.", segmentIds.size(), datasource);
-    int updatedCount = segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
-    log.info("Successfully marked [%d] segments of datasource [%s] as unused.", updatedCount, datasource);
-  }
-
   public String getCurrentLeader()
   {
     return coordLeaderSelector.getCurrentLeader();
@@ -579,10 +572,10 @@ public class DruidCoordinator
   {
     return ImmutableList.of(
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(),
+        new RunRules(segmentsMetadataManager::markSegmentsAsUnused),
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
-        new MarkOvershadowedSegmentsAsUnused(DruidCoordinator.this),
+        new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused),
         new BalanceSegments(),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
@@ -619,7 +612,7 @@ public class DruidCoordinator
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(config, compactionSegmentSearchPolicy, overlordClient);
+      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(
@@ -706,7 +699,6 @@ public class DruidCoordinator
                 .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
-                .withEmitter(emitter)
                 .build();
         log.info(
             "Initialized run params for group [%s] with [%,d] used segments in [%d] datasources.",

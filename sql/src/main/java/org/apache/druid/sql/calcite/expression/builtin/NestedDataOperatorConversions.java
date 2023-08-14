@@ -25,13 +25,15 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlJsonEmptyOrError;
+import org.apache.calcite.sql.SqlJsonValueEmptyOrErrorBehavior;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
@@ -159,7 +161,15 @@ public class NestedDataOperatorConversions
     private static final String FUNCTION_NAME = StringUtils.toUpperCase("json_query");
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder(FUNCTION_NAME)
-        .operandTypeChecker(OperandTypes.family(new SqlTypeFamily[]{SqlTypeFamily.ANY, SqlTypeFamily.CHARACTER, SqlTypeFamily.ANY, SqlTypeFamily.ANY, SqlTypeFamily.ANY}))
+        .operandTypeChecker(
+            OperandTypes.family(
+                SqlTypeFamily.ANY,
+                SqlTypeFamily.CHARACTER,
+                SqlTypeFamily.ANY,
+                SqlTypeFamily.ANY,
+                SqlTypeFamily.ANY
+            )
+        )
         .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
         .functionCategory(SqlFunctionCategory.SYSTEM)
         .build();
@@ -241,89 +251,63 @@ public class NestedDataOperatorConversions
     public SqlRexConvertlet createConvertlet(PlannerContext plannerContext)
     {
       return (cx, call) -> {
-        // we don't support modifying the behavior to be anything other than 'NULL ON EMPTY' / 'NULL ON ERROR'
-        Preconditions.checkArgument(
-            "SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL]".equals(call.operand(2).toString()),
-            "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
-        );
-        Preconditions.checkArgument(
-            "NULL".equals(call.operand(3).toString()),
-            "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
-        );
-        Preconditions.checkArgument(
-            "SQLJSONVALUEEMPTYORERRORBEHAVIOR[NULL]".equals(call.operand(4).toString()),
-            "Unsupported JSON_VALUE parameter 'ON ERROR' defined - please re-issue this query without this argument"
-        );
-        Preconditions.checkArgument(
-            "NULL".equals(call.operand(5).toString()),
-            "Unsupported JSON_VALUE parameter 'ON ERROR' defined - please re-issue this query without this argument"
-        );
-        SqlDataTypeSpec dataType = call.operand(6);
-        RelDataType sqlType = dataType.deriveType(cx.getValidator());
-        SqlNode rewrite;
+        // We don't support modifying the behavior to be anything other than 'NULL ON EMPTY' / 'NULL ON ERROR'.
+        // Check this here: prior operand before ON EMPTY or ON ERROR must be NULL.
+        for (int i = 2; i < call.operandCount(); i++) {
+          final SqlNode operand = call.operand(i);
+
+          if (operand.getKind() == SqlKind.LITERAL
+              && ((SqlLiteral) operand).getValue() instanceof SqlJsonEmptyOrError) {
+            // Found ON EMPTY or ON ERROR. Check prior operand.
+            final SqlNode priorOperand = call.operand(i - 1);
+            Preconditions.checkArgument(
+                priorOperand.getKind() == SqlKind.LITERAL
+                && ((SqlLiteral) priorOperand).getValue() == SqlJsonValueEmptyOrErrorBehavior.NULL,
+                "Unsupported JSON_VALUE parameter '%s' defined - please re-issue this query without this argument",
+                ((SqlLiteral) operand).getValue()
+            );
+          }
+        }
+
+        RelDataType sqlType = cx.getValidator().getValidatedNodeType(call);
+        SqlOperator jsonValueOperator;
         if (SqlTypeName.INT_TYPES.contains(sqlType.getSqlTypeName())) {
-          rewrite = JsonValueBigintOperatorConversion.FUNCTION.createCall(
-              SqlParserPos.ZERO,
-              call.operand(0),
-              call.operand(1)
-          );
+          jsonValueOperator = JsonValueBigintOperatorConversion.FUNCTION;
         } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName()) ||
                    SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
-          rewrite = JsonValueDoubleOperatorConversion.FUNCTION.createCall(
-              SqlParserPos.ZERO,
-              call.operand(0),
-              call.operand(1)
-          );
+          jsonValueOperator = JsonValueDoubleOperatorConversion.FUNCTION;
         } else if (SqlTypeName.STRING_TYPES.contains(sqlType.getSqlTypeName())) {
-          rewrite = JsonValueVarcharOperatorConversion.FUNCTION.createCall(
-              SqlParserPos.ZERO,
-              call.operand(0),
-              call.operand(1)
-          );
+          jsonValueOperator = JsonValueVarcharOperatorConversion.FUNCTION;
         } else if (SqlTypeName.ARRAY.equals(sqlType.getSqlTypeName())) {
           ColumnType elementType = Calcites.getColumnTypeForRelDataType(sqlType.getComponentType());
           switch (elementType.getType()) {
             case LONG:
-              rewrite = JsonValueReturningArrayBigIntOperatorConversion.FUNCTION.createCall(
-                  SqlParserPos.ZERO,
-                  call.operand(0),
-                  call.operand(1)
-              );
+              jsonValueOperator = JsonValueReturningArrayBigIntOperatorConversion.FUNCTION;
               break;
             case DOUBLE:
-              rewrite = JsonValueReturningArrayDoubleOperatorConversion.FUNCTION.createCall(
-                  SqlParserPos.ZERO,
-                  call.operand(0),
-                  call.operand(1)
-              );
+              jsonValueOperator = JsonValueReturningArrayDoubleOperatorConversion.FUNCTION;
               break;
             case STRING:
-              rewrite = JsonValueReturningArrayVarcharOperatorConversion.FUNCTION.createCall(
-                  SqlParserPos.ZERO,
-                  call.operand(0),
-                  call.operand(1)
-              );
+              jsonValueOperator = JsonValueReturningArrayVarcharOperatorConversion.FUNCTION;
               break;
             default:
               throw new IAE("Unhandled JSON_VALUE RETURNING ARRAY type [%s]", sqlType.getComponentType());
           }
         } else {
           // fallback to json_value_any, e.g. the 'standard' convertlet.
-          rewrite = JsonValueAnyOperatorConversion.FUNCTION.createCall(
-              SqlParserPos.ZERO,
-              call.operand(0),
-              call.operand(1)
-          );
+          jsonValueOperator = JsonValueAnyOperatorConversion.FUNCTION;
         }
 
 
         // always cast anyway, to prevent haters from complaining that VARCHAR doesn't match VARCHAR(2000)
-        SqlNode caster = SqlStdOperatorTable.CAST.createCall(
-            SqlParserPos.ZERO,
-            rewrite,
-            call.operand(6)
+        return cx.getRexBuilder().makeCast(
+            sqlType,
+            cx.getRexBuilder().makeCall(
+                jsonValueOperator,
+                cx.convertExpression(call.operand(0)),
+                cx.convertExpression(call.operand(1))
+            )
         );
-        return cx.convertExpression(caster);
       };
     }
 
@@ -557,7 +541,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayBigIntOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_BIGINT", SqlTypeName.BIGINT);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_BIGINT", SqlTypeName.BIGINT);
 
     public JsonValueReturningArrayBigIntOperatorConversion()
     {
@@ -567,7 +551,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayDoubleOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_DOUBLE", SqlTypeName.DOUBLE);
 
     public JsonValueReturningArrayDoubleOperatorConversion()
     {
@@ -577,7 +561,7 @@ public class NestedDataOperatorConversions
 
   public static class JsonValueReturningArrayVarcharOperatorConversion extends JsonValueReturningArrayTypeOperatorConversion
   {
-    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_RETURNING_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
+    static final SqlFunction FUNCTION = buildArrayFunction("JSON_VALUE_ARRAY_VARCHAR", SqlTypeName.VARCHAR);
 
     public JsonValueReturningArrayVarcharOperatorConversion()
     {

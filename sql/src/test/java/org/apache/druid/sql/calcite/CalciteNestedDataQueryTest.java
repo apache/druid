@@ -1373,6 +1373,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       return;
     }
     cannotVectorize();
+    skipVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -1389,8 +1390,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setGranularity(Granularities.ALL)
                             .setDimFilter(
                                 or(
-                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY),
-                                    isNull("arrayLongNulls")
+                                    isNull("arrayLongNulls"),
+                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY)
                                 )
                             )
                             .setDimensions(
@@ -5646,6 +5647,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "variant",
                       "variantEmptyObj",
                       "variantEmtpyArray",
+                      "variantNumeric",
                       "variantWithArrays"
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5661,6 +5663,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 0.0D,
                 "true",
                 "51",
+                -0.13D,
                 "1",
                 "[]",
                 "[51,-35]",
@@ -5698,6 +5701,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 0.0D,
                 "false",
                 "b",
+                1.1D,
                 "\"b\"",
                 "2",
                 "b",
@@ -5735,6 +5739,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 1.0D,
                 "true",
                 "1",
+                1.0D,
                 "1",
                 "1",
                 "1",
@@ -5772,6 +5777,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 3.3D,
                 "true",
                 "1",
+                0.0D,
                 "{}",
                 "4",
                 "1",
@@ -5809,6 +5815,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 4.4D,
                 "true",
                 "hello",
+                -1000.0D,
                 "{}",
                 "[]",
                 "hello",
@@ -5846,6 +5853,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 5.9D,
                 "false",
                 "",
+                3.33D,
                 "\"a\"",
                 "6",
                 null,
@@ -5883,11 +5891,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 2.0D,
                 "",
                 "3.0",
+                1.0D,
                 "3.3",
                 "3",
                 "3.0",
                 "{\"a\":300}",
-                "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
+                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
                 "[\"b\",\"c\"]",
                 "[\"d\",null,\"b\"]",
                 "[1,2,3,4]",
@@ -5922,6 +5931,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 "true",
                 "51",
+                -0.13D,
                 "1",
                 "[]",
                 "[51,-35]",
@@ -5959,6 +5969,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 "false",
                 "b",
+                1.1D,
                 "\"b\"",
                 "2",
                 "b",
@@ -5996,6 +6007,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 1.0D,
                 "true",
                 "1",
+                1.0D,
                 "1",
                 "1",
                 "1",
@@ -6033,6 +6045,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 3.3D,
                 "true",
                 "1",
+                null,
                 "{}",
                 "4",
                 "1",
@@ -6070,6 +6083,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 4.4D,
                 "true",
                 "hello",
+                -1000.0D,
                 "{}",
                 "[]",
                 "hello",
@@ -6107,6 +6121,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 5.9D,
                 "false",
                 null,
+                3.33D,
                 "\"a\"",
                 "6",
                 null,
@@ -6144,11 +6159,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 2.0D,
                 null,
                 "3.0",
+                1.0D,
                 "3.3",
                 "3",
                 "3.0",
                 "{\"a\":300}",
-                "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
+                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
                 "[\"b\",\"c\"]",
                 "[\"d\",null,\"b\"]",
                 "[1,2,3,4]",
@@ -6182,6 +6198,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("double", ColumnType.DOUBLE)
                     .add("bool", ColumnType.STRING)
                     .add("variant", ColumnType.STRING)
+                    .add("variantNumeric", ColumnType.DOUBLE)
                     .add("variantEmptyObj", ColumnType.NESTED_DATA)
                     .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
                     .add("variantWithArrays", ColumnType.STRING_ARRAY)
