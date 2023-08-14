@@ -29,69 +29,9 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 ## Manage automatic compaction
 
-### Update capacity for compaction tasks
-
-Updates the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483652.
-
-#### URL
-
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
-
-#### Query parameters
-
-To limit the maximum number of compaction tasks, use the optional query parameters `ratio` and `max`:
-
-* `ratio` (optional)
-  * Type: Float
-  * Default: 0.1
-  * Limit the ratio of the total task slots to compaction task slots.
-* `max` (optional)
-  * Type: Int
-  * Default: 2147483647
-  * Limit the maximum number of task slots for compaction tasks.
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully updated compaction configuration* 
-
-<!--404 NOT FOUND-->
-
-*Invalid `max` value* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-#### Sample request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000"
-```
-
-<!--HTTP-->
-
-```HTTP
-POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-A successful request returns an HTTP `200 OK` message code and an empty response body.
-
 ### Create or update automatic compaction configuration
 
-Creates or updates the automatic compaction configuration for a datasource. You pass the automatic compaction as a JSON object in the request body.
+Creates or updates the automatic compaction configuration for a datasource. Pass the automatic compaction as a JSON object in the request body.
 
 The automatic compaction configuration requires only the `dataSource` property. Druid fills all other properties with default values if not specified. See [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) for configuration details.
 
@@ -114,7 +54,7 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 ---
 #### Sample request
 
-The following example creates an automatic compaction configuration for datasource `wikipedia_hour`. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data. 
+The following example creates an automatic compaction configuration for the datasource `wikipedia_hour`, which was ingested with `HOUR` segment granularity. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data. 
 
 In this example: 
 
@@ -224,7 +164,69 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
-## Automatic compaction configuration
+### Update capacity for compaction tasks
+
+Updates the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483647. 
+
+Note that while the max compaction tasks can theoretically be set to 2147483647, the practical limit is determined by the available cluster capacity and is capped at 10% of the cluster's total capacity. 
+
+#### URL
+
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
+
+#### Query parameters
+
+To limit the maximum number of compaction tasks, use the optional query parameters `ratio` and `max`:
+
+* `ratio` (optional)
+  * Type: Float
+  * Default: 0.1
+  * Limits the ratio of the total task slots to compaction task slots.
+* `max` (optional)
+  * Type: Int
+  * Default: 2147483647
+  * Limits the maximum number of task slots for compaction tasks.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully updated compaction configuration* 
+
+<!--404 NOT FOUND-->
+
+*Invalid `max` value* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000"
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` message code and an empty response body.
+
+## View automatic compaction configuration
 
 ### Get all automatic compaction configurations
 
@@ -486,10 +488,10 @@ The response contains a list of objects with the following keys:
 #### Query parameters
 * `interval` (optional)
   * Type: ISO-8601
-  * Limit the results within a specified interval. Use `/` as the delimiter for the interval string. 
+  * Limits the results within a specified interval. Use `/` as the delimiter for the interval string. 
 * `count` (optional)
   * Type: Int
-  * Limit the number of results.
+  * Limits the number of results.
 
 #### Responses
 
@@ -625,11 +627,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-## Automatic compaction status
+## View automatic compaction status
 
 ### Get segments awaiting compaction
 
-Returns the total size of segments awaiting compaction for a given datasource. The specified datasource must have automatic compaction enabled.
+Returns the total size of segments awaiting compaction for a given datasource. Returns a 404 response if a datasource does not have automatic compaction enabled.
 
 #### URL
 
