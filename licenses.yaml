@@ -1569,9 +1569,9 @@ name: Bean Validation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0.Final
+version: 2.0.2
 libraries:
-  - javax.validation: validation-api
+  - jakarta.validation: jakarta.validation-api
 
 ---
 
