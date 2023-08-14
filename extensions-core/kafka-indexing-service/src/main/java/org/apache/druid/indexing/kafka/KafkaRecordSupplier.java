@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -33,7 +34,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -57,6 +57,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>
@@ -207,19 +208,30 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public Set<KafkaTopicPartition> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      List<PartitionInfo> allPartitions = new ArrayList<>();
-      for (String topic : stream.split(",")) {
-        if (!multiTopic && !allPartitions.isEmpty()) {
-          throw InvalidInput.exception("Comma separated list of topics [%s] is not supported unless you enabled "
-                                       + "multiTopic in the KafkaSupervisorSpec.", stream);
+      List<PartitionInfo> allPartitions;
+      if (multiTopic) {
+        Pattern pattern = Pattern.compile(stream);
+        allPartitions = consumer.listTopics()
+                                .entrySet()
+                                .stream()
+                                .filter(e -> pattern.matcher(e.getKey()).matches())
+                                .flatMap(e -> e.getValue().stream())
+                                .collect(Collectors.toList());
+        if (allPartitions.isEmpty()) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build("No partitions found for topics that match given pattern [%s]."
+                                     + "Check that the pattern regex is correct and matching topics exists", stream);
         }
-        List<PartitionInfo> partitions = consumer.partitionsFor(topic.trim());
-        if (partitions == null) {
-          throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", topic.trim());
+      } else {
+        allPartitions = consumer.partitionsFor(stream);
+        if (allPartitions == null) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build("Topic [%s] is not found."
+                                     + "Check that the topic exists in Kafka cluster", stream);
         }
-        allPartitions.addAll(partitions);
       }
-
       return allPartitions.stream()
                           .map(p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition()))
                           .collect(Collectors.toSet());

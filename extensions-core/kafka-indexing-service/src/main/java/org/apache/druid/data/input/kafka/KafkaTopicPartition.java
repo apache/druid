@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.apache.druid.error.DruidException;
 import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nullable;
@@ -65,8 +66,15 @@ public class KafkaTopicPartition
   public KafkaTopicPartition(boolean multiTopicPartition, @Nullable String topic, int partition)
   {
     this.partition = partition;
-    this.topic = topic;
     this.multiTopicPartition = multiTopicPartition;
+    if (multiTopicPartition) {
+      if (topic == null) {
+        throw DruidException.defensive("the topic cannot be null in multi-topic mode of kafka ingestion");
+      }
+      this.topic = topic;
+    } else {
+      this.topic = null;
+    }
   }
 
   public int partition()
@@ -99,22 +107,16 @@ public class KafkaTopicPartition
       return false;
     }
     KafkaTopicPartition that = (KafkaTopicPartition) o;
-    return partition == that.partition && multiTopicPartition == that.multiTopicPartition && (!multiTopicPartition
-                                                                                              || Objects.equals(
+    return partition == that.partition && multiTopicPartition == that.multiTopicPartition && Objects.equals(
         topic,
         that.topic
-    ));
+    );
   }
 
   @Override
   public int hashCode()
   {
-    if (multiTopicPartition) {
-      return Objects.hash(partition, multiTopicPartition, topic);
-    } else {
-      return Objects.hash(partition, multiTopicPartition);
-    }
-
+    return Objects.hash(partition, multiTopicPartition, topic);
   }
 
   @Override

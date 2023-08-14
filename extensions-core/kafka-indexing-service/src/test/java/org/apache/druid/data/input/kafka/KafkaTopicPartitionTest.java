@@ -29,7 +29,7 @@ import org.junit.Test;
 public class KafkaTopicPartitionTest
 {
   private ObjectMapper objectMapper;
-  
+
   @Before
   public void setUp()
   {
