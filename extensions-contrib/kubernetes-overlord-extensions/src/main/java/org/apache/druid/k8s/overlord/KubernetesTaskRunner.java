@@ -107,7 +107,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
   // currently worker categories aren't supported, so it's hardcoded.
-  protected static String WORKER_CATEGORY = "_k8s_worker_category";
+  protected final static String WORKER_CATEGORY = "_k8s_worker_category";
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,

@@ -70,7 +70,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskConfig taskConfig,
       Properties properties,
       DruidKubernetesClient druidKubernetesClient,
-      TaskAdapter adapter,
       ServiceEmitter emitter
   )
   {

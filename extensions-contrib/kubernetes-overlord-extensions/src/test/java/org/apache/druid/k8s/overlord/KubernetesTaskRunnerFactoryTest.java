@@ -29,7 +29,6 @@ import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
-import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -54,7 +53,6 @@ public class KubernetesTaskRunnerFactoryTest
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
-  @Mock private TaskAdapter adapter;
 
   @Before
   public void setup()
@@ -92,7 +90,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -115,7 +112,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -143,7 +139,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -169,7 +164,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -200,7 +194,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -232,7 +225,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -258,7 +250,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 
@@ -287,7 +278,6 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        adapter,
         emitter
     );
 

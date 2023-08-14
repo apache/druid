@@ -99,21 +99,6 @@ public class DruidPeonClientIntegrationTest
       {
       }
     };
-    Task task = K8sTestUtils.getTask();
-    TaskAdapter adapter = new TaskAdapter()
-    {
-      @Override
-      public Job fromTask(Task task)
-      {
-        return null;
-      }
-
-      @Override
-      public Task toTask(Job from)
-      {
-        return task;
-      }
-    };
     peonClient = new KubernetesPeonClient(k8sClient, "default", false, serviceEmitter);
     druidNode = new DruidNode(
         "test",
