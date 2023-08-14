@@ -66,10 +66,12 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   private final KafkaConsumerMonitor monitor;
   private boolean closed;
 
-  private boolean multiTopic;
+  private final boolean multiTopic;
 
-  // Store the stream information when partitions get assigned. This is required because the consumer does not
-  // know about the parent stream which could be a list of topics.
+  /**
+   * Store the stream information when partitions get assigned. This is required because the consumer does not
+   * know about the parent stream which could be a list of topics.
+   */
   private String stream;
 
   public KafkaRecordSupplier(
@@ -79,17 +81,17 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       boolean multiTopic
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides));
-    this.multiTopic = multiTopic;
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic);
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
-      KafkaConsumer<byte[], byte[]> consumer
+      KafkaConsumer<byte[], byte[]> consumer,
+      boolean multiTopic
   )
   {
     this.consumer = consumer;
-    this.multiTopic = false;
+    this.multiTopic = multiTopic;
     this.monitor = new KafkaConsumerMonitor(consumer);
   }
 

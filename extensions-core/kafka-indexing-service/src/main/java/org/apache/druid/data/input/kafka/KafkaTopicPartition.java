@@ -57,7 +57,7 @@ public class KafkaTopicPartition
    * This flag is used to maintain backward incompatibilty with older versions of kafka indexing. If this flag
    * is set to false,
    * - KafkaTopicPartition will be serialized as an integer and can be read back by older version.
-   * - topic field is ignored while comparing two KafkaTopicPartition objects and calculating hashcode.
+   * - topic field is ensured to be null.
    * This flag must be explicitly passed while constructing KafkaTopicPartition object. That way, we can ensure that
    * a particular supervisor is always running in multi topic mode or single topic mode.
    */
@@ -92,6 +92,10 @@ public class KafkaTopicPartition
     return multiTopicPartition;
   }
 
+  /**
+   * A utility method to convert KafkaTopicPartition to {@link TopicPartition} object. For single topic ingestion,
+   * the fallback topic is used to populate the topic name in {@link TopicPartition} object.
+   */
   public TopicPartition asTopicPartition(String fallbackTopic)
   {
     return new TopicPartition(topic != null ? topic : fallbackTopic, partition);
