@@ -55,7 +55,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final TaskConfig taskConfig;
   private final Properties properties;
   private final DruidKubernetesClient druidKubernetesClient;
-  private final TaskAdapter adapter;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
 
@@ -84,7 +83,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.taskConfig = taskConfig;
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
-    this.adapter = adapter;
     this.emitter = emitter;
   }
 
@@ -96,7 +94,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
         kubernetesTaskRunnerConfig.isDebugJobs(),
-        adapter,
         emitter
     );
 

@@ -114,7 +114,7 @@ public class DruidPeonClientIntegrationTest
         return task;
       }
     };
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false, adapter, serviceEmitter);
+    peonClient = new KubernetesPeonClient(k8sClient, "default", false, serviceEmitter);
     druidNode = new DruidNode(
         "test",
         null,
@@ -154,7 +154,7 @@ public class DruidPeonClientIntegrationTest
     Job job = adapter.createJobFromPodSpec(podSpec, task, context);
 
     // launch the job and wait to start...
-    peonClient.launchPeonJobAndWaitForStart(job, 1, TimeUnit.MINUTES);
+    peonClient.launchPeonJobAndWaitForStart(job, task, 1, TimeUnit.MINUTES);
 
     // there should be one job that is a k8s peon job that exists
     List<Job> jobs = peonClient.getPeonJobs();

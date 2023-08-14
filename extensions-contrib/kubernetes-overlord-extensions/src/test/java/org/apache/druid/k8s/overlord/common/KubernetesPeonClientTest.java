@@ -31,11 +31,9 @@ import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +60,6 @@ public class KubernetesPeonClientTest
   private KubernetesClientApi clientApi;
   private KubernetesPeonClient instance;
   private ServiceEmitter serviceEmitter;
-  private TaskAdapter adapter;
   private Collection<Event> events;
 
   @BeforeEach
@@ -78,22 +75,7 @@ public class KubernetesPeonClientTest
         events.add(event);
       }
     };
-    Task task = NoopTask.create();
-    adapter = new TaskAdapter()
-    {
-      @Override
-      public Job fromTask(Task task)
-      {
-        return null;
-      }
-
-      @Override
-      public Task toTask(Job from)
-      {
-        return task;
-      }
-    };
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, adapter, serviceEmitter);
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
   }
 
   @Test
@@ -117,7 +99,7 @@ public class KubernetesPeonClientTest
 
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    Pod peonPod = instance.launchPeonJobAndWaitForStart(job, 1, TimeUnit.SECONDS);
+    Pod peonPod = instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS);
 
     Assertions.assertNotNull(peonPod);
     Assertions.assertEquals(1, events.size());
@@ -146,7 +128,7 @@ public class KubernetesPeonClientTest
 
     Assertions.assertThrows(
         KubernetesClientTimeoutException.class,
-        () -> instance.launchPeonJobAndWaitForStart(job, 1, TimeUnit.SECONDS)
+        () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
     );
   }
 
@@ -173,7 +155,6 @@ public class KubernetesPeonClientTest
 
     Assertions.assertEquals(PeonPhase.SUCCEEDED, jobResponse.getPhase());
     Assertions.assertNotNull(jobResponse.getJob());
-    Assertions.assertEquals(1, events.size());
   }
 
   @Test
@@ -199,7 +180,6 @@ public class KubernetesPeonClientTest
 
     Assertions.assertEquals(PeonPhase.FAILED, jobResponse.getPhase());
     Assertions.assertNotNull(jobResponse.getJob());
-    Assertions.assertEquals(1, events.size());
   }
 
   @Test
@@ -213,7 +193,6 @@ public class KubernetesPeonClientTest
 
     Assertions.assertEquals(PeonPhase.FAILED, jobResponse.getPhase());
     Assertions.assertNull(jobResponse.getJob());
-    Assertions.assertEquals(1, events.size());
   }
 
   @Test
@@ -243,7 +222,6 @@ public class KubernetesPeonClientTest
         new TestKubernetesClient(this.client),
         NAMESPACE,
         true,
-        adapter,
         serviceEmitter
     );
 
@@ -269,7 +247,6 @@ public class KubernetesPeonClientTest
         new TestKubernetesClient(this.client),
         NAMESPACE,
         true,
-        adapter,
         serviceEmitter
     );
 

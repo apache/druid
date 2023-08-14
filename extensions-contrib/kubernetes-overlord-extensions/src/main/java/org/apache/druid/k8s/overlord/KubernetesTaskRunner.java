@@ -106,7 +106,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
-  private static String WORKER_CATEGORY = "_k8s_worker_category";
+  // currently worker categories aren't supported, so it's hardcoded.
+  protected static String WORKER_CATEGORY = "_k8s_worker_category";
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -193,6 +194,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       if (run) {
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
+            task,
             config.getTaskLaunchTimeout().toStandardDuration().getMillis(),
             config.getTaskTimeout().toStandardDuration().getMillis()
         );
@@ -352,7 +354,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of("taskQueue", (long) config.getCapacity());
+    return ImmutableMap.of(WORKER_CATEGORY, (long) config.getCapacity());
   }
 
   @Override
@@ -370,15 +372,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    // A negative return value indicates tasks are queued in the thread pool
-    // but have not been scheduled to run in K8s yet.
-    return ImmutableMap.of(WORKER_CATEGORY, Long.valueOf(config.getCapacity() - tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, config.getCapacity() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, Long.valueOf(Math.min(config.getCapacity(), tasks.size())));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(config.getCapacity(), tasks.size()));
   }
 
   @Override

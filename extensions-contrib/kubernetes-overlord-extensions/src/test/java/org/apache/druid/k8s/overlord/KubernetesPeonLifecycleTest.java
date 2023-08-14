@@ -100,6 +100,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
@@ -113,7 +114,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.run(job, 0L, 0L);
+    TaskStatus taskStatus = peonLifecycle.run(job, task, 0L, 0L);
 
     verifyAll();
 
@@ -144,6 +145,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
@@ -157,12 +159,12 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    peonLifecycle.run(job, 0L, 0L);
+    peonLifecycle.run(job, task, 0L, 0L);
 
     Assert.assertThrows(
         "Task [id] failed to run: invalid peon lifecycle state transition [STOPPED]->[PENDING]",
         IllegalStateException.class,
-        () -> peonLifecycle.run(job, 0L, 0L)
+        () -> peonLifecycle.run(job, task, 0L, 0L)
     );
 
     verifyAll();
@@ -192,6 +194,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
@@ -208,7 +211,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertThrows(
         Exception.class,
-        () -> peonLifecycle.run(job, 0L, 0L)
+        () -> peonLifecycle.run(job, task, 0L, 0L)
     );
 
     verifyAll();

@@ -141,6 +141,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(taskAdapter.fromTask(task)).andReturn(job);
     EasyMock.expect(kubernetesPeonLifecycle.run(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.anyLong()
     )).andReturn(taskStatus);
@@ -178,6 +179,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(taskAdapter.fromTask(task)).andReturn(job);
     EasyMock.expect(kubernetesPeonLifecycle.run(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.anyLong()
     )).andThrow(new IllegalStateException());
@@ -367,7 +369,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     MatcherAssert.assertThat(slotCount, Matchers.allOf(
         Matchers.aMapWithSize(1),
         Matchers.hasEntry(
-            Matchers.equalTo("taskQueue"),
+            Matchers.equalTo(KubernetesTaskRunner.WORKER_CATEGORY),
             Matchers.equalTo(1L)
         )
     ));
