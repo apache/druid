@@ -33,8 +33,7 @@ SqlNode DruidSqlInsertEof() :
     partitionedBy = PartitionGranularity()
   ]
   [
-    <CLUSTERED> <BY>
-    clusteredBy = ClusterItems()
+    clusteredBy = ClusteredBy()
   ]
   {
       if (clusteredBy != null && partitionedBy.lhs == null) {
