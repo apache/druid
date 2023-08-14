@@ -54,7 +54,7 @@ public class KafkaTopicPartition
   private final String topic;
 
   /**
-   * This flag is used to maintain backward incompatibilty with older versions of kafka indexing. If this flag
+   * This flag is used to maintain backward compatibilty with older versions of kafka indexing. If this flag
    * is set to false,
    * - KafkaTopicPartition will be serialized as an integer and can be read back by older version.
    * - topic field is ensured to be null.
