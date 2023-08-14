@@ -62,6 +62,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
   private static final int FETCH_BUFFER_SIZE_BYTES = 8 * 1024;
 
   private final long chunkSizeBytes;
+  private final boolean cacheLocally;
 
   public ChunkingStorageConnector()
   {
@@ -72,8 +73,18 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
       final long chunkSizeBytes
   )
   {
-    this.chunkSizeBytes = chunkSizeBytes;
+    this(chunkSizeBytes, false);
   }
+
+  public ChunkingStorageConnector(
+      final long chunkSizeBytes,
+      final boolean cacheLocally
+  )
+  {
+    this.chunkSizeBytes = chunkSizeBytes;
+    this.cacheLocally = cacheLocally;
+  }
+
 
   @Override
   public InputStream read(String path) throws IOException

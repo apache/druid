@@ -2654,6 +2654,7 @@ public class ControllerImpl implements Controller
     ListenableFuture<Void> contactTask(WorkerClient client, String taskId, int workerNumber);
   }
 
+
   /**
    * Interface used when {@link TaskContactFn#contactTask(WorkerClient, String, int)} returns a successful future.
    */

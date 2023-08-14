@@ -22,6 +22,9 @@ package org.apache.druid.storage.s3.output;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -39,12 +42,15 @@ import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
@@ -55,6 +61,8 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
 
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
+
+  private final TransferManager transferManager = TransferManagerBuilder.defaultTransferManager();
 
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
@@ -121,14 +129,30 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));
     builder.objectOpenFunction(new ObjectOpenFunction<GetObjectRequest>()
     {
+
+      File downloadFile = null;
+
       @Override
       public InputStream open(GetObjectRequest object)
       {
         try {
-          return S3Utils.retryS3Operation(
-              () -> s3Client.getObject(object).getObjectContent(),
-              config.getMaxRetry()
-          );
+          if (downloadFile == null) {
+            downloadFile = new File(config.getTempDir(), UUID.randomUUID().toString());
+            Download download = transferManager.download(object, downloadFile);
+            download.waitForCompletion();
+          }
+//          return S3Utils.retryS3Operation(
+//              () -> s3Client.getObject(object).getObjectContent(),
+//              config.getMaxRetry()
+//          );
+          return new FileInputStream(downloadFile)
+          {
+            @Override
+            public void close() throws IOException
+            {
+              downloadFile.delete();
+            }
+          };
         }
         catch (Exception e) {
           throw new RuntimeException(e);
