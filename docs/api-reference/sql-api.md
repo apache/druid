@@ -33,7 +33,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
-Each query can be identified with the SQL context parameter `sqlQueryId`. The `sqlQueryId` can be set manually in the request payload with the `sqlQueryId` context parameter. If not set, Druid automatically generates a `sqlQueryId` and returns it in the response header. Note that the `sqlQueryId` is required to use the [cancel a query](#cancel-a-query) endpoint. 
+Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query) endpoint. 
 
 #### URL
 
@@ -268,7 +268,6 @@ When you cancel a query, Druid handles the cancellation in a best-effort manner.
 
 Cancellation requests require READ permission on all resources used in the SQL query. 
 
-
 #### URL
 
 <code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/:sqlQueryId</code>
@@ -316,9 +315,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful response results in an `HTTP 202` and an empty response body.
+A successful response results in an `HTTP 202` message code and an empty response body.
 
 ## Query output format
+
+The following table is a comparative overview of different data formats, header configurations, and corresponding outputs.
 
 ```
 | Format | typesHeader | sqlTypesHeader | Output                                                                             |
