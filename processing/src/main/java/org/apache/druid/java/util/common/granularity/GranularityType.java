@@ -185,6 +185,17 @@ public enum GranularityType
     return false;
   }
 
+  public static GranularityType fromGranularity(Granularity granularity)
+  {
+    final GranularityType[] values = GranularityType.values();
+    for (GranularityType value : values) {
+      if (value.getDefaultGranularity().equals(granularity)) {
+        return value;
+      }
+    }
+    return null;
+  }
+
   /**
    * Note: This is only an estimate based on the values in period.
    * This will not work for complicated periods that represent say 1 year 1 day

@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -46,6 +47,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -69,6 +71,7 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -96,6 +99,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -467,6 +471,31 @@ public class CompactionTask extends AbstractBatchIndexTask
         toolbox.getCoordinatorClient(),
         segmentCacheManagerFactory
     );
+
+    for (ParallelIndexIngestionSpec ingestionSpec : ingestionSpecs) {
+      final PartitionsSpec partitionsSpec = ingestionSpec.getTuningConfig().getPartitionsSpec();
+      List<String> clusteredBy = new ArrayList<>();
+      if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
+        clusteredBy.addAll(((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions());
+      }
+      System.out.println(
+          new MSQReplaceCompaction(
+              getDataSource(),
+              ((DruidInputSource) ingestionSpec.getIOConfig().getInputSource()).getInterval(),
+              ingestionSpec.getDataSchema().getDimensionsSpec().getDimensionNames(),
+              Arrays.stream(ingestionSpec.getDataSchema().getAggregators())
+                    .map(AggregatorFactory::getName)
+                    .collect(Collectors.toList()),
+              GranularityType
+                  .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getQueryGranularity()),
+              GranularityType
+                  .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getSegmentGranularity()),
+              ingestionSpec.getDataSchema().getGranularitySpec().isRollup(),
+              clusteredBy,
+              ingestionSpec.getTuningConfig().getMaxNumConcurrentSubTasks()
+          ).buildQuery()
+      );
+    }
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
         .mapToObj(i -> {
@@ -1313,6 +1342,182 @@ public class CompactionTask extends AbstractBatchIndexTask
       );
     }
   }
+
+  public static class MSQReplaceCompaction
+  {
+    private static final String MAX_NUM_TASKS = "maxNumTasks";
+
+    private static final String FINALIZE_AGGREGATIONS = "finalizeAggregations";
+
+    private static final Set<GranularityType> QUERY_GRANULARITIES = ImmutableSet.of(
+        GranularityType.NONE,
+        GranularityType.SECOND,
+        GranularityType.MINUTE,
+        GranularityType.HOUR,
+        GranularityType.DAY,
+        GranularityType.MONTH,
+        GranularityType.QUARTER,
+        GranularityType.YEAR
+    );
+
+    private static final Set<GranularityType> SEGMENT_GRANULARITIES = ImmutableSet.of(
+        GranularityType.NONE,
+        GranularityType.SECOND,
+        GranularityType.MINUTE,
+        GranularityType.HOUR,
+        GranularityType.DAY,
+        GranularityType.MONTH,
+        GranularityType.QUARTER,
+        GranularityType.YEAR,
+        GranularityType.ALL
+    );
+
+    private final List<String> dimensions;
+
+    private final List<String> metrics;
+
+    private final Interval interval;
+
+    private final String datasource;
+
+    private final GranularityType queryGranularity;
+
+    private final GranularityType segmentGranularity;
+
+    private final boolean rollup;
+
+    private final List<String> clusterByDimensions;
+
+    private final Map<String, Object> context;
+
+    public MSQReplaceCompaction(
+        String datasource,
+        Interval interval,
+        List<String> dimensions,
+        List<String> metrics,
+        GranularityType queryGranularity,
+        GranularityType segmentGranularity,
+        boolean rollup,
+        List<String> clusterByDimensions,
+        int numSubTasks
+    )
+    {
+      this.context = ImmutableMap.of(MAX_NUM_TASKS, numSubTasks + 1, FINALIZE_AGGREGATIONS, false);
+      this.datasource = datasource;
+      this.interval = interval;
+      this.dimensions = dimensions;
+      this.metrics = metrics;
+      if (queryGranularity != null && !QUERY_GRANULARITIES.contains(queryGranularity)) {
+        throw new IAE("Invalid query granularity: " + queryGranularity);
+      }
+      this.queryGranularity = queryGranularity;
+      if (!SEGMENT_GRANULARITIES.contains(segmentGranularity)) {
+        throw new IAE("Invalid segment granularity: " + segmentGranularity);
+      }
+      this.segmentGranularity = segmentGranularity;
+      this.rollup = rollup;
+      this.clusterByDimensions = clusterByDimensions;
+    }
+
+    public Map<String, Object> getContext()
+    {
+      return this.context;
+    }
+
+    public String buildQuery()
+    {
+      return buildFrom(
+          datasource,
+          makeWhereExpression(),
+          makeSelectExpression(),
+          makeFromExpression(),
+          makeGroupByExpression(),
+          makePartitionedByExpression(),
+          makeClusteredByExpression()
+      );
+    }
+
+    private String buildFrom(
+        final String datasource,
+        final String whereExpression,
+        final String selectExpression,
+        final String fromExpression,
+        final String groupByExpression,
+        final String partitionedByExpression,
+        final String clusteredByExpression
+    )
+    {
+      return "REPLACE INTO " + datasource + "\n"
+             + "OVERWRITE " + whereExpression + "\n"
+             + selectExpression + "\n"
+             + fromExpression + "\n"
+             + groupByExpression
+             + partitionedByExpression + "\n"
+             + clusteredByExpression;
+    }
+
+    private String makeWhereExpression()
+    {
+      return "WHERE __time >= TIMESTAMP '" + interval.getStart().toString() + "'"
+             + " AND __time < TIMESTAMP '" + interval.getEnd().toString() + "'";
+    }
+
+    private String makeTimeExpression()
+    {
+      if (queryGranularity == null || GranularityType.NONE.equals(queryGranularity)) {
+        return "__time";
+      } else {
+        return "FLOOR (__time TO " + queryGranularity + ") AS __time";
+      }
+    }
+
+    private String makeSelectExpression()
+    {
+      StringBuilder selectBuilder = new StringBuilder();
+      selectBuilder.append("SELECT ").append(makeTimeExpression());
+      for (String dimension : dimensions) {
+        selectBuilder.append(", ");
+        selectBuilder.append(dimension);
+      }
+      for (String metric : metrics) {
+        selectBuilder.append(", ");
+        selectBuilder.append(metric);
+      }
+      return selectBuilder.toString();
+    }
+
+    private String makeFromExpression()
+    {
+      return "FROM " + datasource + " " + makeWhereExpression();
+    }
+
+    private String makeGroupByExpression()
+    {
+      if (rollup) {
+        return "GROUP BY " + IntStream.rangeClosed(1, 1 + dimensions.size())
+                                      .mapToObj(String::valueOf)
+                                      .collect(Collectors.joining(", "))
+               + "\n";
+      } else {
+        return "";
+      }
+    }
+
+    private String makePartitionedByExpression()
+    {
+      return "PARTITIONED BY " + segmentGranularity;
+    }
+
+    private String makeClusteredByExpression()
+    {
+      if (CollectionUtils.isNullOrEmpty(clusterByDimensions)) {
+        return "";
+      } else {
+        return "CLUSTERED BY " + String.join(", ", clusterByDimensions) + "\n";
+      }
+    }
+  }
+
 
   /**
    * Compcation Task Tuning Config.

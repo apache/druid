@@ -83,6 +83,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
@@ -422,6 +423,20 @@ public class CompactionTaskTest
     ServiceEmitter noopEmitter = new ServiceEmitter("service", "host", new NoopEmitter());
     taskCreatedWithSegmentGranularity.emitCompactIngestionModeMetrics(noopEmitter, false);
     taskCreatedWithSegmentGranularity.emitCompactIngestionModeMetrics(noopEmitter, true);
+
+    final CompactionTask.MSQReplaceCompaction msqCompaction = new CompactionTask.MSQReplaceCompaction(
+        DATA_SOURCE,
+        COMPACTION_INTERVAL,
+        ImmutableList.of("d1", "d2", "d3", "d4"),
+        ImmutableList.of("m1", "m2"),
+        null,
+        GranularityType.HOUR,
+        false,
+        ImmutableList.of("d1"),
+        3
+    );
+    System.out.println(msqCompaction.buildQuery());
+    System.out.println(msqCompaction.getContext());
   }
 
   @Test(expected = IAE.class)
