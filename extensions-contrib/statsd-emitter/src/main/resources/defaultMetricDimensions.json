@@ -175,5 +175,9 @@
   "namespace/cache/numEntries" : { "dimensions" : [], "type" : "gauge" },
   "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" },
 
-  "service/heartbeat" : { "dimensions" : ["leader"], "type" : "count" }
+  "service/heartbeat" : { "dimensions" : ["leader"], "type" : "count" },
+
+  "killTask/availableSlot/count" : { "dimensions" : [], "type" : "count" },
+  "killTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },
+  "killTask/task/count" : { "dimensions" : [], "type" : "count" }
 }

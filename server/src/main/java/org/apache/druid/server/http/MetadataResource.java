@@ -295,6 +295,11 @@ public class MetadataResource
         return Response.status(Response.Status.OK).entity(segment).build();
       }
     }
+    // fallback to db
+    DataSegment segment = metadataStorageCoordinator.retrieveUsedSegmentForId(segmentId);
+    if (segment != null) {
+      return Response.status(Response.Status.OK).entity(segment).build();
+    }
     return Response.status(Response.Status.NOT_FOUND).build();
   }
 }

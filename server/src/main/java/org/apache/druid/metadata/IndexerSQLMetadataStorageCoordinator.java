@@ -1883,6 +1883,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
+  public DataSegment retrieveUsedSegmentForId(final String id)
+  {
+    return connector.retryTransaction(
+        (handle, status) ->
+            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                    .retrieveUsedSegmentForId(id),
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
   private static class PendingSegmentsRecord
   {
     private final String sequenceName;
