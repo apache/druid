@@ -319,23 +319,23 @@ A successful response results in an `HTTP 202` message code and an empty respons
 
 ### Query output format
 
-The following table shows examples of how Druid returns the column names and data types based on the result format and the type request.
+The following table shows examples of how Druid returns the column names and data types based on the result format and the type request. The examples includes the first row of results, where the value of `user` is `BlueMoon2662`.
 
 ```
-| Format | typesHeader | sqlTypesHeader | Example Output                                                                     |
-|--------|-------------|----------------|------------------------------------------------------------------------------------|
-| object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "docs" } ]                        |
-| object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "docs" } ] |
-| object | false       | true           | [ { "user" : { "sqlType" : "VARCHAR" } }, { "user" : "docs" } ]                    |
-| object | false       | false          | [ { "user" : null }, { "user" : "docs" } ]                                         |
-| array  | true        | false          | [ [ "user" ], [ "STRING" ], [ "docs" ] ]                                           |
-| array  | true        | true           | [ [ "user" ], [ "STRING" ], [ "VARCHAR" ], [ "docs" ] ]                            |
-| array  | false       | true           | [ [ "user" ], [ "VARCHAR" ], [ "docs" ] ]                                          |
-| array  | false       | false          | [ [ "user" ], [ "docs" ] ]                                                         |
-| csv    | true        | false          | user STRING docs                                                                   |
-| csv    | true        | true           | user STRING VARCHAR docs                                                           |
-| csv    | false       | true           | user VARCHAR docs                                                                  |
-| csv    | false       | false          | user docs                                                                          |
+| Format | typesHeader | sqlTypesHeader | Example Output                                                                             |
+|--------|-------------|----------------|--------------------------------------------------------------------------------------------|
+| object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "BlueMoon2662" } ]                        |
+| object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ] |
+| object | false       | true           | [ { "user" : { "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ]                    |
+| object | false       | false          | [ { "user" : null }, { "user" : "BlueMoon2662" } ]                                         |
+| array  | true        | false          | [ [ "user" ], [ "STRING" ], [ "BlueMoon2662" ] ]                                           |
+| array  | true        | true           | [ [ "user" ], [ "STRING" ], [ "VARCHAR" ], [ "BlueMoon2662" ] ]                            |
+| array  | false       | true           | [ [ "user" ], [ "VARCHAR" ], [ "BlueMoon2662" ] ]                                          |
+| array  | false       | false          | [ [ "user" ], [ "BlueMoon2662" ] ]                                                         |
+| csv    | true        | false          | user STRING BlueMoon2662                                                                   |
+| csv    | true        | true           | user STRING VARCHAR BlueMoon2662                                                           |
+| csv    | false       | true           | user VARCHAR BlueMoon2662                                                                  |
+| csv    | false       | false          | user BlueMoon2662                                                                          |
 ```
 
 ## Query from deep storage
