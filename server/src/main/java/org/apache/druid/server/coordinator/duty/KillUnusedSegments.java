@@ -44,6 +44,8 @@ import javax.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Completely removes information about unused segments who have an interval end that comes before
@@ -54,7 +56,7 @@ import java.util.List;
  * <p>
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
-public class KillUnusedSegments implements CoordinatorDuty
+public class KillUnusedSegments  implements CoordinatorCustomDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
@@ -67,6 +69,8 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final long retainDuration;
   private final boolean ignoreRetainDuration;
   private final int maxSegmentsToKill;
+
+  private final ConcurrentMap<String, DateTime> datasourceToLastKillIntervalEnd;
   private long lastKillTime = 0;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
@@ -97,6 +101,8 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
+
+    datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
 
     log.info(
         "Kill Task scheduling enabled with period [%s], retainDuration [%s], maxSegmentsToKill [%s]",
@@ -179,6 +185,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         }
         final Interval intervalToKill = findIntervalForKill(dataSource);
         if (intervalToKill == null) {
+          datasourceToLastKillIntervalEnd.remove(dataSource);
           continue;
         }
 
@@ -190,6 +197,7 @@ public class KillUnusedSegments implements CoordinatorDuty
               maxSegmentsToKill
           ), true);
           ++submittedTasks;
+          datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
         }
         catch (Exception ex) {
           log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
@@ -230,7 +238,7 @@ public class KillUnusedSegments implements CoordinatorDuty
                                 : DateTimes.nowUtc().minus(retainDuration);
 
     List<Interval> unusedSegmentIntervals = segmentsMetadataManager
-        .getUnusedSegmentIntervals(dataSource, maxEndTime, maxSegmentsToKill);
+        .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill);
 
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;

@@ -144,6 +144,12 @@ public interface SegmentsMetadataManager
    */
   List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit);
 
+  /**
+   * Returns top N unused segment intervals with the end time no later than the specified maxEndTime when ordered by
+   * segment start time, end time.
+   */
+  List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime minStartTime, DateTime maxEndTime, int limit);
+
   @VisibleForTesting
   void poll();
 }
