@@ -245,8 +245,10 @@ public class KubernetesPeonLifecycle
           podStatus.getPodIP(),
           DruidK8sConstants.PORT,
           DruidK8sConstants.TLS_PORT,
-          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false"))
+          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
+          pod.getMetadata() != null ? pod.getMetadata().getName() : ""
       );
+      log.info("K8s task %s is running at location %s", taskId.getOriginalTaskId(), taskLocation);
     }
 
     return taskLocation;

@@ -69,7 +69,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
-      @JsonProperty("multiTopic") Boolean multiTopic
+      @JsonProperty("multiTopic") Boolean multiTopic,
+      @JsonProperty("stopTaskCount") Integer stopTaskCount
   )
   {
     super(
@@ -86,7 +87,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         earlyMessageRejectionPeriod,
         autoScalerConfig,
         lateMessageRejectionStartDateTime,
-        idleConfig
+        idleConfig,
+        stopTaskCount
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");

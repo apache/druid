@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -49,6 +50,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 
   // AWS has max limit of 1000 objects that can be requested to be deleted at a time.
   private static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
+
+  private static final String MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT = "message: [%s], code: [%s]";
 
   /**
    * Any implementation of DataSegmentKiller is initialized when an ingestion job starts if the extension is loaded,
@@ -150,13 +153,23 @@ public class S3DataSegmentKiller implements DataSegmentKiller
             s3Bucket,
             keysToDeleteStrings
         );
-        s3Client.deleteObjects(deleteObjectsRequest);
+        S3Utils.retryS3Operation(
+            () -> {
+              s3Client.deleteObjects(deleteObjectsRequest);
+              return null;
+            },
+            3
+        );
       }
       catch (MultiObjectDeleteException e) {
         hadException = true;
         Map<String, List<String>> errorToKeys = new HashMap<>();
         for (MultiObjectDeleteException.DeleteError error : e.getErrors()) {
-          errorToKeys.computeIfAbsent(error.getMessage(), k -> new ArrayList<>()).add(error.getKey());
+          errorToKeys.computeIfAbsent(StringUtils.format(
+              MULTI_OBJECT_DELETE_EXEPTION_ERROR_FORMAT,
+              error.getMessage(),
+              error.getCode()
+          ), k -> new ArrayList<>()).add(error.getKey());
         }
         errorToKeys.forEach((key, value) -> log.error(
             "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
@@ -169,6 +182,14 @@ public class S3DataSegmentKiller implements DataSegmentKiller
         hadException = true;
         log.noStackTrace().warn(e,
             "Unable to delete from bucket [%s], the following keys [%s]",
+            s3Bucket,
+            chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", "))
+        );
+      }
+      catch (Exception e) {
+        hadException = true;
+        log.noStackTrace().warn(e,
+            "Unexpected exception occurred when deleting from bucket [%s], the following keys [%s]",
             s3Bucket,
             chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", "))
         );

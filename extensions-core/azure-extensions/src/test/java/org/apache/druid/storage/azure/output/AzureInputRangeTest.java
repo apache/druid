@@ -17,21 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
-
+package org.apache.druid.storage.azure.output;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.junit.Test;
 
-public class DataSourceMSQDestinationTest
+public class AzureInputRangeTest
 {
-
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(DataSourceMSQDestination.class)
-                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
+    EqualsVerifier.forClass(AzureInputRange.class)
                   .usingGetClass()
                   .verify();
   }

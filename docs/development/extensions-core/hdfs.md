@@ -112,7 +112,7 @@ example properties. Please follow the instructions at
 [https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
 for more details.
 For more configurations, [GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)
-and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
+and [GCS core template](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/src/test/resources/core-site.xml).
 
 ```xml
 <property>
@@ -146,8 +146,6 @@ and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/maste
   </description>
 </property>
 ```
-
-Tested with Druid 0.17.0, Hadoop 2.8.5 and gcs-connector jar 2.0.0-hadoop2.
 
 ## Reading data from HDFS or Cloud Storage
 
