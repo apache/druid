@@ -46,7 +46,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(7776000000L, config.getCoordinatorKillDurationToRetain().getMillis());
     Assert.assertEquals(100, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
-    Assert.assertTrue(config.getCompactionSkipLockedIntervals());
     Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
     Assert.assertEquals("http", config.getLoadQueuePeonType());
 
@@ -75,7 +74,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration("PT1s"), config.getLoadTimeoutDelay());
-    Assert.assertFalse(config.getCompactionSkipLockedIntervals());
     Assert.assertTrue(config.getCoordinatorKillIgnoreDurationToRetain());
 
     // Test negative druid.coordinator.kill.durationToRetain now that it is valid.
