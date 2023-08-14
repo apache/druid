@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
@@ -113,7 +114,8 @@ public class QueryStackTests
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactory joinableFactory,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final LookupExtractorFactoryContainerProvider lookupManager
   )
   {
     return new ClientQuerySegmentWalker(
@@ -157,6 +159,15 @@ public class QueryStackTests
           public boolean isUseResultLevelCache()
           {
             return false;
+          }
+        },
+        lookupManager,
+        new DruidHttpClientConfig()
+        {
+          @Override
+          public int getNumConnections()
+          {
+            return 1;
           }
         }
     );

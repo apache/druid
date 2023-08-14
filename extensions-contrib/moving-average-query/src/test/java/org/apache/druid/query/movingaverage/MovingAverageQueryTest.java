@@ -311,6 +311,17 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     Assert.assertNotNull(expectedResults);
     Assert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
 
+    DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
+    {
+      @Override
+      public long getMaxQueuedBytes()
+      {
+        return 0L;
+      }
+
+
+    };
+
     CachingClusteredClient baseClient = new CachingClusteredClient(
         warehouse,
         new TimelineServerView()
@@ -355,14 +366,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         jsonMapper,
         new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1),
         new CacheConfig(),
-        new DruidHttpClientConfig()
-        {
-          @Override
-          public long getMaxQueuedBytes()
-          {
-            return 0L;
-          }
-        },
+        httpClientConfig,
         new DruidProcessingConfig()
         {
           @Override
@@ -393,7 +397,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         jsonMapper,
         serverConfig,
         null,
-        new CacheConfig()
+        new CacheConfig(),
+        null,
+        httpClientConfig
     );
 
     defineMocks();

@@ -347,9 +347,9 @@ public class QueryContext
     return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
-  public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
+  public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    return getLong(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
+    return getString(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)

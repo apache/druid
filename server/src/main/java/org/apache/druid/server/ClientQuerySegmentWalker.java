@@ -29,6 +29,8 @@ import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -57,6 +59,7 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -103,6 +106,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServerConfig serverConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
+  private final SubqueryLimitUtils subqueryLimitUtils;
 
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
@@ -114,7 +118,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      LookupExtractorFactoryContainerProvider lookupManager,
+      DruidHttpClientConfig httpClientConfig
   )
   {
     this.emitter = emitter;
@@ -127,6 +133,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
+    this.subqueryLimitUtils = new SubqueryLimitUtils(lookupManager, httpClientConfig.getNumConnections());
   }
 
   @Inject
@@ -140,7 +147,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      LookupExtractorFactoryContainerProvider lookupManager,
+      @Client DruidHttpClientConfig httpClientConfig
   )
   {
     this(
@@ -153,7 +162,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         objectMapper,
         serverConfig,
         cache,
-        cacheConfig
+        cacheConfig,
+        lookupManager,
+        httpClientConfig
     );
   }
 
@@ -175,9 +186,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
-    final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
+    final String maxSubqueryMemoryString = query.context()
+                                                .getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
+    final long maxSubqueryMemory = subqueryLimitUtils.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
     final boolean useNestedForUnknownTypeInSubquery = query.context()
                                                            .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
+
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
