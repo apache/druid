@@ -317,7 +317,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 A successful response results in an `HTTP 202` message code and an empty response body.
 
-## Query output format
+### Query output format
 
 The following table is a comparative overview of different data formats, header configurations, and corresponding outputs.
 
@@ -783,8 +783,8 @@ When getting query results, keep the following in mind:
 <code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
 
 #### Query parameters
-* `page`
-    * Int (optional)
+* `page` (optional)
+    * Type: Int
     * Refine paginated results
 
 #### Responses
@@ -1147,4 +1147,4 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful request returns a `202 ACCEPTED` response and an empty response.
+A successful request returns an HTTP `202 ACCEPTED` message code and an empty response body.
