@@ -319,10 +319,10 @@ A successful response results in an `HTTP 202` message code and an empty respons
 
 ### Query output format
 
-The following table is a comparative overview of different data formats, header configurations, and corresponding outputs.
+The following table shows examples of how Druid returns the column names and data types based on the result format and the type request.
 
 ```
-| Format | typesHeader | sqlTypesHeader | Output                                                                             |
+| Format | typesHeader | sqlTypesHeader | Example Output                                                                     |
 |--------|-------------|----------------|------------------------------------------------------------------------------------|
 | object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "docs" } ]                        |
 | object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "docs" } ] |
