@@ -21,32 +21,29 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Completely removes information about unused segments who have an interval end that comes before
@@ -61,6 +58,9 @@ public class KillUnusedSegments implements CoordinatorDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
+  public static final Predicate<TaskStatusPlus> IS_AUTO_KILL_TASK =
+      status -> null != status
+                && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
 
   private final long period;
@@ -112,69 +112,111 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+
+    final long currentTimeMillis = System.currentTimeMillis();
+    if (lastKillTime + period > currentTimeMillis) {
+      log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
+      return params;
+    }
+    TaskStats taskStats = new TaskStats();
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
     double killTaskSlotRatio = params.getCoordinatorDynamicConfig().getKillTaskSlotRatio();
     int maxKillTaskSlots = params.getCoordinatorDynamicConfig().getMaxKillTaskSlots();
-    int availableKillTaskSlots = getAvailableKillTaskSlots(killTaskSlotRatio, maxKillTaskSlots);
-    if (0 == availableKillTaskSlots) {
-      log.debug("Not killing any unused segments because there are no available kill task slots at this time.");
-      return params;
-    }
+    int killTaskCapacity = getKillTaskCapacity(
+        CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient),
+        killTaskSlotRatio,
+        maxKillTaskSlots
+    );
+    int availableKillTaskSlots = getAvailableKillTaskSlots(
+        killTaskCapacity,
+        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
+    );
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
 
-    // If no datasource has been specified, all are eligible for killing unused segments
-    if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
-      dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
-    }
+    taskStats.availableTaskSlots = availableKillTaskSlots;
+    taskStats.maxSlots = killTaskCapacity;
 
-    final long currentTimeMillis = System.currentTimeMillis();
-    if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
-      log.debug("No eligible datasource to kill unused segments.");
-    } else if (lastKillTime + period > currentTimeMillis) {
-      log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
-    } else {
+    if (0 < availableKillTaskSlots) {
+      // If no datasource has been specified, all are eligible for killing unused segments
+      if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
+        dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
+      }
+
       log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
       lastKillTime = currentTimeMillis;
-      killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
+      taskStats.submittedTasks = killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
+
     }
 
+    addStats(taskStats, stats);
     return params;
   }
 
-  private void killUnusedSegments(Collection<String> dataSourcesToKill, int availableKillTaskSlots)
+  private void addStats(
+      TaskStats taskStats,
+      CoordinatorRunStats stats
+  )
+  {
+    stats.add(Stats.Kill.AVAILABLE_SLOTS, taskStats.availableTaskSlots);
+    stats.add(Stats.Kill.SUBMITTED_TASKS, taskStats.submittedTasks);
+    stats.add(Stats.Kill.MAX_SLOTS, taskStats.maxSlots);
+  }
+
+  private int killUnusedSegments(
+      Collection<String> dataSourcesToKill,
+      int availableKillTaskSlots
+  )
   {
     int submittedTasks = 0;
-    for (String dataSource : dataSourcesToKill) {
-      if (submittedTasks >= availableKillTaskSlots) {
-        log.info(StringUtils.format(
-            "Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
-            + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
-        break;
-      }
-      final Interval intervalToKill = findIntervalForKill(dataSource);
-      if (intervalToKill == null) {
-        continue;
-      }
-
-      try {
-        FutureUtils.getUnchecked(overlordClient.runKillTask(
-            TASK_ID_PREFIX,
-            dataSource,
-            intervalToKill,
-            maxSegmentsToKill
-        ), true);
-        ++submittedTasks;
-      }
-      catch (Exception ex) {
-        log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
-        if (Thread.currentThread().isInterrupted()) {
-          log.warn("skipping kill task scheduling because thread is interrupted.");
+    if (0 < availableKillTaskSlots && !CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
+      for (String dataSource : dataSourcesToKill) {
+        if (submittedTasks >= availableKillTaskSlots) {
+          log.info(StringUtils.format(
+              "Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
+              + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
           break;
+        }
+        final Interval intervalToKill = findIntervalForKill(dataSource);
+        if (intervalToKill == null) {
+          continue;
+        }
+
+        try {
+          FutureUtils.getUnchecked(overlordClient.runKillTask(
+              TASK_ID_PREFIX,
+              dataSource,
+              intervalToKill,
+              maxSegmentsToKill
+          ), true);
+          ++submittedTasks;
+        }
+        catch (Exception ex) {
+          log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
+          if (Thread.currentThread().isInterrupted()) {
+            log.warn("skipping kill task scheduling because thread is interrupted.");
+            break;
+          }
         }
       }
     }
 
-    log.debug("Submitted [%d] kill tasks for [%d] datasources.", submittedTasks, dataSourcesToKill.size());
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Submitted [%d] kill tasks for [%d] datasources.%s",
+          submittedTasks,
+          dataSourcesToKill.size(),
+          availableKillTaskSlots < dataSourcesToKill.size()
+              ? StringUtils.format(
+              " Datasources skipped: %s",
+              ImmutableList.copyOf(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size())
+          )
+              : ""
+      );
+    }
+
+    // report stats
+    return submittedTasks;
   }
 
   /**
@@ -199,86 +241,31 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
   }
 
-  private int getAvailableKillTaskSlots(double killTaskSlotRatio, int maxKillTaskSlots)
+  private int getAvailableKillTaskSlots(int killTaskCapacity, int numActiveKillTasks)
   {
     return Math.max(
         0,
-        getKillTaskCapacity(getTotalWorkerCapacity(), killTaskSlotRatio, maxKillTaskSlots) - getNumActiveKillTaskSlots()
+        killTaskCapacity - numActiveKillTasks
     );
-  }
-
-  /**
-   * Get the number of active kill task slots in use. The kill tasks counted, are only those thare are submitted
-   * by this coordinator duty (have prefix {@link KillUnusedSegments#TASK_ID_PREFIX}. The value returned here
-   * may be an overestimate, as in some cased the taskType can be null if middleManagers are running with an older
-   * version, and these tasks are counted as active kill tasks to be safe.
-   * @return
-   */
-  private int getNumActiveKillTaskSlots()
-  {
-    final CloseableIterator<TaskStatusPlus> activeTasks =
-        FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 0), true);
-    // Fetch currently running kill tasks
-    int numActiveKillTasks = 0;
-
-    try (final Closer closer = Closer.create()) {
-      closer.register(activeTasks);
-      while (activeTasks.hasNext()) {
-        final TaskStatusPlus status = activeTasks.next();
-
-        // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
-        // the tasks of the unknown taskType as the killTask. This is because it's important to not run
-        // killTasks more than the configured limit at any time which might impact to the ingestion
-        // performance.
-        if (status.getType() == null
-            || (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX))) {
-          numActiveKillTasks++;
-        }
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    return numActiveKillTasks;
-  }
-
-  private int getTotalWorkerCapacity()
-  {
-    int totalWorkerCapacity;
-    try {
-      final IndexingTotalWorkerCapacityInfo workerCapacityInfo =
-          FutureUtils.get(overlordClient.getTotalWorkerCapacity(), true);
-      totalWorkerCapacity = workerCapacityInfo.getMaximumCapacityWithAutoScale();
-      if (totalWorkerCapacity < 0) {
-        totalWorkerCapacity = workerCapacityInfo.getCurrentClusterCapacity();
-      }
-    }
-    catch (ExecutionException e) {
-      // Call to getTotalWorkerCapacity may fail during a rolling upgrade: API was added in 0.23.0.
-      if (e.getCause() instanceof HttpResponseException
-          && ((HttpResponseException) e.getCause()).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-        log.noStackTrace().warn(e, "Call to getTotalWorkerCapacity failed. Falling back to getWorkers.");
-        totalWorkerCapacity =
-            FutureUtils.getUnchecked(overlordClient.getWorkers(), true)
-                .stream()
-                .mapToInt(worker -> worker.getWorker().getCapacity())
-                .sum();
-      } else {
-        throw new RuntimeException(e.getCause());
-      }
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-
-    return totalWorkerCapacity;
   }
 
   @VisibleForTesting
   static int getKillTaskCapacity(int totalWorkerCapacity, double killTaskSlotRatio, int maxKillTaskSlots)
   {
     return Math.min((int) (totalWorkerCapacity * Math.min(killTaskSlotRatio, 1.0)), maxKillTaskSlots);
+  }
+
+  static class TaskStats
+  {
+    int availableTaskSlots;
+    int maxSlots;
+    int submittedTasks;
+
+    TaskStats()
+    {
+      availableTaskSlots = 0;
+      maxSlots = 0;
+      submittedTasks = 0;
+    }
   }
 }
