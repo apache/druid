@@ -139,8 +139,8 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler an
 ```
 ## Ingesting from multiple topics
 To ingest from multiple topics, you have to set `multiTopic` in the supervisor IO config to `true`. Multiple topics 
-can be passed as a regex pattern as the value for `topic` in the io config. For example, to ingest data from clicks and 
-impressions, you will set `topic` to `clicks|impressions` in the io config. If new topics are added to the cluster that
+can be passed as a regex pattern as the value for `topic` in the IO config. For example, to ingest data from clicks and 
+impressions, you will set `topic` to `clicks|impressions` in the IO config. If new topics are added to the cluster that
 match the regex, druid will automatically start ingesting from those new topics. If you enable multi-topic 
 ingestion for a datasource, downgrading will cause the ingestion to fail for that datasource. 
 
