@@ -40,7 +40,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorDatasourceKillPeriod;
   private final Duration coordinatorDatasourceKillDurationToRetain;
   private final int coordinatorKillMaxSegments;
-  private final boolean compactionSkipLockedIntervals;
   private final boolean coordinatorKillIgnoreDurationToRetain;
   private final String loadQueuePeonType;
   private final Duration httpLoadQueuePeonRepeatDelay;
@@ -66,7 +65,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorDatasourceKillPeriod,
       Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
-      boolean compactionSkipLockedIntervals,
       boolean coordinatorKillIgnoreDurationToRetain,
       String loadQueuePeonType,
       Duration httpLoadQueuePeonRepeatDelay,
@@ -92,7 +90,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
     this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
-    this.compactionSkipLockedIntervals = compactionSkipLockedIntervals;
     this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
     this.loadQueuePeonType = loadQueuePeonType;
     this.httpLoadQueuePeonRepeatDelay = httpLoadQueuePeonRepeatDelay;
@@ -204,12 +201,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
-  public boolean getCompactionSkipLockedIntervals()
-  {
-    return compactionSkipLockedIntervals;
-  }
-
-  @Override
   public boolean getCoordinatorKillIgnoreDurationToRetain()
   {
     return coordinatorKillIgnoreDurationToRetain;
@@ -268,7 +259,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final Duration DEFAULT_HTTP_LOAD_QUEUE_PEON_REPEAT_DELAY = Duration.millis(60000);
     private static final Duration DEFAULT_HTTP_LOAD_QUEUE_PEON_HOST_TIMEOUT = Duration.millis(300000);
     private static final int DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE = 1;
-    private static final boolean DEFAULT_COMPACTION_SKIP_LOCKED_INTERVALS = true;
     private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = new Duration("PT86400s");
     private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
 
@@ -294,7 +284,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Integer curatorLoadQueuePeonNumCallbackThreads;
     private Duration httpLoadQueuePeonHostTimeout;
     private Integer httpLoadQueuePeonBatchSize;
-    private Boolean compactionSkippedLockedIntervals;
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
 
@@ -428,12 +417,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
-    public Builder withCompactionSkippedLockedIntervals(boolean compactionSkippedLockedIntervals)
-    {
-      this.compactionSkippedLockedIntervals = compactionSkippedLockedIntervals;
-      return this;
-    }
-
     public Builder withCoordianatorAuditKillPeriod(Duration coordinatorAuditKillPeriod)
     {
       this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
@@ -466,7 +449,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           coordinatorDatasourceKillPeriod == null ? DEFAULT_COORDINATOR_DATASOURCE_KILL_PERIOD : coordinatorDatasourceKillPeriod,
           coordinatorDatasourceKillDurationToRetain == null ? DEFAULT_COORDINATOR_DATASOURCE_KILL_DURATION_TO_RETAIN : coordinatorDatasourceKillDurationToRetain,
           coordinatorKillMaxSegments == null ? DEFAULT_COORDINATOR_KILL_MAX_SEGMENTS : coordinatorKillMaxSegments,
-          compactionSkippedLockedIntervals == null ? DEFAULT_COMPACTION_SKIP_LOCKED_INTERVALS : compactionSkippedLockedIntervals,
           coordinatorKillIgnoreDurationToRetain == null ? DEFAULT_COORDINATOR_KILL_IGNORE_DURATION_TO_RETAIN : coordinatorKillIgnoreDurationToRetain,
           loadQueuePeonType == null ? DEFAULT_LOAD_QUEUE_PEON_TYPE : loadQueuePeonType,
           httpLoadQueuePeonRepeatDelay == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_REPEAT_DELAY : httpLoadQueuePeonRepeatDelay,

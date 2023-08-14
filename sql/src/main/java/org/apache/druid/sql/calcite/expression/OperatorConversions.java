@@ -468,10 +468,10 @@ public class OperatorConversions
     }
 
     /**
-     * Provides customized operand type checking logic.
+     * Provide customized operand type checking logic.
      *
-     * One of {@link #operandTypes(SqlTypeFamily...)} or {@link #operandTypeChecker(SqlOperandTypeChecker)} must be used
-     * before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     * Either {@link #operandTypes(SqlTypeFamily...)} or this method must be used before calling {@link #build()}.
+     * These methods cannot be mixed; you must call exactly one.
      */
     public OperatorBuilder<T> operandTypeChecker(final SqlOperandTypeChecker operandTypeChecker)
     {
@@ -491,7 +491,8 @@ public class OperatorConversions
     }
 
     /**
-     * Signifies that a function accepts operands of type family given by {@param operandTypes}.
+     * Equivalent to calling {@link BasicOperandTypeChecker.Builder#operandTypes(SqlTypeFamily...)}; leads to using a
+     * {@link BasicOperandTypeChecker} as our operand type checker.
      *
      * May be used in conjunction with {@link #requiredOperandCount(int)} and {@link #literalOperands(int...)} in order
      * to further refine operand checking logic.
@@ -505,15 +506,12 @@ public class OperatorConversions
     }
 
     /**
-     * Signifies that the first {@code requiredOperands} operands are required, and all later operands are optional.
+     * Equivalent to calling {@link BasicOperandTypeChecker.Builder#requiredOperandCount(int)}; leads to using a
+     * {@link BasicOperandTypeChecker} as our operand type checker.
      *
-     * Required operands are not allowed to be null. Optional operands can either be skipped or explicitly provided as
-     * literal NULLs. For example, if {@code requiredOperands == 1}, then {@code F(x, NULL)} and  {@code F(x)} are both
-     * accepted, and {@code x} must not be null.
-     *
-     * Must be used in conjunction with {@link #operandTypes(SqlTypeFamily...)}; this method is not compatible with
-     * {@link #operandTypeChecker(SqlOperandTypeChecker)}.
+     * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
+    @Deprecated
     public OperatorBuilder<T> requiredOperandCount(final int requiredOperandCount)
     {
       this.requiredOperandCount = requiredOperandCount;
@@ -533,10 +531,10 @@ public class OperatorConversions
     }
 
     /**
-     * Signifies that the operands at positions given by {@code literalOperands} must be literals.
+     * Equivalent to calling {@link BasicOperandTypeChecker.Builder#literalOperands(int...)}; leads to using a
+     * {@link BasicOperandTypeChecker} as our operand type checker.
      *
-     * Must be used in conjunction with {@link #operandTypes(SqlTypeFamily...)}; this method is not compatible with
-     * {@link #operandTypeChecker(SqlOperandTypeChecker)}.
+     * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
     public OperatorBuilder<T> literalOperands(final int... literalOperands)
     {
@@ -753,6 +751,11 @@ public class OperatorConversions
     private final int requiredOperands;
     private final IntSet nullableOperands;
     private final IntSet literalOperands;
+
+    public int getNumberOfLiteralOperands()
+    {
+      return literalOperands.size();
+    }
 
     @VisibleForTesting
     DefaultOperandTypeChecker(
