@@ -231,7 +231,8 @@ public class DetermineHashedPartitionsJobTest
             null,
             null,
             null,
-            null
+            null,
+            1
         )
     );
     this.indexerConfig = new HadoopDruidIndexerConfig(ingestionSpec);
