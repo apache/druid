@@ -25,19 +25,26 @@ sidebar_label: Retention rules
 
 This topic describes the API endpoints for managing retention rules in Apache Druid. You can configure retention rules in the Druid web console or API.
 
-Druid uses retention rules to determine what data is retained in the cluster. Druid supports load, drop, and broadcast rules. See [using rules to drop and retain data](../operations/rule-configuration.md) for more information. 
+Druid uses retention rules to determine what data is retained in the cluster. Druid supports load, drop, and broadcast rules. For more information, see [Using rules to drop and retain data](../operations/rule-configuration.md).
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Update retention rules for a datasource
 
-Update one or more retention rules for a datasource. Retention rules can be submitted as an array of rule objects in the request body and overwrite any existing rules for the datasource. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
+Updates one or more retention rules for a datasource. The request body takes an array of retention rule objects. For details on defining retention rules, see the following sources:
 
-Note that this endpoint returns an `HTTP 200` even if the datasource does not exist.
+* [Load rules](../operations/rule-configuration.md#load-rules)
+* [Drop rules](../operations/rule-configuration.md#drop-rules)
+* [Broadcast rules](../operations/rule-configuration.md#broadcast-rules)
+
+This request overwrites any existing rules for the datasource.
+Druid reads rules in the order in which they appear; for more information, see [rule structure](../operations/rule-configuration.md).
+
+Note that this endpoint returns an HTTP `200 OK` even if the datasource does not exist.
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/:datasource</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/rules/:dataSource</code>
 
 ### Header parameters
 
@@ -125,11 +132,17 @@ Content-Length: 273
 
 ### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+A successful request returns an HTTP `200 OK` message code and an empty response body.
 
 ## Update default retention rules for all datasources
 
-Update one or more default retention rules for all datasources. Retention rules can be submitted as an array of rule objects in the request body and overwrite any existing rules for the datasource. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear, see [rule structure](../operations/rule-configuration.md) for more information.
+Updates one or more default retention rules for all datasources. Submit retention rules as an array of objects in the request body. For details on defining retention rules, see the following sources:
+
+* [Load rules](../operations/rule-configuration.md#load-rules)
+* [Drop rules](../operations/rule-configuration.md#drop-rules)
+* [Broadcast rules](../operations/rule-configuration.md#broadcast-rules)
+
+This request overwrites any existing rules for all datasources. To remove default retention rules for all datasources, submit an empty rule array in the request body. Rules are read in the order in which they appear; for more information, see [rule structure](../operations/rule-configuration.md).
 
 ### URL
 
@@ -205,11 +218,11 @@ Content-Length: 205
 
 ### Sample response
 
-A successful request returns an HTTP `200 OK` and an empty response body.
+A successful request returns an HTTP `200 OK` message code and an empty response body.
 
 ## Get an array of all retention rules
 
-Retrieves all current retention rules in the cluster including the default retention rule. Returns an array of objects for each datasource and their associated retention rule.
+Retrieves all current retention rules in the cluster including the default retention rule. Returns an array of objects for each datasource and their associated retention rules.
 
 ### URL
 
@@ -276,16 +289,16 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves an array of rule objects for a single datasource. Returns an empty array if there are no retention rules.
 
-Note that this endpoint returns an `HTTP 200` even if the datasource does not exist.
+Note that this endpoint returns an HTTP `200 OK` message code even if the datasource does not exist.
 
 ### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/:datasource</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/rules/:dataSource</code>
 
 ### Query parameters
 
 * `full` (optional)
-  * Include the default retention rule for the datasource in the response.
+  * Includes the default retention rule for the datasource in the response.
 
 ### Responses
 
@@ -351,7 +364,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ## Get audit history for all datasources
 
-Retrieves the audit history of rules for all datasources over an interval of time. The default value of `interval` can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in the `runtime.properties` file for the Coordinator.
+Retrieves the audit history of rules for all datasources over an interval of time. The default interval is 1 week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Coordinator.
 
 ### URL
 
@@ -363,10 +376,10 @@ Note that the following query parameters cannot be chained.
 
 * `interval` (optional)
   * Type: ISO 8601.
-  * Limit the number of results to the specified time interval. Delimit with `/`. For example, `2023-07-13/2023-07-19`.
+  * Limits the number of results to the specified time interval. Delimit with `/`. For example, `2023-07-13/2023-07-19`.
 * `count` (optional)
   * Type: Int
-  * Limit the number of results to the last `n` entries.
+  * Limits the number of results to the last `n` entries.
 
 ### Responses
 
