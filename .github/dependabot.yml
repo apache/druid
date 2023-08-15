@@ -22,3 +22,6 @@ updates:
       # jclouds 2.1 needs Guava 18+
       - dependency-name: "org.apache.jclouds"
         versions: "[2.1,)"
+      # checkstyle >= 10.x requires Java 11
+      - dependency-name: "com.puppycrawl.tools"
+        versions: "[10,)"
