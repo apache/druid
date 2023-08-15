@@ -25,9 +25,9 @@ sidebar_label: Data management
 
 This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as `used` or `unused` and delete them from Druid.
 
-Note that while you can mark segments as "used" by sending POST requests to the datasource, the Coordinator may subsequently mark segments as "unused" if they meet any configured [Drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to "used," you still need to configure a [Load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
+Note that while you can mark segments as `used` by sending POST requests to the datasource, the Coordinator may subsequently mark segments as `unused` if they meet any configured [Drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to `used`, you still need to configure a [Load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
-When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as "used." Furthermore, it is possible that all segments could be "unused," yet an indexing task might still be able to read data from these segments and complete successfully. 
+When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as `used`. Furthermore, it is possible that all segments could be `unused`, yet an indexing task might still be able to read data from these segments and complete successfully. 
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -83,7 +83,7 @@ The following example updates two segments with IDs `wikipedia_hour_2015-09-12T1
 <!--cURL-->
 
 ```shell
-curl 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/markUnused' \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/markUnused" \
 --header 'Content-Type: application/json' \
 --data '{
     "segmentIds": [
@@ -152,7 +152,7 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 <!--cURL-->
 
 ```shell
-curl --request DELETE 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour'
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour"
 ```
 
 <!--HTTP-->
@@ -216,7 +216,7 @@ The following example updates the segment `wikipedia_hour_2015-09-12T16:00:00.00
 <!--cURL-->
 
 ```shell
-curl --request DELETE 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z' \
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z" \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json, text/plain'
 ```
@@ -292,7 +292,7 @@ The following example updates two segments with IDs `wikipedia_hour_2015-09-12T1
 <!--cURL-->
 
 ```shell
-curl 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/markUsed' \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/markUsed" \
 --header 'Content-Type: application/json' \
 --data '{
     "segmentIds": [
@@ -371,7 +371,7 @@ The following example updates all `unused` segments of `wikipedia_hour` to `used
 <!--cURL-->
 
 ```shell
-curl --request POST 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour' \
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour" \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json, text/plain'
 ```
@@ -437,7 +437,7 @@ The following example updates the segment with ID `wikipedia_hour_2015-09-12T18:
 <!--cURL-->
 
 ```shell
-curl --request POST 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z' \
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z" \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json, text/plain'
 ```
@@ -500,7 +500,7 @@ The following example sends a kill task to permanently delete segments in the da
 <!--cURL-->
 
 ```shell
-curl --request DELETE 'http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/intervals/2015-09-12_2015-09-13'
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/intervals/2015-09-12_2015-09-13"
 ```
 
 <!--HTTP-->
