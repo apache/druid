@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,7 +86,7 @@ public class TestHelper
     return new GuiceAnnotationIntrospector()
     {
       @Override
-      public Object findInjectableValueId(AnnotatedMember m)
+      public JacksonInject.Value findInjectableValue(AnnotatedMember m)
       {
         return null;
       }
