@@ -37,7 +37,7 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|`topic`|String|The Kafka topic to read from. Must be a specific topic. Topic patterns are not supported.|yes|
+|`topic`|String|The Kafka topic to read from. Must be a specific topic. Topic patterns are supported if `multiTopic` is enabled.|yes|
 |`inputFormat`|Object|`inputFormat` to define input data parsing. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to pass to the Kafka consumer. See [More on consumer properties](#more-on-consumerproperties).|yes|
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
@@ -143,6 +143,12 @@ can be passed as a regex pattern as the value for `topic` in the IO config. For 
 impressions, you will set `topic` to `clicks|impressions` in the IO config. If new topics are added to the cluster that
 match the regex, druid will automatically start ingesting from those new topics. If you enable multi-topic 
 ingestion for a datasource, downgrading will cause the ingestion to fail for that datasource. 
+
+When ingesting from multiple topics, the partitions are assigned based on the hashcode of topic and the id of the 
+partition within that topic. The partition assignment might not be uniform across all the tasks. It's also assumed 
+that partitions across individual topics have similar load. It is recommended that you have a higher number of 
+partitions for a high load topic and a lower number of partitions for a low load topic. Assuming that you want to 
+ingest from both high and low load topic in the same supervisor. 
 
 ## More on consumerProperties
 
