@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 20
     ignore:
       - dependency-name: "com.google.guava:guava"
       # pin ZooKeeper dependencies to 3.5.x
@@ -18,3 +19,6 @@ updates:
       # Even then this will involve significant effort.
       # See https://github.com/apache/druid/pull/12258
       - dependency-name: "org.apache.calcite"
+      # jclouds 2.1 needs Guava 18+
+      - dependency-name: "org.apache.jclouds"
+        versions: "[2.1,)"

@@ -23,7 +23,6 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.validate.SqlConformance;
 
 /**
  * Druid extended SQL validator. (At present, it doesn't actually
@@ -35,8 +34,9 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
       JavaTypeFactory typeFactory,
-      SqlConformance conformance)
+      Config validatorConfig
+  )
   {
-    super(opTab, catalogReader, typeFactory, conformance);
+    super(opTab, catalogReader, typeFactory, validatorConfig);
   }
 }

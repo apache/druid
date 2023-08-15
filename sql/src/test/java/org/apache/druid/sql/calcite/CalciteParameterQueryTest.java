@@ -658,15 +658,19 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .build()
         )
         : ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            Druids.newScanQueryBuilder()
                   .dataSource(
                       InlineDataSource.fromIterable(
-                          ImmutableList.of(),
-                          RowSignature.builder().add("f1", ColumnType.FLOAT).add("l1", ColumnType.LONG).build()
+                          ImmutableList.of(
+                              new Object[]{0L}
+                          ),
+                          RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .columns("EXPR$0")
+                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),

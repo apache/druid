@@ -26,6 +26,7 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.Resources.ExInst;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
@@ -50,7 +51,6 @@ import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -121,8 +121,7 @@ public class OperatorConversionsTest
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testRequiredOperandsOnly")
-          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE)
-          .requiredOperandCount(1)
+          .operandTypeChecker(BasicOperandTypeChecker.builder().operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE).requiredOperandCount(1).build())
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -468,8 +467,13 @@ public class OperatorConversionsTest
         final SqlNode node;
         if (operand.isLiteral) {
           node = Mockito.mock(SqlLiteral.class);
+          Mockito.when(node.getKind()).thenReturn(SqlKind.LITERAL);
         } else {
           node = Mockito.mock(SqlNode.class);
+          // Setting this as SqlUtil.isLiteral makes a call on
+          // node.getKind() and without this change would
+          // return a NPE
+          Mockito.when(node.getKind()).thenReturn(SqlKind.OTHER_FUNCTION);
         }
         RelDataType relDataType = Mockito.mock(RelDataType.class);
 
@@ -481,10 +485,13 @@ public class OperatorConversionsTest
         Mockito.when(validator.deriveType(ArgumentMatchers.any(), ArgumentMatchers.eq(node)))
                .thenReturn(relDataType);
         Mockito.when(relDataType.getSqlTypeName()).thenReturn(operand.type);
+
+
         operands.add(node);
       }
       SqlParserPos pos = Mockito.mock(SqlParserPos.class);
-      Mockito.when(pos.plusAll(ArgumentMatchers.any(Collection.class)))
+
+      Mockito.when(pos.plusAll((SqlNode[]) ArgumentMatchers.any()))
              .thenReturn(pos);
       SqlCallBinding callBinding = new SqlCallBinding(
           validator,

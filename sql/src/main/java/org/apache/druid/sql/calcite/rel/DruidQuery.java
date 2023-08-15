@@ -611,9 +611,9 @@ public class DruidQuery
     final OffsetLimit offsetLimit = OffsetLimit.fromSort(sort);
 
     // Extract orderBy column specs.
-    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getChildExps().size());
-    for (int sortKey = 0; sortKey < sort.getChildExps().size(); sortKey++) {
-      final RexNode sortExpression = sort.getChildExps().get(sortKey);
+    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getSortExps().size());
+    for (int sortKey = 0; sortKey < sort.getSortExps().size(); sortKey++) {
+      final RexNode sortExpression = sort.getSortExps().get(sortKey);
       final RelFieldCollation collation = sort.getCollation().getFieldCollations().get(sortKey);
       final OrderByColumnSpec.Direction direction;
       final StringComparator comparator;
@@ -682,7 +682,7 @@ public class DruidQuery
     }
   }
 
-  private VirtualColumns getVirtualColumns(final boolean includeDimensions)
+  VirtualColumns getVirtualColumns(final boolean includeDimensions)
   {
     // 'sourceRowSignature' could provide a list of all defined virtual columns while constructing a query, but we
     // still want to collect the set of VirtualColumns this way to ensure we only add what is still being used after

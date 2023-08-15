@@ -1569,9 +1569,9 @@ name: Bean Validation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0.Final
+version: 2.0.2
 libraries:
-  - javax.validation: validation-api
+  - jakarta.validation: jakarta.validation-api
 
 ---
 
@@ -1662,7 +1662,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.21.0
+version: 1.35.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
@@ -1680,7 +1680,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.17.0
+version: 1.23.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -2892,6 +2892,76 @@ libraries:
   - net.minidev: json-smart
 
 ---
+name: JSON simple
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - com.googlecode.json-simple: json-simple
+notices:
+  - json-simple: |
+      JSON Simple
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+name: Immutables
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.8.8
+libraries:
+  - org.immutables: value-annotations
+notices:
+  - value-annotations: |
+      Value Annotations
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+
+name: Guardian API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.2
+libraries:
+  - org.apiguardian: apiguardian-api
+notices:
+  - apiguardian-api: |
+      API Guardian APIs
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+
+name: Proj4j
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.2.2
+libraries:
+  - org.locationtech.proj4j: proj4j
+notices:
+  - proj4j: |
+      Java library for converting coordinates between different geospatial coordinate reference systems
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+
+name: JTS
+license_category: binary
+module: java-core
+license_name: Eclipse Distribution License 1.0
+version: 1.19.0
+libraries:
+  - org.locationtech.jts: jts-core
+  - org.locationtech.jts.io: jts-io-common
+notices:
+  - jts-core: |
+      The JTS Topology Suite is a Java library for creating and manipulating vector geometry.
+      Eclipse Distribution License 1.0
+  - jts-io-common: |
+      Eclipse Distribution License 1.0
+---
 
 name: Apache Avro
 license_category: binary
@@ -3847,7 +3917,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.4.3
+version: 42.6.0
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3859,7 +3929,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.4.3
+version: 42.6.0
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3871,7 +3941,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.4.3
+version: 42.6.0
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
