@@ -134,8 +134,8 @@
             <artifactId>tesla-aether</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.spy</groupId>
-            <artifactId>spymemcached</artifactId>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>elasticache-java-cluster-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.lz4</groupId>
