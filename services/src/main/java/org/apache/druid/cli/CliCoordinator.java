@@ -91,7 +91,6 @@ import org.apache.druid.server.coordinator.duty.KillCompactionConfig;
 import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
-import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
@@ -264,12 +263,6 @@ public class CliCoordinator extends ServerRunnable
                   + "for more details about compaction."
               );
             }
-            conditionalIndexingServiceDutyMultibind.addConditionBinding(
-                "druid.coordinator.kill.on",
-                "false",
-                Predicates.equalTo("true"),
-                KillUnusedSegments.class
-            );
             conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.pendingSegments.on",
                 "true",

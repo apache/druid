@@ -68,6 +68,7 @@ import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
@@ -154,6 +155,7 @@ public class DruidCoordinator
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
+  private final KillUnusedSegments killUnusedSegments;
 
   private volatile boolean started = false;
 
@@ -222,6 +224,7 @@ public class DruidCoordinator
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
+    this.killUnusedSegments = initializeKillUnusedSegmentsDuty();
     this.loadQueueManager = loadQueueManager;
   }
 
@@ -590,6 +593,9 @@ public class DruidCoordinator
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.addAll(makeCompactSegmentsDuty());
     }
+    if (null != killUnusedSegments) {
+      duties.addAll(makeKillUnusedSegmentsDuty());
+    }
     log.debug(
         "Initialized indexing service duties [%s].",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
@@ -624,6 +630,27 @@ public class DruidCoordinator
     }
   }
 
+  @Nullable
+  @VisibleForTesting
+  KillUnusedSegments initializeKillUnusedSegmentsDuty()
+  {
+    List<KillUnusedSegments> killUnusedSegmentsDutyFromCustomGroups = getKillUnusedSegmentsDutyFromCustomGroups();
+    if (!config.getAutoKillEnabled()) {
+      return null;
+    }
+    if (killUnusedSegmentsDutyFromCustomGroups.isEmpty()) {
+      return new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    } else {
+      if (killUnusedSegmentsDutyFromCustomGroups.size() > 1) {
+        log.warn(
+            "More than one KillUnusedSegments duty is configured in the Coordinator Custom Duty Group."
+            + " The first duty will be picked up."
+        );
+      }
+      return killUnusedSegmentsDutyFromCustomGroups.get(0);
+    }
+  }
+
   @VisibleForTesting
   List<CompactSegments> getCompactSegmentsDutyFromCustomGroups()
   {
@@ -636,9 +663,26 @@ public class DruidCoordinator
                            .collect(Collectors.toList());
   }
 
+  @VisibleForTesting
+  List<KillUnusedSegments> getKillUnusedSegmentsDutyFromCustomGroups()
+  {
+    return customDutyGroups.getCoordinatorCustomDutyGroups()
+        .stream()
+        .flatMap(coordinatorCustomDutyGroup ->
+            coordinatorCustomDutyGroup.getCustomDutyList().stream())
+        .filter(duty -> duty instanceof KillUnusedSegments)
+        .map(duty -> (KillUnusedSegments) duty)
+        .collect(Collectors.toList());
+  }
+
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
     return ImmutableList.of(compactSegments);
+  }
+
+  private List<CoordinatorDuty> makeKillUnusedSegmentsDuty()
+  {
+    return ImmutableList.of(killUnusedSegments);
   }
 
   private class DutiesRunnable implements Runnable

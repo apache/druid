@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -55,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -70,6 +72,7 @@ public class KillUnusedSegmentsTest
   private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
   private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
   private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
+  private static final String DATASOURCE = "DS1";
 
   @Mock
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -104,7 +107,7 @@ public class KillUnusedSegmentsTest
     Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
     Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
 
-    Mockito.doReturn(Collections.singleton("DS1"))
+    Mockito.doReturn(Collections.singleton(DATASOURCE))
            .when(coordinatorDynamicConfig).getSpecificDataSourcesToKillUnusedSegmentsIn();
 
     final DateTime now = DateTimes.nowUtc();
@@ -129,18 +132,22 @@ public class KillUnusedSegmentsTest
         segmentsMetadataManager.getUnusedSegmentIntervals(
             ArgumentMatchers.anyString(),
             ArgumentMatchers.any(),
+            ArgumentMatchers.any(),
             ArgumentMatchers.anyInt()
         )
     ).thenAnswer(invocation -> {
-      DateTime maxEndTime = invocation.getArgument(1);
+      DateTime minStartTime = invocation.getArgument(1);
+      DateTime maxEndTime = invocation.getArgument(2);
       long maxEndMillis = maxEndTime.getMillis();
+      Long minStartMillis = minStartTime != null ? minStartTime.getMillis() : null;
       List<Interval> unusedIntervals =
           unusedSegments.stream()
                         .map(DataSegment::getInterval)
-                        .filter(i -> i.getEnd().getMillis() <= maxEndMillis)
+                        .filter(i -> i.getEnd().getMillis() <= maxEndMillis
+                                     && (null == minStartMillis || i.getStart().getMillis() >= minStartMillis))
                         .collect(Collectors.toList());
 
-      int limit = invocation.getArgument(2);
+      int limit = invocation.getArgument(3);
       return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
     });
 
@@ -186,6 +193,7 @@ public class KillUnusedSegmentsTest
     );
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
+    verifyState(ImmutableMap.of(DATASOURCE, dayOldSegment.getInterval().getEnd()));
     verifyStats(9, 1, 10);
   }
 
@@ -204,6 +212,7 @@ public class KillUnusedSegmentsTest
     );
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
+    verifyState(ImmutableMap.of(DATASOURCE, nextDaySegment.getInterval().getEnd()));
     verifyStats(9, 1, 10);
   }
 
@@ -221,6 +230,7 @@ public class KillUnusedSegmentsTest
     );
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(expectedKillInterval);
+    verifyState(ImmutableMap.of(DATASOURCE, nextMonthSegment.getInterval().getEnd()));
     verifyStats(9, 1, 10);
   }
 
@@ -234,7 +244,52 @@ public class KillUnusedSegmentsTest
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     // Only 1 unused segment is killed
     runAndVerifyKillInterval(yearOldSegment.getInterval());
+    verifyState(ImmutableMap.of(DATASOURCE, yearOldSegment.getInterval().getEnd()));
     verifyStats(9, 1, 10);
+  }
+
+  @Test
+  public void testMultipleRuns()
+  {
+    Mockito.doReturn(true)
+        .when(config).getCoordinatorKillIgnoreDurationToRetain();
+    Mockito.doReturn(1)
+        .when(config).getCoordinatorKillMaxSegments();
+    Mockito.doReturn(2)
+        .when(config).getCoordinatorKillMaxSegments();
+    Mockito.doReturn(null)
+        .when(config).getCoordinatorKillPeriod();
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+
+    // All future and past unused segments are killed
+    Interval expectedKillInterval = new Interval(
+        yearOldSegment.getInterval().getStart(),
+        nextMonthSegment.getInterval().getEnd()
+    );
+
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
+    // Kill segments 2 at a at time
+
+    runAndVerifyKillInterval(new Interval(
+        yearOldSegment.getInterval().getStart(),
+        monthOldSegment.getInterval().getEnd()
+    ));
+    verifyState(ImmutableMap.of(DATASOURCE, monthOldSegment.getInterval().getEnd()));
+
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
+    runAndVerifyKillInterval(new Interval(
+        dayOldSegment.getInterval().getStart(),
+        hourOldSegment.getInterval().getEnd()
+    ));
+    verifyState(ImmutableMap.of(DATASOURCE, hourOldSegment.getInterval().getEnd()));
+
+    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
+    runAndVerifyKillInterval(new Interval(
+        nextDaySegment.getInterval().getStart(),
+        nextMonthSegment.getInterval().getEnd()
+    ));
+    verifyState(ImmutableMap.of(DATASOURCE, nextMonthSegment.getInterval().getEnd()));
+    verifyStats(9, 1, 10, 3);
   }
 
   @Test
@@ -242,6 +297,7 @@ public class KillUnusedSegmentsTest
   {
     mockTaskSlotUsage(0.10, 10, 1, 5);
     runAndVerifyNoKill();
+    verifyState(ImmutableMap.of());
     verifyStats(0, 0, 0);
   }
 
@@ -250,6 +306,8 @@ public class KillUnusedSegmentsTest
   {
     mockTaskSlotUsage(1.0, 3, 3, 10);
     runAndVerifyNoKill();
+    verifyState(ImmutableMap.of());
+    verifyStats(0, 0, 3);
   }
 
   @Test
@@ -300,17 +358,53 @@ public class KillUnusedSegmentsTest
 
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),
-        ArgumentMatchers.eq("DS1"),
+        ArgumentMatchers.eq(DATASOURCE),
         ArgumentMatchers.eq(expectedKillInterval),
         ArgumentMatchers.eq(limit)
     );
   }
 
+  private void runAndVerifyKillIntervals(List<Interval> expectedKillIntervals)
+  {
+    int limit = config.getCoordinatorKillMaxSegments();
+    Mockito.doReturn(Futures.immediateFuture("ok"))
+        .when(overlordClient)
+        .runKillTask(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.any(Interval.class),
+            ArgumentMatchers.anyInt());
+    for (int i = 0; i < expectedKillIntervals.size(); i++) {
+      target.run(params);
+      verifyState(ImmutableMap.of(DATASOURCE, yearOldSegment.getInterval().getEnd()));
+      verifyStats(9, 1, 10);
+    }
+
+    for (Interval expectedKillInterval : expectedKillIntervals) {
+      Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
+          ArgumentMatchers.anyString(),
+          ArgumentMatchers.eq(DATASOURCE),
+          ArgumentMatchers.eq(expectedKillInterval),
+          ArgumentMatchers.eq(limit)
+      );
+    }
+  }
+
   private void verifyStats(int availableSlots, int submittedTasks, int maxSlots)
   {
-    Mockito.verify(stats).add(Stats.Kill.AVAILABLE_SLOTS, availableSlots);
-    Mockito.verify(stats).add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
-    Mockito.verify(stats).add(Stats.Kill.MAX_SLOTS, maxSlots);
+    verifyStats(availableSlots, submittedTasks, maxSlots, 1);
+  }
+
+  private void verifyStats(int availableSlots, int submittedTasks, int maxSlots, int times)
+  {
+    Mockito.verify(stats, Mockito.times(times)).add(Stats.Kill.AVAILABLE_SLOTS, availableSlots);
+    Mockito.verify(stats, Mockito.times(times)).add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
+    Mockito.verify(stats, Mockito.times(times)).add(Stats.Kill.MAX_SLOTS, maxSlots);
+  }
+
+  private void verifyState(Map<String, DateTime> expectedDatasourceToLastKillIntervalEnd)
+  {
+    Assert.assertEquals(expectedDatasourceToLastKillIntervalEnd, target.getDatasourceToLastKillIntervalEnd());
   }
 
   private void runAndVerifyNoKill()
@@ -363,7 +457,7 @@ public class KillUnusedSegmentsTest
   private DataSegment createSegmentWithEnd(DateTime endTime)
   {
     return new DataSegment(
-        "DS1",
+        DATASOURCE,
         new Interval(Period.days(1), endTime),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
