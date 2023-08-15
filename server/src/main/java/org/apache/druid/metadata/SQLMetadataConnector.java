@@ -1033,13 +1033,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * Throws RuntimeException if the column does not exist. There is no recovering from an invalid schema,
    * the program should crash.
+   *
+   * See <a href="https://druid.apache.org/docs/latest/operations/upgrade-prep.html">upgrade-prep docs</a> for info
+   * on manually preparing your segment table.
    */
   private void validateSegmentTable()
   {
     if (tableHasColumn(tablesConfigSupplier.get().getSegmentsTable(), "used_flag_last_updated")) {
       return;
     } else {
-      throw new RuntimeException("Invalid Segment Table Schema! No used_flag_last_updated column!");
+      throw new RuntimeException("Invalid Segment Table Schema! No used_flag_last_updated column!" +
+              " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation");
     }
   }
 }
