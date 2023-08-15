@@ -363,7 +363,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
-            <version>5.5.12</version>
+            <version>7.4.1</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
@@ -398,7 +398,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
-            <version>5.5.12</version>
+            <version>7.4.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
