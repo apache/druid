@@ -342,6 +342,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     boolean indexGeneratorJobAttempted = false;
     boolean indexGeneratorJobSuccess = false;
     HadoopIngestionSpec indexerSchema = null;
+    String version = null;
     try {
       registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
       String hadoopJobIdFile = getHadoopJobIdFileName();
@@ -407,7 +408,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       // We should have a lock from before we started running only if interval was specified
-      String version;
       if (determineIntervals) {
         Interval interval = JodaUtils.umbrellaInterval(
             JodaUtils.condenseIntervals(
@@ -529,7 +529,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       indexerGeneratorCleanupJob(
           indexGeneratorJobAttempted,
           indexGeneratorJobSuccess,
-          indexerSchema == null ? null : toolbox.getJsonMapper().writeValueAsString(indexerSchema)
+          indexerSchema == null ? null : toolbox.getJsonMapper().writeValueAsString(
+                  indexerSchema.withTuningConfig(
+                          indexerSchema.getTuningConfig().withVersion(
+                                  version == null ? indexerSchema.getTuningConfig().getVersion() : version)))
       );
     }
   }
