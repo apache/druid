@@ -45,6 +45,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.rpc.indexing.RouterClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -120,6 +121,7 @@ public class TaskToolbox
   private final AppenderatorsManager appenderatorsManager;
   private final OverlordClient overlordClient;
   private final CoordinatorClient coordinatorClient;
+  private final RouterClient routerClient;
 
   // Used by only native parallel tasks
   private final IntermediaryDataManager intermediaryDataManager;
@@ -165,6 +167,7 @@ public class TaskToolbox
       AppenderatorsManager appenderatorsManager,
       OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
+      RouterClient routerClient,
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
@@ -207,6 +210,7 @@ public class TaskToolbox
     this.appenderatorsManager = appenderatorsManager;
     this.overlordClient = overlordClient;
     this.coordinatorClient = coordinatorClient;
+    this.routerClient = routerClient;
     this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
@@ -448,6 +452,11 @@ public class TaskToolbox
     return coordinatorClient;
   }
 
+  public RouterClient getRouterClient()
+  {
+    return routerClient;
+  }
+
   public ParallelIndexSupervisorTaskClientProvider getSupervisorTaskClientProvider()
   {
     return supervisorTaskClientProvider;
@@ -538,6 +547,7 @@ public class TaskToolbox
     private AppenderatorsManager appenderatorsManager;
     private OverlordClient overlordClient;
     private CoordinatorClient coordinatorClient;
+    private RouterClient routerClient;
     private IntermediaryDataManager intermediaryDataManager;
     private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
@@ -584,6 +594,7 @@ public class TaskToolbox
       this.appenderatorsManager = other.appenderatorsManager;
       this.overlordClient = other.overlordClient;
       this.coordinatorClient = other.coordinatorClient;
+      this.routerClient = other.routerClient;
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
@@ -793,6 +804,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder routerClient(final RouterClient routerClient)
+    {
+      this.routerClient = routerClient;
+      return this;
+    }
+
     public Builder intermediaryDataManager(final IntermediaryDataManager intermediaryDataManager)
     {
       this.intermediaryDataManager = intermediaryDataManager;
@@ -861,6 +878,7 @@ public class TaskToolbox
           appenderatorsManager,
           overlordClient,
           coordinatorClient,
+          routerClient,
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,

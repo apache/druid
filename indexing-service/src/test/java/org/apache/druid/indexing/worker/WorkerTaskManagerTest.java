@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.client.indexing.NoopRouterClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -162,6 +163,7 @@ public class WorkerTaskManagerTest
                 new TestAppenderatorsManager(),
                 overlordClient,
                 new NoopCoordinatorClient(),
+                new NoopRouterClient(),
                 null,
                 null,
                 null,

@@ -27,6 +27,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.indexing.NoopRouterClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -45,6 +46,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.rpc.indexing.RouterClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
@@ -111,6 +113,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.appenderatorsManager,
         bob.overlordClient,
         bob.coordinatorClient,
+        bob.routerClient,
         bob.supervisorTaskClientProvider,
         bob.shuffleClient,
         bob.taskLogPusher,
@@ -154,6 +157,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private AppenderatorsManager appenderatorsManager;
     private OverlordClient overlordClient = new NoopOverlordClient();
     private CoordinatorClient coordinatorClient = new NoopCoordinatorClient();
+    private RouterClient routerClient = new NoopRouterClient();
     private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;

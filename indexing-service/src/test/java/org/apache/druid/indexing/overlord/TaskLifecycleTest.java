@@ -36,6 +36,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.indexing.NoopRouterClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -695,6 +696,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         appenderatorsManager,
         new NoopOverlordClient(),
         new NoopCoordinatorClient(),
+        new NoopRouterClient(),
         null,
         null,
         null,

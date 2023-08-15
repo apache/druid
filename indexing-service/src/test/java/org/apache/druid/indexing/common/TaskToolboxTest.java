@@ -25,6 +25,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.indexing.NoopRouterClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -148,6 +149,7 @@ public class TaskToolboxTest
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
         new NoopCoordinatorClient(),
+        new NoopRouterClient(),
         null,
         null,
         null,

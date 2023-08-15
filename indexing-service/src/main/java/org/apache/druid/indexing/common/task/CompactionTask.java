@@ -71,7 +71,6 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -95,6 +94,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -107,6 +107,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -478,23 +479,33 @@ public class CompactionTask extends AbstractBatchIndexTask
       if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
         clusteredBy.addAll(((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions());
       }
-      System.out.println(
-          new MSQReplaceCompaction(
-              getDataSource(),
-              ((DruidInputSource) ingestionSpec.getIOConfig().getInputSource()).getInterval(),
-              ingestionSpec.getDataSchema().getDimensionsSpec().getDimensionNames(),
-              Arrays.stream(ingestionSpec.getDataSchema().getAggregators())
-                    .map(AggregatorFactory::getName)
-                    .collect(Collectors.toList()),
-              GranularityType
-                  .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getQueryGranularity()),
-              GranularityType
-                  .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getSegmentGranularity()),
-              ingestionSpec.getDataSchema().getGranularitySpec().isRollup(),
-              clusteredBy,
-              ingestionSpec.getTuningConfig().getMaxNumConcurrentSubTasks()
-          ).buildQuery()
+      final MSQReplaceCompaction msqReplaceQuery = new MSQReplaceCompaction(
+          getDataSource(),
+          ((DruidInputSource) ingestionSpec.getIOConfig().getInputSource()).getInterval(),
+          ingestionSpec.getDataSchema().getDimensionsSpec().getDimensionNames(),
+          Arrays.stream(ingestionSpec.getDataSchema().getAggregators())
+                .map(AggregatorFactory::getName)
+                .collect(Collectors.toList()),
+          GranularityType
+              .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getQueryGranularity()),
+          GranularityType
+              .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getSegmentGranularity()),
+          ingestionSpec.getDataSchema().getGranularitySpec().isRollup(),
+          clusteredBy,
+          ingestionSpec.getTuningConfig().getMaxNumConcurrentSubTasks()
       );
+      System.out.println(msqReplaceQuery.buildQuery());
+      final SqlQuery sqlQuery = new SqlQuery(
+          msqReplaceQuery.buildQuery(),
+          null,
+          true,
+          true,
+          true,
+          msqReplaceQuery.getContext(),
+          null
+      );
+      System.out.println(sqlQuery);
+      toolbox.getRouterClient().runQuery(sqlQuery).get();
     }
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -1349,6 +1360,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     private static final String FINALIZE_AGGREGATIONS = "finalizeAggregations";
 
+    private static final String SOURCE_TYPE = "sourceType";
+
     private static final Set<GranularityType> QUERY_GRANULARITIES = ImmutableSet.of(
         GranularityType.NONE,
         GranularityType.SECOND,
@@ -1402,7 +1415,14 @@ public class CompactionTask extends AbstractBatchIndexTask
         int numSubTasks
     )
     {
-      this.context = ImmutableMap.of(MAX_NUM_TASKS, numSubTasks + 1, FINALIZE_AGGREGATIONS, false);
+      this.context = ImmutableMap.of(
+          MAX_NUM_TASKS,
+          numSubTasks + 1,
+          FINALIZE_AGGREGATIONS,
+          false,
+          SOURCE_TYPE,
+          "sql"
+      );
       this.datasource = datasource;
       this.interval = interval;
       this.dimensions = dimensions;
@@ -1452,14 +1472,19 @@ public class CompactionTask extends AbstractBatchIndexTask
              + selectExpression + "\n"
              + fromExpression + "\n"
              + groupByExpression
-             + partitionedByExpression + "\n"
+             + partitionedByExpression
              + clusteredByExpression;
     }
 
     private String makeWhereExpression()
     {
-      return "WHERE __time >= TIMESTAMP '" + interval.getStart().toString() + "'"
-             + " AND __time < TIMESTAMP '" + interval.getEnd().toString() + "'";
+      final String start = Arrays.stream(new Timestamp(interval.getStartMillis()).toString().split("\\."))
+                                 .findFirst().get();
+      final String end = Arrays.stream(new Timestamp(interval.getEndMillis()).toString().split("\\."))
+                               .findFirst().get();
+
+      return "WHERE __time >= TIMESTAMP '" + start + "'"
+             + " AND __time < TIMESTAMP '" + end + "'";
     }
 
     private String makeTimeExpression()
@@ -1513,7 +1538,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       if (CollectionUtils.isNullOrEmpty(clusterByDimensions)) {
         return "";
       } else {
-        return "CLUSTERED BY " + String.join(", ", clusterByDimensions) + "\n";
+        return "\n" + "CLUSTERED BY " + String.join(", ", clusterByDimensions) + "\n";
       }
     }
   }

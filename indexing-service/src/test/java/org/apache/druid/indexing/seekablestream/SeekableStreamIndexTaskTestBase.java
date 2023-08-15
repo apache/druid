@@ -36,6 +36,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.indexing.NoopRouterClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
@@ -696,6 +697,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
         new NoopCoordinatorClient(),
+        new NoopRouterClient(),
         null,
         null,
         null,

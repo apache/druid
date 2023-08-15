@@ -42,6 +42,9 @@ import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClientImpl;
+import org.apache.druid.rpc.indexing.RouterClient;
+import org.apache.druid.rpc.indexing.RouterClientImpl;
+import org.apache.druid.server.router.Router;
 
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -111,6 +114,32 @@ public class ServiceClientModule implements DruidModule
     return new CoordinatorClientImpl(
         clientFactory.makeClient(
             NodeRole.COORDINATOR.getJsonName(),
+            serviceLocator,
+            StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
+        ),
+        jsonMapper
+    );
+  }
+
+  @Provides
+  @ManageLifecycle
+  @Router
+  public ServiceLocator makeRouterServiceLocator(final DruidNodeDiscoveryProvider discoveryProvider)
+  {
+    return new DiscoveryServiceLocator(discoveryProvider, NodeRole.ROUTER);
+  }
+
+  @Provides
+  @LazySingleton
+  public RouterClient makeRouterClient(
+      @Json final ObjectMapper jsonMapper,
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @Router final ServiceLocator serviceLocator
+  )
+  {
+    return new RouterClientImpl(
+        clientFactory.makeClient(
+            NodeRole.ROUTER.getJsonName(),
             serviceLocator,
             StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
         ),
