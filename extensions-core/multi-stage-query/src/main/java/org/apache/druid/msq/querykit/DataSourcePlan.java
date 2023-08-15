@@ -50,6 +50,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
@@ -137,7 +138,13 @@ public class DataSourcePlan
     } else if (dataSource instanceof LookupDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forLookup((LookupDataSource) dataSource, broadcast);
-    } else if (dataSource instanceof QueryDataSource) {
+    } else if (dataSource instanceof UnnestDataSource) {
+      return forUnnest(
+          queryKit, queryId, queryContext,
+          (UnnestDataSource) dataSource, querySegmentSpec, maxWorkerCount, minStageNumber, broadcast
+      );
+    }
+    else if (dataSource instanceof QueryDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forQuery(
           queryKit,
@@ -345,6 +352,46 @@ public class DataSourcePlan
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         QueryDefinition.builder(subQueryDef)
     );
+  }
+
+  /**
+   * Build a plan for Unnest data source
+   */
+  private static DataSourcePlan forUnnest(
+      final QueryKit queryKit,
+      final String queryId,
+      final QueryContext queryContext,
+      final UnnestDataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final int maxWorkerCount,
+      final int minStageNumber,
+      final boolean broadcast
+  )
+  {
+    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
+    final DataSourcePlan basePlan = forDataSource(
+        queryKit,
+        queryId,
+        queryContext,
+        dataSource.getBase(),
+        querySegmentSpec,
+        null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
+        maxWorkerCount,
+        Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+        broadcast
+    );
+    DataSource newDataSource = basePlan.getNewDataSource();
+    basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
+
+    final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
+    basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
+
+    int shift = basePlan.getInputSpecs().size();
+    newDataSource = UnnestDataSource.create(shiftInputNumbers(newDataSource, shift ), dataSource.getVirtualColumn(), dataSource.getUnnestFilter());
+    return new DataSourcePlan(newDataSource,
+                              inputSpecs,
+                              broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+                              subQueryDefBuilder);
   }
 
   /**

@@ -196,7 +196,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     if (segmentMapFn != null) {
       return true;
     } else if (broadcastJoinHelper == null) {
-      segmentMapFn = Function.identity();
+      segmentMapFn = query.getDataSource().createSegmentMapFunction(query, cpuAccumulator);
       return true;
     } else {
       final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
