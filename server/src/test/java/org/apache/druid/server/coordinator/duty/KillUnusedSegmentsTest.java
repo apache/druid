@@ -261,15 +261,7 @@ public class KillUnusedSegmentsTest
         .when(config).getCoordinatorKillPeriod();
     target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
-    // All future and past unused segments are killed
-    Interval expectedKillInterval = new Interval(
-        yearOldSegment.getInterval().getStart(),
-        nextMonthSegment.getInterval().getEnd()
-    );
-
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    // Kill segments 2 at a at time
-
     runAndVerifyKillInterval(new Interval(
         yearOldSegment.getInterval().getStart(),
         monthOldSegment.getInterval().getEnd()

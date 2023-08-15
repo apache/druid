@@ -72,6 +72,10 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
   private final boolean ignoreRetainDuration;
   private final int maxSegmentsToKill;
 
+  /**
+   * Used to keep track of the last interval end time that was killed for each
+   * datasource.
+   */
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
   private long lastKillTime = 0;
 
