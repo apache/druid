@@ -25,10 +25,9 @@ sidebar_label: Data management
 
 This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as `used` or `unused` and delete them from Druid.
 
-Note that while segments may be enabled (set to `used`) by issuing POST requests for the datasources, the Coordinator may again disable segments (set to `unused`) if they match any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if segments are enabled by these APIs, you must configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes. 
+Note that while you can mark segments as "used" by sending POST requests to the datasource, the Coordinator may subsequently mark segments as "unused" if they meet any configured [Drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to "used," you still need to configure a [Load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
-If an indexing task or a kill task runs at the same time that these APIs are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled, but the indexing task can still read data from those segments and succeed.
-
+When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as "used." Furthermore, it is possible that all segments could be "unused," yet an indexing task might still be able to read data from these segments and complete successfully. 
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
