@@ -38,10 +38,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
+import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -51,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
@@ -58,20 +61,57 @@ import java.util.UUID;
 public class S3StorageConnector extends ChunkingStorageConnector<GetObjectRequest>
 {
   private static final Logger log = new Logger(S3StorageConnector.class);
+  private static final int DOWNLOAD_PARALLELISM = 4;
 
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
 
-  private final TransferManager transferManager = TransferManagerBuilder.defaultTransferManager();
+  @Nullable
+  private final TransferManager transferManager;
 
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
+  private final long uploadChunkSize;
+
+  // cacheLocally is old behaviour
+  private final boolean cacheLocally;
+
   public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3)
   {
+    this(
+        config,
+        serverSideEncryptingAmazonS3,
+        config.getChunkSize(),
+        config.getChunkSize() / DOWNLOAD_PARALLELISM,
+        !(config.isTestingTransferManager()
+          && serverSideEncryptingAmazonS3.getUnderlyingServerSideEncryption() instanceof NoopServerSideEncryption)
+    );
+  }
+
+  private S3StorageConnector(
+      S3OutputConfig config,
+      ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3,
+      long downloadChunkSize,
+      long uploadChunkSize,
+      boolean cacheLocally
+  )
+  {
+    super(downloadChunkSize, cacheLocally);
+    this.uploadChunkSize = uploadChunkSize;
+    this.cacheLocally = cacheLocally;
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
+
+    if (!cacheLocally) {
+      this.transferManager = TransferManagerBuilder.standard()
+                                                   .withS3Client(serverSideEncryptingAmazonS3.getUnderlyingS3Client())
+                                                   .build();
+    } else {
+      this.transferManager = null;
+    }
+
     Preconditions.checkNotNull(config, "config is null");
     Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in s3 config");
     try {
@@ -126,7 +166,10 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.tempDirSupplier(config::getTempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(S3Utils.S3RETRY);
-    builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));
+    builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(
+        start,
+        end - 1
+    ));
     builder.objectOpenFunction(new ObjectOpenFunction<GetObjectRequest>()
     {
 
@@ -136,21 +179,32 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       public InputStream open(GetObjectRequest object)
       {
         try {
+          if (cacheLocally) {
+            return S3Utils.retryS3Operation(
+                () -> s3Client.getObject(object).getObjectContent(),
+                config.getMaxRetry()
+            );
+          }
+
           if (downloadFile == null) {
             downloadFile = new File(config.getTempDir(), UUID.randomUUID().toString());
             Download download = transferManager.download(object, downloadFile);
             download.waitForCompletion();
           }
-//          return S3Utils.retryS3Operation(
-//              () -> s3Client.getObject(object).getObjectContent(),
-//              config.getMaxRetry()
-//          );
+
           return new FileInputStream(downloadFile)
           {
+            AtomicBoolean closed = new AtomicBoolean(false);
+
             @Override
             public void close() throws IOException
             {
+              if (closed.get()) {
+                return;
+              }
+              super.close();
               downloadFile.delete();
+              closed.set(true);
             }
           };
         }
@@ -177,7 +231,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return new RetryableS3OutputStream(config, s3Client, objectPath(path));
+    return new RetryableS3OutputStream(config, s3Client, objectPath(path), uploadChunkSize);
   }
 
   @Override

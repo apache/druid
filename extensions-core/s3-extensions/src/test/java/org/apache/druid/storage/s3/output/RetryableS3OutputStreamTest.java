@@ -106,12 +106,7 @@ public class RetryableS3OutputStreamTest
   {
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        false
-    )) {
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(config, s3, path)) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
         bb.putInt(i);
@@ -128,12 +123,7 @@ public class RetryableS3OutputStreamTest
   {
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES * 3);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        false
-    )) {
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(config, s3, path)) {
       bb.clear();
       bb.putInt(1);
       bb.putInt(2);
@@ -149,12 +139,7 @@ public class RetryableS3OutputStreamTest
   public void testWriteSmallBufferShouldSucceed() throws IOException
   {
     chunkSize = 128;
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        false
-    )) {
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(config, s3, path)) {
       for (int i = 0; i < 600; i++) {
         out.write(i);
       }
@@ -171,12 +156,7 @@ public class RetryableS3OutputStreamTest
 
     chunkSize = 10;
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        false
-    )) {
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(config, s3, path)) {
       for (int i = 0; i < 25; i++) {
         bb.clear();
         bb.putInt(i);
@@ -194,12 +174,7 @@ public class RetryableS3OutputStreamTest
     final TestAmazonS3 s3 = new TestAmazonS3(3);
 
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out = new RetryableS3OutputStream(
-        config,
-        s3,
-        path,
-        false
-    )) {
+    try (RetryableS3OutputStream out = new RetryableS3OutputStream(config, s3, path)) {
       for (int i = 0; i < 2; i++) {
         bb.clear();
         bb.putInt(i);

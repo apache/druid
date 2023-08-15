@@ -109,16 +109,14 @@ public class RetryableS3OutputStream extends OutputStream
       String s3Key
   ) throws IOException
   {
-
-    this(config, s3, s3Key, true);
+    this(config, s3, s3Key, config.getChunkSize());
   }
 
-  @VisibleForTesting
-  protected RetryableS3OutputStream(
+  public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
       String s3Key,
-      boolean chunkValidation
+      long uploadChunkSize
   ) throws IOException
   {
     this.config = config;
@@ -137,13 +135,12 @@ public class RetryableS3OutputStream extends OutputStream
     this.uploadId = result.getUploadId();
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
-    this.chunkSize = config.getChunkSize();
+    this.chunkSize = uploadChunkSize;
     this.pushStopwatch = Stopwatch.createUnstarted();
     this.pushStopwatch.reset();
 
     this.currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
   }
-
 
   @Override
   public void write(int b) throws IOException

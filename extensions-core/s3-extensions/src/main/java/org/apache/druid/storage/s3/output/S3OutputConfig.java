@@ -36,16 +36,20 @@ public class S3OutputConfig
   public static final long S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES = 5L * 1024 * 1024 * 1024L;
 
   @JsonProperty
-  private String bucket;
+  private final String bucket;
   @JsonProperty
-  private String prefix;
+  private final String prefix;
 
   @JsonProperty
-  private File tempDir;
+  private final File tempDir;
 
   @Nullable
   @JsonProperty
-  private HumanReadableBytes chunkSize = new HumanReadableBytes("100MiB");
+  private HumanReadableBytes chunkSize = new HumanReadableBytes("128MiB");
+
+  @JsonProperty
+  private boolean testingTransferManager = true;
+
 
   /**
    * Max number of tries for each upload.
@@ -53,16 +57,28 @@ public class S3OutputConfig
   @JsonProperty
   private int maxRetry = RetryUtils.DEFAULT_MAX_TRIES;
 
+  public S3OutputConfig(
+      String bucket,
+      String prefix,
+      File tempDir,
+      HumanReadableBytes chunkSize,
+      Integer maxRetry
+  )
+  {
+    this(bucket, prefix, tempDir, chunkSize, maxRetry, false, true);
+  }
+
   @JsonCreator
   public S3OutputConfig(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
       @JsonProperty(value = "tempDir", required = true) File tempDir,
       @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
-      @JsonProperty("maxRetry") Integer maxRetry
+      @JsonProperty("maxRetry") Integer maxRetry,
+      @JsonProperty("testingTransferManager") Boolean testingTransferManager
   )
   {
-    this(bucket, prefix, tempDir, chunkSize, maxRetry, true);
+    this(bucket, prefix, tempDir, chunkSize, maxRetry, testingTransferManager, true);
   }
 
   @VisibleForTesting
@@ -70,10 +86,9 @@ public class S3OutputConfig
       String bucket,
       String prefix,
       File tempDir,
-      @Nullable
-      HumanReadableBytes chunkSize,
-      @Nullable
-      Integer maxRetry,
+      @Nullable HumanReadableBytes chunkSize,
+      @Nullable Integer maxRetry,
+      Boolean testingTransferManager,
       boolean validation
   )
   {
@@ -85,6 +100,10 @@ public class S3OutputConfig
     }
     if (maxRetry != null) {
       this.maxRetry = maxRetry;
+    }
+
+    if (testingTransferManager != null) {
+      this.testingTransferManager = testingTransferManager;
     }
 
     if (validation) {
@@ -135,6 +154,11 @@ public class S3OutputConfig
     return maxRetry;
   }
 
+  public boolean isTestingTransferManager()
+  {
+    return testingTransferManager;
+  }
+
   private static void validateChunkSize(long chunkSize)
   {
     if (S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES < chunkSize) {
@@ -157,6 +181,7 @@ public class S3OutputConfig
     }
     S3OutputConfig that = (S3OutputConfig) o;
     return maxRetry == that.maxRetry
+           && testingTransferManager == that.testingTransferManager
            && bucket.equals(that.bucket)
            && prefix.equals(that.prefix)
            && tempDir.equals(that.tempDir)
@@ -166,7 +191,7 @@ public class S3OutputConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry);
+    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry, testingTransferManager);
   }
 
 }

@@ -22,11 +22,15 @@ package org.apache.druid.storage.remote;
 import com.google.common.base.Predicates;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.druid.data.input.impl.RetryingInputStream;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,12 +52,15 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
+
+  private static final Logger log = new Logger(ChunkingStorageConnector.class);
+
   /**
    * Default size for chunking of the storage connector. Set to 100MBs to keep the chunk size small relative to the
    * total frame size, while also preventing a large number of calls to the remote storage. While fetching a single
    * file, 100MBs would be required in the disk space.
    */
-  private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 100_000_000;
+  private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 104857600;
 
   /**
    * Default fetch buffer size while copying from the remote location to the download file. Set to default sizing given
@@ -95,7 +102,16 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
   @Override
   public InputStream readRange(String path, long from, long size)
   {
-    return buildInputStream(buildInputParams(path, from, size));
+    DateTime start = DateTimes.nowUtc();
+    InputStream is = buildInputStream(buildInputParams(path, from, size));
+    DateTime end = DateTimes.nowUtc();
+    log.info(
+        "Time taken to read path [%s], size [%d] : [%d]s",
+        path,
+        size,
+        new Interval(start, end).toDurationMillis()
+    );
+    return is;
   }
 
   public abstract ChunkingStorageConnectorParameters<T> buildInputParams(String path) throws IOException;
@@ -139,72 +155,89 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
               return new NullInputStream();
             }
 
-            File outFile = new File(
-                params.getTempDirSupplier().get().getAbsolutePath(),
-                UUID.randomUUID().toString()
-            );
-
             long currentReadEndPosition = Math.min(
                 currentReadStartPosition.get() + chunkSizeBytes,
                 readEnd
             );
 
-            try {
-              if (!outFile.createNewFile()) {
-                throw new IOE(
+            if (cacheLocally) {
+              File outFile = new File(
+                  params.getTempDirSupplier().get().getAbsolutePath(),
+                  UUID.randomUUID().toString()
+              );
+
+              try {
+                if (!outFile.createNewFile()) {
+                  throw new IOE(
+                      StringUtils.format(
+                          "Could not create temporary file [%s] for copying [%s]",
+                          outFile.getAbsolutePath(),
+                          params.getCloudStoragePath()
+                      )
+                  );
+                }
+
+                FileUtils.copyLarge(
+                    () -> new RetryingInputStream<>(
+                        params.getObjectSupplier().getObject(currentReadStartPosition.get(), currentReadEndPosition),
+                        params.getObjectOpenFunction(),
+                        params.getRetryCondition(),
+                        params.getMaxRetry()
+                    ),
+                    outFile,
+                    new byte[FETCH_BUFFER_SIZE_BYTES],
+                    Predicates.alwaysFalse(),
+                    1,
                     StringUtils.format(
-                        "Could not create temporary file [%s] for copying [%s]",
-                        outFile.getAbsolutePath(),
-                        params.getCloudStoragePath()
+                        "Retrying copying of [%s] to [%s]",
+                        params.getCloudStoragePath(),
+                        outFile.getAbsolutePath()
                     )
                 );
               }
+              catch (IOException e) {
+                throw new RE(
+                    e,
+                    StringUtils.format("Unable to copy [%s] to [%s]", params.getCloudStoragePath(), outFile)
+                );
+              }
 
-              FileUtils.copyLarge(
-                  () -> new RetryingInputStream<>(
-                      params.getObjectSupplier().getObject(currentReadStartPosition.get(), currentReadEndPosition),
-                      params.getObjectOpenFunction(),
-                      params.getRetryCondition(),
-                      params.getMaxRetry()
-                  ),
-                  outFile,
-                  new byte[FETCH_BUFFER_SIZE_BYTES],
-                  Predicates.alwaysFalse(),
-                  1,
-                  StringUtils.format(
-                      "Retrying copying of [%s] to [%s]",
-                      params.getCloudStoragePath(),
-                      outFile.getAbsolutePath()
-                  )
-              );
-            }
-            catch (IOException e) {
-              throw new RE(e, StringUtils.format("Unable to copy [%s] to [%s]", params.getCloudStoragePath(), outFile));
+              try {
+                AtomicBoolean fileInputStreamClosed = new AtomicBoolean(false);
+                return new FileInputStream(outFile)
+                {
+                  @Override
+                  public void close() throws IOException
+                  {
+                    // close should be idempotent
+                    if (fileInputStreamClosed.get()) {
+                      return;
+                    }
+                    fileInputStreamClosed.set(true);
+                    super.close();
+                    currentReadStartPosition.set(currentReadEndPosition);
+                    if (!outFile.delete()) {
+                      throw new RE("Cannot delete temp file [%s]", outFile);
+                    }
+                  }
+
+                };
+              }
+              catch (FileNotFoundException e) {
+                throw new RE(e, StringUtils.format("Unable to find temp file [%s]", outFile));
+              }
             }
 
             try {
-              AtomicBoolean fileInputStreamClosed = new AtomicBoolean(false);
-              return new FileInputStream(outFile)
-              {
-                @Override
-                public void close() throws IOException
-                {
-                  // close should be idempotent
-                  if (fileInputStreamClosed.get()) {
-                    return;
-                  }
-                  fileInputStreamClosed.set(true);
-                  super.close();
-                  currentReadStartPosition.set(currentReadEndPosition);
-                  if (!outFile.delete()) {
-                    throw new RE("Cannot delete temp file [%s]", outFile);
-                  }
-                }
-
-              };
+              return new RetryingInputStream<>(
+                  params.getObjectSupplier().getObject(currentReadStartPosition.get(), currentReadEndPosition),
+                  params.getObjectOpenFunction(),
+                  params.getRetryCondition(),
+                  params.getMaxRetry()
+              );
             }
-            catch (FileNotFoundException e) {
-              throw new RE(e, StringUtils.format("Unable to find temp file [%s]", outFile));
+            catch (IOException e) {
+              throw new RE(e);
             }
           }
         }

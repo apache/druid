@@ -168,6 +168,16 @@ public class ServerSideEncryptingAmazonS3
     return amazonS3.completeMultipartUpload(request);
   }
 
+  public AmazonS3 getUnderlyingS3Client()
+  {
+    return amazonS3;
+  }
+
+  public ServerSideEncryption getUnderlyingServerSideEncryption()
+  {
+    return serverSideEncryption;
+  }
+
   public static class Builder
   {
     private AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client.builder();

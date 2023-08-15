@@ -44,10 +44,11 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
       @JsonProperty(value = "prefix", required = true) String prefix,
       @JsonProperty(value = "tempDir", required = true) File tempDir,
       @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
-      @JsonProperty("maxRetry") Integer maxRetry
+      @JsonProperty("maxRetry") Integer maxRetry,
+      @JsonProperty("testingTransferManager") Boolean testingTransferManager
   )
   {
-    super(bucket, prefix, tempDir, chunkSize, maxRetry);
+    super(bucket, prefix, tempDir, chunkSize, maxRetry, testingTransferManager);
   }
 
   @Override
