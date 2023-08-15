@@ -526,6 +526,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
     }
     finally {
+      // The indexGenerator job does not always use the version in the spec. Instead, the version can be dynamically
+      // set. If this is the case, we need to clean up the job with the dynamic version, otherwise intermediate indexing
+      // files will be orphaned and require manual cleanup
       indexerGeneratorCleanupJob(
           indexGeneratorJobAttempted,
           indexGeneratorJobSuccess,
