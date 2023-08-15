@@ -71,9 +71,9 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, Task, long, long)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long)} or {@link #join(long)} is called. */
     NOT_STARTED,
-    /** Lifecycle's state since {@link #run(Job, Task, long, long)} is called. */
+    /** Lifecycle's state since {@link #run(Job, long, long)} is called. */
     PENDING,
     /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
