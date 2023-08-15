@@ -53,7 +53,7 @@ public class MetadataResourceTest
 
   private final DataSegment[] segments =
       CreateDataSegments.ofDatasource(DATASOURCE1)
-                        .forIntervals(2, Granularities.DAY)
+                        .forIntervals(3, Granularities.DAY)
                         .withNumPartitions(2)
                         .eachOfSizeInMb(500)
                         .toArray(new DataSegment[0]);
@@ -77,6 +77,9 @@ public class MetadataResourceTest
            .when(segmentsMetadataManager).getSnapshotOfDataSourcesWithAllUsedSegments();
     Mockito.doReturn(ImmutableList.of(druidDataSource1))
            .when(dataSourcesSnapshot).getDataSourcesWithAllUsedSegments();
+    Mockito.doReturn(druidDataSource1)
+           .when(segmentsMetadataManager)
+           .getImmutableDataSourceWithUsedSegments(DATASOURCE1);
 
     DruidCoordinator coordinator = Mockito.mock(DruidCoordinator.class);
     Mockito.doReturn(2).when(coordinator).getReplicationFactor(segments[0].getId());
@@ -86,9 +89,17 @@ public class MetadataResourceTest
     Mockito.doReturn(ImmutableSet.of(segments[3]))
            .when(dataSourcesSnapshot).getOvershadowedSegments();
 
+    IndexerMetadataStorageCoordinator storageCoordinator = Mockito.mock(IndexerMetadataStorageCoordinator.class);
+    Mockito.doReturn(segments[4])
+           .when(storageCoordinator)
+           .retrieveUsedSegmentForId(segments[4].getId().toString());
+    Mockito.doReturn(null)
+           .when(storageCoordinator)
+           .retrieveUsedSegmentForId(segments[5].getId().toString());
+
     metadataResource = new MetadataResource(
         segmentsMetadataManager,
-        Mockito.mock(IndexerMetadataStorageCoordinator.class),
+        storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         coordinator
     );
@@ -106,6 +117,27 @@ public class MetadataResourceTest
     Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
     Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0), resultList.get(3));
+  }
+
+  @Test
+  public void testGetUsedSegment()
+  {
+    // Available in snapshot
+    Assert.assertEquals(
+        segments[0],
+        metadataResource.getUsedSegment(segments[0].getDataSource(), segments[0].getId().toString()).getEntity()
+    );
+
+    // Unavailable in snapshot, but available in metadata
+    Assert.assertEquals(
+        segments[4],
+        metadataResource.getUsedSegment(segments[4].getDataSource(), segments[4].getId().toString()).getEntity()
+    );
+
+    // Unavailable in both snapshot and metadata
+    Assert.assertNull(
+        metadataResource.getUsedSegment(segments[5].getDataSource(), segments[5].getId().toString()).getEntity()
+    );
   }
 
   private List<SegmentStatusInCluster> extractSegmentStatusList(Response response)

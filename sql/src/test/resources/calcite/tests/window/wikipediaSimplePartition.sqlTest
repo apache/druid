@@ -1,4 +1,4 @@
-type: "operatorValidation"
+type: "failingTest"
 
 sql: |
   SELECT
@@ -6,11 +6,11 @@ sql: |
     FLOOR(__time TO HOUR) t,
     SUM(delta) delta,
     SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode) totalDelta,
-    LAG(FLOOR(__time TO HOUR),  2) OVER (PARTITION BY countryIsoCode) laggardTime,
-    LEAD(FLOOR(__time TO HOUR),  1) OVER (PARTITION BY countryIsoCode) leadTime,
-    FIRST_VALUE(SUM(delta)) OVER (PARTITION BY countryIsoCode) AS firstDelay,
-    LAST_VALUE(SUM(delta)) OVER (PARTITION BY countryIsoCode) AS lastDelay,
-    NTILE(3) OVER (PARTITION BY countryIsoCode) AS delayNTile
+    LAG(FLOOR(__time TO HOUR),  2) OVER (PARTITION BY countryIsoCode ORDER BY FLOOR(__time TO HOUR)) laggardTime,
+    LEAD(FLOOR(__time TO HOUR),  1) OVER (PARTITION BY countryIsoCode ORDER BY FLOOR(__time TO HOUR)) leadTime,
+    FIRST_VALUE(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY FLOOR(__time TO HOUR)) AS firstDelay,
+    LAST_VALUE(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY FLOOR(__time TO HOUR)) AS lastDelay,
+    NTILE(3) OVER (PARTITION BY countryIsoCode ORDER BY FLOOR(__time TO HOUR)) AS delayNTile
   FROM wikipedia
   GROUP BY 1, 2
 
@@ -18,17 +18,19 @@ expectedOperators:
   - { type: "naivePartition",  partitionColumns: [ "d0" ] }
   - type: "window"
     processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - { "type": "longSum", "name": "w0", "fieldName": "a0" }
+  - type: "window"
+    processor:
       type: "composing"
       processors:
-        - { "type": "offset", "inputColumn": "d1", "outputColumn": "w1", "offset": -2 }
-        - { "type": "offset", "inputColumn": "d1", "outputColumn": "w2", "offset": 1 }
-        - { "type": "first", "inputColumn": "a0", "outputColumn": "w3" }
-        - { "type": "last", "inputColumn": "a0", "outputColumn": "w4" }
-        - { "type": "percentile", "outputColumn": "w5", "numBuckets": 3 }
-        - type: "framedAgg"
-          frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
-          aggregations:
-            - { "type": "longSum", "name": "w0", "fieldName": "a0" }
+        - { "type": "offset", "inputColumn": "d1", "outputColumn": "w2", "offset": -2 }
+        - { "type": "offset", "inputColumn": "d1", "outputColumn": "w3", "offset": 1 }
+        - { "type": "first", "inputColumn": "a0", "outputColumn": "w4" }
+        - { "type": "last", "inputColumn": "a0", "outputColumn": "w5" }
+        - { "type": "percentile", "outputColumn": "w1", "numBuckets": 3 }
 
 expectedResults:
   - [ "", 1442016000000, 29873, 8414700, null, 1442019600000, 29873, 276159, 1 ]

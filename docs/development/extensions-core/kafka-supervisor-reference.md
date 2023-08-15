@@ -53,6 +53,7 @@ This topic contains configuration reference information for the Apache Kafka sup
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
 |`idleConfig`|Object|Defines how and when Kafka Supervisor can become idle. See [Idle Supervisor Configuration](#idle-supervisor-configuration) for more details.|no (default == null)|
+|`multiTopic`|Boolean|Set this to true if you want to ingest data from multiple Kafka topics using a single supervisor. See [Ingesting from multiple topics](#ingesting-from-multiple-topics) for more details.|no (default == false)|
 
 ## Task Autoscaler Properties
 
@@ -136,6 +137,12 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler an
     }
 }
 ```
+## Ingesting from multiple topics
+To ingest from multiple topics, you have to set `multiTopic` in the supervisor IO config to `true`. Multiple topics 
+can be passed as a regex pattern as the value for `topic` in the IO config. For example, to ingest data from clicks and 
+impressions, you will set `topic` to `clicks|impressions` in the IO config. If new topics are added to the cluster that
+match the regex, druid will automatically start ingesting from those new topics. If you enable multi-topic 
+ingestion for a datasource, downgrading will cause the ingestion to fail for that datasource. 
 
 ## More on consumerProperties
 

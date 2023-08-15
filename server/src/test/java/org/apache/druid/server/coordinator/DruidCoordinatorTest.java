@@ -733,15 +733,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupContainsCompactSegments()
   {
-    DruidCoordinatorConfig differentConfigUsedInCustomGroup = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
-        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillMaxSegments(10)
-        .withCompactionSkippedLockedIntervals(false)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new CompactSegments(differentConfigUsedInCustomGroup, null, null)));
+    CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
+        "group1",
+        Duration.standardSeconds(1),
+        ImmutableList.of(new CompactSegments(null, null))
+    );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -777,9 +773,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // CompactSegments returned by this method should be from the Custom Duty Group
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
     Assert.assertNotNull(duty);
-    Assert.assertNotEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
-    // We should get the CompactSegment from the custom duty group which was created with a different config than the config in DruidCoordinator
-    Assert.assertEquals(differentConfigUsedInCustomGroup.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
   }
 
   @Test(timeout = 3000)

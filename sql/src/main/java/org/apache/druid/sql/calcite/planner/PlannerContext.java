@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -248,10 +249,17 @@ public class PlannerContext
     return plannerToolbox;
   }
 
+  public ExprMacroTable getExprMacroTable()
+  {
+    return plannerToolbox.exprMacroTable();
+  }
+
   public ExpressionParser getExpressionParser()
   {
     return expressionParser;
   }
+
+
 
   /**
    * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.

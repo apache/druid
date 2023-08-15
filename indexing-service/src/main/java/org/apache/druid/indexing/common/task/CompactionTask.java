@@ -77,6 +77,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
@@ -108,6 +109,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -131,6 +133,8 @@ import java.util.stream.IntStream;
 public class CompactionTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
+  private static final Clock UTC_CLOCK = Clock.systemUTC();
+
 
   /**
    * The CompactionTask creates and runs multiple IndexTask instances. When the {@link AppenderatorsManager}
@@ -460,6 +464,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
+        UTC_CLOCK,
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
         ioConfig,
@@ -470,7 +475,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         metricsSpec,
         granularitySpec,
         toolbox.getCoordinatorClient(),
-        segmentCacheManagerFactory
+        segmentCacheManagerFactory,
+        getMetricBuilder()
     );
 
     for (ParallelIndexIngestionSpec ingestionSpec : ingestionSpecs) {
@@ -602,6 +608,7 @@ public class CompactionTask extends AbstractBatchIndexTask
    */
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSchema(
+      final Clock clock,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
       final CompactionIOConfig ioConfig,
@@ -612,7 +619,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
-      final SegmentCacheManagerFactory segmentCacheManagerFactory
+      final SegmentCacheManagerFactory segmentCacheManagerFactory,
+      final ServiceMetricEvent.Builder metricBuilder
   ) throws IOException
   {
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = retrieveRelevantTimelineHolders(
@@ -668,6 +676,9 @@ public class CompactionTask extends AbstractBatchIndexTask
         // creates new granularitySpec and set segmentGranularity
         Granularity segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
         final DataSchema dataSchema = createDataSchema(
+            clock,
+            toolbox.getEmitter(),
+            metricBuilder,
             segmentProvider.dataSource,
             interval,
             lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager(), toolbox.getIndexIO()),
@@ -699,6 +710,9 @@ public class CompactionTask extends AbstractBatchIndexTask
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
+          clock,
+          toolbox.getEmitter(),
+          metricBuilder,
           segmentProvider.dataSource,
           JodaUtils.umbrellaInterval(
               Iterables.transform(
@@ -796,6 +810,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   private static DataSchema createDataSchema(
+      Clock clock,
+      ServiceEmitter emitter,
+      ServiceMetricEvent.Builder metricBuilder,
       String dataSource,
       Interval totalInterval,
       Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments,
@@ -813,8 +830,15 @@ public class CompactionTask extends AbstractBatchIndexTask
         dimensionsSpec == null,
         metricsSpec == null
     );
-
-    existingSegmentAnalyzer.fetchAndProcessIfNeeded();
+    long start = clock.millis();
+    try {
+      existingSegmentAnalyzer.fetchAndProcessIfNeeded();
+    }
+    finally {
+      if (emitter != null) {
+        emitter.emit(metricBuilder.build("compact/segmentAnalyzer/fetchAndProcessMillis", clock.millis() - start));
+      }
+    }
 
     final Granularity queryGranularityToUse;
     if (granularitySpec.getQueryGranularity() == null) {

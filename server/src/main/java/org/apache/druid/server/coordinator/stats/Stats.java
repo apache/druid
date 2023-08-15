@@ -141,6 +141,12 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
     public static final CoordinatorStat DATASOURCES
         = CoordinatorStat.toDebugAndEmit("killedDatasources", "metadata/kill/datasource/count");
+    public static final CoordinatorStat AVAILABLE_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killAvailSlots", "killTask/availableSlot/count");
+    public static final CoordinatorStat MAX_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
+    public static final CoordinatorStat SUBMITTED_TASKS
+        = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
   }
 
   public static class Balancer
