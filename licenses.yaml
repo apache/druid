@@ -2237,7 +2237,7 @@ name: SIGAR
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.5.132
+version: 1.6.5.132-6
 libraries:
   - org.hyperic: sigar
 notices:
