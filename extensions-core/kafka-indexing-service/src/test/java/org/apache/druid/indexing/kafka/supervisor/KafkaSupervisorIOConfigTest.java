@@ -308,6 +308,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
+        false,
         null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
@@ -350,6 +351,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         mapper.convertValue(idleConfig, IdleConfig.class),
+        false,
         null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);

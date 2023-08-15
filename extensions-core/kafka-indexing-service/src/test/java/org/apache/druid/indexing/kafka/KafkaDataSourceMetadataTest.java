@@ -31,6 +31,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -202,12 +204,28 @@ public class KafkaDataSourceMetadataTest
 
   private static KafkaDataSourceMetadata startMetadata(Map<Integer, Long> offsets)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>("foo", offsets, ImmutableSet.of()));
+    Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
+        offsets,
+        k -> new KafkaTopicPartition(
+            false,
+            "foo",
+            k
+        )
+    );
+    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>("foo", newOffsets, ImmutableSet.of()));
   }
 
   private static KafkaDataSourceMetadata endMetadata(Map<Integer, Long> offsets)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", offsets));
+    Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
+        offsets,
+        k -> new KafkaTopicPartition(
+            false,
+            "foo",
+            k
+        )
+    );
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", newOffsets));
   }
 
   private static ObjectMapper createObjectMapper()
