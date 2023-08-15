@@ -38,6 +38,7 @@ import {
   findMap,
   isSimpleArray,
   oneOf,
+  oneOfKnown,
   parseCsvLine,
   typeIsKnown,
 } from '../../utils';
@@ -436,6 +437,7 @@ export interface IoConfig {
   stream?: string;
   endpoint?: string;
   useEarliestSequenceNumber?: boolean;
+  multiTopic?: boolean;
 }
 
 export function invalidIoConfig(ioConfig: IoConfig): boolean {
@@ -920,11 +922,43 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         {
+          name: 'multiTopic',
+          type: 'boolean',
+          defaultValue: false,
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
+          info: 'Set this to true if you want to ingest data from multiple Kafka topics using a single supervisor.',
+        },
+        {
           name: 'topic',
           type: 'string',
           required: true,
-          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-          placeholder: 'topic_name',
+          defined: inputSource =>
+            oneOfKnown(inputSource.type, KNOWN_TYPES, 'kafka') && inputSource.multiTopic !== true,
+          placeholder: 'your_kafka_topic',
+          info: 'The name of the Kafka topic to ingest from.',
+        },
+        {
+          name: 'topic',
+          label: 'Topics (regexp)',
+          type: 'string',
+          required: true,
+          defined: inputSource =>
+            oneOfKnown(inputSource.type, KNOWN_TYPES, 'kafka') && inputSource.multiTopic === true,
+          placeholder: 'topic1|topic2',
+          info: (
+            <>
+              <p>
+                A regular expression that represents all topics to be ingested from. For example, to
+                ingest data from <Code>clicks</Code> and <Code>impressions</Code>, you can set this
+                to <Code>clicks|impressions</Code>. To ingest from all topics starting with{' '}
+                <Code>metrics-</Code> set this to <Code>metrics-.*</Code>.
+              </p>
+              <p>
+                If new topics are added to the cluster that match the regex, Druid will
+                automatically start ingesting from those new topics.
+              </p>
+            </>
+          ),
         },
         {
           name: 'consumerProperties',
