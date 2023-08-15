@@ -370,7 +370,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "multi-string1 = 3",
+        "(multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || multi-string1 = 1))",
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || unnested-multi-string1 = 1))"
     );
   }
@@ -393,7 +393,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "multi-string1 = 3",
+        "(multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || multi-string1 = 1))",
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
     );
   }
@@ -458,7 +458,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "multi-string1 = 3",
+        "(multi-string1 = 3 && (newcol = 2 || multi-string1 = 2) && (newcol = 4 || multi-string1 = 8 || multi-string1 = 6))",
         "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2) && (newcol = 4 || multi-string1 = 8 || unnested-multi-string1 = 6))"
     );
   }
@@ -472,7 +472,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "multi-string1 = 3",
+        "(multi-string1 = 3 && multi-string1 = 2)",
         "(unnested-multi-string1 = 3 && multi-string1 = 2)"
     );
   }

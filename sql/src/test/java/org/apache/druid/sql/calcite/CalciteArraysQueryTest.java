@@ -3377,6 +3377,41 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestVirtualWithColumns1()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT strings, m1 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (strings) where (strings='a' and (m1<=10 or strings='b'))",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(Druids.newScanQueryBuilder()
+                               .dataSource(UnnestDataSource.create(
+                                   new TableDataSource(CalciteTests.DATASOURCE3),
+                                   expressionVirtualColumn(
+                                       "j0.unnest",
+                                       "\"dim3\"",
+                                       ColumnType.STRING
+                                   ),
+                                   equality("j0.unnest", "a", ColumnType.STRING)
+                               ))
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                               .legacy(false)
+                               .filters(or(
+                                   bound("m1", null, "10", false, false, null, StringComparators.NUMERIC),
+                                   equality("j0.unnest", "b", ColumnType.STRING)
+                               ))
+                               .context(QUERY_CONTEXT_UNNEST)
+                               .columns(ImmutableList.of("j0.unnest", "m1"))
+                               .build()),
+        ImmutableList.of(new Object[]{"a", 1.0f})
+    );
+  }
+  @Test
   public void testUnnestWithFilters()
   {
     // This tells the test to skip generating (vectorize = force) path

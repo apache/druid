@@ -512,7 +512,6 @@ public class UnnestStorageAdapter implements StorageAdapter
            */
           if (isTopLevelAndFilter && getUnnestInputIfDirectAccess(unnestColumn) != null) {
             filterSplitter.addPreFilter(newFilter != null ? newFilter : filter);
-            filterSplitter.addToPreFilterCount(1);
           }
           filterSplitter.addToOriginalFilterCount(1);
         }
