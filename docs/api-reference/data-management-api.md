@@ -34,7 +34,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 > Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk.
 
-## `unused` segment management
+## Segment management
 
 ### Update a group of segments as `unused`
 
@@ -124,7 +124,7 @@ Content-Length: 230
 ```
 </details>
 
-### Mark all datasource segments as `unused`
+### Update all datasource segments as `unused`
 
 Updates the state of all segments of a datasource to `unused`. This is a "soft delete" of the segments from Historicals.
 
@@ -244,8 +244,6 @@ Accept: application/json, text/plain
 }
 ```
 </details>
-
-## `used` segment management
 
 ### Update a group of segments as `used`
 
@@ -468,11 +466,11 @@ Accept: application/json, text/plain
 ```
 </details>
 
-## Kill task
+## Segment deletion
 
 ### Permanently delete segments with a kill task
 
-Runs a [Kill task](../ingestion/tasks.md) for a given interval and datasource. The interval value is an ISO-8601 string delimited by `_`. This endpoint permanently deletes all metadata about `unused` segments and removes them from deep storage.
+Sends a [Kill task](../ingestion/tasks.md) for a given interval and datasource. The interval value is an ISO-8601 string delimited by `_`. This endpoint permanently deletes all metadata about `unused` segments and removes them from deep storage.
 
 Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
 
