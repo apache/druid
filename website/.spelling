@@ -2309,3 +2309,6 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+markUnused
+markUsed
+segmentId
