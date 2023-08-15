@@ -384,7 +384,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
    
    ```python
    # Include `--skip-install` if you already have Docusaurus 2 installed in druid-website-src. 
-   # The script assumes you use `npm`. If you use`yarn`, include `--yarn`.
+   # The script assumes you use `npm`. If you use `yarn`, include `--yarn`.
 
    python do_all_things.py -v VERSION --source /my/path/to/apache/druid
    ```
