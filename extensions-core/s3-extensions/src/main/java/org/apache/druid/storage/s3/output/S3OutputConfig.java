@@ -48,7 +48,7 @@ public class S3OutputConfig
   private HumanReadableBytes chunkSize = new HumanReadableBytes("128MiB");
 
   @JsonProperty
-  private boolean testingTransferManager = true;
+  private boolean testingTransferManager = false;
 
 
   /**
