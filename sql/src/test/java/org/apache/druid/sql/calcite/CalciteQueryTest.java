@@ -13976,9 +13976,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{325323L, false}
         ) :
         ImmutableList.of(
-            new Object[]{null, true},
+            new Object[]{null, false},
             new Object[]{0L, false},
-            new Object[]{7L, true},
+            new Object[]{7L, false},
             new Object[]{325323L, false}
         )
     );
