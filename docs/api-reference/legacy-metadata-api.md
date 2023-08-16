@@ -151,6 +151,11 @@ Returns a list of all segments for a datasource with the full segment metadata a
 Returns full segment metadata for a specific segment as stored in the metadata store, if the segment is used. If the
 segment is unused, or is unknown, a 404 response is returned.
 
+`GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}?includeUnused`
+
+Returns full segment metadata for a specific segment as stored in the metadata store. If the is unknown, a 404 response 
+is returned.
+
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string IS0 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
