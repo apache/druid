@@ -43,9 +43,12 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public static final String KEY_PASSWORD_KEY = "ssl.key.password";
   public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
 
+  public static final boolean DEFAULT_IS_MULTI_TOPIC = false;
+
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
   private final KafkaConfigOverrides configOverrides;
+  private final boolean multiTopic;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -66,6 +69,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
+      @JsonProperty("multiTopic") Boolean multiTopic,
       @JsonProperty("stopTaskCount") Integer stopTaskCount
   )
   {
@@ -94,6 +98,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
+    this.multiTopic = multiTopic != null ? multiTopic : DEFAULT_IS_MULTI_TOPIC;
   }
 
   @JsonProperty
@@ -124,6 +129,12 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public KafkaConfigOverrides getConfigOverrides()
   {
     return configOverrides;
+  }
+
+  @JsonProperty
+  public boolean isMultiTopic()
+  {
+    return multiTopic;
   }
 
   @Override
