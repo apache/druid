@@ -293,6 +293,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
             topic,
+            null,
             INPUT_FORMAT,
             replicas,
             1,
@@ -309,7 +310,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             new IdleConfig(true, 1000L),
-            false,
             1
     );
 
@@ -4501,6 +4501,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -4517,7 +4518,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         idleConfig,
-        false,
         null
     );
 
@@ -4614,6 +4614,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -4630,7 +4631,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
         null
     );
 
@@ -4731,6 +4731,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -4747,7 +4748,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
         null
     );
 
