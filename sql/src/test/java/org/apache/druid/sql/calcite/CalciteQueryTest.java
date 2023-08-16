@@ -14276,9 +14276,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         PLANNER_CONFIG_DEFAULT
-            .withOverrides(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        "SELECT dim1,LATEST_BY(dim2, __time)  as negative FROM druid.foo "
-        + "GROUP BY 1", CalciteTests.REGULAR_USER_AUTH_RESULT,
+            .withOverrides(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true)),
+        "SELECT dim1,LATEST(dim2),LATEST_BY(dim2, __time) FROM druid.foo "
+            + "group by 1",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(GroupByQuery.builder().setDataSource(CalciteTests.DATASOURCE1)
                 .setInterval(querySegmentSpec(Filtration.eternity())).setGranularity(Granularities.ALL)
             .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING)))
