@@ -27,6 +27,7 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,6 +38,8 @@ import java.util.List;
 
 public class SegmentToMoveCalculatorTest
 {
+
+  private static final Duration DEFAULT_COORDINATOR_PERIOD = Duration.standardMinutes(1);
 
   /**
    * 100 days x 100 partitions = 10,000 segments.
@@ -75,6 +78,20 @@ public class SegmentToMoveCalculatorTest
     Assert.assertEquals(10_000, computeMaxSegmentsToMove(200_000, 1));
     Assert.assertEquals(4_000, computeMaxSegmentsToMove(500_000, 1));
     Assert.assertEquals(2_000, computeMaxSegmentsToMove(1_000_000, 1));
+  }
+
+  @Test
+  public void testMaxSegmentsToMoveIncreasesWithCoordinatorPeriod()
+  {
+    Assert.assertEquals(5_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(30_000)));
+    Assert.assertEquals(10_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(60_000)));
+    Assert.assertEquals(15_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(90_000)));
+    Assert.assertEquals(20_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(120_000)));
+
+    Assert.assertEquals(2_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(30_000)));
+    Assert.assertEquals(4_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(60_000)));
+    Assert.assertEquals(6_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(90_000)));
+    Assert.assertEquals(8_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(120_000)));
   }
 
   @Test
@@ -208,14 +225,24 @@ public class SegmentToMoveCalculatorTest
 
   private static int computeMaxSegmentsToMove(int totalSegments, int numThreads)
   {
-    return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(totalSegments, numThreads);
+    return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(
+        totalSegments,
+        numThreads,
+        DEFAULT_COORDINATOR_PERIOD
+    );
+  }
+
+  private static int computeMaxSegmentsToMoveInPeriod(int totalSegments, Duration coordinatorPeriod)
+  {
+    return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(totalSegments, 1, coordinatorPeriod);
   }
 
   private static int computeNumThreadsAndMaxToMove(int totalSegments)
   {
     return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(
         totalSegments,
-        SegmentLoadingConfig.computeNumBalancerThreads(totalSegments)
+        SegmentLoadingConfig.computeNumBalancerThreads(totalSegments),
+        DEFAULT_COORDINATOR_PERIOD
     );
   }
 

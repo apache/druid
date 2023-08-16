@@ -587,7 +587,7 @@ public class DruidCoordinator
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused),
-        new BalanceSegments(),
+        new BalanceSegments(config.getCoordinatorPeriod()),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
   }

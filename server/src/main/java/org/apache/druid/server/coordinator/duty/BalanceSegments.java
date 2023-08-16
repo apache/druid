@@ -19,16 +19,19 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.joda.time.Duration;
 
-import java.util.Collection;
+import java.util.Set;
 
 /**
  *
@@ -36,6 +39,13 @@ import java.util.Collection;
 public class BalanceSegments implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
+
+  private final Duration coordinatorPeriod;
+
+  public BalanceSegments(Duration coordinatorPeriod)
+  {
+    this.coordinatorPeriod = coordinatorPeriod;
+  }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -81,16 +91,15 @@ public class BalanceSegments implements CoordinatorDuty
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     if (dynamicConfig.isSmartSegmentLoading()) {
-      final int totalSegmentsInCluster = getTotalSegmentsOnHistoricals(params.getDruidCluster());
-      final int numHistoricals = getNumHistoricals(params.getDruidCluster());
+      final Pair<Integer, Integer> numHistoricalsAndSegments = getNumHistoricalsAndSegments(params.getDruidCluster());
+      final int totalSegmentsInCluster = numHistoricalsAndSegments.rhs;
+
       final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
-      final int maxSegmentsToMove = SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(
-          totalSegmentsInCluster,
-          numBalancerThreads
-      );
+      final int maxSegmentsToMove = SegmentToMoveCalculator
+          .computeMaxSegmentsToMovePerTier(totalSegmentsInCluster, numBalancerThreads, coordinatorPeriod);
       log.info(
           "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
-          maxSegmentsToMove, totalSegmentsInCluster, numHistoricals
+          maxSegmentsToMove, totalSegmentsInCluster, numHistoricalsAndSegments.lhs
       );
 
       return maxSegmentsToMove;
@@ -100,26 +109,27 @@ public class BalanceSegments implements CoordinatorDuty
   }
 
   /**
-   * Total number of all segments in the cluster that would participate in cost
-   * computations. This includes all replicas of all loaded, loading, dropping
-   * and moving segments across all historicals (active and decommissioning).
+   * Calculates the total number of historicals (active and decommissioning) and
+   * the total number of segments on these historicals that would participate in
+   * cost computations. This includes all replicas of all loaded, loading, dropping
+   * and moving segments.
    * <p>
    * This is calculated here to ensure that all assignments done by the preceding
    * {@link RunRules} duty are accounted for.
    */
-  private int getTotalSegmentsOnHistoricals(DruidCluster cluster)
+  private Pair<Integer, Integer> getNumHistoricalsAndSegments(DruidCluster cluster)
   {
-    return cluster.getHistoricals().values().stream()
-                  .flatMap(Collection::stream)
-                  .mapToInt(server -> server.getServer().getNumSegments() + server.getNumQueuedSegments())
-                  .sum();
-  }
+    int numHistoricals = 0;
+    int numSegments = 0;
 
-  private int getNumHistoricals(DruidCluster cluster)
-  {
-    return cluster.getHistoricals().values().stream()
-                  .mapToInt(Collection::size)
-                  .sum();
+    for (Set<ServerHolder> historicals : cluster.getHistoricals().values()) {
+      for (ServerHolder historical : historicals) {
+        ++numHistoricals;
+        numSegments += historical.getServer().getNumSegments() + historical.getNumQueuedSegments();
+      }
+    }
+
+    return Pair.of(numHistoricals, numSegments);
   }
 
 }

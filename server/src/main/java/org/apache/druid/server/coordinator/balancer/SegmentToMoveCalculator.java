@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.SegmentCountsPerInterval;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.joda.time.Duration;
 
 import java.util.Comparator;
 import java.util.List;
@@ -104,20 +105,18 @@ public class SegmentToMoveCalculator
 
   /**
    * Calculates the maximum number of segments that can be picked for moving in
-   * the cluster in a single coordinator run, assuming that the run must finish
-   * within 40s. A typical coordinator run period is 1 minute and there should
-   * be a buffer of 20s for other coordinator duties.
+   * the cluster in a single coordinator run.
    * <p>
    * This value must be calculated at the cluster level and then applied
    * to every tier so that the total computation time is estimated correctly.
    * <p>
-   * Each balancer thread can perform 2 billion computations in 40s (see #14584).
-   * Therefore,
+   * Each balancer thread can perform 1 billion computations in 20s (see #14584).
+   * Therefore, keeping a buffer of 10s, in every 30s:
    * <pre>
    * numComputations = maxSegmentsToMove * totalSegments
    *
    * maxSegmentsToMove = numComputations / totalSegments
-   *                   = (nThreads * 2B) / totalSegments
+   *                   = (nThreads * 1B) / totalSegments
    * </pre>
    *
    * @param totalSegments Total number of all replicas of all segments loaded or
@@ -128,7 +127,8 @@ public class SegmentToMoveCalculator
    */
   public static int computeMaxSegmentsToMovePerTier(
       int totalSegments,
-      int numBalancerThreads
+      int numBalancerThreads,
+      Duration coordinatorPeriod
   )
   {
     Preconditions.checkArgument(
@@ -144,8 +144,10 @@ public class SegmentToMoveCalculator
     final int upperBound = (totalSegments >> 9) * 100;
     final int lowerBound = MIN_SEGMENTS_TO_MOVE;
 
-    // Each thread can do ~2B computations in one cycle = 2M * 1k = 2^21 * 1k
-    int maxComputationsInThousands = numBalancerThreads << 21;
+    int num30sPeriods = (int) (coordinatorPeriod.getMillis() / 30_000);
+
+    // Each thread can do ~1B computations in 30s = 1M * 1k = 2^20 * 1k
+    int maxComputationsInThousands = (numBalancerThreads * num30sPeriods) << 20;
     int maxSegmentsToMove = (maxComputationsInThousands / totalSegments) * 1000;
 
     if (upperBound < lowerBound) {
@@ -175,18 +177,20 @@ public class SegmentToMoveCalculator
     );
   }
 
-  private static long getTotalUsageBytes(List<ServerHolder> servers)
+  private static double getAverageSegmentSize(List<ServerHolder> servers)
   {
-    return servers.stream()
-                  .mapToLong(server -> server.getProjectedSegments().getTotalSegmentBytes())
-                  .sum();
-  }
+    int totalSegmentCount = 0;
+    long totalUsageBytes = 0;
+    for (ServerHolder server : servers) {
+      totalSegmentCount += server.getProjectedSegments().getTotalSegmentCount();
+      totalUsageBytes += server.getProjectedSegments().getTotalSegmentBytes();
+    }
 
-  private static int getTotalSegmentCount(List<ServerHolder> servers)
-  {
-    return servers.stream()
-                  .mapToInt(server -> server.getProjectedSegments().getTotalSegmentCount())
-                  .sum();
+    if (totalSegmentCount <= 0 || totalUsageBytes <= 0) {
+      return 0;
+    } else {
+      return (1.0 * totalUsageBytes) / totalSegmentCount;
+    }
   }
 
   /**
@@ -280,13 +284,7 @@ public class SegmentToMoveCalculator
       minUsagePercent = Math.min(diskUsage, minUsagePercent);
     }
 
-    final int totalSegments = getTotalSegmentCount(servers);
-    final long totalUsageBytes = getTotalUsageBytes(servers);
-    if (totalSegments <= 0 || totalUsageBytes <= 0) {
-      return 0;
-    }
-
-    final double averageSegmentSize = (1.0 * totalUsageBytes) / totalSegments;
+    final double averageSegmentSize = getAverageSegmentSize(servers);
     final long differenceInUsageBytes = maxUsageBytes - minUsageBytes;
     final int numSegmentsToMove = averageSegmentSize <= 0
                                   ? 0 : (int) (differenceInUsageBytes / averageSegmentSize) / 2;
