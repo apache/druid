@@ -20,16 +20,18 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.guice.DruidProcessingModule;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
-import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -42,7 +44,7 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 
 public class ValidateSegmentsTest extends InitializedNullHandlingTest
 {
@@ -102,9 +104,14 @@ public class ValidateSegmentsTest extends InitializedNullHandlingTest
   public void testGetModules()
   {
     ValidateSegments validator = new ValidateSegments();
-    List<?> modules = validator.getModules();
-    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof DruidProcessingModule));
-    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof QueryableModule));
-    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof QueryRunnerFactoryModule));
+    Injector injector = ServerInjectorBuilder.makeServerInjector(
+        new StartupInjectorBuilder().forServer().build(),
+        Collections.emptySet(),
+        validator.getModules()
+    );
+    Assert.assertNotNull(injector.getInstance(ColumnConfig.class));
+    Assert.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
+    Assert.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
+    Assert.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
   }
 }

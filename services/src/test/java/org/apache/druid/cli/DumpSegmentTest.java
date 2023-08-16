@@ -25,15 +25,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.NestedDataModule;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
-import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,6 +51,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
@@ -222,10 +223,15 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   public void testGetModules()
   {
     DumpSegment dumpSegment = new DumpSegment();
-    List<?> modules = dumpSegment.getModules();
-    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof DruidProcessingModule));
-    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof QueryableModule));
-    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof QueryRunnerFactoryModule));
+    Injector injector = ServerInjectorBuilder.makeServerInjector(
+        new StartupInjectorBuilder().forServer().build(),
+        Collections.emptySet(),
+        dumpSegment.getModules()
+    );
+    Assert.assertNotNull(injector.getInstance(ColumnConfig.class));
+    Assert.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
+    Assert.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
+    Assert.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
   }
 
 
