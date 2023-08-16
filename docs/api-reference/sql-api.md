@@ -23,170 +23,320 @@ sidebar_label: Druid SQL
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
-> This document describes the SQL language.
+Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md). This topic describes the SQL language.
 
-You can submit and cancel [Druid SQL](../querying/sql.md) queries using the Druid SQL API.
-The Druid SQL API is available at `https://ROUTER:8888/druid/v2/sql`, where `ROUTER` is the IP address of the Druid Router.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments. 
 
-## Submit a query
+## Query from Historicals
 
-To use the SQL API to make Druid SQL queries, send your query to the Router using the POST method:
-```
-POST https://ROUTER:8888/druid/v2/sql/
-```  
+### Submit a query
 
-Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
-```json
-{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
-```
+Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
-### Request body
-      
-|Property|Description|Default|
-|--------|----|-----------|
-|`query`|SQL query string.| none (required)|
-|`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
-|`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
-|`typesHeader`|Whether or not to include type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
-|`sqlTypesHeader`|Whether or not to include SQL type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
-|`context`|JSON object containing [SQL query context parameters](../querying/sql-query-context.md).|`{}` (empty)|
-|`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](../querying/sql-data-types.md) for a list of supported SQL types.|`[]` (empty)|
+Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query) endpoint. 
 
-You can use _curl_ to send SQL queries from the command-line:
+#### URL
 
-```bash
-$ cat query.json
-{"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
+<code class="postAPI">POST</code> <code>/druid/v2/sql</code>
 
-$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql/ -d @query.json
-[{"TheCount":24433}]
-```
+#### Request body
 
-There are a variety of [SQL query context parameters](../querying/sql-query-context.md) you can provide by adding a "context" map,
-like:
+The request body takes the following properties:
 
-```json
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "context" : {
-    "sqlTimeZone" : "America/Los_Angeles"
-  }
-}
-```
+* `query`: SQL query string.
+* `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
+  * `object`: Returns a JSON array of JSON objects with the HTTP header `Content-Type: application/json`.
+  * `array`: Returns a JSON array of JSON arrays with the HTTP header `Content-Type: application/json`.
+  * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`.
+  * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`. 
+  * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP header `Content-Type: text/csv`. 
+* `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
+* `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed. 
+* `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
+* `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
+* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
 
-Parameterized SQL queries are also supported:
+    For example:
+    ```
+    "parameters": [
+        {
+            "type": "VARCHAR",
+            "value": "bar"
+        }
+    ]
+    ```
 
-```json
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = ? AND __time > ?",
-  "parameters": [
-    { "type": "VARCHAR", "value": "bar"},
-    { "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
-  ]
-}
-```
+#### Responses
 
-Metadata is available over HTTP POST by querying [metadata tables](../querying/sql-metadata-tables.md).
+<!--DOCUSAURUS_CODE_TABS-->
 
-### Responses
+<!--200 SUCCESS-->
 
-#### Result formats
+*Successfully submitted query* 
 
-Druid SQL's HTTP POST API supports a variety of result formats. You can specify these by adding a `resultFormat` parameter, like:
+<!--400 BAD REQUEST-->
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
 
 ```json
 {
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "resultFormat" : "array"
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
 }
 ```
+<!--500 INTERNAL SERVER ERROR-->
 
-To request a header with information about column names, set `header` to true in your request.
-When you set `header` to true, you can optionally include `typesHeader` and `sqlTypesHeader` as well, which gives
-you information about [Druid runtime and SQL types](../querying/sql-data-types.md) respectively. You can request all these headers
-with a request like:
+*Request not sent due to unexpected conditions. Returns a JSON object detailing the error with the following format:* 
 
 ```json
 {
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "resultFormat" : "array",
-  "header" : true,
-  "typesHeader" : true,
-  "sqlTypesHeader" : true
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
 }
 ```
 
-The following table shows supported result formats:
+<!--END_DOCUSAURUS_CODE_TABS-->
 
-|Format|Description|Header description|Content-Type|
-|------|-----------|------------------|------------|
-|`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|If `header` is true, the first row is an object where the fields are column names. Each field's value is either null (if `typesHeader` and `sqlTypesHeader` are false) or an object that contains the Druid type as `type` (if `typesHeader` is true) and the SQL type as `sqlType` (if `sqlTypesHeader` is true).|application/json|
-|`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|If `header` is true, the first row is an array of column names. If `typesHeader` is true, the next row is an array of Druid types. If `sqlTypesHeader` is true, the next row is an array of SQL types.|application/json|
-|`objectLines`|Like `object`, but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `object`.|text/plain|
-|`arrayLines`|Like `array`, but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the rows are separated by newlines.|text/plain|
-|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the lists are in CSV format.|text/csv|
+Older versions of Druid that support  the `typesHeader` and `sqlTypesHeader` parameters return the HTTP header `X-Druid-SQL-Header-Included: yes` when you set `header` to `true`. Druid returns the HTTP response header for compatibility, regardless of whether `typesHeader` and `sqlTypesHeader` are set.
 
-If `typesHeader` is set to true, [Druid type](../querying/sql-data-types.md) information is included in the response. Complex types,
-like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field,
-or as `COMPLEX` if the particular type name is unknown or mixed. If `sqlTypesHeader` is set to true,
-[SQL type](../querying/sql-data-types.md) information is included in the response. It is possible to set both `typesHeader` and
-`sqlTypesHeader` at once. Both parameters require that `header` is also set.
+---
 
-To aid in building clients that are compatible with older Druid versions, Druid returns the HTTP header
-`X-Druid-SQL-Header-Included: yes` if `header` was set to true and if the version of Druid the client is connected to
-understands the `typesHeader` and `sqlTypesHeader` parameters. This HTTP response header is present irrespective of
-whether `typesHeader` or `sqlTypesHeader` are set or not.
 
-Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
-This query id will be assigned the value of `sqlQueryId` from the [query context parameters](../querying/sql-query-context.md)
-if specified, else Druid will generate a SQL query id for you.
+#### Sample request
 
-#### Errors
+The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` context parameter. The optional properties `header`, `typesHeader`, and `sqlTypesHeader` are set to `true` to include type information to the response.
 
-Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
-same format as [native Druid query errors](../querying/querying.md#query-errors). If an error occurs while the response body is
-being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
-simply end midstream and an error will be logged by the Druid server that was handling your request.
+<!--DOCUSAURUS_CODE_TABS-->
 
-As a caller, it is important that you properly handle response truncation. This is easy for the `object` and `array`
-formats, since truncated responses will be invalid JSON. For the line-oriented formats, you should check the
-trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
-through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
-delivered due to an error.
+<!--cURL-->
 
-## Cancel a query
-
-You can use the HTTP DELETE method to cancel a SQL query on either the Router or the Broker. When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
-
-Druid SQL's HTTP DELETE method uses the following syntax:
-```
-DELETE https://ROUTER:8888/druid/v2/sql/{sqlQueryId}
-```
-
-The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
-
-For example if you issue the following query:
-```bash
-curl --request POST 'https://ROUTER:8888/druid/v2/sql' \
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 --header 'Content-Type: application/json' \
---data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
-"context" : {"sqlQueryId" : "myQuery01"}}'
+--data '{
+    "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
+    "context" : {"sqlQueryId" : "request01"},
+    "header" : true,
+    "typesHeader" : true,
+    "sqlTypesHeader" : true
+}'
 ```
-You can cancel the query using the query id `myQuery01` as follows:
-```bash
-curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/v2/sql HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Content-Length: 192
+
+{
+    "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+    "context" : {"sqlQueryId" : "request01"},
+    "header" : true,
+    "typesHeader" : true,
+    "sqlTypesHeader" : true
+}
 ```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+```json
+[
+    {
+        "__time": {
+            "type": "LONG",
+            "sqlType": "TIMESTAMP"
+        },
+        "channel": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "cityName": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "comment": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "countryIsoCode": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "countryName": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "isAnonymous": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isMinor": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isNew": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isRobot": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isUnpatrolled": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "metroCode": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "namespace": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "page": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "regionIsoCode": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "regionName": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "user": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "delta": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "added": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "deleted": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        }
+    },
+    {
+        "__time": "2015-09-12T00:47:53.259Z",
+        "channel": "#ja.wikipedia",
+        "cityName": "",
+        "comment": "/* 対戦通算成績と得失点 */",
+        "countryIsoCode": "",
+        "countryName": "",
+        "isAnonymous": 0,
+        "isMinor": 1,
+        "isNew": 0,
+        "isRobot": 0,
+        "isUnpatrolled": 0,
+        "metroCode": 0,
+        "namespace": "Main",
+        "page": "アルビレックス新潟の年度別成績一覧",
+        "regionIsoCode": "",
+        "regionName": "",
+        "user": "BlueMoon2662",
+        "delta": 14,
+        "added": 14,
+        "deleted": 0
+    }
+]
+```
+</details>
+
+### Cancel a query
+
+Cancels a query on the Router or the Broker with the associated `sqlQueryId`. The `sqlQueryId` can be manually set when the query is submitted in the query context parameter, or if not set, Druid will generate one and return it in the response header when the query is successfully submitted. Note that Druid does not enforce a unique `sqlQueryId` in the query context. If you've set the same `sqlQueryId` for multiple queries, Druid cancels all requests with that query ID.
+
+When you cancel a query, Druid handles the cancellation in a best-effort manner. Druid immediately marks the query as canceled and aborts the query execution as soon as possible. However, the query may continue running for a short time after you make the cancellation request.
 
 Cancellation requests require READ permission on all resources used in the SQL query. 
 
-Druid returns an HTTP 202 response for successful deletion requests.
+#### URL
 
-Druid returns an HTTP 404 response in the following cases:
-  - `sqlQueryId` is incorrect.
-  - The query completes before your cancellation request is processed.
-  
-Druid returns an HTTP 403 response for authorization failure.
+<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/:sqlQueryId</code>
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--202 SUCCESS-->
+
+*Successfully deleted query*
+
+<!--403 FORBIDDEN-->
+
+*Authorization failure* 
+
+<!--404 NOT FOUND-->
+
+*Invalid `sqlQueryId` or query was completed before cancellation request* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following example cancels a request with the set query ID `request01`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/request01"
+```
+
+<!--HTTP-->
+
+```HTTP
+DELETE /druid/v2/sql/request01 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+A successful response results in an `HTTP 202` message code and an empty response body.
+
+### Query output format
+
+The following table shows examples of how Druid returns the column names and data types based on the result format and the type request. The examples includes the first row of results, where the value of `user` is `BlueMoon2662`.
+
+```
+| Format | typesHeader | sqlTypesHeader | Example Output                                                                             |
+|--------|-------------|----------------|--------------------------------------------------------------------------------------------|
+| object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "BlueMoon2662" } ]                        |
+| object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ] |
+| object | false       | true           | [ { "user" : { "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ]                    |
+| object | false       | false          | [ { "user" : null }, { "user" : "BlueMoon2662" } ]                                         |
+| array  | true        | false          | [ [ "user" ], [ "STRING" ], [ "BlueMoon2662" ] ]                                           |
+| array  | true        | true           | [ [ "user" ], [ "STRING" ], [ "VARCHAR" ], [ "BlueMoon2662" ] ]                            |
+| array  | false       | true           | [ [ "user" ], [ "VARCHAR" ], [ "BlueMoon2662" ] ]                                          |
+| array  | false       | false          | [ [ "user" ], [ "BlueMoon2662" ] ]                                                         |
+| csv    | true        | false          | user STRING BlueMoon2662                                                                   |
+| csv    | true        | true           | user STRING VARCHAR BlueMoon2662                                                           |
+| csv    | false       | true           | user VARCHAR BlueMoon2662                                                                  |
+| csv    | false       | false          | user BlueMoon2662                                                                          |
+```
 
 ## Query from deep storage
 
@@ -633,8 +783,8 @@ When getting query results, keep the following in mind:
 <code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
 
 #### Query parameters
-* `page`
-    * Int (optional)
+* `page` (optional)
+    * Type: Int
     * Refine paginated results
 
 #### Responses
@@ -997,4 +1147,4 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 #### Sample response
 
-A successful request returns a `202 ACCEPTED` response and an empty response.
+A successful request returns an HTTP `202 ACCEPTED` message code and an empty response body.

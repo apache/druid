@@ -169,7 +169,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     Map<KafkaTopicPartition, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new KafkaSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
-        ioConfig.getTopic(),
+        ioConfig.getStream(),
         numPartitions,
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
@@ -204,8 +204,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         baseSequenceName,
         null,
         null,
-        new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getTopic(), startPartitions, Collections.emptySet()),
-        new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getTopic(), endPartitions),
+        new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getStream(), startPartitions, Collections.emptySet()),
+        new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getStream(), endPartitions),
         kafkaIoConfig.getConsumerProperties(),
         kafkaIoConfig.getPollTimeout(),
         true,
