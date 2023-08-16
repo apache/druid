@@ -14271,14 +14271,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestBy() {
-    cannotVectorize();
-
+  public void testLatestByWithoutMaxBytes()
+  {
     testQuery(
-        PLANNER_CONFIG_DEFAULT
-            .withOverrides(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true)),
         "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time) FROM druid.foo where dim2='abc' group by 1",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(CalciteTests.DATASOURCE1)
@@ -14296,9 +14292,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        // returning 1 is incorrect result; but with nulls as default that should be expected
         ImmutableList.of(
-            new Object[] { "abc", useDefault ? "" : null, "def" }
+            new Object[] {"abc", useDefault ? "" : null, "def"}
         ));
   }
 }
