@@ -24,7 +24,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
   @Override
-  public CostBalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
   {
     return new CostBalancerStrategy(exec);
   }

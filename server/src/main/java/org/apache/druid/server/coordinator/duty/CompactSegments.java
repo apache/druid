@@ -48,7 +48,6 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -85,7 +84,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       status -> null != status && COMPACTION_TASK_TYPE.equals(status.getType());
 
   private final CompactionSegmentSearchPolicy policy;
-  private final boolean skipLockedIntervals;
   private final OverlordClient overlordClient;
 
   // This variable is updated by the Coordinator thread executing duties and
@@ -95,23 +93,13 @@ public class CompactSegments implements CoordinatorCustomDuty
   @Inject
   @JsonCreator
   public CompactSegments(
-      @JacksonInject DruidCoordinatorConfig config,
       @JacksonInject CompactionSegmentSearchPolicy policy,
       @JacksonInject OverlordClient overlordClient
   )
   {
     this.policy = policy;
     this.overlordClient = overlordClient;
-    this.skipLockedIntervals = config.getCompactionSkipLockedIntervals();
     resetCompactionSnapshot();
-
-    LOG.info("Scheduling compaction with skipLockedIntervals [%s]", skipLockedIntervals);
-  }
-
-  @VisibleForTesting
-  public boolean isSkipLockedIntervals()
-  {
-    return skipLockedIntervals;
   }
 
   @VisibleForTesting
@@ -272,11 +260,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    if (!skipLockedIntervals) {
-      LOG.info("Not skipping any locked interval for Compaction");
-      return new HashMap<>();
-    }
-
     final Map<String, Integer> minTaskPriority = compactionConfigs
         .stream()
         .collect(
