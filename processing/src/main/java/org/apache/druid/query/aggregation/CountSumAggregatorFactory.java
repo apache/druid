@@ -53,6 +53,7 @@ public class CountSumAggregatorFactory extends LongSumAggregatorFactory
     this(name, fieldName, null, ExprMacroTable.nil());
   }
 
+  @Override
   protected boolean canHandleNulls()
   {
     return true;
