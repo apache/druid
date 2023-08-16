@@ -954,7 +954,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
   private void setupPeons(Map<String, LoadQueuePeon> peonMap)
   {
-    EasyMock.expect(loadQueueTaskMaster.giveMePeon(EasyMock.anyObject())).andAnswer(
+    loadQueueTaskMaster.startPeonsForNewServers(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    loadQueueTaskMaster.stopPeonsForDisappearedServers(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    loadQueueTaskMaster.stopAndRemoveAllPeons();
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(loadQueueTaskMaster.getAllPeons()).andReturn(peonMap).anyTimes();
+
+    EasyMock.expect(loadQueueTaskMaster.getPeonForServer(EasyMock.anyObject())).andAnswer(
         () -> peonMap.get(((ImmutableDruidServer) EasyMock.getCurrentArgument(0)).getName())
     ).anyTimes();
   }

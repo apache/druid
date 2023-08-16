@@ -22,6 +22,9 @@ package org.apache.druid.server.coordinator.balancer;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.logger.Logger;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {
@@ -30,7 +33,45 @@ import com.google.common.util.concurrent.ListeningExecutorService;
     @JsonSubTypes.Type(name = "diskNormalized", value = DiskNormalizedCostBalancerStrategyFactory.class),
     @JsonSubTypes.Type(name = "random", value = RandomBalancerStrategyFactory.class)
 })
-public interface BalancerStrategyFactory
+public abstract class BalancerStrategyFactory
 {
-  BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
+  private static final Logger log = new Logger(BalancerStrategyFactory.class);
+
+  public abstract BalancerStrategy createBalancerStrategy(int numBalancerThreads);
+
+  private int cachedBalancerThreadNumber;
+  private ListeningExecutorService balancerExec;
+
+  public void stopExecutor()
+  {
+    if (balancerExec != null) {
+      balancerExec.shutdownNow();
+      balancerExec = null;
+    }
+  }
+
+  protected ListeningExecutorService getOrCreateBalancerExecutor(int currentNumber)
+  {
+    if (balancerExec == null) {
+      balancerExec = createNewBalancerExecutor(currentNumber);
+    } else if (cachedBalancerThreadNumber != currentNumber) {
+      log.info(
+          "balancerComputeThreads has changed from [%d] to [%d], recreating the thread pool.",
+          cachedBalancerThreadNumber,
+          currentNumber
+      );
+      balancerExec.shutdownNow();
+      balancerExec = createNewBalancerExecutor(currentNumber);
+    }
+
+    return balancerExec;
+  }
+
+  private ListeningExecutorService createNewBalancerExecutor(int numThreads)
+  {
+    cachedBalancerThreadNumber = numThreads;
+    return MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")
+    );
+  }
 }
