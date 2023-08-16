@@ -64,7 +64,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
-import org.apache.druid.server.coordinator.duty.PrepareClusterForHistoricalManagement;
+import org.apache.druid.server.coordinator.duty.PrepareBalancerAndLoadQueues;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
@@ -511,7 +511,7 @@ public class DruidCoordinator
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     return ImmutableList.of(
-        new PrepareClusterForHistoricalManagement(
+        new PrepareBalancerAndLoadQueues(
             taskMaster,
             loadQueueManager,
             balancerStrategyFactory,

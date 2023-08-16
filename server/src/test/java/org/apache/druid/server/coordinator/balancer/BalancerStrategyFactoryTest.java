@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,6 +39,27 @@ public class BalancerStrategyFactoryTest
 
     Assert.assertTrue(strategy instanceof CostBalancerStrategy);
     Assert.assertFalse(strategy instanceof CachingCostBalancerStrategy);
+
+    factory.stopExecutor();
+  }
+
+  @Test
+  public void testBalancerFactoryCreatesNewExecutorIfNumThreadsChanges()
+  {
+    BalancerStrategyFactory factory = new CostBalancerStrategyFactory();
+    ListeningExecutorService exec1 = factory.getOrCreateBalancerExecutor(1);
+    ListeningExecutorService exec2 = factory.getOrCreateBalancerExecutor(2);
+
+    Assert.assertTrue(exec1.isShutdown());
+    Assert.assertNotSame(exec1, exec2);
+
+    ListeningExecutorService exec3 = factory.getOrCreateBalancerExecutor(3);
+    Assert.assertTrue(exec2.isShutdown());
+    Assert.assertNotSame(exec2, exec3);
+
+    ListeningExecutorService exec4 = factory.getOrCreateBalancerExecutor(3);
+    Assert.assertFalse(exec3.isShutdown());
+    Assert.assertSame(exec3, exec4);
 
     factory.stopExecutor();
   }

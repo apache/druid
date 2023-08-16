@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 /**
  * This duty does the following:
  * <ul>
- *   <li>Prepares an immutable {@link DruidCluster} consisting of {@link ServerHolder}s
+ *   <li>Creates an immutable {@link DruidCluster} consisting of {@link ServerHolder}s
  *   which represent the current state of the servers in the cluster.</li>
  *   <li>Starts and stops load peons for new and disappeared servers respectively.</li>
  *   <li>Cancels in-progress loads on all decommissioning servers. This is done
@@ -55,16 +55,16 @@ import java.util.stream.Collectors;
  *   <li>Initializes the {@link BalancerStrategy} for the run.</li>
  * </ul>
  */
-public class PrepareClusterForHistoricalManagement implements CoordinatorDuty
+public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(PrepareClusterForHistoricalManagement.class);
+  private static final Logger log = new Logger(PrepareBalancerAndLoadQueues.class);
 
   private final LoadQueueTaskMaster taskMaster;
   private final SegmentLoadQueueManager loadQueueManager;
   private final ServerInventoryView serverInventoryView;
   private final BalancerStrategyFactory balancerStrategyFactory;
 
-  public PrepareClusterForHistoricalManagement(
+  public PrepareBalancerAndLoadQueues(
       LoadQueueTaskMaster taskMaster,
       SegmentLoadQueueManager loadQueueManager,
       BalancerStrategyFactory balancerStrategyFactory,
