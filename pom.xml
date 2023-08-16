@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>21</version>
+        <version>30</version>
     </parent>
 
     <groupId>org.apache.druid</groupId>
