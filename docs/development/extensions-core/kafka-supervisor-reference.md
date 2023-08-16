@@ -37,7 +37,8 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|`topic`|String|The Kafka topic to read from. Must be a specific topic. Topic patterns are not supported.|yes|
+|`topic`|String|The Kafka topic to read from. Must be a specific topic. Use this setting when you want to ingest from a single kafka topic.|yes|
+|`topicPattern`|String|A regex pattern that can used to select multiple kafka topics to ingest data from. Either this or `topic` can be used in a spec. See [Ingesting from multiple topics](#ingesting-from-multiple-topics) for more details.|yes|
 |`inputFormat`|Object|`inputFormat` to define input data parsing. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to pass to the Kafka consumer. See [More on consumer properties](#more-on-consumerproperties).|yes|
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
@@ -53,7 +54,6 @@ This topic contains configuration reference information for the Apache Kafka sup
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kafka ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
 |`idleConfig`|Object|Defines how and when Kafka Supervisor can become idle. See [Idle Supervisor Configuration](#idle-supervisor-configuration) for more details.|no (default == null)|
-|`multiTopic`|Boolean|Set this to true if you want to ingest data from multiple Kafka topics using a single supervisor. See [Ingesting from multiple topics](#ingesting-from-multiple-topics) for more details.|no (default == false)|
 
 ## Task Autoscaler Properties
 
@@ -138,11 +138,20 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler an
 }
 ```
 ## Ingesting from multiple topics
-To ingest from multiple topics, you have to set `multiTopic` in the supervisor IO config to `true`. Multiple topics 
-can be passed as a regex pattern as the value for `topic` in the IO config. For example, to ingest data from clicks and 
-impressions, you will set `topic` to `clicks|impressions` in the IO config. If new topics are added to the cluster that
-match the regex, druid will automatically start ingesting from those new topics. If you enable multi-topic 
-ingestion for a datasource, downgrading will cause the ingestion to fail for that datasource. 
+
+To ingest data from multiple topics, you have to set `topicPattern` in the supervisor IO config and not set `topic`.
+Multiple topics can be passed as a regex pattern as the value for `topicPattern` in the IO config. For example, to
+ingest data from clicks and impressions, you will set `topicPattern` to `clicks|impressions` in the IO config.
+Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want to ingest from all the topics that
+start with `metrics-`. If new topics are added to the cluster that match the regex, Druid will automatically start
+ingesting from those new topics. If you enable multi-topic ingestion for a datasource, downgrading to a version
+lesser than 28.0.0 will cause the ingestion for that datasource to fail.
+
+When ingesting data from multiple topics, the partitions are assigned based on the hashcode of topic and the id of the 
+partition within that topic. The partition assignment might not be uniform across all the tasks. It's also assumed 
+that partitions across individual topics have similar load. It is recommended that you have a higher number of 
+partitions for a high load topic and a lower number of partitions for a low load topic. Assuming that you want to 
+ingest from both high and low load topic in the same supervisor. 
 
 ## More on consumerProperties
 

@@ -328,6 +328,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -2310,3 +2311,5 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+loadstatus
+sqlQueryId
