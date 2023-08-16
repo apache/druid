@@ -61,7 +61,7 @@ import java.util.Set;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = "kill", value = KillUnusedSegmentsTask.class),
+    @Type(name = KillUnusedSegmentsTask.TYPE, value = KillUnusedSegmentsTask.class),
     @Type(name = "move", value = MoveTask.class),
     @Type(name = "archive", value = ArchiveTask.class),
     @Type(name = "restore", value = RestoreTask.class),

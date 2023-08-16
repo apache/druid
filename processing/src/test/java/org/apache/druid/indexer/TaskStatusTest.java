@@ -59,7 +59,7 @@ public class TaskStatusTest
     );
     Assert.assertEquals(statusNoLocation, mapper.readValue(jsonNoLocation, TaskStatus.class));
 
-    TaskStatus success = TaskStatus.success("forkTaskID", new TaskLocation("localhost", 0, 1));
+    TaskStatus success = TaskStatus.success("forkTaskID", TaskLocation.create("localhost", 0, 1));
     Assert.assertEquals(success.getLocation().getHost(), "localhost");
     Assert.assertEquals(success.getLocation().getPort(), 0);
     Assert.assertEquals(success.getLocation().getTlsPort(), 1);
