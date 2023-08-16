@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "cost", value = CostBalancerStrategyFactory.class),
-    @JsonSubTypes.Type(name = "cachingCost", value = CachingCostBalancerStrategyFactory.class),
+    @JsonSubTypes.Type(name = "cachingCost", value = DisabledCachingCostBalancerStrategyFactory.class),
     @JsonSubTypes.Type(name = "diskNormalized", value = DiskNormalizedCostBalancerStrategyFactory.class),
     @JsonSubTypes.Type(name = "random", value = RandomBalancerStrategyFactory.class)
 })
