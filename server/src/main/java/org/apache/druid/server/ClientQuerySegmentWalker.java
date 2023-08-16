@@ -133,7 +133,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
-    this.subqueryLimitUtils = new SubqueryLimitUtils(lookupManager, httpClientConfig.getNumConnections());
+    this.subqueryLimitUtils = new SubqueryLimitUtils(
+        lookupManager,
+        Runtime.getRuntime().maxMemory(),
+        httpClientConfig.getNumConnections()
+    );
   }
 
   @Inject

@@ -35,13 +35,16 @@ public class SubqueryLimitUtils
   public static final String AUTO_LIMIT_VALUE = "auto";
 
   public static final Long UNLIMITED_LIMIT_REPRESENTATION = -1L;
-  public static final Long AUTO_LIMIT_REPRESENTATION = -2L;
 
   private final long autoLimitBytes;
 
-  public SubqueryLimitUtils(final LookupExtractorFactoryContainerProvider lookupManager, final int brokerNumHttpConnections)
+  public SubqueryLimitUtils(
+      final LookupExtractorFactoryContainerProvider lookupManager,
+      final long maxMemoryInJvm,
+      final int brokerNumHttpConnections
+  )
   {
-    autoLimitBytes = computeLimitBytesForAuto(lookupManager, brokerNumHttpConnections);
+    autoLimitBytes = computeLimitBytesForAuto(lookupManager, maxMemoryInJvm, brokerNumHttpConnections);
   }
 
   public long convertSubqueryLimitStringToLong(final String maxSubqueryLimit)
@@ -74,16 +77,28 @@ public class SubqueryLimitUtils
     return retVal;
   }
 
+  /**
+   * Computes the byte limit when 'auto' is passed as a parameter. This computes the total heap space available
+   * for the subquery inlining by getting a fraction of the total heap space in JVM, removing the size of the lookups,
+   * and dividing it by the maximum concurrent queries that can run. Maximum concurrent queries that Druid can
+   * run is usually limited by its broker's http threadpool size
+   */
   private static long computeLimitBytesForAuto(
       final LookupExtractorFactoryContainerProvider lookupManager,
+      final long maxMemoryInJvm,
       final int brokerNumHttpConnections
   )
   {
-    final long maxMemoryInJvm = Runtime.getRuntime().maxMemory();
-    return ((long) (maxMemoryInJvm * SUBQUERY_MEMORY_BYTES_FRACTION) - computeLookupFootprint(lookupManager))
-           / brokerNumHttpConnections;
+    long memoryInJvmWithoutLookups = maxMemoryInJvm - computeLookupFootprint(lookupManager);
+    long memoryInJvmForSubqueryResultsInlining = (long) (memoryInJvmWithoutLookups * SUBQUERY_MEMORY_BYTES_FRACTION);
+    long memoryInJvmForSubqueryResultsInliningPerQuery = memoryInJvmForSubqueryResultsInlining
+                                                         / brokerNumHttpConnections;
+    return Math.max(memoryInJvmForSubqueryResultsInliningPerQuery, 1L);
   }
 
+  /**
+   * Computes the size occupied by the lookups. If the size of the lookup cannot be computed, it skips over the lookup
+   */
   private static long computeLookupFootprint(final LookupExtractorFactoryContainerProvider lookupManager)
   {
 
