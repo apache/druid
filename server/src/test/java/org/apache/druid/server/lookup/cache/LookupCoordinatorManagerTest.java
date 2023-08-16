@@ -42,7 +42,6 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -104,19 +103,15 @@ public class LookupCoordinatorManagerTest
       Collections.emptySet()
   );
 
-  private static final StubServiceEmitter serviceEmitter = new StubServiceEmitter("test", "localhost");
-
   @BeforeClass
   public static void setUpStatic()
   {
-    EmittingLogger.registerEmitter(serviceEmitter);
+    EmittingLogger.registerEmitter(new StubServiceEmitter("test", "localhost"));
   }
 
   @Before
   public void setUp() throws IOException
   {
-    serviceEmitter.flush();
-
     EasyMock.reset(lookupNodeDiscovery);
 
     EasyMock.reset(configManager);
@@ -139,12 +134,6 @@ public class LookupCoordinatorManagerTest
         new AtomicReference<>(null)
     ).anyTimes();
     EasyMock.replay(configManager);
-  }
-
-  @After
-  public void tearDown() throws IOException
-  {
-    serviceEmitter.flush();
   }
 
   @Test
