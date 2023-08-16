@@ -75,7 +75,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -127,7 +126,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final BrokerParallelMergeConfig parallelMergeConfig;
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -142,7 +140,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BrokerParallelMergeConfig parallelMergeConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       ServiceEmitter emitter
   )
   {
@@ -156,7 +153,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.parallelMergeConfig = parallelMergeConfig;
     this.pool = pool;
     this.scheduler = scheduler;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.emitter = emitter;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {

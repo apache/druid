@@ -203,10 +203,7 @@ public class QueryStackTests
       }
     };
   }
-  public static DruidProcessingConfig getProcessingConfig(
-      boolean useParallelMergePoolConfigured,
-      final int mergeBuffers
-  )
+  public static DruidProcessingConfig getProcessingConfig(final int mergeBuffers)
   {
     return new DruidProcessingConfig()
     {
@@ -245,27 +242,17 @@ public class QueryStackTests
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
   {
-    return createQueryRunnerFactoryConglomerate(closer, true, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
+    return createQueryRunnerFactoryConglomerate(closer, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
-      final Supplier<Integer> minTopNThresholdSupplier
-  )
-  {
-    return createQueryRunnerFactoryConglomerate(closer, true, minTopNThresholdSupplier);
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final boolean useParallelMergePoolConfigured,
       final Supplier<Integer> minTopNThresholdSupplier
   )
   {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
-            useParallelMergePoolConfigured,
             DEFAULT_NUM_MERGE_BUFFERS
         ),
         minTopNThresholdSupplier

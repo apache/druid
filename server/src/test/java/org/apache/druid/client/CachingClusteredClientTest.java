@@ -121,7 +121,6 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.ServerType;
@@ -2832,17 +2831,23 @@ public class CachingClusteredClientTest
         new BrokerParallelMergeConfig()
         {
           @Override
+          public boolean useParallelMergePool()
+          {
+            return true;
+          }
+
+          @Override
           public int getParallelism()
           {
             // fixed so same behavior across all test environments
-            return 4;
+            return 1;
           }
 
           @Override
           public int getDefaultMaxQueryParallelism()
           {
             // fixed so same behavior across all test environments
-            return 4;
+            return 1;
           }
         },
         ForkJoinPool.commonPool(),
@@ -2852,7 +2857,6 @@ public class CachingClusteredClientTest
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         ),
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
   }

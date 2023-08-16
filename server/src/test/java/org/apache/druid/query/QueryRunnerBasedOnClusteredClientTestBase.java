@@ -49,7 +49,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -108,7 +107,6 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   {
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         CLOSER,
-        USE_PARALLEL_MERGE_POOL_CONFIGURED,
         () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
 
@@ -145,7 +143,6 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
     servers = new ArrayList<>();

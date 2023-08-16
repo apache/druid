@@ -47,7 +47,6 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -321,6 +320,12 @@ public class CachingClusteredClientFunctionalityTest
         new BrokerParallelMergeConfig()
         {
           @Override
+          public boolean useParallelMergePool()
+          {
+            return true;
+          }
+
+          @Override
           public int getParallelism()
           {
             // fixed so same behavior across all test environments
@@ -336,7 +341,6 @@ public class CachingClusteredClientFunctionalityTest
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
   }

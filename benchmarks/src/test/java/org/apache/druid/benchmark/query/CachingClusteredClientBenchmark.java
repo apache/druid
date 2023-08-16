@@ -104,7 +104,6 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -343,7 +342,6 @@ public class CachingClusteredClientBenchmark
         },
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
   }
