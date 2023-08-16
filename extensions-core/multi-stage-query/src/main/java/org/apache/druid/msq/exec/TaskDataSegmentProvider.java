@@ -106,7 +106,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     final DataSegment dataSegment;
     try {
       dataSegment = FutureUtils.get(
-          coordinatorClient.fetchUsedSegment(
+          coordinatorClient.fetchSegment(
               segmentId.getDataSource(),
               segmentId.toString()
           ),

@@ -118,6 +118,31 @@ public class CoordinatorClientImplTest
   }
 
   @Test
+  public void test_fetchSegment() throws Exception
+  {
+    final DataSegment segment =
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(Intervals.of("2000/3000"))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segment)
+    );
+
+    Assert.assertEquals(
+        segment,
+        coordinatorClient.fetchSegment("xyz", "def").get()
+    );
+  }
+
+  @Test
   public void test_fetchUsedSegments() throws Exception
   {
     final List<Interval> intervals = Collections.singletonList(Intervals.of("2000/3000"));

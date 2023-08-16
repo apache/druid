@@ -279,9 +279,10 @@ public class MetadataResource
   @Path("/datasources/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getUsedSegment(
+  public Response getSegment(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId
+      @PathParam("segmentId") String segmentId,
+      @QueryParam("includeUnused") @Nullable String includeUnused
   )
   {
     ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
@@ -296,7 +297,12 @@ public class MetadataResource
       }
     }
     // fallback to db
-    DataSegment segment = metadataStorageCoordinator.retrieveUsedSegmentForId(segmentId);
+    DataSegment segment;
+    if (includeUnused != null) {
+      segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId);
+    } else {
+      segment = metadataStorageCoordinator.retrieveUsedSegmentForId(segmentId);
+    }
     if (segment != null) {
       return Response.status(Response.Status.OK).entity(segment).build();
     }

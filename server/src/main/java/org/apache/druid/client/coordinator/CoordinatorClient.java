@@ -40,6 +40,11 @@ public interface CoordinatorClient
   ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId);
 
   /**
+   * Fetches segment metadata for the given dataSource and segmentId.
+   */
+  ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId);
+
+  /**
    * Fetches segment metadata for the given dataSource and intervals.
    */
   ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals);
