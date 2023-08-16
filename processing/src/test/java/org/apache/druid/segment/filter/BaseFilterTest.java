@@ -162,6 +162,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .add(new AutoTypeColumnSchema("arrayString"))
                    .add(new AutoTypeColumnSchema("arrayLong"))
                    .add(new AutoTypeColumnSchema("arrayDouble"))
+                   .add(new AutoTypeColumnSchema("variant"))
                    .build()
   );
 
@@ -185,6 +186,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                   .add("arrayString", ColumnType.STRING_ARRAY)
                   .add("arrayLong", ColumnType.LONG_ARRAY)
                   .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                  .add("variant", ColumnType.STRING_ARRAY)
                   .build();
 
   static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
@@ -198,7 +200,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           0L,
           ImmutableList.of("a", "b", "c"),
           ImmutableList.of(1L, 2L, 3L),
-          ImmutableList.of(1.1, 2.2, 3.3)
+          ImmutableList.of(1.1, 2.2, 3.3),
+          "abc"
       ),
       makeDefaultSchemaRow(
           "1",
@@ -210,7 +213,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           100L,
           ImmutableList.of(),
           ImmutableList.of(),
-          new Object[]{1.1, 2.2, 3.3}
+          new Object[]{1.1, 2.2, 3.3},
+          100L
       ),
       makeDefaultSchemaRow(
           "2",
@@ -222,7 +226,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           40L,
           null,
           new Object[]{1L, 2L, 3L},
-          Collections.singletonList(null)
+          Collections.singletonList(null),
+          "100"
       ),
       makeDefaultSchemaRow(
           "3",
@@ -234,7 +239,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           null,
           new Object[]{"a", "b", "c"},
           null,
-          ImmutableList.of()
+          ImmutableList.of(),
+          Arrays.asList(1.1, 2.2, 3.3)
       ),
       makeDefaultSchemaRow(
           "4",
@@ -246,7 +252,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           9001L,
           ImmutableList.of("c", "d"),
           Collections.singletonList(null),
-          new Object[]{-1.1, -333.3}
+          new Object[]{-1.1, -333.3},
+          12.34
       ),
       makeDefaultSchemaRow(
           "5",
@@ -258,7 +265,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           12345L,
           Collections.singletonList(null),
           new Object[]{123L, 345L},
-          null
+          null,
+          Arrays.asList(100, 200, 300)
       )
   );
 

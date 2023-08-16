@@ -114,7 +114,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   @Override
   public String getSource()
   {
-    return getIoConfig() != null ? getIoConfig().getTopic() : null;
+    return getIoConfig() != null ? getIoConfig().getStream() : null;
   }
 
   @Override

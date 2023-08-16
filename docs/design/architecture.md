@@ -70,12 +70,20 @@ Druid uses deep storage to store any data that has been ingested into the system
 storage accessible by every Druid server. In a clustered deployment, this is typically a distributed object store like S3 or
 HDFS, or a network mounted filesystem. In a single-server deployment, this is typically local disk.
 
-Druid uses deep storage only as a backup of your data and as a way to transfer data in the background between
-Druid processes. Druid stores data in files called _segments_. Historical processes cache data segments on
-local disk and serve queries from that cache as well as from an in-memory cache.
-This means that Druid never needs to access deep storage
-during a query, helping it offer the best query latencies possible. It also means that you must have enough disk space
-both in deep storage and across your Historical servers for the data you plan to load.
+Druid uses deep storage for the following purposes:
+
+- To store all the data you ingest. Segments that get loaded onto Historical processes for low latency queries are also kept in deep storage for backup purposes. Additionally, segments that are only in deep storage can be used for [queries from deep storage](../querying/query-from-deep-storage.md).
+- As a way to transfer data in the background between Druid processes. Druid stores data in files called _segments_.
+
+Historical processes cache data segments on local disk and serve queries from that cache as well as from an in-memory cache.
+Segments on disk for Historical processes provide the low latency querying performance Druid is known for.
+
+You can also query directly from deep storage. When you query segments that exist only in deep storage, you trade some performance  for the ability to query more of your data without necessarily having to scale your Historical processes.
+
+When determining sizing for your storage, keep the following in mind:
+
+- Deep storage needs to be able to hold all the data that you ingest into Druid.
+- On disk storage for Historical processes need to be able to accommodate the data you want to load onto them to run queries. The data on Historical processes should be data you access frequently and need to run low latency queries for. 
 
 Deep storage is an important part of Druid's elastic, fault-tolerant design. Druid bootstraps from deep storage even
 if every single data server is lost and re-provisioned.
@@ -210,8 +218,7 @@ available before they are published, since they are only published when the segm
 any additional rows of data.
 2. **Deep storage:** Segment data files are pushed to deep storage once a segment is done being constructed. This
 happens immediately before publishing metadata to the metadata store.
-3. **Availability for querying:** Segments are available for querying on some Druid data server, like a realtime task
-or a Historical process.
+3. **Availability for querying:** Segments are available for querying on some Druid data server, like a realtime task, directly from deep storage, or a Historical process.
 
 You can inspect the state of currently active segments using the Druid SQL
 [`sys.segments` table](../querying/sql-metadata-tables.md#segments-table). It includes the following flags:

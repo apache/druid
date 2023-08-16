@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
@@ -35,30 +33,25 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KillCompactionConfigTest
 {
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
-
-  @Mock
-  private ServiceEmitter mockServiceEmitter;
 
   @Mock
   private SqlSegmentsMetadataManager mockSqlSegmentsMetadataManager;
@@ -72,15 +65,15 @@ public class KillCompactionConfigTest
   @Mock
   private MetadataStorageTablesConfig mockConnectorConfig;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   private KillCompactionConfig killCompactionConfig;
+  private CoordinatorRunStats runStats;
 
   @Before
   public void setup()
   {
+    runStats = new CoordinatorRunStats();
     Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
   }
 
   @Test
@@ -102,7 +95,7 @@ public class KillCompactionConfigTest
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
     Mockito.verifyNoInteractions(mockJacksonConfigManager);
-    Mockito.verifyNoInteractions(mockServiceEmitter);
+    Assert.assertEquals(0, runStats.rowCount());
   }
 
   @Test
@@ -114,14 +107,21 @@ public class KillCompactionConfigTest
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Coordinator compaction configuration kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
-    killCompactionConfig = new KillCompactionConfig(
-        druidCoordinatorConfig,
-        mockSqlSegmentsMetadataManager,
-        mockJacksonConfigManager,
-        mockConnector,
-        mockConnectorConfig
+
+    final IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> killCompactionConfig = new KillCompactionConfig(
+            druidCoordinatorConfig,
+            mockSqlSegmentsMetadataManager,
+            mockJacksonConfigManager,
+            mockConnector,
+            mockConnectorConfig
+        )
+    );
+    Assert.assertEquals(
+        "[druid.coordinator.kill.compaction.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]",
+        exception.getMessage()
     );
   }
 
@@ -129,7 +129,6 @@ public class KillCompactionConfigTest
   @Test
   public void testRunDoNothingIfCurrentConfigIsEmpty()
   {
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
     // Set current compaction config to an empty compaction config
     Mockito.when(mockConnector.lookup(
         ArgumentMatchers.anyString(),
@@ -158,10 +157,9 @@ public class KillCompactionConfigTest
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
-    final ArgumentCaptor<ServiceEventBuilder> emittedEventCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    Mockito.verify(mockServiceEmitter).emit(emittedEventCaptor.capture());
-    Assert.assertEquals(KillCompactionConfig.COUNT_METRIC, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("metric"));
-    Assert.assertEquals(0, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("value"));
+    Assert.assertTrue(runStats.hasStat(Stats.Kill.COMPACTION_CONFIGS));
+    Assert.assertEquals(0, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
+
     Mockito.verify(mockJacksonConfigManager).convertByteToConfig(
         ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
@@ -223,7 +221,6 @@ public class KillCompactionConfigTest
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
     ).thenReturn(originalCurrentConfig);
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
     Mockito.when(mockSqlSegmentsMetadataManager.retrieveAllDataSourceNames()).thenReturn(ImmutableSet.of(activeDatasourceName));
     final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
     final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
@@ -257,11 +254,7 @@ public class KillCompactionConfigTest
     Assert.assertEquals(1, newConfigCaptor.getValue().getCompactionConfigs().size());
 
     Assert.assertEquals(activeDatasourceConfig, newConfigCaptor.getValue().getCompactionConfigs().get(0));
-    final ArgumentCaptor<ServiceEventBuilder> emittedEventCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    Mockito.verify(mockServiceEmitter).emit(emittedEventCaptor.capture());
-    Assert.assertEquals(KillCompactionConfig.COUNT_METRIC, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("metric"));
-    // Should delete 1 config
-    Assert.assertEquals(1, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("value"));
+    Assert.assertEquals(1, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
 
     Mockito.verify(mockJacksonConfigManager).convertByteToConfig(
         ArgumentMatchers.eq(originalCurrentConfigBytes),
@@ -317,27 +310,20 @@ public class KillCompactionConfigTest
         ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
     ).thenReturn(originalCurrentConfig);
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
     Mockito.when(mockSqlSegmentsMetadataManager.retrieveAllDataSourceNames()).thenReturn(ImmutableSet.of());
     Mockito.when(mockJacksonConfigManager.set(
         ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
         ArgumentMatchers.any(byte[].class),
         ArgumentMatchers.any(CoordinatorCompactionConfig.class),
         ArgumentMatchers.any())
-    ).thenAnswer(new Answer() {
-      private int count = 0;
-      @Override
-      public Object answer(InvocationOnMock invocation)
-      {
-        if (count++ < 3) {
-          // Return fail result with RetryableException the first three call to updated set
-          return ConfigManager.SetResult.fail(new Exception(), true);
-        } else {
-          // Return success ok on the fourth call to set updated config
-          return ConfigManager.SetResult.ok();
-        }
-      }
-    });
+    ).thenReturn(
+        // Return fail result with RetryableException the first three calls to updated set
+        ConfigManager.SetResult.fail(new Exception(), true),
+        ConfigManager.SetResult.fail(new Exception(), true),
+        ConfigManager.SetResult.fail(new Exception(), true),
+        // Return success ok on the fourth call to set updated config
+        ConfigManager.SetResult.ok()
+    );
 
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withMetadataStoreManagementPeriod(new Duration("PT5S"))
@@ -354,12 +340,8 @@ public class KillCompactionConfigTest
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
 
-    // Verify and Assert
-    final ArgumentCaptor<ServiceEventBuilder> emittedEventCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    Mockito.verify(mockServiceEmitter).emit(emittedEventCaptor.capture());
-    Assert.assertEquals(KillCompactionConfig.COUNT_METRIC, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("metric"));
-    // Should delete 1 config
-    Assert.assertEquals(1, emittedEventCaptor.getValue().build(ImmutableMap.of()).toMap().get("value"));
+    // Verify that 1 config has been deleted
+    Assert.assertEquals(1, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
 
     // Should call convertByteToConfig and lookup (to refresh current compaction config) four times due to RetryableException when failed
     Mockito.verify(mockJacksonConfigManager, Mockito.times(4)).convertByteToConfig(

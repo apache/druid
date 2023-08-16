@@ -1492,8 +1492,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
 
-    emitter.verifyEmitted("segment/metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
-    emitter.verifyEmitted("segment/metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

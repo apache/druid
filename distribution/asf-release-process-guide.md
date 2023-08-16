@@ -258,7 +258,7 @@ It is also the release managers responsibility for correctly assigning all PRs m
 | [get-milestone-contributors](bin/get-milestone-contributors.py) | lists github users who contributed to a milestone |
 | [get-milestone-prs](bin/get-milestone-prs.py) | lists PRs between tags or commits and the milestone associated with them. |
 | [tag-missing-milestones](bin/tag-missing-milestones.py) | Find pull requests which the milestone is missing and tag them properly. |
-| [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. |
+| [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. Make sure to fetch remote commits before running this command. |
 | [make-linkable-release-notes](bin/make-linkable-release-notes.py) | given input of a version, input markdown file path, and output markdown file path, will rewrite markdown headers of the input file to have embedded links in the release notes style. |
 
 

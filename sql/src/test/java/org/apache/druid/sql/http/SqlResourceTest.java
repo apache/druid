@@ -1354,7 +1354,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     validateInvalidSqlError(
         errorResponse,
-        "Received an unexpected token [FROM] (line [1], column [1]), acceptable options: [\"INSERT\", \"UPSERT\", "
+        "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
