@@ -157,12 +157,6 @@ public class KillUnusedSegmentsTest
   @Test
   public void testRunWithNoIntervalShouldNotKillAnySegments()
   {
-    Mockito.doReturn(null).when(segmentsMetadataManager).getUnusedSegmentIntervals(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.any(),
-        ArgumentMatchers.anyInt()
-    );
-
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     target.run(params);
     Mockito.verify(overlordClient, Mockito.never())
@@ -253,8 +247,6 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(true)
         .when(config).getCoordinatorKillIgnoreDurationToRetain();
-    Mockito.doReturn(1)
-        .when(config).getCoordinatorKillMaxSegments();
     Mockito.doReturn(2)
         .when(config).getCoordinatorKillMaxSegments();
     Mockito.doReturn(null)
