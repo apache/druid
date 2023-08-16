@@ -14271,7 +14271,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestByWithoutMaxBytes()
+  public void testLatestByOnStringColumnWithoutMaxBytesSpecified()
   {
     testQuery(
         "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time) FROM druid.foo where dim2='abc' group by 1",
