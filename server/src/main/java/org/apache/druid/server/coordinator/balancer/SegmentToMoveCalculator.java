@@ -144,7 +144,7 @@ public class SegmentToMoveCalculator
     final int upperBound = (totalSegments >> 9) * 100;
     final int lowerBound = MIN_SEGMENTS_TO_MOVE;
 
-    int num30sPeriods = (int) (coordinatorPeriod.getMillis() / 30_000);
+    int num30sPeriods = Math.min(4, (int) (coordinatorPeriod.getMillis() / 30_000));
 
     // Each thread can do ~1B computations in 30s = 1M * 1k = 2^20 * 1k
     int maxComputationsInThousands = (numBalancerThreads * num30sPeriods) << 20;

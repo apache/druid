@@ -101,7 +101,6 @@ public class TierSegmentBalancer
       final String sourceServerType
   )
   {
-    runStats.add(Stats.Segments.PICKED_FOR_MOVE, RowKey.of(Dimension.TIER, tier), numSegmentsToMove);
     if (numSegmentsToMove <= 0 || sourceServers.isEmpty() || activeServers.isEmpty()) {
       return;
     }
@@ -203,7 +202,7 @@ public class TierSegmentBalancer
   private int getNumDecommSegmentsToMove(int maxSegmentsToMove)
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    if (decommissioningServers.isEmpty()) {
+    if (decommissioningServers.isEmpty() || activeServers.isEmpty()) {
       return 0;
     } else if (dynamicConfig.isSmartSegmentLoading()) {
       final int decommSegmentsToMove = decommissioningServers.stream().mapToInt(
@@ -222,7 +221,7 @@ public class TierSegmentBalancer
   private int getNumActiveSegmentsToMove(int maxActiveSegmentsToMove)
   {
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    if (activeServers.isEmpty()) {
+    if (activeServers.size() < 2) {
       return 0;
     } else if (dynamicConfig.isSmartSegmentLoading()) {
       return SegmentToMoveCalculator.computeNumSegmentsToMoveInTier(tier, activeServers, maxActiveSegmentsToMove);

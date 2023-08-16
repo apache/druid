@@ -217,7 +217,6 @@ public abstract class CoordinatorSimulationBaseTest implements
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
-    static final String PICKED_FOR_MOVE = "segment/movePicked/count";
     static final String MOVE_SKIPPED = "segment/moveSkipped/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String DELETED_COUNT = "segment/deleted/count";

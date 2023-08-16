@@ -44,10 +44,6 @@ public class Stats
     public static final CoordinatorStat MOVE_SKIPPED
         = CoordinatorStat.toDebugAndEmit("moveSkip", "segment/moveSkipped/count");
 
-    // Configured and computed limits
-    public static final CoordinatorStat PICKED_FOR_MOVE
-        = CoordinatorStat.toDebugAndEmit("movePicked", "segment/movePicked/count");
-
     // Current state of segments of a datasource
     public static final CoordinatorStat USED
         = CoordinatorStat.toDebugAndEmit("usedSegments", "segment/count");

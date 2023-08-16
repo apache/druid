@@ -255,7 +255,6 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
     verifyValue(Metric.MOVE_SKIPPED, 100L);
-    verifyValue(Metric.PICKED_FOR_MOVE, 100L);
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {
@@ -263,8 +262,8 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     }
 
     runCoordinatorCycle();
-    verifyValue(Metric.PICKED_FOR_MOVE, 500L);
     verifyValue(Metric.MOVED_COUNT, 500L);
+    verifyNotEmitted(Metric.MOVE_SKIPPED);
   }
 
 }
