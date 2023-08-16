@@ -83,7 +83,7 @@ public class S3StorageConnectorTest
           temporaryFolder.newFolder(),
           null,
           null,
-          true
+          false
       ), service);
     }
     catch (IOException e) {

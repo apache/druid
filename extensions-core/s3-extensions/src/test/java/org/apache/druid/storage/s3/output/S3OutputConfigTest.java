@@ -52,7 +52,7 @@ public class S3OutputConfigTest
         temporaryFolder.newFolder(),
         HumanReadableBytes.valueOf(chunkSize),
         MAX_RETRY_COUNT,
-        true
+        false
     );
   }
 }
