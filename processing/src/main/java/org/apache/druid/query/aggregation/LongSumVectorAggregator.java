@@ -61,6 +61,9 @@ public class LongSumVectorAggregator implements VectorAggregator
       final int positionOffset
   )
   {
+    if (numRows <= 0) {
+      return;
+    }
     final long[] vector = selector.getLongVector();
 
     for (int i = 0; i < numRows; i++) {
