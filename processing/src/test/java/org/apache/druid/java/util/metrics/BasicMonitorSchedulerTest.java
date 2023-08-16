@@ -35,7 +35,7 @@ public class BasicMonitorSchedulerTest
   private final DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig()
   {
     @Override
-    public Duration getEmitterPeriod()
+    public Duration getEmissionDuration()
     {
       return Duration.millis(5);
     }

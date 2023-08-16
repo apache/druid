@@ -501,7 +501,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
       @Override
-      public Duration getEmitterPeriod()
+      public Duration getEmissionDuration()
       {
         return new Period("PT1S").toStandardDuration();
       }
@@ -1098,7 +1098,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
       @Override
-      public Duration getEmitterPeriod()
+      public Duration getEmissionDuration()
       {
         return new Period("PT1S").toStandardDuration();
       }
@@ -1608,13 +1608,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       reportingExec.scheduleAtFixedRate(
           this::emitLag,
           ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
       reportingExec.scheduleAtFixedRate(
           this::emitNoticesQueueSize,
           ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
     }

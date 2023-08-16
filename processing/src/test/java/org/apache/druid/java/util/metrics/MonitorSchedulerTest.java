@@ -37,7 +37,7 @@ public class MonitorSchedulerTest
     DruidMonitorSchedulerConfig infiniteFlushDelayConfig = new DruidMonitorSchedulerConfig()
     {
       @Override
-      public Duration getEmitterPeriod()
+      public Duration getEmissionDuration()
       {
         return Duration.millis(Long.MAX_VALUE);
       }

@@ -154,7 +154,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     Monitor monitor = Mockito.mock(Monitor.class);
 
     DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
-    Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
+    Mockito.when(config.getEmissionDuration()).thenReturn(new org.joda.time.Duration(1000L));
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
         config,
@@ -218,7 +218,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     Monitor monitor = Mockito.mock(Monitor.class);
 
     DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
-    Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
+    Mockito.when(config.getEmissionDuration()).thenReturn(new org.joda.time.Duration(1000L));
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
         config,
@@ -249,7 +249,7 @@ public class ClockDriftSafeMonitorSchedulerTest
            .thenThrow(new RuntimeException("Test throwing exception while monitoring"));
 
     DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
-    Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
+    Mockito.when(config.getEmissionDuration()).thenReturn(new org.joda.time.Duration(1000L));
 
     CountDownLatch latch = new CountDownLatch(1);
     AtomicBoolean monitorResultHolder = new AtomicBoolean(false);
@@ -311,7 +311,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     ExecutorService executor = Mockito.mock(ExecutorService.class);
     Monitor monitor = Mockito.mock(Monitor.class);
     DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
-    Mockito.when(config.getEmitterPeriod()).thenReturn(new org.joda.time.Duration(1000L));
+    Mockito.when(config.getEmissionDuration()).thenReturn(new org.joda.time.Duration(1000L));
 
     CountDownLatch latch = new CountDownLatch(1);
     Mockito.doAnswer(new Answer<Future<?>>()

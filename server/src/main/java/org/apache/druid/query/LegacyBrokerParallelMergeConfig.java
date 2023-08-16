@@ -23,6 +23,10 @@ import org.skife.config.Config;
 
 import javax.annotation.Nullable;
 
+/**
+ * Backwards compatibility for Druid 27 and older runtime.properties configs, replaced by
+ * {@link BrokerParallelMergeConfig} in Druid 28. This config should be removed in Druid 29.
+ */
 @Deprecated
 public abstract class LegacyBrokerParallelMergeConfig
 {

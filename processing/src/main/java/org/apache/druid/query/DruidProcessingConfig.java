@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -34,11 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidProcessingConfig implements ColumnConfig
 {
   private static final Logger log = new Logger(DruidProcessingConfig.class);
-
-  public static long computeMaxMemoryFromMaxHeapSize()
-  {
-    return Runtime.getRuntime().maxMemory() / 4;
-  }
 
   @JsonProperty
   private final String formatString;
@@ -69,15 +65,16 @@ public class DruidProcessingConfig implements ColumnConfig
       @JsonProperty("indexes") DruidProcessingIndexesConfig indexes
   )
   {
-    this.formatString = formatString == null ? "processing-%s" : formatString;
-    this.numThreads = numThreads == null
-                      ? Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1, 1)
-                      : numThreads;
-    this.numMergeBuffers = numMergeBuffers == null ? Math.max(2, this.numThreads / 4) : numMergeBuffers;
+    this.formatString = Configs.valueOrDefault(formatString, "processing-%s");
+    this.numThreads = Configs.valueOrDefault(
+        numThreads,
+        Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1, 1)
+    );
+    this.numMergeBuffers = Configs.valueOrDefault(numMergeBuffers, Math.max(2, this.numThreads / 4));
     this.fifo = fifo == null || fifo;
-    this.tmpDir = tmpDir == null ? System.getProperty("java.io.tmpdir") : tmpDir;
-    this.buffer = buffer == null ? new DruidProcessingBufferConfig() : buffer;
-    this.indexes = indexes == null ? new DruidProcessingIndexesConfig() : indexes;
+    this.tmpDir = Configs.valueOrDefault(tmpDir, System.getProperty("java.io.tmpdir"));
+    this.buffer = Configs.valueOrDefault(buffer, new DruidProcessingBufferConfig());
+    this.indexes = Configs.valueOrDefault(indexes, new DruidProcessingIndexesConfig());
 
     this.numThreadsConfigured = numThreads != null;
     this.numMergeBuffersConfigured = numMergeBuffers != null;
@@ -110,7 +107,7 @@ public class DruidProcessingConfig implements ColumnConfig
     }
     catch (UnsupportedOperationException e) {
       // max direct memory defaults to max heap size on recent JDK version, unless set explicitly
-      directSizeBytes = computeMaxMemoryFromMaxHeapSize();
+      directSizeBytes = Runtime.getRuntime().maxMemory() / 4;
       log.info("Using up to [%,d] bytes of direct memory for computation buffers.", directSizeBytes);
     }
 

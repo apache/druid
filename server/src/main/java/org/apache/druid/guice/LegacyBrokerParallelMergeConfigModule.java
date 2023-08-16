@@ -23,6 +23,13 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.query.LegacyBrokerParallelMergeConfig;
 
+/**
+ * Backwards compatibility for runtime.properties for Druid 27 and older to make deprecated config paths of
+ * {@link LegacyBrokerParallelMergeConfig} still work for Druid 28.
+ * {@link org.apache.druid.query.BrokerParallelMergeConfig} has replaced these configs, and will warn when these
+ * deprecated paths are configured. This module should be removed in Druid 29, along with
+ * {@link LegacyBrokerParallelMergeConfig} as well as the config-magic library that makes it work.
+ */
 @Deprecated
 public class LegacyBrokerParallelMergeConfigModule implements Module
 {

@@ -63,7 +63,7 @@ public class RouterProcessingModule implements Module
   public QueryProcessingPool getProcessingExecutorPool(DruidProcessingConfig config)
   {
     if (config.isNumThreadsConfigured()) {
-      log.error("numThreads[%d] configured, that is ignored on Router", config.getNumThreads());
+      log.warn("numThreads[%d] configured, that is ignored on Router", config.getNumThreads());
     }
     return new ForwardingQueryProcessingPool(Execs.dummy());
   }
@@ -82,7 +82,7 @@ public class RouterProcessingModule implements Module
   public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
   {
     if (config.isNumMergeBuffersConfigured()) {
-      log.error(
+      log.warn(
           "numMergeBuffers[%d] configured, that is ignored on Router",
           config.getNumMergeBuffers()
       );

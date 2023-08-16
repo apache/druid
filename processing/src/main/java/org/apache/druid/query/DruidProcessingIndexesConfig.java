@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.segment.column.ColumnConfig;
 
 import javax.annotation.Nullable;
@@ -39,12 +40,14 @@ public class DruidProcessingIndexesConfig
       @JsonProperty("skipValuePredicateIndexScale") @Nullable Double skipValuePredicateIndexScale
   )
   {
-    this.skipValueRangeIndexScale = skipValueRangeIndexScale == null
-                                    ? ColumnConfig.DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE
-                                    : skipValueRangeIndexScale;
-    this.skipValuePredicateIndexScale = skipValuePredicateIndexScale == null
-                                        ? ColumnConfig.DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE
-                                        : skipValuePredicateIndexScale;
+    this.skipValueRangeIndexScale = Configs.valueOrDefault(
+        skipValueRangeIndexScale,
+        ColumnConfig.DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE
+    );
+    this.skipValuePredicateIndexScale = Configs.valueOrDefault(
+        skipValuePredicateIndexScale,
+        ColumnConfig.DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE
+    );
   }
 
   public DruidProcessingIndexesConfig()

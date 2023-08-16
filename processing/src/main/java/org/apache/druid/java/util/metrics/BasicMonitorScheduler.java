@@ -50,7 +50,7 @@ public class BasicMonitorScheduler extends MonitorScheduler
     monitor.start();
     ScheduledExecutors.scheduleAtFixedRate(
         exec,
-        getConfig().getEmitterPeriod(),
+        getConfig().getEmissionDuration(),
         () -> {
           if (hasMonitor(monitor) && monitor.monitor(getEmitter())) {
             return Signal.REPEAT;

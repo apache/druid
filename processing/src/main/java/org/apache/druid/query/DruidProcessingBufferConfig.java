@@ -22,6 +22,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
@@ -48,11 +49,12 @@ public class DruidProcessingBufferConfig
       @JsonProperty("poolCacheInitialCount") @Nullable Integer poolCacheInitialCount
   )
   {
-    this.sizeBytes = sizeBytes == null ? DEFAULT_PROCESSING_BUFFER_SIZE_BYTES : sizeBytes;
-    this.poolCacheInitialCount = poolCacheInitialCount == null
-                                 ? DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL
-                                 : poolCacheInitialCount;
-    this.poolCacheMaxCount = poolCacheMaxCount == null ? Integer.MAX_VALUE : poolCacheMaxCount;
+    this.sizeBytes = Configs.valueOrDefault(sizeBytes, DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
+    this.poolCacheInitialCount = Configs.valueOrDefault(
+        poolCacheInitialCount,
+        DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL
+    );
+    this.poolCacheMaxCount = Configs.valueOrDefault(poolCacheMaxCount, Integer.MAX_VALUE);
   }
 
   public DruidProcessingBufferConfig()

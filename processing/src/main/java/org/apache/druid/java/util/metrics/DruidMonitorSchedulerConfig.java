@@ -33,19 +33,12 @@ public class DruidMonitorSchedulerConfig
   @JsonProperty
   private Period emissionPeriod = new Period("PT1M");
 
-  @JsonProperty
   public String getSchedulerClassName()
   {
     return schedulerClassName;
   }
 
-  @JsonProperty
-  public Period getEmissionPeriod()
-  {
-    return emissionPeriod;
-  }
-
-  public Duration getEmitterPeriod()
+  public Duration getEmissionDuration()
   {
     return emissionPeriod.toStandardDuration();
   }
