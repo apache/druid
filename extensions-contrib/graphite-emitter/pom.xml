@@ -49,7 +49,7 @@
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-graphite</artifactId>
-      <version>4.2.19</version>
+      <version>${dropwizard.metrics.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
