@@ -14277,17 +14277,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT
             .withOverrides(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true)),
-        "SELECT dim1,LATEST(dim2),LATEST_BY(dim2, __time) FROM druid.foo "
-            + "group by 1",
+        "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time) FROM druid.foo where dim2='abc' group by 1",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(GroupByQuery.builder().setDataSource(CalciteTests.DATASOURCE1)
-                .setInterval(querySegmentSpec(Filtration.eternity())).setGranularity(Granularities.ALL)
-            .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING)))
-            .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0", "m1", "__time")))
-            .build()
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    expressionVirtualColumn("v0", "'abc'", ColumnType.STRING))
+                .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
+                .setDimensions(
+                    dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(
+                    aggregators(
+                        new StringLastAggregatorFactory("a0", "dim3", "__time", 1024),
+                        new StringLastAggregatorFactory("a1", "dim1", "__time", 1024)))
+                .build()
 
         ),
         // returning 1 is incorrect result; but with nulls as default that should be expected
-        ImmutableList.of(new Object[] { useDefault ? 1L : 0L }));
+        ImmutableList.of(
+            new Object[] { "abc", useDefault ? "" : null, "def" }
+        ));
   }
 }
