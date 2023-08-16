@@ -58,4 +58,10 @@ public class CountSumAggregatorFactory extends LongSumAggregatorFactory
   {
     return true;
   }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return cacheKey.get();
+  }
 }
