@@ -37,8 +37,8 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|`topic`|String|The Kafka topic to read from. Must be a specific topic. Use this setting when you want to ingest from a single Kafka topic.|yes|
-|`topicPattern`|String|A regex pattern that can used to select multiple Kafka topics to ingest data from. Either this or `topic` can be used in a spec. See [Ingesting from multiple topics](#ingesting-from-multiple-topics) for more details.|yes|
+|`topic`|String|The Kafka topic to read from. Must be a specific topic. Use this setting when you want to ingest from a single Kafka topic.|yes if `topicPattern` is not set|
+|`topicPattern`|String|A regex pattern that can used to select multiple Kafka topics to ingest data from. Either this or `topic` can be used in a spec. See [Ingesting from multiple topics](#ingesting-from-multiple-topics) for more details.|yes if `topic` is not set|
 |`inputFormat`|Object|`inputFormat` to define input data parsing. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to pass to the Kafka consumer. See [More on consumer properties](#more-on-consumerproperties).|yes|
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
