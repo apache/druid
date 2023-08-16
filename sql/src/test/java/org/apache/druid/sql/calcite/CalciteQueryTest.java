@@ -14269,4 +14269,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testLatestBy() {
+    cannotVectorize();
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT
+            .withOverrides(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "SELECT dim1,LATEST_BY(dim2, __time)  as negative FROM druid.foo "
+        + "GROUP BY 1", CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(GroupByQuery.builder().setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity())).setGranularity(Granularities.ALL)
+            .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING)))
+            .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0", "m1", "__time")))
+            .build()
+
+        ),
+        // returning 1 is incorrect result; but with nulls as default that should be expected
+        ImmutableList.of(new Object[] { useDefault ? 1L : 0L }));
+  }
 }

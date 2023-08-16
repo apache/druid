@@ -82,7 +82,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          int maxStringBytes
+          Integer maxStringBytes
       )
       {
         switch (type.getType()) {
@@ -108,7 +108,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          int maxStringBytes
+          Integer maxStringBytes
       )
       {
         switch (type.getType()) {
@@ -134,7 +134,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          int maxStringBytes
+          Integer maxStringBytes
       )
       {
         switch (type.getType()) {
@@ -157,7 +157,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         String fieldName,
         String timeColumn,
         ColumnType outputType,
-        int maxStringBytes
+        Integer maxStringBytes
     );
   }
 
@@ -236,7 +236,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
       case 1:
-        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, -1);
+        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null);
         break;
       case 2:
         int maxStringBytes;
