@@ -479,40 +479,44 @@ public class CompactionTask extends AbstractBatchIndexTask
         getMetricBuilder()
     );
 
-    for (ParallelIndexIngestionSpec ingestionSpec : ingestionSpecs) {
-      final PartitionsSpec partitionsSpec = ingestionSpec.getTuningConfig().getPartitionsSpec();
-      List<String> clusteredBy = new ArrayList<>();
-      if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
-        clusteredBy.addAll(((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions());
+    if (getContextValue(Tasks.USE_MSQ_COMPACTION, false)) {
+      for (ParallelIndexIngestionSpec ingestionSpec : ingestionSpecs) {
+        final PartitionsSpec partitionsSpec = ingestionSpec.getTuningConfig().getPartitionsSpec();
+        List<String> clusteredBy = new ArrayList<>();
+        if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
+          clusteredBy.addAll(((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions());
+        }
+        final MSQReplaceCompaction msqReplaceQuery = new MSQReplaceCompaction(
+            getDataSource(),
+            ((DruidInputSource) ingestionSpec.getIOConfig().getInputSource()).getInterval(),
+            ingestionSpec.getDataSchema().getDimensionsSpec().getDimensionNames(),
+            Arrays.stream(ingestionSpec.getDataSchema().getAggregators())
+                  .map(AggregatorFactory::getName)
+                  .collect(Collectors.toList()),
+            GranularityType
+                .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getQueryGranularity()),
+            GranularityType
+                .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getSegmentGranularity()),
+            ingestionSpec.getDataSchema().getGranularitySpec().isRollup(),
+            clusteredBy,
+            ingestionSpec.getTuningConfig().getMaxNumConcurrentSubTasks(),
+            getPriority()
+        );
+        final SqlQuery sqlQuery = new SqlQuery(
+            msqReplaceQuery.buildQuery(),
+            null,
+            true,
+            true,
+            true,
+            msqReplaceQuery.getContext(),
+            null
+        );
+        log.info("Submitting SQL replace: [%s]", sqlQuery);
+        toolbox.getRouterClient().runQuery(sqlQuery).get();
       }
-      final MSQReplaceCompaction msqReplaceQuery = new MSQReplaceCompaction(
-          getDataSource(),
-          ((DruidInputSource) ingestionSpec.getIOConfig().getInputSource()).getInterval(),
-          ingestionSpec.getDataSchema().getDimensionsSpec().getDimensionNames(),
-          Arrays.stream(ingestionSpec.getDataSchema().getAggregators())
-                .map(AggregatorFactory::getName)
-                .collect(Collectors.toList()),
-          GranularityType
-              .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getQueryGranularity()),
-          GranularityType
-              .fromGranularity(ingestionSpec.getDataSchema().getGranularitySpec().getSegmentGranularity()),
-          ingestionSpec.getDataSchema().getGranularitySpec().isRollup(),
-          clusteredBy,
-          ingestionSpec.getTuningConfig().getMaxNumConcurrentSubTasks()
-      );
-      System.out.println(msqReplaceQuery.buildQuery());
-      final SqlQuery sqlQuery = new SqlQuery(
-          msqReplaceQuery.buildQuery(),
-          null,
-          true,
-          true,
-          true,
-          msqReplaceQuery.getContext(),
-          null
-      );
-      System.out.println(sqlQuery);
-      toolbox.getRouterClient().runQuery(sqlQuery).get();
+      return TaskStatus.success(getId());
     }
+
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
         .mapToObj(i -> {
@@ -1436,7 +1440,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         GranularityType segmentGranularity,
         boolean rollup,
         List<String> clusterByDimensions,
-        int numSubTasks
+        int numSubTasks,
+        int priority
     )
     {
       this.context = ImmutableMap.of(
@@ -1445,7 +1450,9 @@ public class CompactionTask extends AbstractBatchIndexTask
           FINALIZE_AGGREGATIONS,
           false,
           SOURCE_TYPE,
-          "sql"
+          "sql",
+          Tasks.PRIORITY_KEY,
+          priority
       );
       this.datasource = datasource;
       this.interval = interval;

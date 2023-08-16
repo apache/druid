@@ -23,13 +23,13 @@ package org.apache.druid.rpc.indexing;
 import com.google.common.util.concurrent.ListenableFuture;
 
 /**
- * High-level Broker client.
+ * High-level Router client.
  *
  */
 public interface RouterClient
 {
   /**
-   * Run a given query on a broker
+   * Run a given query on a router
    *
    * @return
    */

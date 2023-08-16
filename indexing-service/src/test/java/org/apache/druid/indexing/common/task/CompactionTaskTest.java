@@ -450,7 +450,8 @@ public class CompactionTaskTest
         GranularityType.HOUR,
         false,
         ImmutableList.of("d1"),
-        3
+        3,
+        25
     );
     System.out.println(msqCompaction.buildQuery());
     System.out.println(msqCompaction.getContext());
