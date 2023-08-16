@@ -71,6 +71,7 @@ import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -774,15 +775,12 @@ public class CachingClusteredClientTest
         .threshold(3)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
+        .granularity(Granularities.HOUR)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
 
     testQueryCaching(
         runner,
@@ -853,10 +851,7 @@ public class CachingClusteredClientTest
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
 
     testQueryCaching(
         runner,
@@ -878,7 +873,6 @@ public class CachingClusteredClientTest
         .build();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
-
             new DateTime("2011-11-04", TIMEZONE), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-11-05", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-11-06", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -952,15 +946,13 @@ public class CachingClusteredClientTest
         .threshold(3)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
+        .granularity(Granularities.HOUR)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
+
     testQueryCaching(
         runner,
         builder.randomQueryId().build(),
@@ -1023,15 +1015,12 @@ public class CachingClusteredClientTest
         .threshold(3)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
+        .granularity(Granularities.HOUR)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
 
     testQueryCaching(
         runner,
@@ -1083,6 +1072,16 @@ public class CachingClusteredClientTest
         ),
         runner.run(QueryPlus.wrap(query))
     );
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private FluentQueryRunner makeTopNQueryRunner()
+  {
+    return FluentQueryRunner
+        .create(getDefaultQueryRunner(), new TopNQueryQueryToolChest(new TopNQueryConfig()))
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   @Test
@@ -2283,7 +2282,8 @@ public class CachingClusteredClientTest
                             )
                         ),
                         initializeResponseContext()
-                    )
+                    ).toList(),
+                    StringUtils.format("Run number [%d]", i)
                 );
                 if (queryCompletedCallback != null) {
                   queryCompletedCallback.run();
@@ -2664,7 +2664,7 @@ public class CachingClusteredClientTest
         index += 3;
       }
 
-      retVal.add(new Result<>(timestamp, new TopNResultValue(values)));
+      retVal.add(new Result<>(timestamp, TopNResultValue.create(values)));
     }
     return retVal;
   }

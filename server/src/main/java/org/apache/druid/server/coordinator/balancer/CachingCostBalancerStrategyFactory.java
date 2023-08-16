@@ -39,6 +39,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 
+/**
+ * @deprecated This is currently being used only in tests for benchmarking purposes
+ * and will be removed in future releases.
+ */
+@Deprecated
 public class CachingCostBalancerStrategyFactory implements BalancerStrategyFactory
 {
   private static final EmittingLogger LOG = new EmittingLogger(CachingCostBalancerStrategyFactory.class);

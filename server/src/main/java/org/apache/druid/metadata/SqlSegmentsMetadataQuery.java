@@ -37,6 +37,8 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -104,7 +106,7 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true);
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null);
   }
 
   /**
@@ -118,10 +120,11 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
       final String dataSource,
-      final Collection<Interval> intervals
+      final Collection<Interval> intervals,
+      @Nullable final Integer limit
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit);
   }
 
   /**
@@ -201,7 +204,7 @@ public class SqlSegmentsMetadataQuery
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
-              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true),
+              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null),
               DataSegment::getId
           )
       );
@@ -209,11 +212,35 @@ public class SqlSegmentsMetadataQuery
     }
   }
 
+  /**
+   * Retrieve the used segment for a given id if it exists in the metadata store and null otherwise
+   */
+  public DataSegment retrieveUsedSegmentForId(String id)
+  {
+
+    final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
+
+    final Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
+        .bind("id", id);
+
+    final ResultIterator<DataSegment> resultIterator =
+        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+           .iterator();
+
+    if (resultIterator.hasNext()) {
+      return resultIterator.next();
+    }
+
+    return null;
+  }
+
   private CloseableIterator<DataSegment> retrieveSegments(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
-      final boolean used
+      final boolean used,
+      @Nullable final Integer limit
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -259,6 +286,9 @@ public class SqlSegmentsMetadataQuery
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)
         .bind("dataSource", dataSource);
+    if (null != limit) {
+      sql.setMaxRows(limit);
+    }
 
     if (compareAsString) {
       final Iterator<Interval> iterator = intervals.iterator();

@@ -1117,7 +1117,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
-              new TopNResultValue(
+              TopNResultValue.create(
                   Collections.<Map<String, Object>>singletonList(
                       ImmutableMap.of(
                           "tags", "t3",
@@ -1184,7 +1184,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
-              new TopNResultValue(
+              TopNResultValue.create(
                   expected
               )
           )
@@ -1242,7 +1242,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
-              new TopNResultValue(
+              TopNResultValue.create(
                   expected
               )
           )

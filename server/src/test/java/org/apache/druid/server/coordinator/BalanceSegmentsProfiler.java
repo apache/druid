@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * TODO convert benchmarks to JMH
@@ -138,12 +139,11 @@ public class BalanceSegmentsProfiler
                 .build()
         )
         .withSegmentAssignerUsing(loadQueueManager)
-        .withEmitter(emitter)
         .withDatabaseRuleManager(manager)
         .build();
 
     BalanceSegments tester = new BalanceSegments();
-    RunRules runner = new RunRules();
+    RunRules runner = new RunRules(Set::size);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);

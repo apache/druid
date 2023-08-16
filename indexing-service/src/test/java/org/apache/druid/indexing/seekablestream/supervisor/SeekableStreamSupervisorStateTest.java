@@ -492,7 +492,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
-        new IdleConfig(true, 200L)
+        new IdleConfig(true, 200L),
+        null
     )
     {
     }).anyTimes();
@@ -1088,6 +1089,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -1148,6 +1150,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
         null,
+        null,
         null
     )
     {
@@ -1180,18 +1183,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       @Override
       public Integer getWorkerThreads()
-      {
-        return 1;
-      }
-
-      @Override
-      public boolean getChatAsync()
-      {
-        return false;
-      }
-
-      @Override
-      public Integer getChatThreads()
       {
         return 1;
       }

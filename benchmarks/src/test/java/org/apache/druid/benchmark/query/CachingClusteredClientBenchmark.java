@@ -60,7 +60,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -481,8 +481,11 @@ public class CachingClusteredClientBenchmark
   private <T> List<T> runQuery()
   {
     //noinspection unchecked
-    QueryRunner<T> theRunner = new FluentQueryRunnerBuilder<T>(toolChestWarehouse.getToolChest(query))
-        .create(cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals()))
+    QueryRunner<T> theRunner = FluentQueryRunner
+        .create(
+            cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals()),
+            toolChestWarehouse.getToolChest(query)
+        )
         .applyPreMergeDecoration()
         .mergeResults()
         .applyPostMergeDecoration();
