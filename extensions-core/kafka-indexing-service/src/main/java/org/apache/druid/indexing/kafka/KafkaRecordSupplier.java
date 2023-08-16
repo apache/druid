@@ -231,7 +231,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
           throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.INVALID_INPUT)
                               .build("Topic [%s] is not found."
-                                     + "Check that the topic exists in Kafka cluster", stream);
+                                     + " Check that the topic exists in Kafka cluster", stream);
         }
       }
       return allPartitions.stream()

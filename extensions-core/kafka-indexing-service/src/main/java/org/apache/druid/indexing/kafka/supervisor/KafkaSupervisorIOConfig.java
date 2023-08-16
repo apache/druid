@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -48,11 +49,13 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
   private final KafkaConfigOverrides configOverrides;
-  private final boolean multiTopic;
+  private final String topic;
+  private final String topicPattern;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
       @JsonProperty("topic") String topic,
+      @JsonProperty("topicPattern") String topicPattern,
       @JsonProperty("inputFormat") InputFormat inputFormat,
       @JsonProperty("replicas") Integer replicas,
       @JsonProperty("taskCount") Integer taskCount,
@@ -69,12 +72,11 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
-      @JsonProperty("multiTopic") Boolean multiTopic,
       @JsonProperty("stopTaskCount") Integer stopTaskCount
   )
   {
     super(
-        Preconditions.checkNotNull(topic, "topic"),
+        checkTopicArguments(topic, topicPattern),
         inputFormat,
         replicas,
         taskCount,
@@ -98,13 +100,26 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
-    this.multiTopic = multiTopic != null ? multiTopic : DEFAULT_IS_MULTI_TOPIC;
+    this.topic = topic;
+    this.topicPattern = topicPattern;
   }
 
+  /**
+   * Only used in testing or serialization/deserialization
+   */
   @JsonProperty
   public String getTopic()
   {
-    return getStream();
+    return topic;
+  }
+
+  /**
+   * Only used in testing or serialization/deserialization
+   */
+  @JsonProperty
+  public String getTopicPattern()
+  {
+    return topicPattern;
   }
 
   @JsonProperty
@@ -131,10 +146,9 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return configOverrides;
   }
 
-  @JsonProperty
   public boolean isMultiTopic()
   {
-    return multiTopic;
+    return topicPattern != null;
   }
 
   @Override
@@ -142,6 +156,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   {
     return "KafkaSupervisorIOConfig{" +
            "topic='" + getTopic() + '\'' +
+           "topicPattern='" + getTopicPattern() + '\'' +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
@@ -157,7 +172,23 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            ", configOverrides=" + getConfigOverrides() +
            ", idleConfig=" + getIdleConfig() +
+           ", stopTaskCount=" + getStopTaskCount() +
            '}';
+  }
+
+  private static String checkTopicArguments(String topic, String topicPattern)
+  {
+    if (topic == null && topicPattern == null) {
+      throw InvalidInput.exception("Either topic or topicPattern must be specified");
+    }
+    if (topic != null && topicPattern != null) {
+      throw InvalidInput.exception(
+          "Only one of topic [%s] or topicPattern [%s] must be specified",
+          topic,
+          topicPattern
+      );
+    }
+    return topic != null ? topic : topicPattern;
   }
 
 }
