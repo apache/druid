@@ -66,14 +66,21 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
     final long[] timeVector = timeSelector.getLongVector();
     final int[] valueVector = valueDimensionVectorSelector.getRowVector();
     firstTime = buf.getLong(position);
-    int index = startRow;
+    int index;
+    long earliestTime;
 
-    final long earliestTime = timeVector[index];
-    if (earliestTime < firstTime) {
-      firstTime = earliestTime;
-      buf.putLong(position, firstTime);
-      buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-      buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, valueVector[index]);
+    // Now we are iterating over the values to find the minima as the
+    // timestamp expression in EARLIEST_BY has no established sorting order
+    // If we know that the time is already sorted this can be optimized
+    // for the general EARLIEST call which is always on __time which is sorted
+    for (index = startRow; index < endRow; index++) {
+      earliestTime = timeVector[index];
+      if (earliestTime < firstTime) {
+        firstTime = earliestTime;
+        buf.putLong(position, firstTime);
+        buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+        buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, valueVector[index]);
+      }
     }
   }
 
@@ -81,18 +88,44 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
   public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
     long[] timeVector = timeSelector.getLongVector();
+    boolean[] nullTimeVector = timeSelector.getNullVector();
     int[] values = valueDimensionVectorSelector.getRowVector();
-    for (int i = 0; i < numRows; i++) {
-      int position = positions[i] + positionOffset;
-      int row = rows == null ? i : rows[i];
-      long firstTime = buf.getLong(position);
-      if (timeVector[row] < firstTime) {
-        firstTime = timeVector[row];
-        buf.putLong(position, firstTime);
-        buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-        buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, values[row]);
+    // Now we are iterating over the values to find the minima as the
+    // timestamp expression in EARLIEST_BY has no established sorting order
+    // If we know that the time is already sorted this can be optimized
+    // for the general EARLIEST call which is always on __time which is sorted
+
+    // The hotpath is separated out into 2 cases when nullTimeVector
+    // is null and not-null so that the check is not on every value
+    if (nullTimeVector != null) {
+      for (int i = 0; i < numRows; i++) {
+        if (nullTimeVector[i]) {
+          continue;
+        }
+        int position = positions[i] + positionOffset;
+        int row = rows == null ? i : rows[i];
+        long firstTime = buf.getLong(position);
+        if (timeVector[row] < firstTime) {
+          firstTime = timeVector[row];
+          buf.putLong(position, firstTime);
+          buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+          buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, values[row]);
+        }
+      }
+    } else {
+      for (int i = 0; i < numRows; i++) {
+        int position = positions[i] + positionOffset;
+        int row = rows == null ? i : rows[i];
+        long firstTime = buf.getLong(position);
+        if (timeVector[row] < firstTime) {
+          firstTime = timeVector[row];
+          buf.putLong(position, firstTime);
+          buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+          buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, values[row]);
+        }
       }
     }
+
 
   }
 

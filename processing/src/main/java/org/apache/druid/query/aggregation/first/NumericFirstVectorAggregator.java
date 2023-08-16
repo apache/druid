@@ -57,21 +57,21 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
     final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
     final boolean[] nullValueVector = valueSelector.getNullVector();
-    firstTime = buf.getLong(position);
-    // check if nullVector is found or not
-    // the nullVector is null if no null values are found
-    // set the nullAbsent flag accordingly
 
-    // the time vector is already sorted so the first element would be the earliest
-    // traverse accordingly
     int index;
-
-    for (int i = startRow; i < endRow; i++) {
-      index = i;
+    // Now we are iterating over the values to find the minima as the
+    // timestamp expression in EARLIEST_BY has no established sorting order
+    // If we know that the time is already sorted this can be optimized
+    // for the general EARLIEST call which is always on __time which is sorted
+    for (index = startRow; index < endRow; index++) {
+      if (nullTimeVector != null && nullTimeVector[index]) {
+        continue;
+      }
       final long earliestTime = timeVector[index];
       if (earliestTime >= firstTime) {
-        break;
+        continue;
       }
       firstTime = earliestTime;
       if (useDefault || nullValueVector == null || !nullValueVector[index]) {
@@ -83,11 +83,10 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   }
 
   /**
-   *
    * Checks if the aggregated value at a position in the buffer is null or not
    *
-   * @param buf         byte buffer storing the byte array representation of the aggregate
-   * @param position    offset within the byte buffer at which the current aggregate value is stored
+   * @param buf      byte buffer storing the byte array representation of the aggregate
+   * @param position offset within the byte buffer at which the current aggregate value is stored
    * @return
    */
   boolean isValueNull(ByteBuffer buf, int position)
@@ -110,7 +109,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      long firstTime = buf.getLong(position);
+      firstTime = buf.getLong(position);
       if (timeVector[row] < firstTime) {
         if (useDefault || nulls == null || !nulls[row]) {
           updateTimeWithValue(buf, position, timeVector[row], row);
@@ -124,10 +123,10 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   /**
    * Updates the time and the non null values to the appropriate position in buffer
    *
-   * @param buf         byte buffer storing the byte array representation of the aggregate
-   * @param position    offset within the byte buffer at which the current aggregate value is stored
-   * @param time        the time to be updated in the buffer as the last time
-   * @param index       the index of the vectorized vector which is the last value
+   * @param buf      byte buffer storing the byte array representation of the aggregate
+   * @param position offset within the byte buffer at which the current aggregate value is stored
+   * @param time     the time to be updated in the buffer as the last time
+   * @param index    the index of the vectorized vector which is the last value
    */
   void updateTimeWithValue(ByteBuffer buf, int position, long time, int index)
   {
@@ -139,9 +138,9 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   /**
    * Updates the time only to the appropriate position in buffer as the value is null
    *
-   * @param buf         byte buffer storing the byte array representation of the aggregate
-   * @param position    offset within the byte buffer at which the current aggregate value is stored
-   * @param time        the time to be updated in the buffer as the last time
+   * @param buf      byte buffer storing the byte array representation of the aggregate
+   * @param position offset within the byte buffer at which the current aggregate value is stored
+   * @param time     the time to be updated in the buffer as the last time
    */
   void updateTimeWithNull(ByteBuffer buf, int position, long time)
   {
@@ -150,7 +149,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   }
 
   /**
-   *Abstract function which needs to be overridden by subclasses to set the initial value
+   * Abstract function which needs to be overridden by subclasses to set the initial value
    */
   abstract void initValue(ByteBuffer buf, int position);
 

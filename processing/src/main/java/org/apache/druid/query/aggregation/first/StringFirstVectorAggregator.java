@@ -68,11 +68,14 @@ public class StringFirstVectorAggregator implements VectorAggregator
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
     long firstTime = buf.getLong(position);
     int index;
-    for (int i = startRow; i < endRow; i++) {
-      if (times[i] > firstTime) {
-        break;
+    // Now we are iterating over the values to find the minima as the
+    // timestamp expression in EARLIEST_BY has no established sorting order
+    // If we know that the time is already sorted this can be optimized
+    // for the general EARLIEST call which is always on __time which is sorted
+    for (index = startRow; index < endRow; index++) {
+      if (times[index] > firstTime) {
+        continue;
       }
-      index = i;
       final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
       if (foldNeeded) {
         final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
@@ -132,6 +135,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
       long firstTime = buf.getLong(position);
       if (timeVector[row] < firstTime) {
         if (foldNeeded) {
+          firstTime = timeVector[row];
           final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
               timeSelector,
               valueSelector,
