@@ -92,9 +92,6 @@ public class VectorGroupByEngine
       final List<DimensionSpec> dimensions
   )
   {
-//    if (dimensions.size() == 0) {
-//      return false;
-//    }
     return dimensions
         .stream()
         .allMatch(

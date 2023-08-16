@@ -318,7 +318,7 @@ public class RowBasedGrouperHelper
       rowPredicate = getResultRowPredicate(query, subquery);
     }
 
-    if(keySerdeFactory.factorize().isEmpty()) {
+    if (keySerdeFactory.factorize().isEmpty()) {
       grouper.init();
     }
 
