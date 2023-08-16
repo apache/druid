@@ -13957,13 +13957,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "CAST(greatest(\"dim1\",\"dim2\"), 'DOUBLE')",
-                                ColumnType.DOUBLE
+                                "greatest(\"dim1\",\"dim2\")",
+                                ColumnType.STRING
                             )
                         )
                         .setGranularity(Granularities.ALL)
                         .addDimension(new DefaultDimensionSpec("l1", "_d0", ColumnType.LONG))
-                        .addAggregator(new DoubleLastAggregatorFactory("a0", "v0", null))
+                        .addAggregator(new StringLastAggregatorFactory("a0", "v0", null, 1024))
                         .setPostAggregatorSpecs(ImmutableList.of(
                             expressionPostAgg("p0", "isnull(\"a0\")")
                         ))
