@@ -327,8 +327,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
-              OperandTypes.NUMERIC,
-              OperandTypes.BOOLEAN,
+              OperandTypes.ANY,
               OperandTypes.sequence(
                   "'" + aggregatorType.name() + "(expr, maxBytesPerString)'",
                   OperandTypes.ANY,
