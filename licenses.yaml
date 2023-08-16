@@ -4312,7 +4312,7 @@ name: XZ
 license_category: binary
 module: java-core
 license_name: Public Domain
-version: 1.8
+version: 1.9
 libraries:
   - org.tukaani: xz
 
