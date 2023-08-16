@@ -95,7 +95,7 @@ The OVER clause defines the query windows for window functions as follows:
 
 :::note
 
-Sometimes windows are called partitions. However, the partitioning for window functions are a shuffle/partition of the result set that happens at query time and is not to be confused with Druid's segment partitioning feature which partitions data at ingest time.
+Sometimes windows are called partitions. However, the partitioning for window functions are a shuffle or a partition of the result set that happens at query time and is not to be confused with Druid's segment partitioning feature which partitions data at ingest time.
 
 :::
 
