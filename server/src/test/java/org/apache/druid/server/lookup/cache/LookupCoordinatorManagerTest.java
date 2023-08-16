@@ -110,7 +110,7 @@ public class LookupCoordinatorManagerTest
   }
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     EasyMock.reset(lookupNodeDiscovery);
 
