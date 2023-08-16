@@ -22,12 +22,18 @@ title: Window functions
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the SQL language.
->
-> Window functions are an [experimental](../development/experimental.md) feature. Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
-> There are known issues where ORDER BY only works on ascending order and certain options may cause errors.
-> Set the context parameter `windowsAreForClosers: true` to use window functions.
+:::info
+
+Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+This document describes the SQL language.
+
+Window functions are an [experimental](../development/experimental.md) feature. Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
+
+There are known issues where ORDER BY only works on ascending order and certain options may cause errors.
+
+Set the context parameter `windowsAreForClosers: true` to use window functions.
+
+:::
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
@@ -86,7 +92,12 @@ When working with window functions, consider the following:
 The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
 - ORDER BY specifies the order of the rows within the windows. Currently only ascending order, ASC, works.
-Sometimes windows are called partitions, but don't confuse them with the segment partitioning feature of Druid.
+
+:::note
+
+Sometimes windows are called partitions. However, the partitioning for window functions are a shuffle/partition of the result set that happens at query time and is not to be confused with Druid's segment partitioning feature which partitions data at ingest time.
+
+:::
 
 The following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
 
