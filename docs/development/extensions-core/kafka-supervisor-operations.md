@@ -144,13 +144,12 @@ will resume from the last stored offset.
 Use care when using this operation! Resetting offsets for a supervisor may cause Kafka messages to be skipped or read
 twice, resulting in missing or duplicate data.
 
-<!--DOCUSAURUS_CODE_TABS-->
-
 #### Sample request
 
 The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
 from two kafka topics `ads_media_foo` and `ads_media_bar` and has the stored offsets: `{"ads_media_foo:0": 0, "ads_media_foo:1": 10, "ads_media_bar:0": 20, "ads_media_bar:1": 40}`.
 
+<!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 

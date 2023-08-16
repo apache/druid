@@ -3033,8 +3033,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ### Reset Offsets for a supervisor
 
 Resets the specified offsets for a supervisor. This endpoint clears _only_ the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading.
-The supervisor will start from the specified reset offsets for the partitions specified and for the other partitions from the stored offset. It kills and recreates active tasks pertaining to
-the partitions specified to read from valid offsets.
+If there are no stored offsets, the specified offsets will be set in the metadata store. The supervisor will start from the reset offsets for the partitions specified and for the other partitions from the stored offset.
+It kills and recreates active tasks pertaining to the partitions specified to read from valid offsets.
 
 Use this endpoint to selectively reset offsets for partitions without resetting the entire set.
 
@@ -3064,9 +3064,9 @@ This section presents the structure and details of the reset offsets metadata pa
 | Field | Type | Description | Required |
 |---------|---------|---------|---------|
 | `type` | String | The type of reset offsets metadata payload. It must match the supervisor's `type`. Possible values: `kafka` or `kinesis`. | Yes |
-| `partitions` | Object | An object representing the reset metadata. See [Partitions](#ResetPartitions) for details. | Yes |
+| `partitions` | Object | An object representing the reset metadata. See below for details. | Yes |
 
-#### Reset Partitions
+#### Partitions
 
 The following table defines the fields within the `partitions` object in the reset offsets metadata payload.
 
@@ -3076,12 +3076,12 @@ The following table defines the fields within the `partitions` object in the res
 | `stream` | String | The stream to be reset. It must be a valid stream consumed by the supervisor. | Yes |
 | `partitionOffsetMap` | Object | A map of partitions to corresponding offsets for the stream to be reset.| Yes |
 
-<!--DOCUSAURUS_CODE_TABS-->
-
 #### Sample request
 
 The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
 from a kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
+
+<!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 
@@ -3113,7 +3113,6 @@ Content-Type: application/json
 
 The above operation will reset offsets only for partitions 0 and 2 to 100 and 650 respectively. After a successful reset,
 when the supervisor's tasks restart, they will resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
-
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 

@@ -100,14 +100,14 @@ article iframe {
   max-width: 100%;
 }
 .getAPI {
-  color: #0073e6; 
+  color: #0073e6;
   font-weight: bold;
 }
 .postAPI {
-  color: #00bf7d; 
+  color: #00bf7d;
   font-weight: bold;
 }
 .deleteAPI {
-  color: #f49200; 
+  color: #f49200;
   font-weight: bold;
 }
