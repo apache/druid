@@ -6,8 +6,8 @@ sidebar_label: Druid SQL
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-
 <!--
+
 
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -32,7 +32,7 @@ import TabItem from '@theme/TabItem';
  This document describes the SQL language.
 :::
 
-In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments. 
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 ## Query from Historicals
 
@@ -40,7 +40,7 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
-Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query) endpoint. 
+Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query) endpoint.
 
 #### URL
 
@@ -55,10 +55,10 @@ The request body takes the following properties:
   * `object`: Returns a JSON array of JSON objects with the HTTP header `Content-Type: application/json`.
   * `array`: Returns a JSON array of JSON arrays with the HTTP header `Content-Type: application/json`.
   * `objectLines`: Returns newline-delimited JSON objects with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`.
-  * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`. 
-  * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP header `Content-Type: text/csv`. 
+  * `arrayLines`: Returns newline-delimited JSON arrays with a trailing blank line. Returns the HTTP header `Content-Type: text/plain`.
+  * `csv`: Returns a comma-separated values with one row per line and a trailing blank line. Returns the HTTP header `Content-Type: text/csv`.
 * `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
-* `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed. 
+* `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed.
 * `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
 * `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
@@ -75,27 +75,18 @@ The request body takes the following properties:
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully submitted query* 
 
-<!--400 BAD REQUEST-->
+*Successfully submitted query*
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
 
-```json
-{
-    "error": "A well-defined error code.",
-    "errorMessage": "A message with additional details about the error.",
-    "errorClass": "Class of exception that caused this error.",
-    "host": "The host on which the error occurred."
-}
-```
-<!--500 INTERNAL SERVER ERROR-->
 
-*Request not sent due to unexpected conditions. Returns a JSON object detailing the error with the following format:* 
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
@@ -105,8 +96,23 @@ The request body takes the following properties:
     "host": "The host on which the error occurred."
 }
 ```
+</TabItem>
+<TabItem value="3" label="500 INTERNAL SERVER ERROR">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Request not sent due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
+
+```json
+{
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
+}
+```
+
+</TabItem>
+</Tabs>
 
 Older versions of Druid that support  the `typesHeader` and `sqlTypesHeader` parameters return the HTTP header `X-Druid-SQL-Header-Included: yes` when you set `header` to `true`. Druid returns the HTTP response header for compatibility, regardless of whether `typesHeader` and `sqlTypesHeader` are set.
 
@@ -117,9 +123,10 @@ Older versions of Druid that support  the `typesHeader` and `sqlTypesHeader` par
 
 The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` context parameter. The optional properties `header`, `typesHeader`, and `sqlTypesHeader` are set to `true` to include type information to the response.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="4" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
@@ -133,7 +140,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="5" label="HTTP">
+
 
 ```HTTP
 POST /druid/v2/sql HTTP/1.1
@@ -150,7 +159,8 @@ Content-Length: 192
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -273,7 +283,7 @@ Cancels a query on the Router or the Broker with the associated `sqlQueryId`. Th
 
 When you cancel a query, Druid handles the cancellation in a best-effort manner. Druid immediately marks the query as canceled and aborts the query execution as soon as possible. However, the query may continue running for a short time after you make the cancellation request.
 
-Cancellation requests require READ permission on all resources used in the SQL query. 
+Cancellation requests require READ permission on all resources used in the SQL query.
 
 #### URL
 
@@ -281,21 +291,27 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--202 SUCCESS-->
+<TabItem value="6" label="202 SUCCESS">
+
 
 *Successfully deleted query*
 
-<!--403 FORBIDDEN-->
+</TabItem>
+<TabItem value="7" label="403 FORBIDDEN">
 
-*Authorization failure* 
 
-<!--404 NOT FOUND-->
+*Authorization failure*
 
-*Invalid `sqlQueryId` or query was completed before cancellation request* 
+</TabItem>
+<TabItem value="8" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid `sqlQueryId` or query was completed before cancellation request*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -303,22 +319,26 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 The following example cancels a request with the set query ID `request01`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="9" label="cURL">
+
 
 ```shell
 curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/request01"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="10" label="HTTP">
+
 
 ```HTTP
 DELETE /druid/v2/sql/request01 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
