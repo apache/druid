@@ -935,7 +935,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUnusedListWithLimit() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     int limit = SEGMENTS.size() - 1;
     Set<DataSegment> retreivedUnusedSegments = ImmutableSet.copyOf(
