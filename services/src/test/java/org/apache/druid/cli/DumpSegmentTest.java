@@ -29,7 +29,10 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.QueryRunnerFactoryModule;
+import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -214,6 +217,17 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
       );
     }
   }
+
+  @Test
+  public void testGetModules()
+  {
+    DumpSegment dumpSegment = new DumpSegment();
+    List<?> modules = dumpSegment.getModules();
+    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof DruidProcessingModule));
+    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof QueryableModule));
+    Assert.assertTrue(modules.stream().anyMatch(x -> x instanceof QueryRunnerFactoryModule));
+  }
+
 
   public static List<Segment> createSegments(
       AggregationTestHelper helper,

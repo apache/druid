@@ -326,6 +326,13 @@ public class CachingClusteredClientFunctionalityTest
             // fixed so same behavior across all test environments
             return 4;
           }
+
+          @Override
+          public int getDefaultMaxQueryParallelism()
+          {
+            // fixed so same behavior across all test environments
+            return 4;
+          }
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,

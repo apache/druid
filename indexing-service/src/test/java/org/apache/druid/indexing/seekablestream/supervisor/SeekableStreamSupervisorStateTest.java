@@ -102,6 +102,7 @@ import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -1060,6 +1061,29 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.emitLag();
     Assert.assertEquals(0, emitter.getEvents().size());
+  }
+
+  @Test
+  public void testScheduleReporting()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig();
+    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(config).times(2);
+    ScheduledExecutorService executorService = EasyMock.createMock(ScheduledExecutorService.class);
+    EasyMock.expect(executorService.scheduleWithFixedDelay(EasyMock.anyObject(), EasyMock.eq(86415000L), EasyMock.eq(300000L), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).once();
+    EasyMock.expect(executorService.scheduleAtFixedRate(EasyMock.anyObject(), EasyMock.eq(86425000L), EasyMock.eq(config.getEmissionDuration().getMillis()), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(2);
+
+    EasyMock.replay(executorService, spec);
+    final BaseTestSeekableStreamSupervisor supervisor = new BaseTestSeekableStreamSupervisor()
+    {
+      @Override
+      public LagStats computeLagStats()
+      {
+        return new LagStats(0, 0, 0);
+      }
+    };
+    supervisor.scheduleReporting(executorService);
+    EasyMock.verify(executorService, spec);
   }
 
   private List<Event> filterMetrics(List<Event> events, List<String> whitelist)
