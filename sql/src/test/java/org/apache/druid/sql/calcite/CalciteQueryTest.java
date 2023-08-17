@@ -14273,9 +14273,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestByOnStringColumnWithoutMaxBytesSpecified()
   {
+    String defaultString = useDefault ? "" : null;
     cannotVectorize();
     testQuery(
-        "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time),EARLIEST(dim3),EARLIEST_BY(dim1, __time) FROM druid.foo where dim2='abc' group by 1",
+        "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time),EARLIEST(dim3),EARLIEST_BY(dim1, __time),ANY_VALUE(dim3) FROM druid.foo where dim2='abc' group by 1",
         ImmutableList.of(
             GroupByQuery.builder()
                 .setDataSource(CalciteTests.DATASOURCE1)
@@ -14291,12 +14292,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new StringLastAggregatorFactory("a0", "dim3", "__time", 1024),
                         new StringLastAggregatorFactory("a1", "dim1", "__time", 1024),
                         new StringFirstAggregatorFactory("a2", "dim3", "__time", 1024),
-                        new StringFirstAggregatorFactory("a3", "dim1", "__time", 1024)))
+                        new StringFirstAggregatorFactory("a3", "dim1", "__time", 1024),
+                        new StringAnyAggregatorFactory("a4", "dim3", 1024)))
                 .build()
 
         ),
         ImmutableList.of(
-            new Object[] { "abc", useDefault ? "" : null, "def", useDefault ? "" : null, "def" }
+            new Object[] { "abc", defaultString, "def", defaultString, "def", defaultString }
         ));
   }
 }
