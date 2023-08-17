@@ -343,7 +343,7 @@ GROUP BY 1, 2`;
       },
       {
         icon: IconNames.STEP_BACKWARD,
-        title: 'Reset offsets',
+        title: 'Set offsets',
         onAction: () => this.setState({ resetOffsetsSupervisorInfo: { id, type } }),
       },
       {
