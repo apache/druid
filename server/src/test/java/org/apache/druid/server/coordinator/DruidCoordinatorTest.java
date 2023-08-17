@@ -711,6 +711,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testCoordinatorCustomDutyGroupsRunAsExpected() throws Exception
   {
     // Some nessesary setup to start the Coordinator
+    setupPeons(Collections.emptyMap());
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
@@ -749,10 +750,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedSegments())
             .andReturn(Collections.singletonList(dataSegment)).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
-    EasyMock.replay(serverInventoryView);
+    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
 
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
