@@ -3965,7 +3965,7 @@ libraries:
 name: ICU4J
 license_category: binary
 module: java-core
-license_name: ICU License
+license_name: Unicode/ICU License
 version: 73.2
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
