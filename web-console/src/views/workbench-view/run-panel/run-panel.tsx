@@ -85,7 +85,7 @@ const NAMED_TIMEZONES: string[] = [
 export interface RunPanelProps {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
-  loading: boolean;
+  running: boolean;
   small?: boolean;
   onRun(preview: boolean): void | Promise<void>;
   queryEngines: DruidEngine[];
@@ -94,7 +94,7 @@ export interface RunPanelProps {
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines, clusterCapacity } =
+  const { query, onQueryChange, onRun, moreMenu, running, small, queryEngines, clusterCapacity } =
     props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
@@ -201,7 +201,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     <div className="run-panel">
       <Button
         className={effectiveEngine === 'native' ? 'rune-button' : undefined}
-        disabled={loading}
+        disabled={running}
         icon={IconNames.CARET_RIGHT}
         onClick={() => void onRun(false)}
         text="Run"
@@ -211,7 +211,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       />
       {ingestMode && (
         <Button
-          disabled={loading}
+          disabled={running}
           icon={IconNames.EYE_OPEN}
           onClick={() => void onRun(true)}
           text="Preview"
