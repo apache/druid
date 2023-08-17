@@ -14298,7 +14298,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of(
-            new Object[] { "abc", defaultString, "def", defaultString, "def", defaultString }
+            new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}
         ));
   }
 }
