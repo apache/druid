@@ -39,6 +39,7 @@ import {
   findMap,
   isSimpleArray,
   oneOf,
+  oneOfKnown,
   parseCsvLine,
   typeIsKnown,
 } from '../../utils';
@@ -427,6 +428,7 @@ export interface IoConfig {
   inputFormat?: InputFormat;
   appendToExisting?: boolean;
   topic?: string;
+  topicPattern?: string;
   consumerProperties?: any;
   replicas?: number;
   taskCount?: number;
@@ -924,8 +926,31 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'topic',
           type: 'string',
           required: true,
-          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-          placeholder: 'topic_name',
+          defined: ioConfig =>
+            oneOfKnown(ioConfig.type, KNOWN_TYPES, 'kafka') && !ioConfig.topicPattern,
+          placeholder: 'your_kafka_topic',
+          info: 'The name of the Kafka topic to ingest from.',
+        },
+        {
+          name: 'topicPattern',
+          type: 'string',
+          required: true,
+          defined: ioConfig => oneOfKnown(ioConfig.type, KNOWN_TYPES, 'kafka') && !ioConfig.topic,
+          placeholder: 'topic1|topic2',
+          info: (
+            <>
+              <p>
+                A regular expression that represents all topics to be ingested from. For example, to
+                ingest data from <Code>clicks</Code> and <Code>impressions</Code>, you can set this
+                to <Code>clicks|impressions</Code>. Alternatively, to ingest from all topics
+                starting with <Code>metrics-</Code> set this to <Code>metrics-.*</Code>.
+              </p>
+              <p>
+                If new topics are added to the cluster that match the regex, Druid will
+                automatically start ingesting from those new topics.
+              </p>
+            </>
+          ),
         },
         {
           name: 'consumerProperties',
@@ -1028,7 +1053,7 @@ export function issueWithIoConfig(
       break;
 
     case 'kafka':
-      if (!ioConfig.topic) return 'must have a topic';
+      if (!ioConfig.topic && !ioConfig.topicPattern) return 'must have a topic or topicPattern';
       break;
 
     case 'kinesis':
@@ -1374,7 +1399,7 @@ export function guessDataSourceName(spec: Partial<IngestionSpec>): string | unde
     }
 
     case 'kafka':
-      return ioConfig.topic;
+      return ioConfig.topic || ioConfig.topicPattern;
 
     case 'kinesis':
       return ioConfig.stream;
@@ -1459,7 +1484,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
     label: 'Segment granularity',
     type: 'string',
-    suggestions: ['hour', 'day', 'week', 'month', 'year', 'all'],
+    suggestions: ['hour', 'day', 'month', 'year', 'all'],
     required: true,
     info: (
       <>

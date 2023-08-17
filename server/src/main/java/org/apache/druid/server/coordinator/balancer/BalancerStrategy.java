@@ -72,8 +72,7 @@ public interface BalancerStrategy
   Iterator<ServerHolder> findServersToDropSegment(DataSegment segmentToDrop, List<ServerHolder> serverHolders);
 
   /**
-   * Returns the stats collected by the strategy in the current run and resets
-   * the stats collector for the next run.
+   * Returns the stats collected by the strategy.
    */
-  CoordinatorRunStats getAndResetStats();
+  CoordinatorRunStats getStats();
 }

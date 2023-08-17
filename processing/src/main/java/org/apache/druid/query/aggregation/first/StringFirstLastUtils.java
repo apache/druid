@@ -159,6 +159,7 @@ public class StringFirstLastUtils
     Long timeValue = copyBuffer.getLong();
     int stringSizeBytes = copyBuffer.getInt();
 
+
     if (stringSizeBytes >= 0) {
       byte[] valueBytes = new byte[stringSizeBytes];
       copyBuffer.get(valueBytes, 0, stringSizeBytes);

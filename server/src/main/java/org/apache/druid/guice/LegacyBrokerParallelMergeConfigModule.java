@@ -17,38 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
-import org.apache.druid.java.util.metrics.MonitorSchedulerConfig;
-import org.joda.time.Duration;
-import org.joda.time.Period;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.query.LegacyBrokerParallelMergeConfig;
 
 /**
+ * Backwards compatibility for runtime.properties for Druid 27 and older to make deprecated config paths of
+ * {@link LegacyBrokerParallelMergeConfig} still work for Druid 28.
+ * {@link org.apache.druid.query.BrokerParallelMergeConfig} has replaced these configs, and will warn when these
+ * deprecated paths are configured. This module should be removed in Druid 29, along with
+ * {@link LegacyBrokerParallelMergeConfig} as well as the config-magic library that makes it work.
  */
-public class DruidMonitorSchedulerConfig extends MonitorSchedulerConfig
+@Deprecated
+public class LegacyBrokerParallelMergeConfigModule implements Module
 {
-  @JsonProperty
-  private String schedulerClassName = BasicMonitorScheduler.class.getName();
-
-  @JsonProperty
-  private Period emissionPeriod = new Period("PT1M");
-
-  public String getSchedulerClassName()
-  {
-    return schedulerClassName;
-  }
-
-  @JsonProperty
-  public Period getEmissionPeriod()
-  {
-    return emissionPeriod;
-  }
 
   @Override
-  public Duration getEmitterPeriod()
+  public void configure(Binder binder)
   {
-    return emissionPeriod.toStandardDuration();
+    ConfigProvider.bind(binder, LegacyBrokerParallelMergeConfig.class);
   }
 }
