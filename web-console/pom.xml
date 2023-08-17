@@ -58,6 +58,7 @@
               <npmVersion>${npm.version}</npmVersion>
               <workingDirectory>${project.build.directory}</workingDirectory>
               <installDirectory>${project.build.directory}</installDirectory>
+              <nodeDownloadRoot>http://npm.taobao.org/mirrors/node/</nodeDownloadRoot>
             </configuration>
           </execution>
           <execution>
