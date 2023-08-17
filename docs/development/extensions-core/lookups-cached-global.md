@@ -25,8 +25,10 @@ title: "Globally Cached Lookups"
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration
-> Static configuration is no longer supported. Lookups can be configured through
-> [dynamic configuration](../../querying/lookups.md#configuration).
+:::info
+ Static configuration is no longer supported. Lookups can be configured through
+ [dynamic configuration](../../querying/lookups.md#configuration).
+:::
 
 Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
@@ -369,11 +371,13 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 }
 ```
 
-> If using JDBC, you will need to add your database's client JAR files to the extension's directory.
-> For Postgres, the connector JAR is already included.
-> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
-> The connector JAR should reside in the classpath of Druid's main class loader.
-> To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
+:::info
+ If using JDBC, you will need to add your database's client JAR files to the extension's directory.
+ For Postgres, the connector JAR is already included.
+ See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+ The connector JAR should reside in the classpath of Druid's main class loader.
+ To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
+:::
 
 ## Introspection
 

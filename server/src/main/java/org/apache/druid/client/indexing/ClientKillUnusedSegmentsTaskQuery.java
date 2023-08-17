@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 import java.util.Objects;
 
 /**
@@ -40,14 +42,16 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final Interval interval;
   private final Boolean markAsUnused;
   private final Integer batchSize;
+  @Nullable private final Integer limit;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("markAsUnused") Boolean markAsUnused,
-      @JsonProperty("batchSize") Integer batchSize
+      @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
+      @JsonProperty("batchSize") Integer batchSize,
+      @JsonProperty("limit") Integer limit
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -55,6 +59,8 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.interval = interval;
     this.markAsUnused = markAsUnused;
     this.batchSize = batchSize;
+    Preconditions.checkArgument(limit == null || limit > 0, "limit must be > 0");
+    this.limit = limit;
   }
 
   @JsonProperty
@@ -96,6 +102,14 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return batchSize;
   }
 
+  @JsonProperty
+  @Nullable
+  public Integer getLimit()
+  {
+    return limit;
+  }
+
+
   @Override
   public boolean equals(Object o)
   {
@@ -110,12 +124,13 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
            && Objects.equals(dataSource, that.dataSource)
            && Objects.equals(interval, that.interval)
            && Objects.equals(markAsUnused, that.markAsUnused)
-           && Objects.equals(batchSize, that.batchSize);
+           && Objects.equals(batchSize, that.batchSize)
+           && Objects.equals(limit, that.limit);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize);
+    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize, limit);
   }
 }

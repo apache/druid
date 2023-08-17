@@ -27,6 +27,7 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
+import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.volcano.DruidVolcanoCost;
@@ -138,14 +139,14 @@ public class PlannerFactory extends PlannerToolbox
   private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
-        .configBuilder()
+        .config()
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
         .withInSubQueryThreshold(
             plannerContext.queryContext().getInSubQueryThreshold()
-        )
-        .build();
+        );
+
     Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
@@ -196,4 +197,33 @@ public class PlannerFactory extends PlannerToolbox
     return frameworkConfigBuilder.build();
 
   }
+
+  static class DruidCalciteConnectionConfigImpl extends CalciteConnectionConfigImpl
+  {
+    public DruidCalciteConnectionConfigImpl(Properties properties)
+    {
+      super(properties);
+    }
+
+    @Override
+    public <T> T typeSystem(Class<T> typeSystemClass, T defaultTypeSystem)
+    {
+      return (T) DruidTypeSystem.INSTANCE;
+    }
+
+    @Override
+    public SqlConformance conformance()
+    {
+      return DruidConformance.instance();
+    }
+
+    @Override
+    public CalciteConnectionConfigImpl set(CalciteConnectionProperty property, String value)
+    {
+      final Properties newProperties = (Properties) properties.clone();
+      newProperties.setProperty(property.camelName(), value);
+      return new DruidCalciteConnectionConfigImpl(newProperties);
+    }
+  }
 }
+

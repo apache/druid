@@ -39,7 +39,6 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -200,6 +199,11 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public TopNQuery withAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
   {
     return new TopNQueryBuilder(this).aggregators(aggregatorSpecs).build();
+  }
+
+  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggs)
+  {
+    return new TopNQueryBuilder(this).postAggregators(postAggs).build();
   }
 
   @Override

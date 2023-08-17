@@ -191,11 +191,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit
+  )
+  {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval))) {
+                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -1870,6 +1880,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           int[] result = batch.execute();
           return IntStream.of(result).sum();
         }
+    );
+  }
+
+  @Override
+  public DataSegment retrieveUsedSegmentForId(final String id)
+  {
+    return connector.retryTransaction(
+        (handle, status) ->
+            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                    .retrieveUsedSegmentForId(id),
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
 

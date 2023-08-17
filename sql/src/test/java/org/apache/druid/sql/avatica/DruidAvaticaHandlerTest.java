@@ -35,6 +35,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.AvaticaSqlException;
+import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
@@ -187,6 +188,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private Connection clientNoTrailingSlash;
   private Connection superuserClient;
   private Connection clientLosAngeles;
+  private Connection clientLosAngelesUsingUrl;
   private Injector injector;
   private TestRequestLogger testRequestLogger;
 
@@ -221,7 +223,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     public Connection getConnection(String user, String password) throws SQLException
     {
-      return DriverManager.getConnection(url, user, password);
+      final Properties props = new Properties();
+      props.setProperty("user", user);
+      props.setProperty("password", password);
+      props.setProperty(BuiltInConnectionProperty.TRANSPARENT_RECONNECTION.camelName(), "true");
+      return DriverManager.getConnection(url, props);
     }
 
     public Connection getUserConnection() throws SQLException
@@ -1591,12 +1597,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
         Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
         Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
-        Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, null, null, null}, (Object[]) rows.get(0).get("arr4"));
+        Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
       } else {
         Assert.assertArrayEquals(new Object[]{"a", null, null, "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
         Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, 0L, 0L, 0L}, (Object[]) rows.get(0).get("arr2"));
         Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr3"));
-        Assert.assertArrayEquals(new Object[]{1.0f, 0.1f, 0.0f, 0.0f, 0.0f, 0.0f}, (Object[]) rows.get(0).get("arr4"));
+        Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr4"));
       }
     }
   }

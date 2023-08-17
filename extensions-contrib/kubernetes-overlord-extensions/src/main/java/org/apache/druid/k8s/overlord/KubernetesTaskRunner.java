@@ -31,16 +31,22 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -48,6 +54,7 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -100,14 +107,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ListeningExecutorService exec;
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
-
+  private final ServiceEmitter emitter;
+  // currently worker categories aren't supported, so it's hardcoded.
+  protected static final String WORKER_CATEGORY = "_k8s_worker_category";
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
       KubernetesTaskRunnerConfig config,
       KubernetesPeonClient client,
       HttpClient httpClient,
-      PeonLifecycleFactory peonLifecycleFactory
+      PeonLifecycleFactory peonLifecycleFactory,
+      ServiceEmitter emitter
   )
   {
     this.adapter = adapter;
@@ -119,6 +129,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(config.getCapacity(), "k8s-task-runner-%d")
     );
+    this.emitter = emitter;
   }
 
   @Override
@@ -162,7 +173,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   protected TaskStatus doTask(Task task, boolean run)
   {
     try {
-      KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
+      KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
+          task,
+          this::emitTaskStateMetrics
+      );
 
       synchronized (tasks) {
         KubernetesWorkItem workItem = tasks.get(task.getId());
@@ -203,6 +217,33 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       synchronized (tasks) {
         tasks.remove(task.getId());
       }
+    }
+  }
+
+  @VisibleForTesting
+  protected void emitTaskStateMetrics(KubernetesPeonLifecycle.State state, String taskId)
+  {
+    switch (state) {
+      case RUNNING:
+        KubernetesWorkItem workItem;
+        synchronized (tasks) {
+          workItem = tasks.get(taskId);
+          if (workItem == null) {
+            log.error("Task [%s] disappeared", taskId);
+            return;
+          }
+        }
+        ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+        IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
+        emitter.emit(
+            metricBuilder.build(
+                "task/pending/time",
+                new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
+            )
+        );
+      default:
+        // ignore other state transition now
+        return;
     }
   }
 
@@ -287,6 +328,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
     cleanupExecutor.scheduleAtFixedRate(
@@ -304,6 +346,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
 
   @Override
+  @LifecycleStop
   public void stop()
   {
     log.debug("Stopping KubernetesTaskRunner");
@@ -314,7 +357,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of("taskQueue", (long) config.getCapacity());
+    return ImmutableMap.of(WORKER_CATEGORY, (long) config.getCapacity());
   }
 
   @Override
@@ -332,13 +375,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, config.getCapacity() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(config.getCapacity(), tasks.size()));
   }
 
   @Override

@@ -1574,6 +1574,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
     }
+    earlyStopTime = DateTimes.EPOCH;
 
     checkTaskDuration();
   }
@@ -2934,33 +2935,43 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
 
+    boolean stopTasksEarly = false;
+    if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
+      log.info("Early stop requested - signalling tasks to complete");
+
+      earlyStopTime = null;
+      stopTasksEarly = true;
+    }
+
+    int stoppedTasks = 0;
     for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
       Integer groupId = entry.getKey();
       TaskGroup group = entry.getValue();
 
-      // find the longest running task from this group
-      DateTime earliestTaskStart = DateTimes.nowUtc();
-      for (TaskData taskData : group.tasks.values()) {
-        if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
-          earliestTaskStart = taskData.startTime;
-        }
-      }
-
-
-      boolean stopTasksEarly = false;
-      if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
-        log.info("Early stop requested - signalling tasks to complete");
-
-        earlyStopTime = null;
-        stopTasksEarly = true;
-      }
-
-
-      // if this task has run longer than the configured duration, signal all tasks in the group to persist
-      if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow() || stopTasksEarly) {
-        log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
+      if (stopTasksEarly) {
+        log.info("Stopping task group [%d] early. It has run for [%s]", groupId, ioConfig.getTaskDuration());
         futureGroupIds.add(groupId);
         futures.add(checkpointTaskGroup(group, true));
+      } else {
+        // find the longest running task from this group
+        DateTime earliestTaskStart = DateTimes.nowUtc();
+        for (TaskData taskData : group.tasks.values()) {
+          if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
+            earliestTaskStart = taskData.startTime;
+          }
+        }
+
+        if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+          // if this task has run longer than the configured duration
+          // as long as the pending task groups are less than the configured stop task count.
+          if (pendingCompletionTaskGroups.values().stream().mapToInt(CopyOnWriteArrayList::size).sum() + stoppedTasks
+                 < ioConfig.getStopTaskCount()) {
+            log.info("Task group [%d] has run for [%s]. Stopping.", groupId, ioConfig.getTaskDuration());
+            futureGroupIds.add(groupId);
+            futures.add(checkpointTaskGroup(group, true));
+            stoppedTasks++;
+          }
+        }
       }
     }
 
@@ -4066,13 +4077,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     reportingExec.scheduleAtFixedRate(
         this::emitLag,
         ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
         TimeUnit.MILLISECONDS
     );
     reportingExec.scheduleAtFixedRate(
         this::emitNoticesQueueSize,
         ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
         TimeUnit.MILLISECONDS
     );
   }

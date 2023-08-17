@@ -38,7 +38,9 @@ Derby is the default metadata store for Druid, however, it is not suitable for p
 [MySQL](../development/extensions-core/mysql.md) and [PostgreSQL](../development/extensions-core/postgresql.md) are more production suitable metadata stores.
 See [Metadata storage configuration](../configuration/index.md#metadata-storage) for the default configuration settings.
 
-> We also recommend you set up a high availability environment because there is no way to restore lost metadata.
+:::info
+ We also recommend you set up a high availability environment because there is no way to restore lost metadata.
+:::
 
 ## Available metadata stores
 
@@ -46,7 +48,9 @@ Druid supports Derby, MySQL, and PostgreSQL for storing metadata.
 
 ### Derby
 
-> For production clusters, consider using MySQL or PostgreSQL instead of Derby.
+:::info
+ For production clusters, consider using MySQL or PostgreSQL instead of Derby.
+:::
 
 Configure metadata storage with Derby by setting the following properties in your Druid configuration.
 
