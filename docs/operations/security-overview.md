@@ -32,8 +32,9 @@ By default, security features in Druid are disabled, which simplifies the initia
 
 The following recommendations apply to the Druid cluster setup:
 * Run Druid as an unprivileged Unix user. Do not run Druid as the root user.
-   > **WARNING!** \
-   Druid administrators have the same OS permissions as the Unix user account running Druid. See [Authentication and authorization model](security-user-auth.md#authentication-and-authorization-model). If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
+:::caution
+Druid administrators have the same OS permissions as the Unix user account running Druid. See [Authentication and authorization model](security-user-auth.md#authentication-and-authorization-model). If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
+:::
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
 * Enable authorization and do not expose the web console without authorization enabled. If authorization is not enabled, any user that has access to the web console has the same privileges as the operating system user that runs the web console process.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
@@ -82,7 +83,9 @@ keytool -import -file public.cert -alias druid -keystore truststore.jks
 Druid uses Jetty as its embedded web server. See [Configuring SSL/TLS KeyStores
 ](https://www.eclipse.org/jetty/documentation/jetty-11/operations-guide/index.html#og-keystore) from the Jetty documentation.
 
-   > WARNING: Do not use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
+:::caution
+Do not use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
+:::
 
 ### Update Druid TLS configurations
 Edit `common.runtime.properties` for all Druid services on all nodes. Add or update the following TLS options. Restart the cluster when you are finished.
@@ -194,15 +197,19 @@ The following diagram depicts the authorization model, and the relationship betw
 
 The following steps walk through a sample setup procedure:
 
-> The default Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
+:::info
+ The default Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
+:::
 
 1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`.
    Replace `<USERNAME>` with the *new* username you are trying to create. For example:
    ```bash
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname
    ```
-   > If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates,
-   you may choose to include the `insecure` curl option to forgo certificate checking for the curl command.
+:::info
+ If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates,
+you may choose to include the `insecure` curl option to forgo certificate checking for the curl command.
+:::
 
 2. Add a credential for the user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
    ```bash
@@ -244,7 +251,9 @@ The following steps walk through a sample setup procedure:
       }
    ]
    ```
-  > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
+:::info
+ Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
+:::
 
 
 ## Configuring an LDAP authenticator
@@ -263,7 +272,9 @@ From the innermost layer:
 1. Druid processes have the same access to the local files granted to the specified system user running the process.
 2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files or external resources that the Druid process has access to.
 
-> Note: Only grant the `DATASOURCE WRITE` to trusted users because they can act as the Druid process.
+:::info
+ Note: Only grant the `DATASOURCE WRITE` to trusted users because they can act as the Druid process.
+:::
 
 Within the cluster:
 1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. When you implement Druid, take care to setup firewalls and other security measures to secure both inbound and outbound connections.

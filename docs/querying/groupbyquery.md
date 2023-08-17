@@ -23,17 +23,21 @@ sidebar_label: "GroupBy"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes a query
-> type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql-translation.md#query-types).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes a query
+ type in the native language. For information about when Druid SQL will use this query type, refer to the
+ [SQL documentation](sql-translation.md#query-types).
+:::
 
 These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
-> Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,
-> consider [Timeseries](timeseriesquery.md) and [TopN](topnquery.md) queries as well as
-> groupBy. Their performance may be better in some cases. See [Alternatives](#alternatives) below for more details.
+:::info
+ Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,
+ consider [Timeseries](timeseriesquery.md) and [TopN](topnquery.md) queries as well as
+ groupBy. Their performance may be better in some cases. See [Alternatives](#alternatives) below for more details.
+:::
 
 An example groupBy query object is shown below:
 
@@ -227,9 +231,11 @@ The response for the query above would look something like:
 ]
 ```
 
-> Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0. 
-> In release 0.17.0 and earlier, such dimensions were entirely excluded from the result. If you were relying on this old behavior to determine whether a particular dimension was not part of
-> a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#grouping-aggregator) instead.  
+:::info
+ Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0.
+ In release 0.17.0 and earlier, such dimensions were entirely excluded from the result. If you were relying on this old behavior to determine whether a particular dimension was not part of
+ a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#grouping-aggregator) instead.
+:::
 
 
 ## Implementation details
