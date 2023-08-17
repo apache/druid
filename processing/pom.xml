@@ -38,6 +38,8 @@
     <sigar.version>${sigar.base.version}.132</sigar.version>
     <ipaddress.version>5.3.4</ipaddress.version>
     <oshi.version>6.4.4</oshi.version>
+    <antlr4.visitor>true</antlr4.visitor>
+    <antlr4.listener>true</antlr4.listener>
   </properties>
 
   <dependencies>
@@ -477,6 +479,7 @@
       <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
+        <version>4.9.3</version>
         <executions>
           <execution>
             <goals>

@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.Types;
 import javax.annotation.Nullable;
 
 // math operators live here
+// asd
 
 @SuppressWarnings("ClassName")
 final class BinPlusExpr extends BinaryEvalOpExprBase

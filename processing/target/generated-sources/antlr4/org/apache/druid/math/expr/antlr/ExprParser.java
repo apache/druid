@@ -107,6 +107,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitStart(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitStart(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final StartContext start() throws RecognitionException {
@@ -160,6 +165,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitApplyFunctionExpr(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitApplyFunctionExpr(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class DoubleExprContext extends ExprContext {
 		public TerminalNode DOUBLE() { return getToken(ExprParser.DOUBLE, 0); }
@@ -171,6 +181,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitDoubleExpr(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitDoubleExpr(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class DoubleArrayContext extends ExprContext {
@@ -189,6 +204,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitDoubleArray(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitDoubleArray(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class AddSubExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -206,6 +226,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitAddSubExpr(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitAddSubExpr(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class StringContext extends ExprContext {
 		public TerminalNode STRING() { return getToken(ExprParser.STRING, 0); }
@@ -218,6 +243,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitString(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitString(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class LongExprContext extends ExprContext {
 		public TerminalNode LONG() { return getToken(ExprParser.LONG, 0); }
@@ -229,6 +259,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLongExpr(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLongExpr(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class ExplicitStringArrayContext extends ExprContext {
@@ -247,6 +282,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitExplicitStringArray(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitExplicitStringArray(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class LogicalAndOrExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -263,6 +303,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLogicalAndOrExpr(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLogicalAndOrExpr(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class LongArrayContext extends ExprContext {
@@ -281,6 +326,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLongArray(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLongArray(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class NestedExprContext extends ExprContext {
 		public ExprContext expr() {
@@ -294,6 +344,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitNestedExpr(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitNestedExpr(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class LogicalOpExprContext extends ExprContext {
@@ -312,6 +367,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLogicalOpExpr(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLogicalOpExpr(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class FunctionExprContext extends ExprContext {
 		public TerminalNode IDENTIFIER() { return getToken(ExprParser.IDENTIFIER, 0); }
@@ -326,6 +386,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitFunctionExpr(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitFunctionExpr(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class ExplicitLongArrayContext extends ExprContext {
@@ -344,6 +409,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitExplicitLongArray(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitExplicitLongArray(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class UnaryOpExprContext extends ExprContext {
 		public ExprContext expr() {
@@ -358,6 +428,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitUnaryOpExpr(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitUnaryOpExpr(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class NullContext extends ExprContext {
 		public TerminalNode NULL() { return getToken(ExprParser.NULL, 0); }
@@ -369,6 +444,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitNull(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitNull(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class ExplicitArrayContext extends ExprContext {
@@ -388,6 +468,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitExplicitArray(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitExplicitArray(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class StringArrayContext extends ExprContext {
 		public List<StringElementContext> stringElement() {
@@ -404,6 +489,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitStringArray(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitStringArray(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 	public static class MulDivModuloExprContext extends ExprContext {
@@ -422,6 +512,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitMulDivModuloExpr(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitMulDivModuloExpr(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class PowOpExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -439,6 +534,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitPowOpExpr(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitPowOpExpr(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 	public static class IdentifierExprContext extends ExprContext {
 		public TerminalNode IDENTIFIER() { return getToken(ExprParser.IDENTIFIER, 0); }
@@ -450,6 +550,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitIdentifierExpr(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitIdentifierExpr(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -943,6 +1048,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLambda(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLambda(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final LambdaContext lambda() throws RecognitionException {
@@ -1039,6 +1149,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitFunctionArgs(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitFunctionArgs(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final FnArgsContext fnArgs() throws RecognitionException {
@@ -1095,6 +1210,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitStringElement(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitStringElement(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final StringElementContext stringElement() throws RecognitionException {
@@ -1138,6 +1258,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLongElement(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLongElement(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -1184,6 +1309,11 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitNumericElement(this);
 		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitNumericElement(this);
+			else return visitor.visitChildren(this);
+		}
 	}
 
 	public final NumericElementContext numericElement() throws RecognitionException {
@@ -1229,6 +1359,11 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLiteralElement(this);
+		}
+		@Override
+		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLiteralElement(this);
+			else return visitor.visitChildren(this);
 		}
 	}
 
