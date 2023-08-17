@@ -1,4 +1,4 @@
-// Generated from org/apache/druid/math/expr/antlr/Expr.g4 by ANTLR 4.9.3
+// Generated from org/apache/druid/math/expr/antlr/Expr.g4 by ANTLR 4.5.3
 package org.apache.druid.math.expr.antlr;
 
 import org.antlr.v4.runtime.ParserRuleContext;

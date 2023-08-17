@@ -1,4 +1,4 @@
-// Generated from org/apache/druid/math/expr/antlr/Expr.g4 by ANTLR 4.9.3
+// Generated from org/apache/druid/math/expr/antlr/Expr.g4 by ANTLR 4.5.3
 package org.apache.druid.math.expr.antlr;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class ExprParser extends Parser {
-	static { RuntimeMetaData.checkVersion("4.9.3", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.5.3", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -24,32 +24,23 @@ public class ExprParser extends Parser {
 	public static final int
 		RULE_start = 0, RULE_expr = 1, RULE_lambda = 2, RULE_fnArgs = 3, RULE_stringElement = 4, 
 		RULE_longElement = 5, RULE_numericElement = 6, RULE_literalElement = 7;
-	private static String[] makeRuleNames() {
-		return new String[] {
-			"start", "expr", "lambda", "fnArgs", "stringElement", "longElement", 
-			"numericElement", "literalElement"
-		};
-	}
-	public static final String[] ruleNames = makeRuleNames();
+	public static final String[] ruleNames = {
+		"start", "expr", "lambda", "fnArgs", "stringElement", "longElement", "numericElement", 
+		"literalElement"
+	};
 
-	private static String[] makeLiteralNames() {
-		return new String[] {
-			null, "'('", "')'", "','", "'['", "']'", "'<LONG>'", "'<DOUBLE>'", "'<STRING>'", 
-			"'->'", null, "'null'", null, null, null, null, null, null, "'-'", "'!'", 
-			"'^'", "'*'", "'/'", "'%'", "'+'", "'<'", "'<='", "'>'", "'>='", "'=='", 
-			"'!='", "'&&'", "'||'"
-		};
-	}
-	private static final String[] _LITERAL_NAMES = makeLiteralNames();
-	private static String[] makeSymbolicNames() {
-		return new String[] {
-			null, null, null, null, null, null, null, null, null, null, "ARRAY_TYPE", 
-			"NULL", "LONG", "EXP", "DOUBLE", "IDENTIFIER", "WS", "STRING", "MINUS", 
-			"NOT", "POW", "MUL", "DIV", "MODULO", "PLUS", "LT", "LEQ", "GT", "GEQ", 
-			"EQ", "NEQ", "AND", "OR"
-		};
-	}
-	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
+	private static final String[] _LITERAL_NAMES = {
+		null, "'('", "')'", "','", "'['", "']'", "'<LONG>'", "'<DOUBLE>'", "'<STRING>'", 
+		"'->'", null, "'null'", null, null, null, null, null, null, "'-'", "'!'", 
+		"'^'", "'*'", "'/'", "'%'", "'+'", "'<'", "'<='", "'>'", "'>='", "'=='", 
+		"'!='", "'&&'", "'||'"
+	};
+	private static final String[] _SYMBOLIC_NAMES = {
+		null, null, null, null, null, null, null, null, null, null, "ARRAY_TYPE", 
+		"NULL", "LONG", "EXP", "DOUBLE", "IDENTIFIER", "WS", "STRING", "MINUS", 
+		"NOT", "POW", "MUL", "DIV", "MODULO", "PLUS", "LT", "LEQ", "GT", "GEQ", 
+		"EQ", "NEQ", "AND", "OR"
+	};
 	public static final Vocabulary VOCABULARY = new VocabularyImpl(_LITERAL_NAMES, _SYMBOLIC_NAMES);
 
 	/**
@@ -99,7 +90,6 @@ public class ExprParser extends Parser {
 		super(input);
 		_interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
 	}
-
 	public static class StartContext extends ParserRuleContext {
 		public ExprContext expr() {
 			return getRuleContext(ExprContext.class,0);
@@ -207,8 +197,6 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
-		public TerminalNode PLUS() { return getToken(ExprParser.PLUS, 0); }
-		public TerminalNode MINUS() { return getToken(ExprParser.MINUS, 0); }
 		public AddSubExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -267,8 +255,6 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
-		public TerminalNode AND() { return getToken(ExprParser.AND, 0); }
-		public TerminalNode OR() { return getToken(ExprParser.OR, 0); }
 		public LogicalAndOrExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -317,12 +303,6 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
-		public TerminalNode LT() { return getToken(ExprParser.LT, 0); }
-		public TerminalNode LEQ() { return getToken(ExprParser.LEQ, 0); }
-		public TerminalNode GT() { return getToken(ExprParser.GT, 0); }
-		public TerminalNode GEQ() { return getToken(ExprParser.GEQ, 0); }
-		public TerminalNode EQ() { return getToken(ExprParser.EQ, 0); }
-		public TerminalNode NEQ() { return getToken(ExprParser.NEQ, 0); }
 		public LogicalOpExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -369,8 +349,6 @@ public class ExprParser extends Parser {
 		public ExprContext expr() {
 			return getRuleContext(ExprContext.class,0);
 		}
-		public TerminalNode MINUS() { return getToken(ExprParser.MINUS, 0); }
-		public TerminalNode NOT() { return getToken(ExprParser.NOT, 0); }
 		public UnaryOpExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -435,9 +413,6 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
-		public TerminalNode MUL() { return getToken(ExprParser.MUL, 0); }
-		public TerminalNode DIV() { return getToken(ExprParser.DIV, 0); }
-		public TerminalNode MODULO() { return getToken(ExprParser.MODULO, 0); }
 		public MulDivModuloExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -455,7 +430,6 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
-		public TerminalNode POW() { return getToken(ExprParser.POW, 0); }
 		public PowOpExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -517,10 +491,7 @@ public class ExprParser extends Parser {
 				_la = _input.LA(1);
 				if ( !(_la==MINUS || _la==NOT) ) {
 				_errHandler.recoverInline(this);
-				}
-				else {
-					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-					_errHandler.reportMatch(this);
+				} else {
 					consume();
 				}
 				setState(22);
@@ -569,7 +540,6 @@ public class ExprParser extends Parser {
 				setState(35);
 				match(T__0);
 				setState(37);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__0) | (1L << T__3) | (1L << T__5) | (1L << T__6) | (1L << T__7) | (1L << ARRAY_TYPE) | (1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << IDENTIFIER) | (1L << STRING) | (1L << MINUS) | (1L << NOT))) != 0)) {
 					{
@@ -626,7 +596,6 @@ public class ExprParser extends Parser {
 				setState(44);
 				match(T__3);
 				setState(53);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if (_la==NULL || _la==STRING) {
 					{
@@ -694,7 +663,6 @@ public class ExprParser extends Parser {
 				setState(68);
 				match(T__3);
 				setState(77);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE))) != 0)) {
 					{
@@ -729,7 +697,6 @@ public class ExprParser extends Parser {
 				_ctx = _localctx;
 				_prevctx = _localctx;
 				setState(81);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if (_la==T__6) {
 					{
@@ -741,7 +708,6 @@ public class ExprParser extends Parser {
 				setState(83);
 				match(T__3);
 				setState(92);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE))) != 0)) {
 					{
@@ -780,7 +746,6 @@ public class ExprParser extends Parser {
 				setState(96);
 				match(T__3);
 				setState(105);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << STRING))) != 0)) {
 					{
@@ -819,7 +784,6 @@ public class ExprParser extends Parser {
 				setState(109);
 				match(T__3);
 				setState(118);
-				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << STRING))) != 0)) {
 					{
@@ -883,10 +847,7 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << MUL) | (1L << DIV) | (1L << MODULO))) != 0)) ) {
 						_errHandler.recoverInline(this);
-						}
-						else {
-							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-							_errHandler.reportMatch(this);
+						} else {
 							consume();
 						}
 						setState(128);
@@ -903,10 +864,7 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !(_la==MINUS || _la==PLUS) ) {
 						_errHandler.recoverInline(this);
-						}
-						else {
-							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-							_errHandler.reportMatch(this);
+						} else {
 							consume();
 						}
 						setState(131);
@@ -923,10 +881,7 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << LT) | (1L << LEQ) | (1L << GT) | (1L << GEQ) | (1L << EQ) | (1L << NEQ))) != 0)) ) {
 						_errHandler.recoverInline(this);
-						}
-						else {
-							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-							_errHandler.reportMatch(this);
+						} else {
 							consume();
 						}
 						setState(134);
@@ -943,10 +898,7 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !(_la==AND || _la==OR) ) {
 						_errHandler.recoverInline(this);
-						}
-						else {
-							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-							_errHandler.reportMatch(this);
+						} else {
 							consume();
 						}
 						setState(137);
@@ -1159,10 +1111,7 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==NULL || _la==STRING) ) {
 			_errHandler.recoverInline(this);
-			}
-			else {
-				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-				_errHandler.reportMatch(this);
+			} else {
 				consume();
 			}
 			}
@@ -1206,10 +1155,7 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==NULL || _la==LONG) ) {
 			_errHandler.recoverInline(this);
-			}
-			else {
-				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-				_errHandler.reportMatch(this);
+			} else {
 				consume();
 			}
 			}
@@ -1254,10 +1200,7 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE))) != 0)) ) {
 			_errHandler.recoverInline(this);
-			}
-			else {
-				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-				_errHandler.reportMatch(this);
+			} else {
 				consume();
 			}
 			}
@@ -1303,10 +1246,7 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << STRING))) != 0)) ) {
 			_errHandler.recoverInline(this);
-			}
-			else {
-				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
-				_errHandler.reportMatch(this);
+			} else {
 				consume();
 			}
 			}
@@ -1346,7 +1286,7 @@ public class ExprParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\"\u00b4\4\2\t\2\4"+
+		"\3\u0430\ud6d1\u8206\uad2d\u4417\uaef1\u8d80\uaadd\3\"\u00b4\4\2\t\2\4"+
 		"\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b\t\b\4\t\t\t\3\2\3\2\3\2\3\3"+
 		"\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\5"+
 		"\3(\n\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\7\3\63\n\3\f\3\16\3\66\13"+
@@ -1360,8 +1300,8 @@ public class ExprParser extends Parser {
 		"\4\3\4\3\5\3\5\3\5\7\5\u00a7\n\5\f\5\16\5\u00aa\13\5\3\6\3\6\3\7\3\7\3"+
 		"\b\3\b\3\t\3\t\3\t\2\3\4\n\2\4\6\b\n\f\16\20\2\13\3\2\24\25\3\2\27\31"+
 		"\4\2\24\24\32\32\3\2\33 \3\2!\"\4\2\r\r\23\23\3\2\r\16\4\2\r\16\20\20"+
-		"\5\2\r\16\20\20\23\23\2\u00cf\2\22\3\2\2\2\4{\3\2\2\2\6\u009e\3\2\2\2"+
-		"\b\u00a3\3\2\2\2\n\u00ab\3\2\2\2\f\u00ad\3\2\2\2\16\u00af\3\2\2\2\20\u00b1"+
+		"\5\2\r\16\20\20\23\23\u00cf\2\22\3\2\2\2\4{\3\2\2\2\6\u009e\3\2\2\2\b"+
+		"\u00a3\3\2\2\2\n\u00ab\3\2\2\2\f\u00ad\3\2\2\2\16\u00af\3\2\2\2\20\u00b1"+
 		"\3\2\2\2\22\23\5\4\3\2\23\24\7\2\2\3\24\3\3\2\2\2\25\26\b\3\1\2\26|\7"+
 		"\r\2\2\27\30\t\2\2\2\30|\5\4\3\25\31\32\7\3\2\2\32\33\5\4\3\2\33\34\7"+
 		"\4\2\2\34|\3\2\2\2\35\36\7\21\2\2\36\37\7\3\2\2\37 \5\6\4\2 !\7\5\2\2"+

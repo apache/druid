@@ -30,7 +30,9 @@ import org.apache.druid.segment.column.Types;
 import javax.annotation.Nullable;
 
 // math operators live here
-// asd
+
+// phony class to enable maven to track the compilation of this class
+final class BinaryMathOperatorExpr {}
 
 @SuppressWarnings("ClassName")
 final class BinPlusExpr extends BinaryEvalOpExprBase
