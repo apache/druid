@@ -33,6 +33,7 @@ import java.math.BigInteger;
 import java.util.Objects;
 
 
+@SuppressWarnings("unused")
 final class UnaryOperatorExpr
 {
   // phony class to enable maven to track the compilation of this class

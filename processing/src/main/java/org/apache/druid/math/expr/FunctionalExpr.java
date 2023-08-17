@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("unused")
 final class FunctionalExpr
 {
   // phony class to enable maven to track the compilation of this class
