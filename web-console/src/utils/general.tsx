@@ -156,7 +156,7 @@ function identity<T>(x: T): T {
 
 export function lookupBy<T, Q = T>(
   array: readonly T[],
-  keyFn: (x: T, index: number) => string = String,
+  keyFn: (x: T, index: number) => string | number = String,
   valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
   if (!valueFn) valueFn = identity as any;
@@ -302,21 +302,25 @@ export function formatDurationHybrid(ms: NumberLike): string {
   }
 }
 
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
+  } else {
+    return word + 's';
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
-
-export function validJson(json: string): boolean {
-  try {
-    JSONBig.parse(json);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
@@ -517,17 +521,19 @@ export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
 
-export function offsetToRowColumn(
-  str: string,
-  offset: number,
-): { row: number; column: number } | undefined {
+export interface RowColumn {
+  row: number;
+  column: number;
+}
+
+export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
   // Ensure offset is within the string length
   if (offset < 0 || offset > str.length) return;
 
   const lines = str.split('\n');
   for (let row = 0; row < lines.length; row++) {
     const line = lines[row];
-    if (offset < line.length) {
+    if (offset <= line.length) {
       return {
         row,
         column: offset,

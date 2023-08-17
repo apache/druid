@@ -87,7 +87,13 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
           </p>
         </Callout>
       )}
-      <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+      <FormJsonSelector
+        tab={currentTab}
+        onChange={t => {
+          setJsonError(undefined);
+          setCurrentTab(t);
+        }}
+      />
       <div className="content">
         {currentTab === 'form' ? (
           <AutoForm
@@ -98,11 +104,8 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
         ) : (
           <JsonInput
             value={currentConfig}
-            onChange={v => {
-              setCurrentConfig(v);
-              setJsonError(undefined);
-            }}
-            onError={setJsonError}
+            onChange={setCurrentConfig}
+            setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, COMPACTION_CONFIG_FIELDS)}
             height="100%"
           />

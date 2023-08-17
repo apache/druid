@@ -338,13 +338,6 @@ public class DruidCoordinator
     return CoordinatorCompactionConfig.current(configManager);
   }
 
-  public void markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
-  {
-    log.debug("Marking [%d] segments of datasource [%s] as unused.", segmentIds.size(), datasource);
-    int updatedCount = segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
-    log.info("Successfully marked [%d] segments of datasource [%s] as unused.", updatedCount, datasource);
-  }
-
   public String getCurrentLeader()
   {
     return coordLeaderSelector.getCurrentLeader();
@@ -549,26 +542,37 @@ public class DruidCoordinator
     }
   }
 
+  /**
+   * Resets the balancerExec if required and creates a new BalancerStrategy for
+   * the current coordinator run.
+   */
   @VisibleForTesting
-  protected void initBalancerExecutor()
+  BalancerStrategy createBalancerStrategy(int balancerComputeThreads)
   {
-    final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
-
+    // Reset balancerExecutor if required
     if (balancerExec == null) {
-      balancerExec = createNewBalancerExecutor(currentNumber);
-    } else if (cachedBalancerThreadNumber != currentNumber) {
+      balancerExec = createNewBalancerExecutor(balancerComputeThreads);
+    } else if (cachedBalancerThreadNumber != balancerComputeThreads) {
       log.info(
-          "balancerComputeThreads has changed from [%d] to [%d], recreating the thread pool.",
-          cachedBalancerThreadNumber,
-          currentNumber
+          "'balancerComputeThreads' has changed from [%d] to [%d]",
+          cachedBalancerThreadNumber, balancerComputeThreads
       );
       balancerExec.shutdownNow();
-      balancerExec = createNewBalancerExecutor(currentNumber);
+      balancerExec = createNewBalancerExecutor(balancerComputeThreads);
     }
+
+    // Create BalancerStrategy
+    final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
+    log.info(
+        "Using balancer strategy[%s] with [%d] threads.",
+        balancerStrategy.getClass().getSimpleName(), balancerComputeThreads
+    );
+    return balancerStrategy;
   }
 
   private ListeningExecutorService createNewBalancerExecutor(int numThreads)
   {
+    log.info("Creating new balancer executor with [%d] threads.", numThreads);
     cachedBalancerThreadNumber = numThreads;
     return MoreExecutors.listeningDecorator(
         Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")
@@ -579,11 +583,11 @@ public class DruidCoordinator
   {
     return ImmutableList.of(
         new UpdateCoordinatorStateAndPrepareCluster(),
-        new RunRules(),
+        new RunRules(segmentsMetadataManager::markSegmentsAsUnused),
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
-        new MarkOvershadowedSegmentsAsUnused(DruidCoordinator.this),
-        new BalanceSegments(),
+        new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused),
+        new BalanceSegments(config.getCoordinatorPeriod()),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
   }
@@ -619,7 +623,7 @@ public class DruidCoordinator
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(config, compactionSegmentSearchPolicy, overlordClient);
+      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(
@@ -706,7 +710,6 @@ public class DruidCoordinator
                 .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
-                .withEmitter(emitter)
                 .build();
         log.info(
             "Initialized run params for group [%s] with [%,d] used segments in [%d] datasources.",
@@ -758,7 +761,7 @@ public class DruidCoordinator
           );
 
           log.info(
-              "Emitted [%d] stats for group [%s]. All collected stats:%s\n",
+              "Emitted [%d] stats for group [%s]. All collected stats:%s",
               emittedCount.get(), dutyGroupName, allStats.buildStatsTable()
           );
         }
@@ -766,7 +769,7 @@ public class DruidCoordinator
         // Emit the runtime of the full DutiesRunnable
         final long runMillis = groupRunTime.stop().elapsed(TimeUnit.MILLISECONDS);
         emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
-        log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
+        log.info("Finished coordinator run for group [%s] in [%d] ms.%n", dutyGroupName, runMillis);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
@@ -826,15 +829,8 @@ public class DruidCoordinator
       final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
       cancelLoadsOnDecommissioningServers(cluster);
 
-      initBalancerExecutor();
-      final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
-      log.info(
-          "Using balancer strategy [%s] with round-robin assignment [%s] and debug dimensions [%s].",
-          balancerStrategy.getClass().getSimpleName(),
-          segmentLoadingConfig.isUseRoundRobinSegmentAssignment(),
-          dynamicConfig.getDebugDimensions()
-      );
-
+      final BalancerStrategy balancerStrategy
+          = createBalancerStrategy(segmentLoadingConfig.getBalancerComputeThreads());
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withBalancerStrategy(balancerStrategy)

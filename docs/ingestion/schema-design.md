@@ -244,12 +244,14 @@ You should query for the number of ingested rows with:
 
 Druid can infer the schema for your data in one of two ways:
 
-- [Type-aware schema discovery (experimental)](#type-aware-schema-discovery) where Druid infers the schema and type for your data. Type-aware schema discovery is an experimental feature currently available for native batch and streaming ingestion.
+- [Type-aware schema discovery](#type-aware-schema-discovery) where Druid infers the schema and type for your data. Type-aware schema discovery is available for native batch and streaming ingestion.
 - [String-based schema discovery](#string-based-schema-discovery) where all the discovered columns are typed as either native string or multi-value string columns.
 
 #### Type-aware schema discovery
 
-> Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns.
+:::info
+ Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns.
+:::
 
 You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
 
@@ -260,6 +262,8 @@ native boolean types, Druid ingests these values as strings if `druid.expression
 (the default), or longs if set to `true` (for more SQL compatible behavior). Array typed columns can be queried using
 the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql-functions.md#unnest). Nested
 columns can be queried with the [JSON functions](../querying/sql-json-functions.md).
+
+We also highly recommend setting `druid.generic.useDefaultValueForNull=false` when using these columns since it also enables out of the box `ARRAY` type filtering. If not set to `false`, setting `sqlUseBoundsAndSelectors` to `false` on the [SQL query context](../querying/sql-query-context.md) can enable `ARRAY` filtering instead.
 
 Mixed type columns are stored in the _least_ restrictive type that can represent all values in the column. For example:
 

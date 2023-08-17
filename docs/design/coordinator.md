@@ -141,9 +141,11 @@ This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
 For more information, see [Avoid conflicts with ingestion](../data-management/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
-> This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
-> and their total size exceeds [`inputSegmentSizeBytes`](../configuration/index.md#automatic-compaction-dynamic-configuration).
-> If it finds such segments, it simply skips them.
+:::info
+ This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
+ and their total size exceeds [`inputSegmentSizeBytes`](../configuration/index.md#automatic-compaction-dynamic-configuration).
+ If it finds such segments, it simply skips them.
+:::
 
 ### FAQ
 

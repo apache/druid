@@ -3,8 +3,12 @@ id: kinesis-ingestion
 title: "Amazon Kinesis ingestion"
 sidebar_label: "Amazon Kinesis"
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -34,7 +38,7 @@ Review the [Kinesis known issues](#kinesis-known-issues) before deploying the `d
 
 ## Supervisor spec
 
-The following table outlines the high-level configuration options for the Kinesis supervisor object. 
+The following table outlines the high-level configuration options for the Kinesis supervisor object.
 See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
 
 |Property|Type|Description|Required|
@@ -58,9 +62,10 @@ supervisor creates a new set of tasks. In this way, the supervisors persist acro
 The following example shows how to submit a supervisor spec for a stream with the name `KinesisStream`.
 In this example, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="1" label="cURL">
+
 ```shell
 curl -X POST "http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor" \
 -H "Content-Type: application/json" \
@@ -135,7 +140,9 @@ curl -X POST "http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor" \
   }
 }'
 ```
-<!--HTTP-->
+</TabItem>
+<TabItem value="2" label="HTTP">
+
 ```HTTP
 POST /druid/indexer/v1/supervisor
 HTTP/1.1
@@ -213,7 +220,8 @@ Content-Type: application/json
   }
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ## Supervisor I/O configuration
 
@@ -395,8 +403,6 @@ The following table outlines the configuration options for `tuningConfig`:
 |`resetOffsetAutomatically`|Boolean|Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/>If `false`, the exception bubbles up causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially using the [Reset Supervisor API](../../api-reference/supervisor-api.md). This mode is useful for production, since it highlights issues with ingestion.<br/>If `true`, Druid automatically resets to the earliest or latest sequence number available in Kinesis, based on the value of the `useEarliestSequenceNumber` property (earliest if `true`, latest if `false`). Note that this can lead to dropping data (if `useEarliestSequenceNumber` is `false`) or duplicating data (if `useEarliestSequenceNumber` is `true`) without your knowledge. Druid logs messages indicating that a reset has occurred without interrupting ingestion. This mode is useful for non-production situations since it enables Druid to recover from problems automatically, even if they lead to quiet dropping or duplicating of data.|No|`false`|
 |`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`.|No|`false`|
 |`workerThreads`|Integer|The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.|No| `min(10, taskCount)`|
-|`chatAsync`|Boolean| If `true`, the supervisor uses asynchronous communication with indexing tasks and ignores the `chatThreads` parameter. If `false`, the supervisor uses synchronous communication in a thread pool of size `chatThreads`.|No| `true`|
-|`chatThreads`|Integer|The number of threads Druid uses to communicate with indexing tasks. Druid ignores this setting if `chatAsync` is `true`.|No|`min(10, taskCount * replicas)`|
 |`chatRetries`|Integer|The number of times Druid retries HTTP requests to indexing tasks before considering tasks unresponsive.|No|8|
 |`httpTimeout`|ISO 8601 period|The period of time to wait for a HTTP response from an indexing task.|No|PT10S|
 |`shutdownTimeout`|ISO 8601 period|The period of time to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|No|PT80S|
@@ -430,14 +436,26 @@ This section describes how to use the [Supervisor API](../../api-reference/super
 
 ### AWS authentication
 
-To authenticate with AWS, you must provide your AWS access key and AWS secret key using `runtime.properties`, for example:
+Druid uses AWS access and secret keys to authenticate Kinesis API requests. There are a few ways to provide this information to Druid:
 
-```text
+1. Using roles or short-term credentials:
+
+   Druid looks for credentials set in [environment variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html),
+via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the
+default [profile configuration file](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html), and from the
+EC2 instance profile provider (in this order).
+
+2. Using long-term security credentials:
+
+   You can directly provide your AWS access key and AWS secret key in the `common.runtime.properties` file as shown in the example below:
+
+```properties
 druid.kinesis.accessKey=AKIAWxxxxxxxxxx4NCKS
 druid.kinesis.secretKey=Jbytxxxxxxxxxxx2+555
 ```
 
-Druid uses the AWS access key and AWS secret key to authenticate Kinesis API requests. If not provided, the service looks for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+> Note: AWS does not recommend providing long-term security credentials in configuration files since it might pose a security risk.
+If you use this approach, it takes precedence over all other methods of providing credentials.
 
 To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
 The required permissions depend on the value of `useListShards`.
@@ -484,7 +502,7 @@ The following is an example policy:
   },
   {
     "Effect": "Allow",
-    "Action": ["kinesis:DescribeStreams"],
+    "Action": ["kinesis:DescribeStream"],
     "Resource": ["*"]
   },
   {

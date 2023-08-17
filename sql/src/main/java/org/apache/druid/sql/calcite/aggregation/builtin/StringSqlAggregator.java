@@ -62,15 +62,27 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Implements {@link org.apache.calcite.sql.fun.SqlLibraryOperators#STRING_AGG} and
+ * {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#LISTAGG}, as well as our extended versions of these
+ * functions that include {@code maxSizeBytes}.
+ */
 public class StringSqlAggregator implements SqlAggregator
 {
-  private static final String NAME = "STRING_AGG";
-  private static final SqlAggFunction FUNCTION = new StringAggFunction();
+  private final SqlAggFunction function;
+
+  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction("STRING_AGG"));
+  public static final StringSqlAggregator LISTAGG = new StringSqlAggregator(new StringAggFunction("LISTAGG"));
+
+  public StringSqlAggregator(SqlAggFunction function)
+  {
+    this.function = function;
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return FUNCTION;
+    return function;
   }
 
   @Nullable
@@ -108,7 +120,10 @@ public class StringSqlAggregator implements SqlAggregator
       // separator must be a literal
       return null;
     }
-    String separator = RexLiteral.stringValue(separatorNode);
+
+    final String separator;
+
+    separator = RexLiteral.stringValue(separatorNode);
 
     if (separator == null) {
       // separator must not be null
@@ -116,6 +131,7 @@ public class StringSqlAggregator implements SqlAggregator
     }
 
     Integer maxSizeBytes = null;
+
     if (arguments.size() > 2) {
       RexNode maxBytes = Expressions.fromFieldAccess(
           rexBuilder.getTypeFactory(),
@@ -129,6 +145,7 @@ public class StringSqlAggregator implements SqlAggregator
       }
       maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
+
     final DruidExpression arg = arguments.get(0);
     final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
@@ -226,10 +243,10 @@ public class StringSqlAggregator implements SqlAggregator
   {
     private static final StringAggReturnTypeInference RETURN_TYPE_INFERENCE = new StringAggReturnTypeInference();
 
-    StringAggFunction()
+    StringAggFunction(String name)
     {
       super(
-          NAME,
+          name,
           null,
           SqlKind.OTHER_FUNCTION,
           RETURN_TYPE_INFERENCE,
@@ -237,7 +254,7 @@ public class StringSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s(expr, separator)'", NAME),
+                      StringUtils.format("'%s(expr, separator)'", name),
                       OperandTypes.ANY,
                       OperandTypes.STRING
                   ),
@@ -245,7 +262,7 @@ public class StringSqlAggregator implements SqlAggregator
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", NAME),
+                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", name),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
                       OperandTypes.POSITIVE_INTEGER_LITERAL
