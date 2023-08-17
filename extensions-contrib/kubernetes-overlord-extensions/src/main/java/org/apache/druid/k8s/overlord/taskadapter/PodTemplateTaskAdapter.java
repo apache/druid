@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -210,7 +211,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private Collection<EnvVar> getEnv(Task task)
   {
-    return ImmutableList.of(
+    List<EnvVar> envVars = Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
             .withValue(taskConfig.getBaseDir())
@@ -220,16 +221,20 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValue(task.getId())
             .build(),
         new EnvVarBuilder()
-            .withName(DruidK8sConstants.TASK_JSON_ENV)
-            .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
-                null,
-                StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK)
-            )).build()).build(),
-        new EnvVarBuilder()
             .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
             .withValue(Boolean.toString(task.supportsQueries()))
             .build()
     );
+    if (taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+      envVars.add(new EnvVarBuilder()
+          .withName(DruidK8sConstants.TASK_JSON_ENV)
+          .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
+              null,
+              StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK)
+          )).build()).build()
+      );
+    }
+    return envVars;
   }
 
   private Map<String, String> getPodLabels(KubernetesTaskRunnerConfig config, Task task)
@@ -239,14 +244,17 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private Map<String, String> getPodTemplateAnnotations(Task task) throws IOException
   {
-    return ImmutableMap.<String, String>builder()
-        .put(DruidK8sConstants.TASK, Base64Compression.compressBase64(mapper.writeValueAsString(task)))
+    ImmutableMap.Builder<String, String> podTemplateAnnotationBuilder = ImmutableMap.<String, String>builder()
         .put(DruidK8sConstants.TLS_ENABLED, String.valueOf(node.isEnableTlsPort()))
         .put(DruidK8sConstants.TASK_ID, task.getId())
         .put(DruidK8sConstants.TASK_TYPE, task.getType())
         .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
-        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
-        .build();
+        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource());
+    if (taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+      podTemplateAnnotationBuilder
+          .put(DruidK8sConstants.TASK, Base64Compression.compressBase64(mapper.writeValueAsString(task)));
+    }
+    return podTemplateAnnotationBuilder.build();
   }
   
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)

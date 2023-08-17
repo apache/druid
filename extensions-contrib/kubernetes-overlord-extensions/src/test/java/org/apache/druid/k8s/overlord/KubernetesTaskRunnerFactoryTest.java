@@ -44,6 +44,7 @@ import java.util.Properties;
 public class KubernetesTaskRunnerFactoryTest
 {
   private ObjectMapper objectMapper;
+  private ObjectMapper jsonMapper;
   private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
   private StartupLoggingConfig startupLoggingConfig;
   private TaskLogs taskLogs;
@@ -58,6 +59,7 @@ public class KubernetesTaskRunnerFactoryTest
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
+    jsonMapper = new TestUtils().getTestObjectMapper();
     kubernetesTaskRunnerConfig = KubernetesTaskRunnerConfig.builder()
         .withCapacity(1)
         .build();

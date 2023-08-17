@@ -37,6 +37,10 @@ public class ExecutorLifecycleConfig
 
   @JsonProperty
   @NotNull
+  private String taskId = "";
+
+  @JsonProperty
+  @NotNull
   private File statusFile = null;
 
   @JsonProperty
@@ -67,6 +71,17 @@ public class ExecutorLifecycleConfig
   public File getStatusFile()
   {
     return statusFile;
+  }
+
+  public ExecutorLifecycleConfig setTaskId(String taskId)
+  {
+    this.taskId = taskId;
+    return this;
+  }
+
+  public String getTaskId()
+  {
+    return taskId;
   }
 
   public ExecutorLifecycleConfig setStatusFile(File statusFile)

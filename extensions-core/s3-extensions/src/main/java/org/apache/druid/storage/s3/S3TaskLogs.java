@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +40,7 @@ import java.util.Date;
 /**
  * Provides task logs archived on S3.
  */
-public class S3TaskLogs implements TaskLogs
+public class S3TaskLogs implements TaskLogs, TaskPayloadManager
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 
@@ -80,6 +81,19 @@ public class S3TaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "status.json");
+    return streamTaskFileWithRetry(0, taskKey);
+  }
+
+  @Override
+  public void pushTaskPayload(String taskid, File taskPayloadFile) throws IOException {
+    final String taskKey = getTaskLogKey(taskid, "task.json");
+    log.info("Pushing task payload %s to: %s", taskPayloadFile, taskKey);
+    pushTaskFile(taskPayloadFile, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskid) throws IOException {
+    final String taskKey = getTaskLogKey(taskid, "task.json");
     return streamTaskFileWithRetry(0, taskKey);
   }
 

@@ -244,6 +244,41 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
+  public void test_fromTask_withNoopPodTemplateInRuntimeProperites_dontSetTaskJSON() throws IOException
+  {
+    Path templatePath = Files.createFile(tempDir.resolve("noop.yaml"));
+    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", templatePath.toString());
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        KubernetesTaskRunnerConfig.builder().withTaskPayloadAsEnvVariable(false).build(),
+        taskConfig,
+        node,
+        mapper,
+        props
+    );
+
+    Task task = new NoopTask(
+        "id",
+        "id",
+        "datasource",
+        0,
+        0,
+        null,
+        null,
+        null
+    );
+
+    Job actual = adapter.fromTask(task);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobNoTaskJson.yaml", Job.class);
+
+    Assertions.assertEquals(actual, expected);
+  }
+
+  @Test
   public void test_fromTask_withoutAnnotations_throwsIOE() throws IOException
   {
     Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));

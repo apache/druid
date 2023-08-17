@@ -25,20 +25,35 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientTaskQuery;
+import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceClientFactoryImpl;
+import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.rpc.indexing.OverlordClient;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +61,8 @@ import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -64,6 +81,8 @@ public class ExecutorLifecycle
 
   private final ExecutorService parentMonitorExec = Execs.singleThreaded("parent-monitor-%d");
 
+  private final ServiceClient serviceClient;
+
   private volatile Task task = null;
   private volatile ListenableFuture<TaskStatus> statusFuture = null;
   private volatile FileChannel taskLockChannel;
@@ -75,7 +94,9 @@ public class ExecutorLifecycle
       TaskConfig taskConfig,
       TaskActionClientFactory taskActionClientFactory,
       TaskRunner taskRunner,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @IndexingService final ServiceLocator serviceLocator
   )
   {
     this.taskExecutorConfig = taskExecutorConfig;
@@ -83,6 +104,10 @@ public class ExecutorLifecycle
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
     this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.serviceClient = clientFactory.makeClient("peon", serviceLocator, StandardRetryPolicy.builder()
+        .maxAttempts(5)
+        .retryNotAvailable(false)
+        .build());
   }
 
   @LifecycleStart
@@ -93,14 +118,29 @@ public class ExecutorLifecycle
     final InputStream parentStream = Preconditions.checkNotNull(taskExecutorConfig.getParentStream(), "parentStream");
 
     try {
-      task = jsonMapper.readValue(taskFile, Task.class);
+      if (!taskExecutorConfig.getTaskId().equals("")) {
+        final String path = StringUtils.format("/druid/indexer/v1/task/%s", StringUtils.urlEncode(taskExecutorConfig.getTaskId()));
+        final Map<String, Object> response = jsonMapper.readValue(
+            serviceClient.request(
+                new RequestBuilder(HttpMethod.GET, path),
+                new BytesFullResponseHandler()
+            ).getContent(),
+            JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+        );
+        task = jsonMapper.convertValue(
+            response.get("payload"),
+            Task.class
+        );
+      } else {
+        task = jsonMapper.readValue(taskFile, Task.class);
+      }
 
       log.info(
           "Running with task: %s",
           jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task)
       );
     }
-    catch (IOException e) {
+    catch (ExecutionException | IOException e) {
       throw new RuntimeException(e);
     }
 

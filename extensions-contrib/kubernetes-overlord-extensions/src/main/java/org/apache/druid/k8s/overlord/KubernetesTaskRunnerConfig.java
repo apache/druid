@@ -90,6 +90,11 @@ public class KubernetesTaskRunnerConfig
   // how long to wait for the peon k8s job to launch
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
+  // Whether to pass the task.json payload to the peon K8s Jobs as a environment variable.
+  @JsonProperty
+  @NotNull
+  private Boolean taskPayloadAsEnvVariable = Boolean.TRUE;
+
   @JsonProperty
   // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
   // the peon inherits the monitors from the overlord, so if someone specifies
@@ -135,7 +140,8 @@ public class KubernetesTaskRunnerConfig
       List<String> javaOptsArray,
       Map<String, String> labels,
       Map<String, String> annotations,
-      Integer capacity
+      Integer capacity,
+      Boolean taskPayloadAsEnvVariable
   )
   {
     this.namespace = namespace;
@@ -195,6 +201,10 @@ public class KubernetesTaskRunnerConfig
     this.capacity = ObjectUtils.defaultIfNull(
         capacity,
         this.capacity
+    );
+    this.taskPayloadAsEnvVariable = ObjectUtils.defaultIfNull(
+        taskPayloadAsEnvVariable,
+        Boolean.TRUE
     );
   }
 
@@ -279,6 +289,11 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
+  public Boolean isTaskPayloadAsEnvVariable()
+  {
+    return taskPayloadAsEnvVariable;
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -302,6 +317,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> labels;
     private Map<String, String> annotations;
     private Integer capacity;
+    private Boolean taskPayloadAsEnvVariable;
 
     public Builder()
     {
@@ -403,6 +419,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withTaskPayloadAsEnvVariable(Boolean taskPayloadAsEnvVariable)
+    {
+      this.taskPayloadAsEnvVariable = taskPayloadAsEnvVariable;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -421,7 +443,8 @@ public class KubernetesTaskRunnerConfig
           this.javaOptsArray,
           this.labels,
           this.annotations,
-          this.capacity
+          this.capacity,
+          this.taskPayloadAsEnvVariable
       );
     }
   }

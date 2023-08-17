@@ -42,6 +42,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,9 +72,9 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long, Task)} or {@link #join(long)} is called. */
     NOT_STARTED,
-    /** Lifecycle's state since {@link #run(Job, long, long)} is called. */
+    /** Lifecycle's state since {@link #run(Job, long, long, Task)} is called. */
     PENDING,
     /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
@@ -117,13 +118,14 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout) throws IllegalStateException
+  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, Task task) throws IllegalStateException
   {
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
+      writeTaskPayload(task);
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           launchTimeout,
@@ -132,6 +134,10 @@ public class KubernetesPeonLifecycle
 
       return join(timeout);
     }
+    catch (IOException e) {
+      log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      throw new RuntimeException(e);
+    }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
       shutdown();
@@ -139,6 +145,18 @@ public class KubernetesPeonLifecycle
     }
     finally {
       stopTask();
+    }
+  }
+
+  private void writeTaskPayload(Task task) throws IOException{
+    Path file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
+    try {
+      FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());
+      taskLogs.pushTaskPayload(task.getId(), file.toFile());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    } finally {
+      Files.deleteIfExists(file);
     }
   }
 

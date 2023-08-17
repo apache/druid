@@ -40,6 +40,7 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import io.netty.util.SuppressForbidden;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
@@ -66,6 +67,8 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.tasklogs.TaskLogs;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
@@ -133,6 +136,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -175,6 +179,9 @@ public class CliPeon extends GuiceRunnable
    */
   @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
   public String loadBroadcastSegments = "false";
+
+  @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
+  public String taskId = "";
 
   private static final Logger log = new Logger(CliPeon.class);
 
@@ -229,7 +236,8 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
-                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
+                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile())
+                .setTaskId(taskId);
 
             if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
               log.info("Running peon in k8s mode");
@@ -282,9 +290,13 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          public Task readTask(@Json ObjectMapper mapper, ExecutorLifecycleConfig config)
+          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskLogs taskLogs)
           {
             try {
+              if (!config.getTaskId().equals("")) {
+                String task = IOUtils.toString(taskLogs.streamTaskPayload(config.getTaskId()).get(), Charset.defaultCharset());
+                return smileMapper.readValue(task, Task.class);
+              }
               return mapper.readValue(config.getTaskFile(), Task.class);
             }
             catch (IOException e) {

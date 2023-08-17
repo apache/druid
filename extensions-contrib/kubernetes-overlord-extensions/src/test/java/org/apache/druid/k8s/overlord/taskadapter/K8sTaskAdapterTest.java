@@ -65,9 +65,11 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -187,6 +189,64 @@ class K8sTaskAdapterTest
 
     Task taskFromJob = adapter.toTask(Iterables.getOnlyElement(jobList.getItems()));
     assertEquals(task, taskFromJob);
+  }
+
+  @Test
+  public void toTask_dontSetTaskJSON() throws IOException
+  {
+    final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
+    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+      {
+        return (T) new Pod()
+        {
+          @Override
+          public PodSpec getSpec()
+          {
+            return podSpec;
+          }
+        };
+      }
+    };
+
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .withTaskPayloadAsEnvVariable(false)
+        .build();
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper
+    );
+    Task task = K8sTestUtils.getTask();
+    Job job = adapter.fromTask(task);
+    // TASK_JSON should not be set in env variables
+    Assertions.assertFalse(
+        job.getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0).getEnv()
+            .stream().anyMatch(env -> env.getName().equals(DruidK8sConstants.TASK_JSON_ENV))
+    );
+
+    // --taskId <TASK_ID> should be passed to the peon command args
+    Assertions.assertTrue(
+        Arrays.stream(job.getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0)
+            .getArgs()
+            .get(0).split(" ")).collect(Collectors.toSet())
+            .containsAll(ImmutableList.of("--taskId", task.getId()))
+    );
   }
 
   @Test

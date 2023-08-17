@@ -219,14 +219,10 @@ public abstract class K8sTaskAdapter implements TaskAdapter
                                      .build());
     }
 
-    mainContainer.getEnv().addAll(Lists.newArrayList(
+    List<EnvVar> envVars = Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
             .withValue(context.getTaskDir().getAbsolutePath())
-            .build(),
-        new EnvVarBuilder()
-            .withName(DruidK8sConstants.TASK_JSON_ENV)
-            .withValue(taskContents)
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.JAVA_OPTS)
@@ -244,7 +240,16 @@ public abstract class K8sTaskAdapter implements TaskAdapter
                 null,
                 "metadata.name"
             )).build()).build()
-    ));
+    );
+    if (taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+      envVars.add(
+          new EnvVarBuilder()
+              .withName(DruidK8sConstants.TASK_JSON_ENV)
+              .withValue(taskRunnerConfig.isTaskPayloadAsEnvVariable() ? taskContents : "")
+              .build()
+      );
+    }
+    mainContainer.getEnv().addAll(envVars);
   }
 
   protected Container setupMainContainer(
@@ -402,6 +407,12 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     if (task.supportsQueries()) {
       command.add("--loadBroadcastSegments");
       command.add("true");
+    }
+
+    // If we are not passing the TASK_JSON, pass the taskId flag to pull the task payload.
+    if (!taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+      command.add("--taskId");
+      command.add(task.getId());
     }
     log.info(
         "Peon Command for K8s job: %s",
