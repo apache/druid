@@ -23,4 +23,4 @@
 "Area - Documentation":
   - "docs/**/*"
   - "website/**"
-  - "examples/quickstart/jupyter-notebooks/**"
+  - "examples/quickstart/jupyter-notebooks/*"
