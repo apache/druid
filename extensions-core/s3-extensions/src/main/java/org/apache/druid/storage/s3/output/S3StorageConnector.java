@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,6 +42,8 @@ import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -189,7 +192,14 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
           if (downloadFile == null) {
             downloadFile = new File(config.getTempDir(), UUID.randomUUID().toString());
             Download download = transferManager.download(object, downloadFile);
+            DateTime start = DateTimes.nowUtc();
             download.waitForCompletion();
+            log.info(
+                "Download path [%s], size [%d] took [%d] ms",
+                path,
+                size,
+                new Interval(start, DateTimes.nowUtc()).toDurationMillis()
+            );
           }
 
           return new FileInputStream(downloadFile)
