@@ -50,18 +50,17 @@ public abstract class BalancerStrategyFactory
     }
   }
 
-  protected ListeningExecutorService getOrCreateBalancerExecutor(int currentNumber)
+  protected ListeningExecutorService getOrCreateBalancerExecutor(int balancerComputeThreads)
   {
     if (balancerExec == null) {
-      balancerExec = createNewBalancerExecutor(currentNumber);
-    } else if (cachedBalancerThreadNumber != currentNumber) {
+      balancerExec = createNewBalancerExecutor(balancerComputeThreads);
+    } else if (cachedBalancerThreadNumber != balancerComputeThreads) {
       log.info(
-          "balancerComputeThreads has changed from [%d] to [%d], recreating the thread pool.",
-          cachedBalancerThreadNumber,
-          currentNumber
+          "'balancerComputeThreads' has changed from [%d] to [%d].",
+          cachedBalancerThreadNumber, balancerComputeThreads
       );
       balancerExec.shutdownNow();
-      balancerExec = createNewBalancerExecutor(currentNumber);
+      balancerExec = createNewBalancerExecutor(balancerComputeThreads);
     }
 
     return balancerExec;
@@ -69,6 +68,7 @@ public abstract class BalancerStrategyFactory
 
   private ListeningExecutorService createNewBalancerExecutor(int numThreads)
   {
+    log.info("Creating new balancer executor with [%d] threads.", numThreads);
     cachedBalancerThreadNumber = numThreads;
     return MoreExecutors.listeningDecorator(
         Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")

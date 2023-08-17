@@ -98,10 +98,8 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     int numBalancerThreads = params.getCoordinatorDynamicConfig().getBalancerComputeThreads();
     final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
     log.info(
-        "Using balancer strategy [%s] with round-robin assignment [%s] and debug dimensions [%s].",
-        balancerStrategy.getClass().getSimpleName(),
-        segmentLoadingConfig.isUseRoundRobinSegmentAssignment(),
-        dynamicConfig.getDebugDimensions()
+        "Using balancer strategy [%s] with [%d] threads.",
+        balancerStrategy.getClass().getSimpleName(), numBalancerThreads
     );
 
     return params.buildFromExisting()
