@@ -59,7 +59,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
     final long[] timeVector = timeSelector.getLongVector();
     final boolean[] nullTimeVector = timeSelector.getNullVector();
     final boolean[] nullValueVector = valueSelector.getNullVector();
-
+    firstTime = buf.getLong(position);
     int index;
     // Now we are iterating over the values to find the minima as the
     // timestamp expression in EARLIEST_BY has no established sorting order
