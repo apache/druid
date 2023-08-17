@@ -37,7 +37,7 @@ public class ExecutorLifecycleConfig
 
   @JsonProperty
   @NotNull
-  private String taskId = "";
+  private boolean useTaskPayloadManager = false;
 
   @JsonProperty
   @NotNull
@@ -73,15 +73,15 @@ public class ExecutorLifecycleConfig
     return statusFile;
   }
 
-  public ExecutorLifecycleConfig setTaskId(String taskId)
+  public ExecutorLifecycleConfig setUseTaskPayloadManager(boolean useTaskPayloadManager)
   {
-    this.taskId = taskId;
+    this.useTaskPayloadManager = useTaskPayloadManager;
     return this;
   }
 
-  public String getTaskId()
+  public boolean isUseTaskPayloadManager()
   {
-    return taskId;
+    return useTaskPayloadManager;
   }
 
   public ExecutorLifecycleConfig setStatusFile(File statusFile)

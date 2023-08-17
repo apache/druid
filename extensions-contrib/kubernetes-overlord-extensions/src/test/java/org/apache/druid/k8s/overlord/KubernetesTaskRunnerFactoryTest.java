@@ -32,7 +32,9 @@ import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
+import org.apache.druid.tasklogs.NoopTaskPayloadManager;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,7 +46,6 @@ import java.util.Properties;
 public class KubernetesTaskRunnerFactoryTest
 {
   private ObjectMapper objectMapper;
-  private ObjectMapper jsonMapper;
   private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
   private StartupLoggingConfig startupLoggingConfig;
   private TaskLogs taskLogs;
@@ -54,12 +55,12 @@ public class KubernetesTaskRunnerFactoryTest
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
+  private TaskPayloadManager taskPayloadManager;
 
   @Before
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
-    jsonMapper = new TestUtils().getTestObjectMapper();
     kubernetesTaskRunnerConfig = KubernetesTaskRunnerConfig.builder()
         .withCapacity(1)
         .build();
@@ -77,6 +78,7 @@ public class KubernetesTaskRunnerFactoryTest
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     properties = new Properties();
     druidKubernetesClient = new DruidKubernetesClient();
+    taskPayloadManager = new NoopTaskPayloadManager();
   }
 
   @Test
@@ -92,7 +94,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();
@@ -114,7 +117,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -141,7 +145,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -166,7 +171,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -196,7 +202,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     Assert.assertThrows(
@@ -227,7 +234,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -252,7 +260,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -280,7 +289,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskPayloadManager
     );
 
     KubernetesTaskRunner runner = factory.build();

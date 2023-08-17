@@ -40,7 +40,9 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import io.netty.util.SuppressForbidden;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
@@ -68,7 +70,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.tasklogs.TaskLogs;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
@@ -132,6 +133,7 @@ import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.eclipse.jetty.server.Server;
 
 import java.io.File;
@@ -237,7 +239,7 @@ public class CliPeon extends GuiceRunnable
             ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile())
-                .setTaskId(taskId);
+                .setUseTaskPayloadManager(StringUtils.isNotEmpty(taskId));
 
             if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
               log.info("Running peon in k8s mode");
@@ -290,11 +292,12 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskLogs taskLogs)
+          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager)
           {
             try {
-              if (!config.getTaskId().equals("")) {
-                String task = IOUtils.toString(taskLogs.streamTaskPayload(config.getTaskId()).get(), Charset.defaultCharset());
+              if (config.isUseTaskPayloadManager()) {
+                String task = IOUtils.toString(taskPayloadManager.streamTaskPayload(taskId).get(), Charset.defaultCharset());
+                FileUtils.write(config.getTaskFile(), task, Charset.defaultCharset());
                 return smileMapper.readValue(task, Task.class);
               }
               return mapper.readValue(config.getTaskFile(), Task.class);

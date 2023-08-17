@@ -40,7 +40,7 @@ import java.util.Date;
 /**
  * Provides task logs archived on S3.
  */
-public class S3TaskLogs implements TaskLogs, TaskPayloadManager
+public class S3TaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 

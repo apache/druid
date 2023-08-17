@@ -89,6 +89,7 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
 
+  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
   @MonotonicNonNull
   private LogWatch logWatch;
 
@@ -99,7 +100,8 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener
+      TaskStateListener stateListener,
+      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig
   )
   {
     this.taskId = new K8sTaskId(task);
@@ -107,6 +109,7 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
+    this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
   }
 
   /**
@@ -123,9 +126,13 @@ public class KubernetesPeonLifecycle
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
+      // Need to use the taskPayloadManager if we are not passing the task via env variable.
+      if (!kubernetesTaskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+        writeTaskPayload(task);
+      }
+
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
-      writeTaskPayload(task);
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           launchTimeout,
@@ -148,7 +155,7 @@ public class KubernetesPeonLifecycle
     }
   }
 
-  private void writeTaskPayload(Task task) throws IOException{
+  private void writeTaskPayload(Task task) throws IOException {
     Path file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
     try {
       FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());

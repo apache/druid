@@ -56,6 +56,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
 
@@ -63,6 +64,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         IllegalStateException.class,
         () -> workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
             task,
+            null,
             null,
             null,
             null,
@@ -160,6 +162,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
 
@@ -171,6 +174,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -196,6 +200,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ) {
       @Override
@@ -215,6 +220,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -246,6 +252,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
     Assert.assertFalse(workItem.streamTaskLogs().isPresent());
@@ -262,6 +269,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,

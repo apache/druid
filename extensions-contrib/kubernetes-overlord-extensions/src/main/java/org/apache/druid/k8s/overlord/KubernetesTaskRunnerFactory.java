@@ -41,6 +41,7 @@ import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 
 import java.util.Locale;
 import java.util.Properties;
@@ -59,7 +60,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
-
+  private final TaskPayloadManager taskPayloadManager;
 
   @Inject
   public KubernetesTaskRunnerFactory(
@@ -72,7 +73,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskConfig taskConfig,
       Properties properties,
       DruidKubernetesClient druidKubernetesClient,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      TaskPayloadManager taskPayloadManager
   )
   {
     this.smileMapper = smileMapper;
@@ -85,6 +87,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
+    this.taskPayloadManager = taskPayloadManager;
   }
 
   @Override
@@ -102,7 +105,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper, kubernetesTaskRunnerConfig),
         emitter
     );
     return runner;
