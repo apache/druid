@@ -323,11 +323,12 @@ public class TaskLockHelper
     }
 
     final TaskLockType lockTypeVal;
-    final String lockTypeName = context.get(Tasks.TASK_LOCK_TYPE).toString();
+    final Object lockTypeName = context.get(Tasks.TASK_LOCK_TYPE);
     if (lockTypeName == null) {
-      lockTypeVal = (boolean) context.get(Tasks.USE_SHARED_LOCK) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+      final Object useSharedLock = context.getOrDefault(Tasks.USE_SHARED_LOCK, false);
+      lockTypeVal = (boolean) useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
     } else {
-      lockTypeVal = TaskLockType.valueOf(lockTypeName);
+      lockTypeVal = TaskLockType.valueOf(lockTypeName.toString());
     }
 
     final Set<TaskLockType> appendModeCompatible = ImmutableSet.of(TaskLockType.SHARED, TaskLockType.APPEND);

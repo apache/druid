@@ -292,7 +292,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    TaskLockType lockType = getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE);
+    final TaskLockType lockType = TaskLockType.valueOf(
+        getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name())
+    );
     StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics, lockType);
 
     try {
