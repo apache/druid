@@ -1083,7 +1083,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   @VisibleForTesting
   boolean populateTaskTypeAndGroupId()
   {
-    log.info("Populate fields task and group_id of task entry table [%s] from payload", entryTable);
+    log.info("Populating columns [task] and [group_id] in task table[%s] from payload.", entryTable);
     String id = "";
     int limit = 100;
     int count = 0;
@@ -1102,7 +1102,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       try {
         updateTaskMetadatas(entryTable, taskIdentifiers);
         count += taskIdentifiers.size();
-        log.info("Successfully updated type and groupId for [%d] tasks", count);
+        log.info("Successfully updated columns [type] and [group_id] for [%d] tasks.", count);
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while updating entries in task table");
@@ -1118,7 +1118,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         Thread.currentThread().interrupt();
       }
     }
-    log.info("Task migration for table [%s] successful", entryTable);
+    log.info("Task migration for table[%s] successful.", entryTable);
     return true;
   }
 }
