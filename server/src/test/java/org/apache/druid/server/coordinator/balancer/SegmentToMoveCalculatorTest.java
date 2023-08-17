@@ -137,28 +137,28 @@ public class SegmentToMoveCalculatorTest
     Assert.assertEquals(100, computeMinSegmentsToMove(1_000));
 
     Assert.assertEquals(100, computeMinSegmentsToMove(20_000));
-    Assert.assertEquals(300, computeMinSegmentsToMove(50_000));
-    Assert.assertEquals(600, computeMinSegmentsToMove(100_000));
-    Assert.assertEquals(1_200, computeMinSegmentsToMove(200_000));
-    Assert.assertEquals(3_000, computeMinSegmentsToMove(500_000));
-    Assert.assertEquals(6_100, computeMinSegmentsToMove(1_000_000));
-    Assert.assertEquals(61_000, computeMinSegmentsToMove(10_000_000));
+    Assert.assertEquals(100, computeMinSegmentsToMove(50_000));
+    Assert.assertEquals(100, computeMinSegmentsToMove(100_000));
+    Assert.assertEquals(300, computeMinSegmentsToMove(200_000));
+    Assert.assertEquals(700, computeMinSegmentsToMove(500_000));
+    Assert.assertEquals(1_500, computeMinSegmentsToMove(1_000_000));
+    Assert.assertEquals(15_200, computeMinSegmentsToMove(10_000_000));
   }
 
   @Test
   public void testMinSegmentsToMoveIncreasesInSteps()
   {
-    Assert.assertEquals(100, computeMinSegmentsToMove(32_767));
-    Assert.assertEquals(200, computeMinSegmentsToMove(32_768));
+    Assert.assertEquals(100, computeMinSegmentsToMove(131_071));
+    Assert.assertEquals(200, computeMinSegmentsToMove(131_072));
 
-    Assert.assertEquals(500, computeMinSegmentsToMove(98_303));
-    Assert.assertEquals(600, computeMinSegmentsToMove(98_304));
+    Assert.assertEquals(500, computeMinSegmentsToMove(393_215));
+    Assert.assertEquals(600, computeMinSegmentsToMove(393_216));
 
-    Assert.assertEquals(900, computeMinSegmentsToMove(163_839));
-    Assert.assertEquals(1000, computeMinSegmentsToMove(163_840));
+    Assert.assertEquals(900, computeMinSegmentsToMove(655_359));
+    Assert.assertEquals(1000, computeMinSegmentsToMove(655_360));
 
-    Assert.assertEquals(9_900, computeMinSegmentsToMove(1_638_399));
-    Assert.assertEquals(10_000, computeMinSegmentsToMove(1_638_400));
+    Assert.assertEquals(9_900, computeMinSegmentsToMove(6_553_599));
+    Assert.assertEquals(10_000, computeMinSegmentsToMove(6_553_600));
   }
 
   @Test

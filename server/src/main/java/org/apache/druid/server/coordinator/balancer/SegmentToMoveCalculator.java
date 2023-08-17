@@ -92,13 +92,13 @@ public class SegmentToMoveCalculator
    * @param totalSegmentsInTier Total number of all replicas of all segments
    *                            loaded or queued across all historicals in the tier.
    * @return {@code minSegmentsToMoveInTier} in the range
-   * [{@link #MIN_SEGMENTS_TO_MOVE}, {@code ~0.6% of totalSegmentsInTier}].
+   * [{@link #MIN_SEGMENTS_TO_MOVE}, {@code ~0.15% of totalSegmentsInTier}].
    */
   public static int computeMinSegmentsToMoveInTier(int totalSegmentsInTier)
   {
     // Divide by 2^14 and multiply by 100 so that the value increases
-    // in steps of 100 for every 2^14 = ~16k segments
-    int upperBound = (totalSegmentsInTier >> 14) * 100;
+    // in steps of 100 for every 2^16 = ~65k segments
+    int upperBound = (totalSegmentsInTier >> 16) * 100;
     int lowerBound = Math.min(MIN_SEGMENTS_TO_MOVE, totalSegmentsInTier);
     return Math.max(lowerBound, upperBound);
   }
