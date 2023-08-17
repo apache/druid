@@ -30,8 +30,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-//phony class to enable maven to track the compilation of this class
-final class FunctionalExpr {}
+final class FunctionalExpr
+{
+  // phony class to enable maven to track the compilation of this class
+}
 
 @SuppressWarnings("ClassName")
 class LambdaExpr implements Expr

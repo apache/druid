@@ -29,8 +29,10 @@ import org.apache.druid.segment.column.Types;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-//phony class to enable maven to track the compilation of this class
-final class BinaryLogicalOperatorExpr {}
+final class BinaryLogicalOperatorExpr
+{
+  // phony class to enable maven to track the compilation of this class
+}
 
 // logical operators live here
 @SuppressWarnings("ClassName")
