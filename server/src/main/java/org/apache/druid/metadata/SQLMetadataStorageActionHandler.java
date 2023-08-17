@@ -1103,8 +1103,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       try {
         final int updatedCount = updateColumnsTypeAndGroupIdForTasks(taskIdentifiers);
         if (updatedCount > 0) {
-          log.info("Successfully updated columns [type] and [group_id] for [%d] tasks.", updatedCount);
           numUpdatedTasks += updatedCount;
+          log.info("Successfully updated columns [type] and [group_id] for [%d] tasks.", numUpdatedTasks);
         }
       }
       catch (Exception e) {
