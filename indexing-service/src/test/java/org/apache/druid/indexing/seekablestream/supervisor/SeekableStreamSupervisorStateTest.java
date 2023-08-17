@@ -72,6 +72,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -80,7 +81,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -107,6 +107,7 @@ import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -505,7 +506,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
       @Override
-      public Duration getEmitterPeriod()
+      public Duration getEmissionDuration()
       {
         return new Period("PT1S").toStandardDuration();
       }
@@ -1601,6 +1602,29 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testScheduleReporting()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig();
+    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(config).times(2);
+    ScheduledExecutorService executorService = EasyMock.createMock(ScheduledExecutorService.class);
+    EasyMock.expect(executorService.scheduleWithFixedDelay(EasyMock.anyObject(), EasyMock.eq(86415000L), EasyMock.eq(300000L), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).once();
+    EasyMock.expect(executorService.scheduleAtFixedRate(EasyMock.anyObject(), EasyMock.eq(86425000L), EasyMock.eq(config.getEmissionDuration().getMillis()), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(2);
+
+    EasyMock.replay(executorService, spec);
+    final BaseTestSeekableStreamSupervisor supervisor = new BaseTestSeekableStreamSupervisor()
+    {
+      @Override
+      public LagStats computeLagStats()
+      {
+        return new LagStats(0, 0, 0);
+      }
+    };
+    supervisor.scheduleReporting(executorService);
+    EasyMock.verify(executorService, spec);
+  }
+
   private List<Event> filterMetrics(List<Event> events, List<String> whitelist)
   {
     List<Event> result = events.stream()
@@ -1637,7 +1661,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
       @Override
-      public Duration getEmitterPeriod()
+      public Duration getEmissionDuration()
       {
         return new Period("PT1S").toStandardDuration();
       }
@@ -2152,13 +2176,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       reportingExec.scheduleAtFixedRate(
           this::emitLag,
           ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
       reportingExec.scheduleAtFixedRate(
           this::emitNoticesQueueSize,
           ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
     }

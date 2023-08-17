@@ -35,10 +35,12 @@ Access the web console at the following address:
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
-> **Security note:** Without [Druid user permissions](../operations/security-overview.md) configured, any user of the
+:::info
+ **Security note:** Without [Druid user permissions](../operations/security-overview.md) configured, any user of the
 API or web console has effectively the same level of access to local files and network services as the user under which
 Druid runs. It is a best practice to avoid running Druid as the root user, and to use Druid permissions or network
 firewalls to restrict which users have access to potentially sensitive resources.
+:::
 
 This topic presents the high-level features and functionality of the web console.
 

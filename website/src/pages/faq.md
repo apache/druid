@@ -1,4 +1,8 @@
-/*
+---
+title: Frequently Asked Questions
+---
+
+<!--
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,16 +18,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
 
-const React = require('react');
+-->
 
-function PlaceholderPage(props) {
-  return (
-    <div className="docMainWrapper wrapper">
-      This page will not be seen in the final website build. It is only here as a placeholder for docusaurus.
-    </div>
-  );
-}
-
-module.exports = PlaceholderPage;
+Edit this page in the [`druid-website-src`](https://github.com/apache/druid-website-src/) repo. To see your changes, navigate to them from the [Docs section](/docs/latest/design).
