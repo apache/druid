@@ -218,6 +218,7 @@ SslContextFactory
 StatsD
 SYSTEM_TABLE
 TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -328,6 +329,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -2309,3 +2311,5 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+loadstatus
+sqlQueryId

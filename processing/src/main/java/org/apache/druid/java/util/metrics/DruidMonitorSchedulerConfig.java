@@ -17,19 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.query.DruidProcessingConfig;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 
-public class DruidProcessingConfigModule implements Module
+/**
+ */
+public class DruidMonitorSchedulerConfig
 {
+  @JsonProperty
+  private String schedulerClassName = BasicMonitorScheduler.class.getName();
 
-  @Override
-  public void configure(Binder binder)
+  @JsonProperty
+  private Period emissionPeriod = new Period("PT1M");
+
+  public String getSchedulerClassName()
   {
-    ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
+    return schedulerClassName;
+  }
+
+  public Duration getEmissionDuration()
+  {
+    return emissionPeriod.toStandardDuration();
   }
 }

@@ -39,13 +39,14 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.utils.JvmUtils;
 
@@ -67,7 +68,9 @@ public class BrokerProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
+    JsonConfigProvider.bind(binder, "druid.processing.merge", BrokerParallelMergeConfig.class);
+    JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
+    binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
   }
 
@@ -133,14 +136,14 @@ public class BrokerProcessingModule implements Module
 
   @Provides
   @ManageLifecycle
-  public LifecycleForkJoinPoolProvider getMergeProcessingPoolProvider(DruidProcessingConfig config)
+  public LifecycleForkJoinPoolProvider getMergeProcessingPoolProvider(BrokerParallelMergeConfig config)
   {
     return new LifecycleForkJoinPoolProvider(
-        config.getMergePoolParallelism(),
+        config.getParallelism(),
         ForkJoinPool.defaultForkJoinWorkerThreadFactory,
         (t, e) -> log.error(e, "Unhandled exception in thread [%s]", t),
         true,
-        config.getMergePoolAwaitShutdownMillis()
+        config.getAwaitShutdownMillis()
     );
   }
 

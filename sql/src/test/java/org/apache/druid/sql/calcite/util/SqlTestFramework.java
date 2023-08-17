@@ -219,7 +219,7 @@ public class SqlTestFramework
       } else {
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
-            QueryStackTests.getProcessingConfig(true, builder.mergeBufferCount)
+            QueryStackTests.getProcessingConfig(builder.mergeBufferCount)
         );
       }
     }
