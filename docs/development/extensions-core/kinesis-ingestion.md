@@ -3,8 +3,12 @@ id: kinesis-ingestion
 title: "Amazon Kinesis ingestion"
 sidebar_label: "Amazon Kinesis"
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -58,9 +62,10 @@ supervisor creates a new set of tasks. In this way, the supervisors persist acro
 The following example shows how to submit a supervisor spec for a stream with the name `KinesisStream`.
 In this example, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="1" label="cURL">
+
 ```shell
 curl -X POST "http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor" \
 -H "Content-Type: application/json" \
@@ -135,7 +140,9 @@ curl -X POST "http://SERVICE_IP:SERVICE_PORT/druid/indexer/v1/supervisor" \
   }
 }'
 ```
-<!--HTTP-->
+</TabItem>
+<TabItem value="2" label="HTTP">
+
 ```HTTP
 POST /druid/indexer/v1/supervisor
 HTTP/1.1
@@ -213,7 +220,8 @@ Content-Type: application/json
   }
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ## Supervisor I/O configuration
 

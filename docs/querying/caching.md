@@ -45,9 +45,11 @@ Druid supports two types of query caching:
 
 Druid invalidates any cache the moment any underlying data change to avoid returning stale results. This is especially important for `table` datasources that have highly-variable underlying data segments, including real-time data segments.
 
-> **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
->
-> The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+:::info
+ **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
+
+ The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+:::
 
 ### Per-segment caching
 
