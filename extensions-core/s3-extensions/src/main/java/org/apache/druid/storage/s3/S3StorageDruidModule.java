@@ -32,7 +32,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.commons.lang.StringUtils;
@@ -43,10 +42,8 @@ import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PolyBind;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.tasklogs.TaskPayloadManager;
 
 import java.util.List;
 

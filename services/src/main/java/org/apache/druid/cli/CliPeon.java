@@ -297,6 +297,7 @@ public class CliPeon extends GuiceRunnable
             try {
               if (config.isUseTaskPayloadManager()) {
                 String task = IOUtils.toString(taskPayloadManager.streamTaskPayload(taskId).get(), Charset.defaultCharset());
+                // write the remote task.json to task file location for ExecutorLifecycle to pickup
                 FileUtils.write(config.getTaskFile(), task, Charset.defaultCharset());
                 return smileMapper.readValue(task, Task.class);
               }

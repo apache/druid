@@ -70,8 +70,6 @@ public class ExecutorLifecycle
 
   private final ExecutorService parentMonitorExec = Execs.singleThreaded("parent-monitor-%d");
 
-  private final ServiceClient serviceClient;
-
   private volatile Task task = null;
   private volatile ListenableFuture<TaskStatus> statusFuture = null;
   private volatile FileChannel taskLockChannel;
@@ -83,9 +81,7 @@ public class ExecutorLifecycle
       TaskConfig taskConfig,
       TaskActionClientFactory taskActionClientFactory,
       TaskRunner taskRunner,
-      ObjectMapper jsonMapper,
-      @EscalatedGlobal final ServiceClientFactory clientFactory,
-      @IndexingService final ServiceLocator serviceLocator
+      ObjectMapper jsonMapper
   )
   {
     this.taskExecutorConfig = taskExecutorConfig;
@@ -93,10 +89,6 @@ public class ExecutorLifecycle
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
     this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
-    this.serviceClient = clientFactory.makeClient("peon", serviceLocator, StandardRetryPolicy.builder()
-        .maxAttempts(5)
-        .retryNotAvailable(false)
-        .build());
   }
 
   @LifecycleStart
@@ -108,6 +100,7 @@ public class ExecutorLifecycle
 
     try {
       task = jsonMapper.readValue(taskFile, Task.class);
+
       log.info(
           "Running with task: %s",
           jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task)

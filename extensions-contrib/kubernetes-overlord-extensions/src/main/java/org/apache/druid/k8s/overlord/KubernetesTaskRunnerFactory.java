@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -41,7 +39,6 @@ import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.apache.druid.tasklogs.TaskPayloadManager;
 
 import java.util.Locale;
 import java.util.Properties;
@@ -60,7 +57,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
-  private final TaskPayloadManager taskPayloadManager;
 
   @Inject
   public KubernetesTaskRunnerFactory(
@@ -73,8 +69,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskConfig taskConfig,
       Properties properties,
       DruidKubernetesClient druidKubernetesClient,
-      ServiceEmitter emitter,
-      TaskPayloadManager taskPayloadManager
+      ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -87,7 +82,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
-    this.taskPayloadManager = taskPayloadManager;
   }
 
   @Override

@@ -94,8 +94,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();
@@ -117,8 +116,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -145,8 +143,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -171,8 +168,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -202,8 +198,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     Assert.assertThrows(
@@ -234,8 +229,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -260,8 +254,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -289,8 +282,7 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter,
-        taskPayloadManager
+        emitter
     );
 
     KubernetesTaskRunner runner = factory.build();
