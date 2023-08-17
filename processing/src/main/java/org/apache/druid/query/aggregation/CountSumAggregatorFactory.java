@@ -64,4 +64,16 @@ public class CountSumAggregatorFactory extends LongSumAggregatorFactory
   {
     return cacheKey.get();
   }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new CountSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+  }
+
+  @Override
+  public AggregatorFactory getCombiningFactory()
+  {
+    return new CountSumAggregatorFactory(name, name, null, macroTable);
+  }
 }
