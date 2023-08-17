@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -100,6 +101,9 @@ public class QueryStackTests
       NoQueryLaningStrategy.INSTANCE,
       new ServerConfig()
   );
+
+  public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
+
   private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
@@ -187,10 +191,19 @@ public class QueryStackTests
     );
   }
 
-  public static DruidProcessingConfig getProcessingConfig(
-      boolean useParallelMergePoolConfigured,
-      final int mergeBuffers
+  public static BrokerParallelMergeConfig getParallelMergeConfig(
+      boolean useParallelMergePoolConfigured
   )
+  {
+    return new BrokerParallelMergeConfig() {
+      @Override
+      public boolean useParallelMergePool()
+      {
+        return useParallelMergePoolConfigured;
+      }
+    };
+  }
+  public static DruidProcessingConfig getProcessingConfig(final int mergeBuffers)
   {
     return new DruidProcessingConfig()
     {
@@ -221,12 +234,6 @@ public class QueryStackTests
         }
         return mergeBuffers;
       }
-
-      @Override
-      public boolean useParallelMergePoolConfigured()
-      {
-        return useParallelMergePoolConfigured;
-      }
     };
   }
 
@@ -235,28 +242,18 @@ public class QueryStackTests
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
   {
-    return createQueryRunnerFactoryConglomerate(closer, true, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
+    return createQueryRunnerFactoryConglomerate(closer, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
-      final Supplier<Integer> minTopNThresholdSupplier
-  )
-  {
-    return createQueryRunnerFactoryConglomerate(closer, true, minTopNThresholdSupplier);
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final boolean useParallelMergePoolConfigured,
       final Supplier<Integer> minTopNThresholdSupplier
   )
   {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
-            useParallelMergePoolConfigured,
-            DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
+            DEFAULT_NUM_MERGE_BUFFERS
         ),
         minTopNThresholdSupplier
     );

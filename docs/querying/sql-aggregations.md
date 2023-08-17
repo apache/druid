@@ -30,8 +30,10 @@ sidebar_label: "Aggregation functions"
   patterns in this markdown file and parse it to TypeScript file for web console
 -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 You can use aggregation functions in the SELECT clause of any [Druid SQL](./sql.md) query.
 
@@ -56,12 +58,14 @@ always return 0 as the initial value.
 
 In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
 
-> The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
-> functions can produce inconsistent results across the same query. 
->
-> Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
-> results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
-> consider using the `ROUND` function to smooth out the inconsistencies between queries.
+:::info
+ The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
+ functions can produce inconsistent results across the same query.
+
+ Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
+ results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
+ consider using the `ROUND` function to smooth out the inconsistencies between queries.
+:::
 
 |Function|Notes|Default|
 |--------|-----|-------|
