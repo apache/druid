@@ -1,4 +1,4 @@
-// Generated from org/apache/druid/math/expr/antlr/Expr.g4 by ANTLR 4.5.1
+// Generated from org/apache/druid/math/expr/antlr/Expr.g4 by ANTLR 4.9.3
 package org.apache.druid.math.expr.antlr;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class ExprParser extends Parser {
-	static { RuntimeMetaData.checkVersion("4.5.1", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.9.3", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -24,23 +24,32 @@ public class ExprParser extends Parser {
 	public static final int
 		RULE_start = 0, RULE_expr = 1, RULE_lambda = 2, RULE_fnArgs = 3, RULE_stringElement = 4, 
 		RULE_longElement = 5, RULE_numericElement = 6, RULE_literalElement = 7;
-	public static final String[] ruleNames = {
-		"start", "expr", "lambda", "fnArgs", "stringElement", "longElement", "numericElement", 
-		"literalElement"
-	};
+	private static String[] makeRuleNames() {
+		return new String[] {
+			"start", "expr", "lambda", "fnArgs", "stringElement", "longElement", 
+			"numericElement", "literalElement"
+		};
+	}
+	public static final String[] ruleNames = makeRuleNames();
 
-	private static final String[] _LITERAL_NAMES = {
-		null, "'('", "')'", "','", "'['", "']'", "'<LONG>'", "'<DOUBLE>'", "'<STRING>'", 
-		"'->'", null, "'null'", null, null, null, null, null, null, "'-'", "'!'", 
-		"'^'", "'*'", "'/'", "'%'", "'+'", "'<'", "'<='", "'>'", "'>='", "'=='", 
-		"'!='", "'&&'", "'||'"
-	};
-	private static final String[] _SYMBOLIC_NAMES = {
-		null, null, null, null, null, null, null, null, null, null, "ARRAY_TYPE", 
-		"NULL", "LONG", "EXP", "DOUBLE", "IDENTIFIER", "WS", "STRING", "MINUS", 
-		"NOT", "POW", "MUL", "DIV", "MODULO", "PLUS", "LT", "LEQ", "GT", "GEQ", 
-		"EQ", "NEQ", "AND", "OR"
-	};
+	private static String[] makeLiteralNames() {
+		return new String[] {
+			null, "'('", "')'", "','", "'['", "']'", "'<LONG>'", "'<DOUBLE>'", "'<STRING>'", 
+			"'->'", null, "'null'", null, null, null, null, null, null, "'-'", "'!'", 
+			"'^'", "'*'", "'/'", "'%'", "'+'", "'<'", "'<='", "'>'", "'>='", "'=='", 
+			"'!='", "'&&'", "'||'"
+		};
+	}
+	private static final String[] _LITERAL_NAMES = makeLiteralNames();
+	private static String[] makeSymbolicNames() {
+		return new String[] {
+			null, null, null, null, null, null, null, null, null, null, "ARRAY_TYPE", 
+			"NULL", "LONG", "EXP", "DOUBLE", "IDENTIFIER", "WS", "STRING", "MINUS", 
+			"NOT", "POW", "MUL", "DIV", "MODULO", "PLUS", "LT", "LEQ", "GT", "GEQ", 
+			"EQ", "NEQ", "AND", "OR"
+		};
+	}
+	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
 	public static final Vocabulary VOCABULARY = new VocabularyImpl(_LITERAL_NAMES, _SYMBOLIC_NAMES);
 
 	/**
@@ -90,6 +99,7 @@ public class ExprParser extends Parser {
 		super(input);
 		_interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
 	}
+
 	public static class StartContext extends ParserRuleContext {
 		public ExprContext expr() {
 			return getRuleContext(ExprContext.class,0);
@@ -106,11 +116,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitStart(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitStart(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -165,11 +170,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitApplyFunctionExpr(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitApplyFunctionExpr(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class DoubleExprContext extends ExprContext {
 		public TerminalNode DOUBLE() { return getToken(ExprParser.DOUBLE, 0); }
@@ -181,11 +181,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitDoubleExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitDoubleExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class DoubleArrayContext extends ExprContext {
@@ -204,11 +199,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitDoubleArray(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitDoubleArray(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class AddSubExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -217,6 +207,8 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
+		public TerminalNode PLUS() { return getToken(ExprParser.PLUS, 0); }
+		public TerminalNode MINUS() { return getToken(ExprParser.MINUS, 0); }
 		public AddSubExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -225,11 +217,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitAddSubExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitAddSubExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class StringContext extends ExprContext {
@@ -243,11 +230,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitString(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitString(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class LongExprContext extends ExprContext {
 		public TerminalNode LONG() { return getToken(ExprParser.LONG, 0); }
@@ -259,11 +241,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLongExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLongExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class ExplicitStringArrayContext extends ExprContext {
@@ -282,11 +259,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitExplicitStringArray(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitExplicitStringArray(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class LogicalAndOrExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -295,6 +267,8 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
+		public TerminalNode AND() { return getToken(ExprParser.AND, 0); }
+		public TerminalNode OR() { return getToken(ExprParser.OR, 0); }
 		public LogicalAndOrExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -303,11 +277,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLogicalAndOrExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLogicalAndOrExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class LongArrayContext extends ExprContext {
@@ -326,11 +295,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLongArray(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLongArray(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class NestedExprContext extends ExprContext {
 		public ExprContext expr() {
@@ -345,11 +309,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitNestedExpr(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitNestedExpr(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class LogicalOpExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -358,6 +317,12 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
+		public TerminalNode LT() { return getToken(ExprParser.LT, 0); }
+		public TerminalNode LEQ() { return getToken(ExprParser.LEQ, 0); }
+		public TerminalNode GT() { return getToken(ExprParser.GT, 0); }
+		public TerminalNode GEQ() { return getToken(ExprParser.GEQ, 0); }
+		public TerminalNode EQ() { return getToken(ExprParser.EQ, 0); }
+		public TerminalNode NEQ() { return getToken(ExprParser.NEQ, 0); }
 		public LogicalOpExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -366,11 +331,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLogicalOpExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLogicalOpExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class FunctionExprContext extends ExprContext {
@@ -386,11 +346,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitFunctionExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitFunctionExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class ExplicitLongArrayContext extends ExprContext {
@@ -409,16 +364,13 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitExplicitLongArray(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitExplicitLongArray(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class UnaryOpExprContext extends ExprContext {
 		public ExprContext expr() {
 			return getRuleContext(ExprContext.class,0);
 		}
+		public TerminalNode MINUS() { return getToken(ExprParser.MINUS, 0); }
+		public TerminalNode NOT() { return getToken(ExprParser.NOT, 0); }
 		public UnaryOpExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -427,11 +379,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitUnaryOpExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitUnaryOpExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class NullContext extends ExprContext {
@@ -444,11 +391,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitNull(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitNull(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class ExplicitArrayContext extends ExprContext {
@@ -468,11 +410,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitExplicitArray(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitExplicitArray(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class StringArrayContext extends ExprContext {
 		public List<StringElementContext> stringElement() {
@@ -490,11 +427,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitStringArray(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitStringArray(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class MulDivModuloExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -503,6 +435,9 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
+		public TerminalNode MUL() { return getToken(ExprParser.MUL, 0); }
+		public TerminalNode DIV() { return getToken(ExprParser.DIV, 0); }
+		public TerminalNode MODULO() { return getToken(ExprParser.MODULO, 0); }
 		public MulDivModuloExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -512,11 +447,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitMulDivModuloExpr(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitMulDivModuloExpr(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 	public static class PowOpExprContext extends ExprContext {
 		public List<ExprContext> expr() {
@@ -525,6 +455,7 @@ public class ExprParser extends Parser {
 		public ExprContext expr(int i) {
 			return getRuleContext(ExprContext.class,i);
 		}
+		public TerminalNode POW() { return getToken(ExprParser.POW, 0); }
 		public PowOpExprContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
 		public void enterRule(ParseTreeListener listener) {
@@ -533,11 +464,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitPowOpExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitPowOpExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 	public static class IdentifierExprContext extends ExprContext {
@@ -550,11 +476,6 @@ public class ExprParser extends Parser {
 		@Override
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitIdentifierExpr(this);
-		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitIdentifierExpr(this);
-			else return visitor.visitChildren(this);
 		}
 	}
 
@@ -575,31 +496,35 @@ public class ExprParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(121);
+			_errHandler.sync(this);
 			switch ( getInterpreter().adaptivePredict(_input,13,_ctx) ) {
 			case 1:
-				{
-				_localctx = new UnaryOpExprContext(_localctx);
-				_ctx = _localctx;
-				_prevctx = _localctx;
-
-				setState(20);
-				_la = _input.LA(1);
-				if ( !(_la==MINUS || _la==NOT) ) {
-				_errHandler.recoverInline(this);
-				} else {
-					consume();
-				}
-				setState(21);
-				expr(19);
-				}
-				break;
-			case 2:
 				{
 				_localctx = new NullContext(_localctx);
 				_ctx = _localctx;
 				_prevctx = _localctx;
-				setState(22);
+
+				setState(20);
 				match(NULL);
+				}
+				break;
+			case 2:
+				{
+				_localctx = new UnaryOpExprContext(_localctx);
+				_ctx = _localctx;
+				_prevctx = _localctx;
+				setState(21);
+				_la = _input.LA(1);
+				if ( !(_la==MINUS || _la==NOT) ) {
+				_errHandler.recoverInline(this);
+				}
+				else {
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+					_errHandler.reportMatch(this);
+					consume();
+				}
+				setState(22);
+				expr(19);
 				}
 				break;
 			case 3:
@@ -644,6 +569,7 @@ public class ExprParser extends Parser {
 				setState(35);
 				match(T__0);
 				setState(37);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__0) | (1L << T__3) | (1L << T__5) | (1L << T__6) | (1L << T__7) | (1L << ARRAY_TYPE) | (1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << IDENTIFIER) | (1L << STRING) | (1L << MINUS) | (1L << NOT))) != 0)) {
 					{
@@ -700,6 +626,7 @@ public class ExprParser extends Parser {
 				setState(44);
 				match(T__3);
 				setState(53);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if (_la==NULL || _la==STRING) {
 					{
@@ -767,6 +694,7 @@ public class ExprParser extends Parser {
 				setState(68);
 				match(T__3);
 				setState(77);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE))) != 0)) {
 					{
@@ -801,6 +729,7 @@ public class ExprParser extends Parser {
 				_ctx = _localctx;
 				_prevctx = _localctx;
 				setState(81);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if (_la==T__6) {
 					{
@@ -812,6 +741,7 @@ public class ExprParser extends Parser {
 				setState(83);
 				match(T__3);
 				setState(92);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE))) != 0)) {
 					{
@@ -850,6 +780,7 @@ public class ExprParser extends Parser {
 				setState(96);
 				match(T__3);
 				setState(105);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << STRING))) != 0)) {
 					{
@@ -888,6 +819,7 @@ public class ExprParser extends Parser {
 				setState(109);
 				match(T__3);
 				setState(118);
+				_errHandler.sync(this);
 				_la = _input.LA(1);
 				if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << STRING))) != 0)) {
 					{
@@ -927,6 +859,7 @@ public class ExprParser extends Parser {
 					_prevctx = _localctx;
 					{
 					setState(138);
+					_errHandler.sync(this);
 					switch ( getInterpreter().adaptivePredict(_input,14,_ctx) ) {
 					case 1:
 						{
@@ -950,7 +883,10 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << MUL) | (1L << DIV) | (1L << MODULO))) != 0)) ) {
 						_errHandler.recoverInline(this);
-						} else {
+						}
+						else {
+							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+							_errHandler.reportMatch(this);
 							consume();
 						}
 						setState(128);
@@ -967,7 +903,10 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !(_la==MINUS || _la==PLUS) ) {
 						_errHandler.recoverInline(this);
-						} else {
+						}
+						else {
+							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+							_errHandler.reportMatch(this);
 							consume();
 						}
 						setState(131);
@@ -984,7 +923,10 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << LT) | (1L << LEQ) | (1L << GT) | (1L << GEQ) | (1L << EQ) | (1L << NEQ))) != 0)) ) {
 						_errHandler.recoverInline(this);
-						} else {
+						}
+						else {
+							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+							_errHandler.reportMatch(this);
 							consume();
 						}
 						setState(134);
@@ -1001,7 +943,10 @@ public class ExprParser extends Parser {
 						_la = _input.LA(1);
 						if ( !(_la==AND || _la==OR) ) {
 						_errHandler.recoverInline(this);
-						} else {
+						}
+						else {
+							if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+							_errHandler.reportMatch(this);
 							consume();
 						}
 						setState(137);
@@ -1048,11 +993,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLambda(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLambda(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final LambdaContext lambda() throws RecognitionException {
@@ -1063,6 +1003,7 @@ public class ExprParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(156);
+			_errHandler.sync(this);
 			switch ( getInterpreter().adaptivePredict(_input,17,_ctx) ) {
 			case 1:
 				{
@@ -1149,11 +1090,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitFunctionArgs(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitFunctionArgs(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final FnArgsContext fnArgs() throws RecognitionException {
@@ -1210,11 +1146,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitStringElement(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitStringElement(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final StringElementContext stringElement() throws RecognitionException {
@@ -1228,7 +1159,10 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==NULL || _la==STRING) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -1259,11 +1193,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLongElement(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLongElement(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final LongElementContext longElement() throws RecognitionException {
@@ -1277,7 +1206,10 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==NULL || _la==LONG) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -1309,11 +1241,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitNumericElement(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitNumericElement(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final NumericElementContext numericElement() throws RecognitionException {
@@ -1327,7 +1254,10 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE))) != 0)) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -1360,11 +1290,6 @@ public class ExprParser extends Parser {
 		public void exitRule(ParseTreeListener listener) {
 			if ( listener instanceof ExprListener ) ((ExprListener)listener).exitLiteralElement(this);
 		}
-		@Override
-		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
-			if ( visitor instanceof ExprVisitor ) return ((ExprVisitor<? extends T>)visitor).visitLiteralElement(this);
-			else return visitor.visitChildren(this);
-		}
 	}
 
 	public final LiteralElementContext literalElement() throws RecognitionException {
@@ -1378,7 +1303,10 @@ public class ExprParser extends Parser {
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NULL) | (1L << LONG) | (1L << DOUBLE) | (1L << STRING))) != 0)) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -1418,7 +1346,7 @@ public class ExprParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\3\u0430\ud6d1\u8206\uad2d\u4417\uaef1\u8d80\uaadd\3\"\u00b4\4\2\t\2\4"+
+		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\"\u00b4\4\2\t\2\4"+
 		"\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b\t\b\4\t\t\t\3\2\3\2\3\2\3\3"+
 		"\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\5"+
 		"\3(\n\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\3\7\3\63\n\3\f\3\16\3\66\13"+
@@ -1432,10 +1360,10 @@ public class ExprParser extends Parser {
 		"\4\3\4\3\5\3\5\3\5\7\5\u00a7\n\5\f\5\16\5\u00aa\13\5\3\6\3\6\3\7\3\7\3"+
 		"\b\3\b\3\t\3\t\3\t\2\3\4\n\2\4\6\b\n\f\16\20\2\13\3\2\24\25\3\2\27\31"+
 		"\4\2\24\24\32\32\3\2\33 \3\2!\"\4\2\r\r\23\23\3\2\r\16\4\2\r\16\20\20"+
-		"\5\2\r\16\20\20\23\23\u00cf\2\22\3\2\2\2\4{\3\2\2\2\6\u009e\3\2\2\2\b"+
-		"\u00a3\3\2\2\2\n\u00ab\3\2\2\2\f\u00ad\3\2\2\2\16\u00af\3\2\2\2\20\u00b1"+
-		"\3\2\2\2\22\23\5\4\3\2\23\24\7\2\2\3\24\3\3\2\2\2\25\26\b\3\1\2\26\27"+
-		"\t\2\2\2\27|\5\4\3\25\30|\7\r\2\2\31\32\7\3\2\2\32\33\5\4\3\2\33\34\7"+
+		"\5\2\r\16\20\20\23\23\2\u00cf\2\22\3\2\2\2\4{\3\2\2\2\6\u009e\3\2\2\2"+
+		"\b\u00a3\3\2\2\2\n\u00ab\3\2\2\2\f\u00ad\3\2\2\2\16\u00af\3\2\2\2\20\u00b1"+
+		"\3\2\2\2\22\23\5\4\3\2\23\24\7\2\2\3\24\3\3\2\2\2\25\26\b\3\1\2\26|\7"+
+		"\r\2\2\27\30\t\2\2\2\30|\5\4\3\25\31\32\7\3\2\2\32\33\5\4\3\2\33\34\7"+
 		"\4\2\2\34|\3\2\2\2\35\36\7\21\2\2\36\37\7\3\2\2\37 \5\6\4\2 !\7\5\2\2"+
 		"!\"\5\b\5\2\"#\7\4\2\2#|\3\2\2\2$%\7\21\2\2%\'\7\3\2\2&(\5\b\5\2\'&\3"+
 		"\2\2\2\'(\3\2\2\2()\3\2\2\2)|\7\4\2\2*|\7\21\2\2+|\7\20\2\2,|\7\16\2\2"+
@@ -1452,7 +1380,7 @@ public class ExprParser extends Parser {
 		"\2fd\3\2\2\2gj\3\2\2\2hf\3\2\2\2hi\3\2\2\2il\3\2\2\2jh\3\2\2\2kc\3\2\2"+
 		"\2kl\3\2\2\2lm\3\2\2\2m|\7\7\2\2no\7\f\2\2ox\7\6\2\2pu\5\20\t\2qr\7\5"+
 		"\2\2rt\5\20\t\2sq\3\2\2\2tw\3\2\2\2us\3\2\2\2uv\3\2\2\2vy\3\2\2\2wu\3"+
-		"\2\2\2xp\3\2\2\2xy\3\2\2\2yz\3\2\2\2z|\7\7\2\2{\25\3\2\2\2{\30\3\2\2\2"+
+		"\2\2\2xp\3\2\2\2xy\3\2\2\2yz\3\2\2\2z|\7\7\2\2{\25\3\2\2\2{\27\3\2\2\2"+
 		"{\31\3\2\2\2{\35\3\2\2\2{$\3\2\2\2{*\3\2\2\2{+\3\2\2\2{,\3\2\2\2{-\3\2"+
 		"\2\2{.\3\2\2\2{:\3\2\2\2{E\3\2\2\2{S\3\2\2\2{a\3\2\2\2{n\3\2\2\2|\u008e"+
 		"\3\2\2\2}~\f\24\2\2~\177\7\26\2\2\177\u008d\5\4\3\24\u0080\u0081\f\23"+
