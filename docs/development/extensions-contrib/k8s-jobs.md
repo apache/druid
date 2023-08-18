@@ -234,6 +234,12 @@ data:
 |`druid.indexer.runner.graceTerminationPeriodSeconds`| `Long`          | Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete.  Keep at a smaller value if you want tasks to hold locks for shorter periods.                                                                      |`PT30S` (K8s default)|No|
 |`druid.indexer.runner.capacity`| `Integer`       | Number of concurrent jobs that can be sent to Kubernetes.                                                                                                                                                                                        |`2147483647`|No|
 
+### Metrics added
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+| `k8s/peon/startup/time` | Metric indicating the milliseconds for peon pod to startup. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags` |Varies|
+
 ### Gotchas
 
 - All Druid Pods belonging to one Druid cluster must be inside the same Kubernetes namespace.

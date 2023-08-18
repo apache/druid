@@ -106,6 +106,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
@@ -151,6 +152,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
@@ -200,6 +202,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
         EasyMock.eq(job),
+        EasyMock.eq(task),
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);

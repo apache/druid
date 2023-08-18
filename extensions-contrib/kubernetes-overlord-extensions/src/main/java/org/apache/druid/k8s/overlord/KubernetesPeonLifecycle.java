@@ -86,6 +86,7 @@ public class KubernetesPeonLifecycle
   private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
   private final K8sTaskId taskId;
   private final TaskLogs taskLogs;
+  private final Task task;
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
@@ -105,6 +106,7 @@ public class KubernetesPeonLifecycle
   )
   {
     this.taskId = new K8sTaskId(task);
+    this.task = task;
     this.kubernetesClient = kubernetesClient;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
@@ -135,6 +137,7 @@ public class KubernetesPeonLifecycle
       taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
+          task,
           launchTimeout,
           TimeUnit.MILLISECONDS
       );
