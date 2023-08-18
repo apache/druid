@@ -45,8 +45,6 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
   public static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
-  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
-  private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
@@ -328,14 +326,6 @@ public class GroupByQueryConfig
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
     final QueryContext queryContext = query.context();
     newConfig.singleThreaded = queryContext.getBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
-    newConfig.maxIntermediateRows = Math.min(
-        queryContext.getInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
-        getMaxIntermediateRows()
-    );
-    newConfig.maxResults = Math.min(
-        queryContext.getInt(CTX_KEY_MAX_RESULTS, getMaxResults()),
-        getMaxResults()
-    );
     newConfig.bufferGrouperMaxSize = Math.min(
         queryContext.getInt(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
