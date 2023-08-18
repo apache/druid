@@ -30,14 +30,13 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -59,7 +58,6 @@ public class MSQTaskSqlEngine implements SqlEngine
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS =
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
-                  .add(MultiStageQueryContext.CTX_DESTINATION)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
                   .build();
 
@@ -86,7 +84,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
@@ -124,7 +122,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case SCAN_NEEDS_SIGNATURE:
         return true;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(MSQTaskSqlEngine.class.getSimpleName(), feature);
     }
   }
 
@@ -132,9 +130,9 @@ public class MSQTaskSqlEngine implements SqlEngine
   public QueryMaker buildQueryMakerForSelect(
       final RelRoot relRoot,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
-    validateSelect(relRoot.fields, plannerContext);
+    validateSelect(plannerContext);
 
     return new MSQTaskQueryMaker(
         null,
@@ -155,7 +153,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       final String targetDataSource,
       final RelRoot relRoot,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
 
@@ -168,17 +166,23 @@ public class MSQTaskSqlEngine implements SqlEngine
     );
   }
 
-  private static void validateSelect(
-      final List<Pair<Integer, String>> fieldMappings,
-      final PlannerContext plannerContext
-  ) throws ValidationException
+  /**
+   * Checks if the SELECT contains {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} in the context. This is a
+   * defensive cheeck because {@link org.apache.druid.sql.calcite.planner.DruidPlanner} should have called the
+   * {@link #validateContext}
+   */
+  private static void validateSelect(final PlannerContext plannerContext)
   {
-    validateNoDuplicateAliases(fieldMappings);
-
     if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
-      throw new ValidationException(
-          StringUtils.format("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
-      );
+      throw DruidException
+          .forPersona(DruidException.Persona.DEVELOPER)
+          .ofCategory(DruidException.Category.DEFENSIVE)
+          .build(
+              "The SELECT query's context contains invalid parameter [%s] which is supposed to be populated "
+              + "by Druid for INSERT queries. If the user is seeing this exception, that means there's a bug in Druid "
+              + "that is populating the query context with the segment's granularity.",
+              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+          );
     }
   }
 
@@ -186,7 +190,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       final RelNode rootRel,
       final List<Pair<Integer, String>> fieldMappings,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
     validateNoDuplicateAliases(fieldMappings);
 
@@ -200,12 +204,10 @@ public class MSQTaskSqlEngine implements SqlEngine
         // Validate the __time field has the proper type.
         final SqlTypeName timeType = rootRel.getRowType().getFieldList().get(field.left).getType().getSqlTypeName();
         if (timeType != SqlTypeName.TIMESTAMP) {
-          throw new ValidationException(
-              StringUtils.format(
-                  "Field \"%s\" must be of type TIMESTAMP (was %s)",
-                  ColumnHolder.TIME_COLUMN_NAME,
-                  timeType
-              )
+          throw InvalidSqlInput.exception(
+              "Field [%s] was the wrong type [%s], expected TIMESTAMP",
+              ColumnHolder.TIME_COLUMN_NAME,
+              timeType
           );
         }
       }
@@ -221,13 +223,18 @@ public class MSQTaskSqlEngine implements SqlEngine
       );
     }
     catch (Exception e) {
-      throw new ValidationException(
-          StringUtils.format(
-              "Invalid segmentGranularity: %s",
-              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
-          ),
-          e
-      );
+      // This is a defensive check as the DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
+      // populated by Druid. If the user entered an incorrect granularity, that should have been flagged before reaching
+      // here
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build(
+                              e,
+                              "[%s] is not a valid value for [%s]",
+                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY),
+                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+                          );
+
     }
 
     final boolean hasSegmentGranularity = !Granularities.ALL.equals(segmentGranularity);
@@ -238,31 +245,30 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateLimitAndOffset(rootRel, !hasSegmentGranularity);
 
     if (hasSegmentGranularity && timeFieldIndex < 0) {
-      throw new ValidationException(
-          StringUtils.format(
-              "INSERT queries with segment granularity other than \"all\" must have a \"%s\" field.",
-              ColumnHolder.TIME_COLUMN_NAME
-          )
+      throw InvalidInput.exception(
+          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL. "
+          + "Therefore, the query must specify a time column (named __time).",
+          segmentGranularity
       );
     }
   }
 
   /**
-   * SQL allows multiple output columns with the same name, but multi-stage queries doesn't.
+   * SQL allows multiple output columns with the same name. However, we don't allow this for INSERT or REPLACE
+   * queries, because we use these output names to generate columns in segments. They must be unique.
    */
   private static void validateNoDuplicateAliases(final List<Pair<Integer, String>> fieldMappings)
-      throws ValidationException
   {
     final Set<String> aliasesSeen = new HashSet<>();
 
     for (final Pair<Integer, String> field : fieldMappings) {
       if (!aliasesSeen.add(field.right)) {
-        throw new ValidationException("Duplicate field in SELECT: " + field.right);
+        throw InvalidSqlInput.exception("Duplicate field in SELECT: [%s]", field.right);
       }
     }
   }
 
-  private static void validateLimitAndOffset(final RelNode topRel, final boolean limitOk) throws ValidationException
+  private static void validateLimitAndOffset(final RelNode topRel, final boolean limitOk)
   {
     Sort sort = null;
 
@@ -284,20 +290,22 @@ public class MSQTaskSqlEngine implements SqlEngine
       // The segment generator relies on shuffle statistics to determine segment intervals when PARTITIONED BY is not ALL,
       // and LIMIT/OFFSET prevent shuffle statistics from being generated. This is because they always send everything
       // to a single partition, so there are no shuffle statistics.
-      throw new ValidationException(
+      throw InvalidSqlInput.exception(
           "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\"."
       );
     }
     if (sort != null && sort.offset != null) {
       // Found an outer OFFSET that is not allowed.
-      throw new ValidationException("INSERT and REPLACE queries cannot have an OFFSET.");
+      throw InvalidSqlInput.exception("INSERT and REPLACE queries cannot have an OFFSET.");
     }
   }
 
   private static RelDataType getMSQStructType(RelDataTypeFactory typeFactory)
   {
     return typeFactory.createStructType(
-        ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
+        ImmutableList.of(
+            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
+        ),
         TASK_STRUCT_FIELD_NAMES
     );
   }

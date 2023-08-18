@@ -19,25 +19,22 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
-import org.apache.druid.data.input.impl.InlineInputSource;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
+import org.apache.druid.msq.input.inline.InlineInputSpec;
+import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
@@ -49,6 +46,7 @@ import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -59,6 +57,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
@@ -81,6 +80,8 @@ public class DataSourcePlan
    * of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
+
+  private static final Logger log = new Logger(DataSourcePlan.class);
 
   static {
     CONTEXT_MAP_NO_SEGMENT_GRANULARITY.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, null);
@@ -133,6 +134,9 @@ public class DataSourcePlan
     } else if (dataSource instanceof InlineDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forInline((InlineDataSource) dataSource, broadcast);
+    } else if (dataSource instanceof LookupDataSource) {
+      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
+      return forLookup((LookupDataSource) dataSource, broadcast);
     } else if (dataSource instanceof QueryDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forQuery(
@@ -144,9 +148,13 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm preferredJoinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
+          preferredJoinAlgorithm,
+          ((JoinDataSource) dataSource)
+      );
 
-      switch (joinAlgorithm) {
+      switch (deducedJoinAlgorithm) {
         case BROADCAST:
           return forBroadcastHashJoin(
               queryKit,
@@ -171,7 +179,7 @@ public class DataSourcePlan
           );
 
         default:
-          throw new UOE("Cannot handle join algorithm [%s]", joinAlgorithm);
+          throw new UOE("Cannot handle join algorithm [%s]", deducedJoinAlgorithm);
       }
     } else {
       throw new UOE("Cannot handle dataSource [%s]", dataSource);
@@ -199,6 +207,48 @@ public class DataSourcePlan
   }
 
   /**
+   * Contains the logic that deduces the join algorithm to be used. Ideally, this should reside while planning the
+   * native query, however we don't have the resources and the structure in place (when adding this function) to do so.
+   * Therefore, this is done while planning the MSQ query
+   * It takes into account the algorithm specified by "sqlJoinAlgorithm" in the query context and the join condition
+   * that is present in the query.
+   */
+  private static JoinAlgorithm deduceJoinAlgorithm(JoinAlgorithm preferredJoinAlgorithm, JoinDataSource joinDataSource)
+  {
+    JoinAlgorithm deducedJoinAlgorithm;
+    if (JoinAlgorithm.BROADCAST.equals(preferredJoinAlgorithm)) {
+      deducedJoinAlgorithm = JoinAlgorithm.BROADCAST;
+    } else if (isConditionEqualityOnLeftAndRightColumns(joinDataSource.getConditionAnalysis())) {
+      deducedJoinAlgorithm = JoinAlgorithm.SORT_MERGE;
+    } else {
+      deducedJoinAlgorithm = JoinAlgorithm.BROADCAST;
+    }
+
+    if (deducedJoinAlgorithm != preferredJoinAlgorithm) {
+      log.debug(
+          "User wanted to plan join [%s] as [%s], however the join will be executed as [%s]",
+          joinDataSource,
+          preferredJoinAlgorithm.toString(),
+          deducedJoinAlgorithm.toString()
+      );
+    }
+
+    return deducedJoinAlgorithm;
+  }
+
+  /**
+   * Checks if the join condition on two tables "table1" and "table2" is of the form
+   * table1.columnA = table2.columnA && table1.columnB = table2.columnB && ....
+   * sortMerge algorithm can help these types of join conditions
+   */
+  private static boolean isConditionEqualityOnLeftAndRightColumns(JoinConditionAnalysis joinConditionAnalysis)
+  {
+    return joinConditionAnalysis.getEquiConditions()
+                                .stream()
+                                .allMatch(equality -> equality.getLeftExpr().isIdentifier());
+  }
+
+  /**
    * Whether this datasource must be processed by a single worker. True if, and only if, all inputs are broadcast.
    */
   public boolean isSingleWorker()
@@ -214,7 +264,7 @@ public class DataSourcePlan
   )
   {
     return new DataSourcePlan(
-        new InputNumberDataSource(0),
+        (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
@@ -227,7 +277,7 @@ public class DataSourcePlan
   )
   {
     return new DataSourcePlan(
-        new InputNumberDataSource(0),
+        dataSource,
         Collections.singletonList(
             new ExternalInputSpec(
                 dataSource.getInputSource(),
@@ -245,34 +295,24 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    final ObjectMapper jsonMapper = new ObjectMapper(new JsonFactory());
-    final RowSignature signature = dataSource.getRowSignature();
-    final StringBuilder stringBuilder = new StringBuilder();
+    return new DataSourcePlan(
+        dataSource,
+        Collections.singletonList(new InlineInputSpec(dataSource)),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
+    );
+  }
 
-    for (final Object[] rowArray : dataSource.getRows()) {
-      final Map<String, Object> m = new HashMap<>();
-
-      for (int i = 0; i < signature.size(); i++) {
-        m.put(signature.getColumnName(i), rowArray[i]);
-      }
-
-      try {
-        stringBuilder.append(jsonMapper.writeValueAsString(m)).append('\n');
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    final String dataString = stringBuilder.toString();
-
-    return forExternal(
-        new ExternalDataSource(
-            dataString.isEmpty() ? NilInputSource.instance() : new InlineInputSource(dataString),
-            new JsonInputFormat(null, null, null, null, null),
-            signature
-        ),
-        broadcast
+  private static DataSourcePlan forLookup(
+      final LookupDataSource dataSource,
+      final boolean broadcast
+  )
+  {
+    return new DataSourcePlan(
+        dataSource,
+        Collections.singletonList(new LookupInputSpec(dataSource.getLookupName())),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
     );
   }
 
@@ -522,8 +562,11 @@ public class DataSourcePlan
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
    *
    * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
-   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering. Ideally,
-   * we'd support this everywhere it appears, but we can get away without it for now.
+   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
+   *
+   * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
+   * the SQL layer avoids "intervals" in other cases. See
+   * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.
    */
   private static void checkQuerySegmentSpecIsEternity(
       final DataSource dataSource,

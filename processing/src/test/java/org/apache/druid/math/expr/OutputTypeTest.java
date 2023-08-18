@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -537,6 +538,20 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.operator(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
+
+    ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
+    Assert.assertEquals(
+        nested,
+        ExpressionTypeConversion.operator(nested, nested)
+    );
+    Assert.assertEquals(
+        nested,
+        ExpressionTypeConversion.operator(nested, ExpressionType.UNKNOWN_COMPLEX)
+    );
+    Assert.assertEquals(
+        nested,
+        ExpressionTypeConversion.operator(ExpressionType.UNKNOWN_COMPLEX, nested)
+    );
   }
 
   @Test
@@ -600,6 +615,19 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.function(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
+    );
+    ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
+    Assert.assertEquals(
+        nested,
+        ExpressionTypeConversion.function(nested, nested)
+    );
+    Assert.assertEquals(
+        nested,
+        ExpressionTypeConversion.function(nested, ExpressionType.UNKNOWN_COMPLEX)
+    );
+    Assert.assertEquals(
+        nested,
+        ExpressionTypeConversion.function(ExpressionType.UNKNOWN_COMPLEX, nested)
     );
   }
 

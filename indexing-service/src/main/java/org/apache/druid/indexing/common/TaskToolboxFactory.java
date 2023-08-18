@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -64,6 +65,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 
 import java.io.File;
+import java.util.function.Function;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -110,7 +112,6 @@ public class TaskToolboxFactory
   private final ShuffleClient shuffleClient;
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
-  private final TaskStorageDirTracker dirTracker;
 
   @Inject
   public TaskToolboxFactory(
@@ -151,8 +152,7 @@ public class TaskToolboxFactory
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      @AttemptId String attemptId,
-      TaskStorageDirTracker dirTracker
+      @AttemptId String attemptId
   )
   {
     this.config = config;
@@ -193,12 +193,21 @@ public class TaskToolboxFactory
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
-    this.dirTracker = dirTracker;
   }
 
   public TaskToolbox build(Task task)
   {
-    final File taskWorkDir = dirTracker.getTaskWorkDir(task.getId());
+    return build(config, task);
+  }
+
+  public TaskToolbox build(Function<TaskConfig, TaskConfig> decoratorFn, Task task)
+  {
+    return build(decoratorFn.apply(config), task);
+  }
+
+  public TaskToolbox build(TaskConfig config, Task task)
+  {
+    final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(taskExecutorNode)
@@ -237,13 +246,15 @@ public class TaskToolboxFactory
         .chatHandlerProvider(chatHandlerProvider)
         .rowIngestionMetersFactory(rowIngestionMetersFactory)
         .appenderatorsManager(appenderatorsManager)
-        .overlordClient(overlordClient)
-        .coordinatorClient(coordinatorClient)
+        // Most tasks are written in such a way that if an Overlord or Coordinator RPC fails, the task fails.
+        // Set the retry policy to "about an hour", so tasks are resilient to brief Coordinator/Overlord problems.
+        // Calls will still eventually fail if problems persist.
+        .overlordClient(overlordClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()))
+        .coordinatorClient(coordinatorClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()))
         .supervisorTaskClientProvider(supervisorTaskClientProvider)
         .shuffleClient(shuffleClient)
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
-        .dirTracker(dirTracker)
         .build();
   }
 }

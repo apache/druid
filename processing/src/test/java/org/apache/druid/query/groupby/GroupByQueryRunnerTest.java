@@ -228,6 +228,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         return GroupByStrategySelector.STRATEGY_V1;
       }
     };
+
     final GroupByQueryConfig v1SingleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
@@ -362,6 +363,20 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final GroupByQueryConfig config
+  )
+  {
+    return makeQueryRunnerFactory(
+        DEFAULT_MAPPER,
+        config,
+        new TestGroupByBuffers(
+            DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes(),
+            DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()
+        ),
+        DEFAULT_PROCESSING_CONFIG
+    );
+  }
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
       final GroupByQueryConfig config,
       final TestGroupByBuffers bufferPools
   )
@@ -462,6 +477,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     BUFFER_POOLS = null;
   }
 
+  @SuppressWarnings("unused")
   public GroupByQueryRunnerTest(
       String testName,
       GroupByQueryConfig config,
@@ -474,7 +490,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
     this.originalRunner = runner;
-    String runnerName = runner.toString();
     this.vectorize = vectorize;
   }
 

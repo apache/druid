@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 
@@ -38,6 +39,7 @@ public class PlannerToolbox
   protected final String druidSchemaName;
   protected final CalciteRulesManager calciteRuleManager;
   protected final AuthorizerMapper authorizerMapper;
+  protected final AuthConfig authConfig;
 
   public PlannerToolbox(
       final DruidOperatorTable operatorTable,
@@ -49,7 +51,8 @@ public class PlannerToolbox
       final CatalogResolver catalog,
       final String druidSchemaName,
       final CalciteRulesManager calciteRuleManager,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final AuthConfig authConfig
   )
   {
     this.operatorTable = operatorTable;
@@ -62,6 +65,7 @@ public class PlannerToolbox
     this.druidSchemaName = druidSchemaName;
     this.calciteRuleManager = calciteRuleManager;
     this.authorizerMapper = authorizerMapper;
+    this.authConfig = authConfig;
   }
 
   public DruidOperatorTable operatorTable()
@@ -107,5 +111,10 @@ public class PlannerToolbox
   public PlannerConfig plannerConfig()
   {
     return plannerConfig;
+  }
+
+  public AuthConfig getAuthConfig()
+  {
+    return authConfig;
   }
 }

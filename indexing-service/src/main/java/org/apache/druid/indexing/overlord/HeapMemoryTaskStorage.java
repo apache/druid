@@ -90,7 +90,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     TaskStuff newTaskStuff = new TaskStuff(task, status, DateTimes.nowUtc(), task.getDataSource());
     TaskStuff alreadyExisted = tasks.putIfAbsent(task.getId(), newTaskStuff);
     if (alreadyExisted != null) {
-      throw new EntryExistsException(task.getId());
+      throw new EntryExistsException("Task", task.getId());
     }
 
     log.info("Inserted task %s with status: %s", task.getId(), status);
@@ -184,10 +184,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
-      CompleteTaskLookup taskLookup,
-      @Nullable String datasource
-  )
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(CompleteTaskLookup taskLookup)
   {
     final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
     {
@@ -216,17 +213,15 @@ public class HeapMemoryTaskStorage implements TaskStorage
   )
   {
     final List<TaskInfo<Task, TaskStatus>> tasks = new ArrayList<>();
-    taskLookups.forEach((type, lookup) -> {
-      if (type == TaskLookupType.COMPLETE) {
-        CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) lookup;
-        tasks.addAll(
-            getRecentlyCreatedAlreadyFinishedTaskInfo(
-                completeTaskLookup.hasTaskCreatedTimeFilter()
-                ? completeTaskLookup
-                : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold()),
-                datasource
-            )
+    final Map<TaskLookupType, TaskLookup> processedTaskLookups =
+        TaskStorageUtils.processTaskLookups(
+            taskLookups,
+            DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold())
         );
+
+    processedTaskLookups.forEach((type, lookup) -> {
+      if (type == TaskLookupType.COMPLETE) {
+        tasks.addAll(getRecentlyCreatedAlreadyFinishedTaskInfo((CompleteTaskLookup) lookup));
       } else {
         tasks.addAll(getActiveTaskInfo(datasource));
       }
@@ -319,14 +314,16 @@ public class HeapMemoryTaskStorage implements TaskStorage
     // It is then possible that the same task will be queued for removal twice. Whilst not ideal,
     // it will not cause any problems.
     List<String> taskIds = tasks.entrySet().stream()
-        .filter(entry -> entry.getValue().getStatus().isComplete()
-                          && entry.getValue().getCreatedDate().isBefore(timestamp))
-        .map(entry -> entry.getKey())
-        .collect(Collectors.toList());
+                                .filter(entry -> entry.getValue().getStatus().isComplete()
+                                                 && entry.getValue().getCreatedDate().isBefore(timestamp))
+                                .map(Map.Entry::getKey)
+                                .collect(Collectors.toList());
 
     taskIds.forEach(tasks::remove);
     synchronized (taskActions) {
-      taskIds.forEach(taskActions::removeAll);
+      for (String taskId : taskIds) {
+        taskActions.removeAll(taskId);
+      }
     }
   }
 
@@ -393,11 +390,11 @@ public class HeapMemoryTaskStorage implements TaskStorage
     static TaskInfo<Task, TaskStatus> toTaskInfo(TaskStuff taskStuff)
     {
       return new TaskInfo<>(
-        taskStuff.getTask().getId(),
-        taskStuff.getCreatedDate(),
-        taskStuff.getStatus(),
-        taskStuff.getDataSource(),
-        taskStuff.getTask()
+          taskStuff.getTask().getId(),
+          taskStuff.getCreatedDate(),
+          taskStuff.getStatus(),
+          taskStuff.getDataSource(),
+          taskStuff.getTask()
       );
     }
   }

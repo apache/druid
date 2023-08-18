@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -67,7 +68,7 @@ public class CaseOperatorConversion implements SqlOperatorConversion
     // at the native layer
     // this conversion won't help if the condition expression is only part of then expression, like if the input
     // expression to coalesce was an expression itself, but this is better than nothing
-    if (druidExpressions.size() == 3) {
+    if (druidExpressions != null && druidExpressions.size() == 3) {
       final DruidExpression condition = druidExpressions.get(0);
       final DruidExpression thenExpression = druidExpressions.get(1);
       final DruidExpression elseExpression = druidExpressions.get(2);
@@ -109,30 +110,26 @@ public class CaseOperatorConversion implements SqlOperatorConversion
 
     // rewrite case_searched(notnull(someColumn), then, else) into better native filters
     //    or(then, and(else, isNull(someColumn))
-    if (druidExpressions.size() == 3) {
+    if (druidExpressions != null && druidExpressions.size() == 3) {
       final DruidExpression condition = druidExpressions.get(0);
       final DruidExpression thenExpression = druidExpressions.get(1);
       final DruidExpression elseExpression = druidExpressions.get(2);
       if (condition.getExpression().startsWith("notnull") && condition.getArguments().get(0).isDirectColumnAccess()) {
 
         DimFilter thenFilter = null, elseFilter = null;
-        final DimFilter isNull = new SelectorDimFilter(
-            condition.getArguments().get(0).getDirectColumn(),
-            null,
-            null
-        );
+        final DimFilter isNull;
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          isNull = new SelectorDimFilter(condition.getArguments().get(0).getDirectColumn(), null, null);
+        } else {
+          isNull = NullFilter.forColumn(condition.getArguments().get(0).getDirectColumn());
+        }
 
         if (call.getOperands().get(1) instanceof RexCall) {
           final RexCall thenCall = (RexCall) call.getOperands().get(1);
-          final SqlOperatorConversion thenConversion = plannerContext.getPlannerToolbox()
-                                                                     .operatorTable()
-                                                                     .lookupOperatorConversion(thenCall.getOperator());
-          if (thenConversion != null) {
-            thenFilter = thenConversion.toDruidFilter(plannerContext, rowSignature, virtualColumnRegistry, thenCall);
-          }
+          thenFilter = Expressions.toFilter(plannerContext, rowSignature, virtualColumnRegistry, thenCall);
         }
 
-        if (call.getOperands().get(2) instanceof RexLiteral) {
+        if (thenFilter != null && call.getOperands().get(2) instanceof RexLiteral) {
           if (call.getOperands().get(2).isAlwaysTrue()) {
             return new OrDimFilter(thenFilter, isNull);
           } else {
@@ -141,20 +138,23 @@ public class CaseOperatorConversion implements SqlOperatorConversion
           }
         } else if (call.getOperands().get(2) instanceof RexCall) {
           RexCall elseCall = (RexCall) call.getOperands().get(2);
-          SqlOperatorConversion elseConversion = plannerContext.getPlannerToolbox()
-                                                               .operatorTable()
-                                                               .lookupOperatorConversion(elseCall.getOperator());
-          if (elseConversion != null) {
-            elseFilter = elseConversion.toDruidFilter(plannerContext, rowSignature, virtualColumnRegistry, elseCall);
-          }
+          elseFilter = Expressions.toFilter(plannerContext, rowSignature, virtualColumnRegistry, elseCall);
         }
 
         // if either then or else filters produced a native filter (that wasn't just another expression filter)
         // make sure we have filters for both sides by filling in the gaps with expression filter
         if (thenFilter != null && !(thenFilter instanceof ExpressionDimFilter) && elseFilter == null) {
-          elseFilter = new ExpressionDimFilter(elseExpression.getExpression(), plannerContext.getExprMacroTable());
+          elseFilter = new ExpressionDimFilter(
+              elseExpression.getExpression(),
+              plannerContext.parseExpression(elseExpression.getExpression()),
+              null
+          );
         } else if (thenFilter == null && elseFilter != null && !(elseFilter instanceof ExpressionDimFilter)) {
-          thenFilter = new ExpressionDimFilter(thenExpression.getExpression(), plannerContext.getExprMacroTable());
+          thenFilter = new ExpressionDimFilter(
+              thenExpression.getExpression(),
+              plannerContext.parseExpression(thenExpression.getExpression()),
+              null
+          );
         }
 
         if (thenFilter != null && elseFilter != null) {

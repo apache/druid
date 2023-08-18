@@ -128,8 +128,6 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
-  private final TaskStorageDirTracker dirTracker;
-
 
   public TaskToolbox(
       TaskConfig config,
@@ -170,8 +168,7 @@ public class TaskToolbox
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      String attemptId,
-      TaskStorageDirTracker dirTracker
+      String attemptId
   )
   {
     this.config = config;
@@ -214,7 +211,6 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
-    this.dirTracker = dirTracker;
   }
 
   public TaskConfig getConfig()
@@ -472,11 +468,6 @@ public class TaskToolbox
     return attemptId;
   }
 
-  public TaskStorageDirTracker getDirTracker()
-  {
-    return dirTracker;
-  }
-
   /**
    * Get {@link RuntimeInfo} adjusted for this particular task. When running in a task JVM launched by a MiddleManager,
    * this is the same as the baseline {@link RuntimeInfo}. When running in an Indexer, it is adjusted based on
@@ -552,7 +543,6 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
-    private TaskStorageDirTracker dirTracker;
 
     public Builder()
     {
@@ -597,7 +587,6 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
-      this.dirTracker = other.getDirTracker();
     }
 
     public Builder config(final TaskConfig config)
@@ -834,12 +823,6 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder dirTracker(final TaskStorageDirTracker dirTracker)
-    {
-      this.dirTracker = dirTracker;
-      return this;
-    }
-
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -881,8 +864,7 @@ public class TaskToolbox
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,
-          attemptId,
-          dirTracker
+          attemptId
       );
     }
   }

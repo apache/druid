@@ -26,18 +26,17 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.rpc.indexing.OverlordClient;
 
 /**
  * This class is deprecated and required only to support {@link org.apache.druid.indexing.overlord.RemoteTaskRunner}.
@@ -63,13 +62,13 @@ public class WorkerTaskMonitor extends WorkerTaskManager
   public WorkerTaskMonitor(
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
+      TaskConfig taskConfig,
       CuratorFramework cf,
       WorkerCuratorCoordinator workerCuratorCoordinator,
-      @IndexingService DruidLeaderClient overlordClient,
-      TaskStorageDirTracker dirTracker
+      OverlordClient overlordClient
   )
   {
-    super(jsonMapper, taskRunner, overlordClient, dirTracker);
+    super(jsonMapper, taskRunner, taskConfig, overlordClient);
 
     this.jsonMapper = jsonMapper;
     this.pathChildrenCache = new PathChildrenCache(

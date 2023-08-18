@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -51,6 +52,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +60,7 @@ public class MSQTaskReportTest
 {
   private static final String TASK_ID = "mytask";
   private static final String HOST = "example.com:1234";
-  private static final QueryDefinition QUERY_DEFINITION =
+  public static final QueryDefinition QUERY_DEFINITION =
       QueryDefinition
           .builder()
           .add(
@@ -101,9 +103,10 @@ public class MSQTaskReportTest
             ),
             new CounterSnapshotsTree(),
             new MSQResultsReport(
-                RowSignature.builder().add("s", ColumnType.STRING).build(),
-                ImmutableList.of("VARCHAR"),
-                Yielders.each(Sequences.simple(results))
+                Collections.singletonList(new MSQResultsReport.ColumnAndType("s", ColumnType.STRING)),
+                ImmutableList.of(SqlTypeName.VARCHAR),
+                Yielders.each(Sequences.simple(results)),
+                null
             )
         )
     );
@@ -130,7 +133,6 @@ public class MSQTaskReportTest
       results2.add(yielder.get());
       yielder = yielder.next(null);
     }
-
     Assert.assertEquals(results.size(), results2.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(results.get(i), results2.get(i));

@@ -33,8 +33,7 @@ import javax.annotation.Nullable;
 class SimpleColumnHolder implements ColumnHolder
 {
   private final ColumnCapabilities capabilities;
-
-  private final ColumnCapabilities handlerCapabilities;
+  private final ColumnFormat columnFormat;
 
   @Nullable
   private final Supplier<? extends BaseColumn> columnSupplier;
@@ -47,7 +46,7 @@ class SimpleColumnHolder implements ColumnHolder
 
   SimpleColumnHolder(
       ColumnCapabilities capabilities,
-      @Nullable ColumnCapabilities handlerCapabilities,
+      @Nullable ColumnFormat columnFormat,
       @Nullable Supplier<? extends BaseColumn> columnSupplier,
       @Nullable ColumnIndexSupplier indexSupplier
   )
@@ -55,7 +54,7 @@ class SimpleColumnHolder implements ColumnHolder
     this.capabilities = capabilities;
     this.columnSupplier = columnSupplier;
     this.indexSupplier = indexSupplier;
-    this.handlerCapabilities = handlerCapabilities == null ? capabilities : handlerCapabilities;
+    this.columnFormat = columnFormat == null ? new CapabilitiesBasedFormat(capabilities) : columnFormat;
 
     // ColumnSupplier being null is sort of a rare case but can happen when a segment
     // was created, for example, using an aggregator that was removed in later versions.
@@ -79,9 +78,9 @@ class SimpleColumnHolder implements ColumnHolder
   }
 
   @Override
-  public ColumnCapabilities getHandlerCapabilities()
+  public ColumnFormat getColumnFormat()
   {
-    return handlerCapabilities;
+    return columnFormat;
   }
 
   @Override

@@ -36,6 +36,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.table.BroadcastSegmentIndexedTable;
 import org.apache.druid.segment.join.table.IndexedTable;
@@ -67,7 +68,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerModule(new SegmentizerModule());
-    final IndexIO indexIO = new IndexIO(mapper, () -> 0);
+    final IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -91,13 +92,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
         data,
         testInterval,
         segment,
-        new IndexSpec(
-            null,
-            null,
-            null,
-            null,
-            expectedFactory
-        ),
+        IndexSpec.builder().withSegmentLoader(expectedFactory).build(),
         null
     );
 

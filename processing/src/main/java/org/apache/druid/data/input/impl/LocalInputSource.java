@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -45,12 +46,14 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -79,6 +82,14 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
       throw new IAE("At least one of baseDir or files should be specified");
     }
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   public LocalInputSource(File baseDir, String filter)
@@ -137,20 +148,28 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public Stream<InputSplit<List<File>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Streams.sequentialStreamFrom(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)))
+    return Streams.sequentialStreamFrom(getSplitFileIterator(inputFormat, getSplitHintSpecOrDefault(splitHintSpec)))
                   .map(InputSplit::new);
   }
 
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Iterators.size(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)));
+    return Iterators.size(getSplitFileIterator(inputFormat, getSplitHintSpecOrDefault(splitHintSpec)));
   }
 
-  private Iterator<List<File>> getSplitFileIterator(SplitHintSpec splitHintSpec)
+  private Iterator<List<File>> getSplitFileIterator(final InputFormat inputFormat, SplitHintSpec splitHintSpec)
   {
     final Iterator<File> fileIterator = getFileIterator();
-    return splitHintSpec.split(fileIterator, file -> new InputFileAttribute(file.length()));
+    return splitHintSpec.split(
+        fileIterator,
+        file -> new InputFileAttribute(
+            file.length(),
+            inputFormat != null
+            ? inputFormat.getWeightedSize(file.getName(), file.length())
+            : file.length()
+        )
+    );
   }
 
   @VisibleForTesting

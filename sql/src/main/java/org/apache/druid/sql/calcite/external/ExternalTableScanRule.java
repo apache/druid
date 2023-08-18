@@ -47,7 +47,7 @@ public class ExternalTableScanRule extends RelOptRule
       return super.matches(call);
     } else {
       plannerContext.setPlanningError(
-          "Cannot use '%s' with SQL engine '%s'.",
+          "Cannot use [%s] with SQL engine [%s].",
           ExternalOperatorConversion.FUNCTION_NAME,
           plannerContext.getEngine().name()
       );

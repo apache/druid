@@ -19,8 +19,6 @@
 
 package org.apache.druid.sql.calcite.external;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
@@ -30,19 +28,26 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.SqlWriter.Frame;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
+import org.apache.druid.sql.calcite.table.ExternalTable;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Table macro designed for use with the Druid EXTEND operator. Example:
@@ -106,12 +111,11 @@ public abstract class SchemaAwareUserDefinedTableMacro
       SqlIdentifier opName,
       SqlReturnTypeInference returnTypeInference,
       SqlOperandTypeInference operandTypeInference,
-      SqlOperandTypeChecker operandTypeChecker,
-      List<RelDataType> paramTypes,
+      SqlOperandMetadata operandMetadata,
       ExtendedTableMacro tableMacro
   )
   {
-    super(opName, returnTypeInference, operandTypeInference, operandTypeChecker, paramTypes, tableMacro);
+    super(opName, returnTypeInference, operandTypeInference, operandMetadata, tableMacro);
   }
 
   /**
@@ -140,7 +144,6 @@ public abstract class SchemaAwareUserDefinedTableMacro
           ReturnTypes.CURSOR,
           null,
           base.getOperandTypeChecker(),
-          base.getParamTypes(),
           new ShimTableMacro((ExtendedTableMacro) base.macro, schema)
       );
       this.base = base;
@@ -148,24 +151,31 @@ public abstract class SchemaAwareUserDefinedTableMacro
     }
 
     @Override
-    public TranslatableTable getTable(
-        RelDataTypeFactory typeFactory,
-        List<SqlNode> operandList
-    )
+    public TranslatableTable getTable(SqlOperatorBinding callBinding)
     {
       if (table == null) {
         // Cache the table to avoid multiple conversions
         // Possible because each call has a distinct instance
         // of this operator.
-        table = super.getTable(typeFactory, operandList);
+        table = super.getTable(callBinding);
       }
       return table;
     }
 
     @Override
-    public Set<ResourceAction> computeResources(final SqlCall call)
+    public Set<ResourceAction> computeResources(final SqlCall call, final boolean inputSourceTypeSecurityEnabled)
     {
-      return base.computeResources(call);
+      Set<ResourceAction> resourceActions = new HashSet<>();
+      if (table instanceof ExternalTable && inputSourceTypeSecurityEnabled) {
+        resourceActions.addAll(((ExternalTable) table)
+                                   .getInputSourceTypeSupplier().get().stream()
+                                   .map(inputSourceType ->
+                                 new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ))
+                                   .collect(Collectors.toSet()));
+      } else {
+        resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));
+      }
+      return resourceActions;
     }
   }
 
@@ -180,9 +190,8 @@ public abstract class SchemaAwareUserDefinedTableMacro
     {
       super(
           macro,
-          oldCall.getOperands(),
+          oldCall.getOperandList(),
           oldCall.getParserPosition(),
-          false,
           oldCall.getFunctionQuantifier()
       );
       this.schema = macro.schema;
@@ -192,9 +201,8 @@ public abstract class SchemaAwareUserDefinedTableMacro
     {
       super(
           from.getOperator(),
-          from.getOperands(),
+          from.getOperandList(),
           pos,
-          false,
           from.getFunctionQuantifier()
       );
       this.schema = from.schema;
@@ -243,7 +251,7 @@ public abstract class SchemaAwareUserDefinedTableMacro
 
   public interface ExtendedTableMacro extends TableMacro
   {
-    TranslatableTable apply(List<Object> arguments, SqlNodeList schema);
+    TranslatableTable apply(List<?> arguments, SqlNodeList schema);
   }
 
   /**
@@ -269,7 +277,7 @@ public abstract class SchemaAwareUserDefinedTableMacro
     }
 
     @Override
-    public TranslatableTable apply(List<Object> arguments)
+    public TranslatableTable apply(List<?> arguments)
     {
       if (table == null) {
         table = delegate.apply(arguments, schema);

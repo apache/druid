@@ -59,7 +59,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   private final byte[][] bucketBuffer;
   private final ByteBuffer getOffsetBuffer;
   private final int div;
-  private final boolean useIncrementalBuckets;
+  private final byte version;
 
   @Nullable
   private byte[] prevObject = null;
@@ -78,7 +78,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       SegmentWriteOutMedium segmentWriteOutMedium,
       ByteOrder byteOrder,
       int bucketSize,
-      boolean useIncrementalBuckets
+      byte version
   )
   {
     if (Integer.bitCount(bucketSize) != 1 || bucketSize < 1 || bucketSize > 128) {
@@ -91,7 +91,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     this.bucketBuffer = new byte[bucketSize][];
     this.getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES).order(byteOrder);
     this.div = Integer.numberOfTrailingZeros(bucketSize);
-    this.useIncrementalBuckets = useIncrementalBuckets;
+    this.version = FrontCodedIndexed.validateVersion(version);
   }
 
   @Override
@@ -124,9 +124,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       int written;
       // write the bucket, growing scratch buffer as necessary
       do {
-        written = useIncrementalBuckets
-                  ? writeIncrementalBucket(scratch, bucketBuffer, bucketSize)
-                  : writeBucket(scratch, bucketBuffer, bucketSize);
+        written = version == FrontCodedIndexed.V1
+                  ? writeBucketV1(scratch, bucketBuffer, bucketSize)
+                  : writeBucketV0(scratch, bucketBuffer, bucketSize);
         if (written < 0) {
           growScratch();
         }
@@ -170,14 +170,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       flush();
     }
     resetScratch();
-
-    if (useIncrementalBuckets) {
-      // version 1 is incremental buckets
-      scratch.put((byte) 1);
-    } else {
-      // version 0 all values are prefixed on first bucket value
-      scratch.put((byte) 0);
-    }
+    scratch.put(version);
     scratch.put((byte) bucketSize);
     scratch.put(hasNulls ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
     VByte.writeInt(scratch, numWritten);
@@ -222,13 +215,19 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       final ByteBuffer bucketBuffer = ByteBuffer.allocate(bucketBytesSize).order(byteOrder);
       valuesOut.readFully(startOffset, bucketBuffer);
       bucketBuffer.clear();
-      final ByteBuffer valueBuffer = useIncrementalBuckets
+      final ByteBuffer valueBuffer = version == FrontCodedIndexed.V1
                                      ? getFromBucketV1(bucketBuffer, relativeIndex, bucketSize)
-                                     : FrontCodedIndexed.getFromBucketV0(bucketBuffer, relativeIndex);
+                                     : FrontCodedIndexed.FrontCodedV0.getValueFromBucket(bucketBuffer, relativeIndex);
       final byte[] valueBytes = new byte[valueBuffer.limit() - valueBuffer.position()];
       valueBuffer.get(valueBytes);
       return valueBytes;
     }
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    return numWritten + (hasNulls ? 1 : 0);
   }
 
   private long getBucketOffset(int index) throws IOException
@@ -248,9 +247,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     int written;
     do {
       int flushSize = remainder == 0 ? bucketSize : remainder;
-      written = useIncrementalBuckets
-                ? writeIncrementalBucket(scratch, bucketBuffer, flushSize)
-                : writeBucket(scratch, bucketBuffer, flushSize);
+      written = version == FrontCodedIndexed.V1
+                ? writeBucketV1(scratch, bucketBuffer, flushSize)
+                : writeBucketV0(scratch, bucketBuffer, flushSize);
       if (written < 0) {
         growScratch();
       }
@@ -283,7 +282,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
    *
    * Uses {@link VByte} encoded integers to indicate prefix length and value length.
    */
-  public static int writeBucket(ByteBuffer buffer, byte[][] values, int numValues)
+  public static int writeBucketV0(ByteBuffer buffer, byte[][] values, int numValues)
   {
     int written = 0;
     byte[] first = null;
@@ -333,7 +332,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
    *
    * Uses {@link VByte} encoded integers to indicate prefix length and value length.
    */
-  public static int writeIncrementalBucket(ByteBuffer buffer, byte[][] values, int numValues)
+  public static int writeBucketV1(ByteBuffer buffer, byte[][] values, int numValues)
   {
     int written = 0;
     byte[] prev = null;
@@ -414,15 +413,15 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     return StringUtils.compareUtf8UsingJavaStringOrdering(b1, b2);
   }
 
-
   /**
-   * same as {@link FrontCodedIndexed#getFromBucketV1(ByteBuffer, int)} but without re-using prefixLength and buffer position
-   * arrays so has more overhead/garbage creation than the instance method.
+   * same as {@link FrontCodedIndexed.FrontCodedV1#getFromBucket(ByteBuffer, int)} but
+   * without re-using prefixLength and buffer position arrays so has more overhead/garbage creation than the instance
+   * method.
    *
    * Note: adding the unwindPrefixLength and unwindBufferPosition arrays as arguments and having
-   * {@link FrontCodedIndexed#getFromBucketV1(ByteBuffer, int)} call this static method added 5-10ns of overhead
-   * compared to having its own copy of the code, presumably due to the overhead of an additional method call and extra
-   * arguments.
+   * {@link FrontCodedIndexed.FrontCodedV1#getFromBucket(ByteBuffer, int)} call this static method added 5-10ns of
+   * overhead compared to having its own copy of the code, presumably due to the overhead of an additional method call
+   * and extra arguments.
    *
    * As such, since the writer is the only user of this method, it has been copied here...
    */

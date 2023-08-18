@@ -57,13 +57,12 @@ public class DruidUserDefinedTableMacro extends SchemaAwareUserDefinedTableMacro
         // Use our own definition of variadic since Calcite's doesn't allow
         // optional parameters.
         Externals.variadic(macro.parameters),
-        Externals.dataTypes(macro.parameters),
         macro
     );
   }
 
   @Override
-  public Set<ResourceAction> computeResources(final SqlCall call)
+  public Set<ResourceAction> computeResources(final SqlCall call, final boolean inputSourceTypeSecurityEnabled)
   {
     return Collections.singleton(Externals.EXTERNAL_RESOURCE_ACTION);
   }

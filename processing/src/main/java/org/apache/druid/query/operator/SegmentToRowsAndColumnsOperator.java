@@ -46,8 +46,13 @@ public class SegmentToRowsAndColumnsOperator implements Operator
       if (shifty == null) {
         throw new ISE("Segment[%s] cannot shapeshift", segment.getClass());
       }
+      RowsAndColumns rac;
+      if (shifty instanceof RowsAndColumns) {
+        rac = (RowsAndColumns) shifty;
+      } else {
+        rac = shifty.as(RowsAndColumns.class);
+      }
 
-      RowsAndColumns rac = shifty.as(RowsAndColumns.class);
       if (rac == null) {
         throw new ISE("Cannot work with segment of type[%s]", segment.getClass());
       }

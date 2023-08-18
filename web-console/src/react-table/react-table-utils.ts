@@ -18,11 +18,11 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from 'druid-query-toolkit';
-import { C, F } from 'druid-query-toolkit';
+import type { SqlExpression } from '@druid-toolkit/query';
+import { C, F } from '@druid-toolkit/query';
 import type { Filter } from 'react-table';
 
-import { addOrUpdate, caseInsensitiveContains } from '../utils';
+import { addOrUpdate, caseInsensitiveContains, filterMap } from '../utils';
 
 export const DEFAULT_TABLE_CLASS_NAME = '-striped -highlight padded-header';
 
@@ -107,16 +107,7 @@ export function addOrUpdateFilter(filters: readonly Filter[], filter: Filter): F
   return addOrUpdate(filters, filter, f => f.id);
 }
 
-export function syncFilterClauseById(
-  target: readonly Filter[],
-  source: readonly Filter[],
-  id: string,
-): Filter[] {
-  const clause = source.find(filter => filter.id === id);
-  return clause ? addOrUpdateFilter(target, clause) : target.filter(filter => filter.id !== id);
-}
-
-export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
+export function booleanCustomTableFilter(filter: Filter, value: unknown): boolean {
   if (value == null) return false;
   const modeAndNeedle = parseFilterModeAndNeedle(filter);
   if (!modeAndNeedle) return true;
@@ -160,4 +151,20 @@ export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression | undef
     default:
       return F('LOWER', column).like(`%${needle.toLowerCase()}%`);
   }
+}
+
+export function tableFiltersToString(tableFilters: Filter[]): string {
+  return tableFilters
+    .map(({ id, value }) => `${id}${value.replace(/[&%]/g, encodeURIComponent)}`)
+    .join('&');
+}
+
+export function stringToTableFilters(str: string | undefined): Filter[] {
+  if (!str) return [];
+  // '~' | '=' | '!=' | '<=' | '>=';
+  return filterMap(str.split('&'), clause => {
+    const m = /^(\w+)((?:~|=|!=|<=|>=).*)$/.exec(clause.replace(/%2[56]/g, decodeURIComponent));
+    if (!m) return;
+    return { id: m[1], value: m[2] };
+  });
 }

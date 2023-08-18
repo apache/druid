@@ -16,43 +16,74 @@
  * limitations under the License.
  */
 
-import { Button, Divider, FormGroup } from '@blueprintjs/core';
+import { Button, Divider, FormGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { ExternalLink, RuleEditor } from '../../components';
+import type { FormJsonTabs } from '../../components';
+import { ExternalLink, FormJsonSelector, JsonInput, RuleEditor } from '../../components';
+import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api } from '../../singletons';
-import { swapElements } from '../../utils';
+import { filterMap, queryDruidSql, swapElements } from '../../utils';
 import type { Rule } from '../../utils/load-rule';
-import { RuleUtil } from '../../utils/load-rule';
 import { SnitchDialog } from '..';
 
 import './retention-dialog.scss';
+
+const CLUSTER_DEFAULT_FAKE_DATASOURCE = '_default';
 
 export interface RetentionDialogProps {
   datasource: string;
   rules: Rule[];
   defaultRules: Rule[];
-  tiers: string[];
-  onEditDefaults: () => void;
-  onCancel: () => void;
-  onSave: (datasource: string, newRules: Rule[], comment: string) => void | Promise<void>;
+  capabilities: Capabilities;
+  onEditDefaults(): void;
+  onCancel(): void;
+  onSave(datasource: string, newRules: Rule[], comment: string): void | Promise<void>;
 }
 
 export const RetentionDialog = React.memo(function RetentionDialog(props: RetentionDialogProps) {
-  const { datasource, onCancel, onEditDefaults, rules, defaultRules, tiers } = props;
+  const { datasource, onCancel, onEditDefaults, rules, defaultRules, capabilities } = props;
+  const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [currentRules, setCurrentRules] = useState(props.rules);
+  const [jsonError, setJsonError] = useState<Error | undefined>();
+
+  const [tiersState] = useQueryManager<Capabilities, string[]>({
+    initQuery: capabilities,
+    processQuery: async capabilities => {
+      if (capabilities.hasSql()) {
+        const sqlResp = await queryDruidSql<{ tier: string }>({
+          query: `SELECT "tier"
+FROM "sys"."servers"
+WHERE "server_type" = 'historical'
+GROUP BY 1
+ORDER BY 1`,
+        });
+
+        return sqlResp.map(d => d.tier);
+      } else if (capabilities.hasCoordinatorAccess()) {
+        const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
+        return filterMap(allServiceResp.data, (s: any) =>
+          s.type === 'historical' ? s.tier : undefined,
+        );
+      } else {
+        throw new Error(`must have sql or coordinator access`);
+      }
+    },
+  });
+
+  const tiers = tiersState.data || [];
 
   const [historyQueryState] = useQueryManager<string, any[]>({
+    initQuery: props.datasource,
     processQuery: async datasource => {
       const historyResp = await Api.instance.get(
-        `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history`,
+        `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history?count=200`,
       );
       return historyResp.data;
     },
-    initQuery: props.datasource,
   });
 
   const historyRecords = historyQueryState.data || [];
@@ -83,35 +114,13 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
     setCurrentRules(swapElements(currentRules, index, index + direction));
   }
 
-  function renderRule(rule: Rule, index: number) {
-    return (
-      <RuleEditor
-        rule={rule}
-        tiers={tiers}
-        key={index}
-        onChange={r => changeRule(r, index)}
-        onDelete={() => deleteRule(index)}
-        moveUp={index > 0 ? () => moveRule(index, -1) : undefined}
-        moveDown={index < currentRules.length - 1 ? () => moveRule(index, 1) : undefined}
-      />
-    );
-  }
-
-  function renderDefaultRule(rule: Rule, index: number) {
-    return (
-      <div className="default-rule" key={index}>
-        <Button disabled>{RuleUtil.ruleToString(rule)}</Button>
-      </div>
-    );
-  }
-
   return (
     <SnitchDialog
       className="retention-dialog"
-      saveDisabled={false}
+      saveDisabled={Boolean(jsonError)}
       onClose={onCancel}
       title={`Edit retention rules: ${datasource}${
-        datasource === '_default' ? ' (cluster defaults)' : ''
+        datasource === CLUSTER_DEFAULT_FAKE_DATASOURCE ? ' (cluster defaults)' : ''
       }`}
       onReset={() => setCurrentRules(rules)}
       onSave={saveHandler}
@@ -125,28 +134,68 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
         </ExternalLink>
         .
       </p>
-      <FormGroup>
-        {currentRules.length ? (
-          currentRules.map(renderRule)
-        ) : datasource !== '_default' ? (
-          <p className="no-rules-message">
-            This datasource currently has no rules, it will use the cluster defaults.
-          </p>
-        ) : undefined}
-        <div>
-          <Button icon={IconNames.PLUS} onClick={addRule}>
-            New rule
-          </Button>
-        </div>
-      </FormGroup>
-      {datasource !== '_default' && (
+      <FormJsonSelector
+        tab={currentTab}
+        onChange={t => {
+          setJsonError(undefined);
+          setCurrentTab(t);
+        }}
+      />
+      {currentTab === 'form' ? (
+        <FormGroup>
+          {currentRules.length ? (
+            currentRules.map((rule, index) => (
+              <RuleEditor
+                key={index}
+                rule={rule}
+                tiers={tiers}
+                onChange={r => changeRule(r, index)}
+                onDelete={() => deleteRule(index)}
+                moveUp={index > 0 ? () => moveRule(index, -1) : undefined}
+                moveDown={index < currentRules.length - 1 ? () => moveRule(index, 1) : undefined}
+              />
+            ))
+          ) : datasource !== CLUSTER_DEFAULT_FAKE_DATASOURCE ? (
+            <p className="no-rules-message">
+              This datasource currently has no rules, it will use the cluster defaults.
+            </p>
+          ) : undefined}
+          <div>
+            <Button
+              icon={IconNames.PLUS}
+              onClick={addRule}
+              intent={currentRules.length ? undefined : Intent.PRIMARY}
+            >
+              New rule
+            </Button>
+          </div>
+        </FormGroup>
+      ) : (
+        <JsonInput
+          value={currentRules}
+          onChange={setCurrentRules}
+          setError={setJsonError}
+          height="100%"
+        />
+      )}
+      {datasource !== CLUSTER_DEFAULT_FAKE_DATASOURCE && (
         <>
           <Divider />
-          <FormGroup>
-            <p>
-              Cluster defaults (<a onClick={onEditDefaults}>edit</a>):
-            </p>
-            {defaultRules.map(renderDefaultRule)}
+          <FormGroup
+            label={
+              <>
+                Cluster defaults (<a onClick={onEditDefaults}>edit</a>)
+              </>
+            }
+          >
+            <p>The cluster default rules are evaluated if none of the above rules match.</p>
+            {currentTab === 'form' ? (
+              defaultRules.map((rule, index) => (
+                <RuleEditor key={index} rule={rule} tiers={tiers} />
+              ))
+            ) : (
+              <JsonInput value={defaultRules} />
+            )}
           </FormGroup>
         </>
       )}

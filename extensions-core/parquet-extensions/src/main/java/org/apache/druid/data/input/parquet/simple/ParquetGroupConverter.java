@@ -40,11 +40,12 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-class ParquetGroupConverter
+public class ParquetGroupConverter
 {
   private static final int JULIAN_EPOCH_OFFSET_DAYS = 2_440_588;
   private static final long MILLIS_IN_DAY = TimeUnit.DAYS.toMillis(1);
@@ -359,7 +360,6 @@ class ParquetGroupConverter
             return g.getInteger(fieldIndex, index);
           case INT_64:
             return g.getLong(fieldIndex, index);
-          // todo: idk wtd about unsigned
           case UINT_8:
           case UINT_16:
             return g.getInteger(fieldIndex, index);
@@ -493,9 +493,27 @@ class ParquetGroupConverter
 
   private final boolean binaryAsString;
 
-  ParquetGroupConverter(boolean binaryAsString)
+  public ParquetGroupConverter(boolean binaryAsString)
   {
     this.binaryAsString = binaryAsString;
+  }
+
+  /**
+   * Recursively converts a group into native Java Map
+   *
+   * @param g the group
+   * @return the native Java object
+   */
+  public Object convertGroup(Group g)
+  {
+    Map<String, Object> retVal = new LinkedHashMap<>();
+
+    for (Type field : g.getType().getFields()) {
+      final String fieldName = field.getName();
+      retVal.put(fieldName, convertField(g, fieldName));
+    }
+
+    return retVal;
   }
 
   /**

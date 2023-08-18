@@ -1,4 +1,4 @@
-type: "operatorValidation"
+type: "failingTest"
 
 sql: |
   SELECT
@@ -17,9 +17,12 @@ sql: |
     CUME_DIST() OVER (PARTITION BY countryIsoCode ORDER BY SUM(delta)) AS delayCumeDist
   FROM wikipedia
   GROUP BY 1, 2
-  ORDER BY 1, 3
 
 expectedOperators:
+  - type: naiveSort
+    columns:
+    - { column: "d0", direction: "ASC"}
+    - { column: "a0", direction: "ASC"}
   - { type: "naivePartition",  partitionColumns: [ "d0" ] }
   - type: "window"
     processor:

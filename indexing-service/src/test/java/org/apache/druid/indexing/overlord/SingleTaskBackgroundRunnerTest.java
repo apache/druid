@@ -20,19 +20,20 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -87,23 +88,12 @@ public class SingleTaskBackgroundRunnerTest
   {
     final TestUtils utils = new TestUtils();
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
-    final TaskConfig taskConfig = new TaskConfig(
-        temporaryFolder.newFile().toString(),
-        null,
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.newFile().toString())
+        .setDefaultRowFlushBoundary(50000)
+        .setRestoreTasksOnRestart(true)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
@@ -140,12 +130,11 @@ public class SingleTaskBackgroundRunnerTest
         utils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
-        null,
-        "1",
-        new TaskStorageDirTracker(taskConfig)
+        "1"
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -175,7 +164,7 @@ public class SingleTaskBackgroundRunnerTest
       }
 
       @Override
-      public void cleanUp(TaskToolbox toolbox, boolean failure)
+      public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
       {
         // do nothing
       }
@@ -193,10 +182,10 @@ public class SingleTaskBackgroundRunnerTest
 
     final QueryRunner<ScanResultValue> queryRunner =
         Druids.newScanQueryBuilder()
-              .dataSource("foo")
-              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
-              .build()
-              .getRunner(runner);
+            .dataSource("foo")
+            .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+            .build()
+            .getRunner(runner);
 
     Assert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
   }
@@ -274,7 +263,7 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void cleanUp(TaskToolbox toolbox, boolean failure)
+          public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
           {
             // do nothing
           }
@@ -396,7 +385,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
     {
       // do nothing
     }

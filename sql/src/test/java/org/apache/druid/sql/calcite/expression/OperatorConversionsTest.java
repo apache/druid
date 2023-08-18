@@ -26,6 +26,7 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.Resources.ExInst;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
@@ -50,7 +51,7 @@ import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Enclosed.class)
@@ -65,6 +66,7 @@ public class OperatorConversionsTest
     public void testGetOperandCountRange()
     {
       SqlOperandTypeChecker typeChecker = new DefaultOperandTypeChecker(
+          Collections.emptyList(),
           ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
           2,
           IntSets.EMPTY_SET,
@@ -79,6 +81,7 @@ public class OperatorConversionsTest
     public void testIsOptional()
     {
       SqlOperandTypeChecker typeChecker = new DefaultOperandTypeChecker(
+          Collections.emptyList(),
           ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
           2,
           IntSets.EMPTY_SET,
@@ -95,7 +98,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testAllowFullOperands")
           .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -118,8 +121,7 @@ public class OperatorConversionsTest
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testRequiredOperandsOnly")
-          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE)
-          .requiredOperands(1)
+          .operandTypeChecker(BasicOperandTypeChecker.builder().operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE).requiredOperandCount(1).build())
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -140,7 +142,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testLiteralOperandCheckLiteral")
           .operandTypes(SqlTypeFamily.INTEGER)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .literalOperands(0)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
@@ -162,7 +164,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testLiteralOperandCheckLiteralThrow")
           .operandTypes(SqlTypeFamily.INTEGER)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .literalOperands(0)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
@@ -184,7 +186,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testAnyTypeOperand")
           .operandTypes(SqlTypeFamily.ANY)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -205,7 +207,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testCastableFromDatetimeFamilyToTimestamp")
           .operandTypes(SqlTypeFamily.DATETIME)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -235,7 +237,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableOperand")
           .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -259,7 +261,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullLiteralForNullableOperand")
           .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -283,7 +285,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableNonnull")
           .operandTypes(SqlTypeFamily.CHARACTER)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -304,7 +306,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableCascade")
           .operandTypes(SqlTypeFamily.CHARACTER)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeCascadeNullable(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -325,7 +327,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableNonnull")
           .operandTypes(SqlTypeFamily.CHARACTER)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNullable(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -346,7 +348,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNonNullableOperand")
           .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -372,7 +374,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullLiteralForNonNullableOperand")
           .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
-          .requiredOperands(1)
+          .requiredOperandCount(1)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -398,7 +400,7 @@ public class OperatorConversionsTest
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNonCastableType")
           .operandTypes(SqlTypeFamily.CURSOR, SqlTypeFamily.INTERVAL_DAY_TIME)
-          .requiredOperands(2)
+          .requiredOperandCount(2)
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
@@ -418,6 +420,41 @@ public class OperatorConversionsTest
       );
     }
 
+    @Test
+    public void testSignatureWithNames()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testSignatureWithNames")
+          .operandNames("x", "y", "z")
+          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE, SqlTypeFamily.ANY)
+          .requiredOperandCount(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+
+      Assert.assertEquals(
+          "'testSignatureWithNames(<x>, [<y>, [<z>]])'",
+          typeChecker.getAllowedSignatures(function, function.getName())
+      );
+    }
+
+    @Test
+    public void testSignatureWithoutNames()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testSignatureWithoutNames")
+          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE, SqlTypeFamily.ANY)
+          .requiredOperandCount(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+
+      Assert.assertEquals(
+          "'testSignatureWithoutNames(<INTEGER>, [<DATE>, [<ANY>]])'",
+          typeChecker.getAllowedSignatures(function, function.getName())
+      );
+    }
+
     private static SqlCallBinding mockCallBinding(
         SqlFunction function,
         List<OperandSpec> actualOperands
@@ -430,8 +467,13 @@ public class OperatorConversionsTest
         final SqlNode node;
         if (operand.isLiteral) {
           node = Mockito.mock(SqlLiteral.class);
+          Mockito.when(node.getKind()).thenReturn(SqlKind.LITERAL);
         } else {
           node = Mockito.mock(SqlNode.class);
+          // Setting this as SqlUtil.isLiteral makes a call on
+          // node.getKind() and without this change would
+          // return a NPE
+          Mockito.when(node.getKind()).thenReturn(SqlKind.OTHER_FUNCTION);
         }
         RelDataType relDataType = Mockito.mock(RelDataType.class);
 
@@ -443,10 +485,13 @@ public class OperatorConversionsTest
         Mockito.when(validator.deriveType(ArgumentMatchers.any(), ArgumentMatchers.eq(node)))
                .thenReturn(relDataType);
         Mockito.when(relDataType.getSqlTypeName()).thenReturn(operand.type);
+
+
         operands.add(node);
       }
       SqlParserPos pos = Mockito.mock(SqlParserPos.class);
-      Mockito.when(pos.plusAll(ArgumentMatchers.any(Collection.class)))
+
+      Mockito.when(pos.plusAll((SqlNode[]) ArgumentMatchers.any()))
              .thenReturn(pos);
       SqlCallBinding callBinding = new SqlCallBinding(
           validator,

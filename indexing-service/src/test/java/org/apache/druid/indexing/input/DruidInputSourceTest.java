@@ -99,7 +99,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -133,7 +132,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -173,7 +171,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -256,7 +253,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
@@ -291,12 +287,31 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
     ColumnsFilter columnsFilter = inputSourceReader.getColumnsFilter();
     Assert.assertTrue(columnsFilter.apply(column));
     Assert.assertFalse(columnsFilter.apply(metricName));
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    String datasource = "foo";
+    Interval interval = Intervals.of("2000/2001");
+    DruidInputSource druidInputSource = new DruidInputSource(
+        datasource,
+        interval,
+        null,
+        null,
+        ImmutableList.of("a"),
+        ImmutableList.of("b"),
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        taskConfig
+    );
+    Assert.assertEquals(ImmutableSet.of(DruidInputSource.TYPE_KEY), druidInputSource.getTypes());
   }
 }

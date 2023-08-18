@@ -85,7 +85,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     for (int i = 0; i < frame.numRows(); i++) {
       final boolean isPartiallyNull =
           Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).limit(3).anyMatch(Objects::isNull);
-      Assert.assertEquals(isPartiallyNull, widget.isPartiallyNullKey(i));
+      Assert.assertEquals(isPartiallyNull, !widget.isCompletelyNonNullKey(i));
     }
   }
 
@@ -104,7 +104,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     for (int i = 0; i < frame.numRows(); i++) {
       final boolean isPartiallyNull =
           Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).anyMatch(Objects::isNull);
-      Assert.assertEquals(isPartiallyNull, widget.isPartiallyNullKey(i));
+      Assert.assertEquals(isPartiallyNull, !widget.isCompletelyNonNullKey(i));
     }
   }
 

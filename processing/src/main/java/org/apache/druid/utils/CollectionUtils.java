@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.TreeSet;
@@ -129,6 +130,7 @@ public final class CollectionUtils
    * can be replaced with Guava's implementation once Druid has upgraded its Guava dependency to a sufficient version.
    *
    * @param expectedSize the expected size of the LinkedHashMap
+   *
    * @return LinkedHashMap object with appropriate size based on callers expectedSize
    */
   @SuppressForbidden(reason = "java.util.LinkedHashMap#<init>(int)")
@@ -182,6 +184,27 @@ public final class CollectionUtils
     Set<T> result = new HashSet<>(left);
     result.addAll(right);
     return result;
+  }
+
+  /**
+   * Like {@link Iterables#getOnlyElement(Iterable)}, but allows a customizable error message.
+   */
+  public static <T, I extends Iterable<T>, X extends Throwable> T getOnlyElement(
+      final I iterable,
+      final Function<? super I, ? extends X> exceptionSupplier
+  ) throws X
+  {
+    final Iterator<T> iterator = iterable.iterator();
+    try {
+      final T object = iterator.next();
+      if (iterator.hasNext()) {
+        throw exceptionSupplier.apply(iterable);
+      }
+      return object;
+    }
+    catch (NoSuchElementException e) {
+      throw exceptionSupplier.apply(iterable);
+    }
   }
 
   private CollectionUtils()

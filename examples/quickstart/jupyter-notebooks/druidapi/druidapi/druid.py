@@ -19,6 +19,7 @@ from druidapi.catalog import CatalogClient
 from druidapi.sql import QueryClient
 from druidapi.tasks import TaskClient
 from druidapi.datasource import DatasourceClient
+from druidapi.basic_auth import BasicAuthClient
 
 class DruidClient:
     '''
@@ -26,8 +27,8 @@ class DruidClient:
     specialized "clients" that group many of Druid's REST API calls.
     '''
 
-    def __init__(self, router_endpoint, display_client=None):
-        self.rest_client = DruidRestClient(router_endpoint)
+    def __init__(self, router_endpoint, display_client=None, auth=None):
+        self.rest_client = DruidRestClient(router_endpoint, auth=auth)
         self.status_client = None
         self.catalog_client = None
         self.sql_client = None
@@ -116,6 +117,33 @@ class DruidClient:
         if not self.datasource_client:
             self.datasource_client = DatasourceClient(self.rest_client)
         return self.datasource_client
+    
+    def basic_security(self, authenticator, authorizer=None):
+        '''
+        Returns a client to work with a basic authorization authenticator/authorizer pair.
+        This client assumes the typical case of one authenticator and one authorizer. If
+        you have more than one, create multiple clients.
+
+        The basic security API is not proxied through the Router: it must work directly with
+        the Coordinator. Create an ad hoc Druid client for your Coordinator. Because you have
+        basic security enabled, you must specify the admin user and password:
+
+        ```
+        coord = druidapi.jupyter_client('http://localhost:8081', auth=('admin', 'admin-pwd'))
+        ac = coord.basic_security('yourAuthenticator', 'yourAuthorizer')
+        ```
+
+        Parameters
+        ----------
+        authenticator: str
+            Authenticator name as set in the `druid.auth.authenticatorChain`
+            runtime property.
+
+        authorizer: str, default = same as authenticator
+            Authorizer name as set in the `druid.auth.authorizers` runtime property.
+            Defaults to the same name as the `authenticator` parameter for simple cases.
+        '''
+        return BasicAuthClient(self.rest_client, authenticator, authorizer)
 
     @property
     def display(self):

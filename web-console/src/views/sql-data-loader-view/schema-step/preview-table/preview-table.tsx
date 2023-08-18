@@ -19,9 +19,9 @@
 import { Icon } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { Column, QueryResult, SqlQuery } from '@druid-toolkit/query';
+import { SqlAlias, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type { Column, QueryResult, SqlQuery } from 'druid-query-toolkit';
-import { SqlAlias, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
@@ -30,7 +30,13 @@ import { BracedText, Deferred, TableCell } from '../../../../components';
 import { CellFilterMenu } from '../../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryAction } from '../../../../utils';
-import { columnToIcon, columnToWidth, filterMap, getNumericColumnBraces } from '../../../../utils';
+import {
+  columnToIcon,
+  columnToSummary,
+  columnToWidth,
+  filterMap,
+  getNumericColumnBraces,
+} from '../../../../utils';
 
 import './preview-table.scss';
 
@@ -124,7 +130,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             Header() {
               return (
                 <div className="header-wrapper" onClick={() => onEditColumn(i)}>
-                  <div className="output-name">
+                  <div className="output-name" title={columnToSummary(column)}>
                     {icon && <Icon className="type-icon" icon={icon} size={12} />}
                     {h}
                     {hasFilterOnHeader(h, i) && (

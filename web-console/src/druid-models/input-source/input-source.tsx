@@ -21,10 +21,12 @@ import React from 'react';
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { deepGet, deepSet, nonEmptyArray, typeIs } from '../../utils';
+import { deepGet, deepSet, nonEmptyArray, typeIsKnown } from '../../utils';
 
 export const FILTER_SUGGESTIONS: string[] = [
   '*',
+  '*.jsonl',
+  '*.jsonl.gz',
   '*.json',
   '*.json.gz',
   '*.csv',
@@ -77,7 +79,7 @@ export type InputSourceDesc =
       dataSource: string;
       interval: string;
       filter?: any;
-      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/native-batch-input-sources.html
+      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/input-sources.html
       metrics?: string[];
       maxInputSegmentBytesPerTask?: number;
     }
@@ -167,6 +169,7 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
   }
 }
 
+const KNOWN_TYPES = ['inline', 'druid', 'http', 'local', 's3', 'azure', 'google', 'hdfs', 'sql'];
 export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
   // inline
 
@@ -174,10 +177,11 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'data',
     label: 'Inline data',
     type: 'string',
-    defined: typeIs('inline'),
+    defined: typeIsKnown(KNOWN_TYPES, 'inline'),
     required: true,
     placeholder: 'Paste your data here',
     multiline: true,
+    height: '400px',
     info: <p>Put you inline data here</p>,
   },
 
@@ -188,7 +192,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'URIs',
     type: 'string-array',
     placeholder: 'https://example.com/path/to/file1.ext, https://example.com/path/to/file2.ext',
-    defined: typeIs('http'),
+    defined: typeIsKnown(KNOWN_TYPES, 'http'),
     required: true,
     info: (
       <p>
@@ -201,7 +205,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'httpAuthenticationUsername',
     label: 'HTTP auth username',
     type: 'string',
-    defined: typeIs('http'),
+    defined: typeIsKnown(KNOWN_TYPES, 'http'),
     placeholder: '(optional)',
     info: <p>Username to use for authentication with specified URIs</p>,
   },
@@ -209,7 +213,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'httpAuthenticationPassword',
     label: 'HTTP auth password',
     type: 'string',
-    defined: typeIs('http'),
+    defined: typeIsKnown(KNOWN_TYPES, 'http'),
     placeholder: '(optional)',
     info: <p>Password to use for authentication with specified URIs</p>,
   },
@@ -221,7 +225,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Base directory',
     type: 'string',
     placeholder: '/path/to/files/',
-    defined: typeIs('local'),
+    defined: typeIsKnown(KNOWN_TYPES, 'local'),
     required: true,
     info: (
       <>
@@ -236,7 +240,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'filter',
     label: 'File filter',
     type: 'string',
-    defined: typeIs('local'),
+    defined: typeIsKnown(KNOWN_TYPES, 'local'),
     required: true,
     suggestions: FILTER_SUGGESTIONS,
     info: (
@@ -441,7 +445,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: FILTER_SUGGESTIONS,
     placeholder: '*',
-    defined: typeIs('s3', 'azure', 'google'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3', 'azure', 'google'),
     info: (
       <p>
         A wildcard filter for files. See{' '}
@@ -461,7 +465,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: [undefined, 'environment', 'default'],
     placeholder: '(none)',
-    defined: typeIs('s3'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3'),
     info: (
       <>
         <p>S3 access key type.</p>
@@ -518,7 +522,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: [undefined, 'environment', 'default'],
     placeholder: '(none)',
-    defined: typeIs('s3'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3'),
     info: (
       <>
         <p>S3 secret key type.</p>
@@ -566,7 +570,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Paths',
     type: 'string',
     placeholder: '/path/to/file.ext',
-    defined: typeIs('hdfs'),
+    defined: typeIsKnown(KNOWN_TYPES, 'hdfs'),
     required: true,
   },
 
@@ -576,7 +580,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Database type',
     type: 'string',
     suggestions: ['mysql', 'postgresql'],
-    defined: typeIs('sql'),
+    defined: typeIsKnown(KNOWN_TYPES, 'sql'),
     required: true,
     info: (
       <>

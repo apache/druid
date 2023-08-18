@@ -51,12 +51,10 @@ public class LongFieldWriter implements FieldWriter
 
     if (selector.isNull()) {
       memory.putByte(position, NULL_BYTE);
-      memory.putLong(position + Byte.BYTES, 0 /* no need to call reverseBytes on zero */);
+      memory.putLong(position + Byte.BYTES, transform(0));
     } else {
       memory.putByte(position, NOT_NULL_BYTE);
-
-      // Must flip the first (sign) bit so comparison-as-bytes works.
-      memory.putLong(position + Byte.BYTES, Long.reverseBytes(selector.getLong() ^ Long.MIN_VALUE));
+      memory.putLong(position + Byte.BYTES, transform(selector.getLong()));
     }
 
     return SIZE;
@@ -66,5 +64,22 @@ public class LongFieldWriter implements FieldWriter
   public void close()
   {
     // Nothing to do.
+  }
+
+  /**
+   * Transforms a long into a form where it can be compared as unsigned bytes without decoding.
+   */
+  public static long transform(final long n)
+  {
+    // Must flip the first (sign) bit so comparison-as-bytes works.
+    return Long.reverseBytes(n ^ Long.MIN_VALUE);
+  }
+
+  /**
+   * Reverse the {@link #transform(long)} function.
+   */
+  public static long detransform(final long bits)
+  {
+    return Long.reverseBytes(bits) ^ Long.MIN_VALUE;
   }
 }

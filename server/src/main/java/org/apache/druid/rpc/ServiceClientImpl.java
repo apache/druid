@@ -476,6 +476,18 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   /**
+   * Sanitizes IPv6 address if it has brackets. Eg. host = "[1:2:3:4:5:6:7:8]" will be returned as "1:2:3:4:5:6:7:8"
+   * after this function
+   */
+  static String sanitizeHost(String host)
+  {
+    if (host.charAt(0) == '[') {
+      return host.substring(1, host.length() - 1);
+    }
+    return host;
+  }
+
+  /**
    * Returns a {@link ServiceLocation} without a path component, based on a URI.
    */
   @Nullable
@@ -488,13 +500,13 @@ public class ServiceClientImpl implements ServiceClient
 
     try {
       final URI uri = new URI(uriString);
-      final String host = uri.getHost();
 
-      if (host == null) {
+      if (uri.getHost() == null) {
         return null;
       }
 
       final String scheme = uri.getScheme();
+      final String host = sanitizeHost(uri.getHost());
 
       if ("http".equals(scheme)) {
         return new ServiceLocation(host, uri.getPort() < 0 ? 80 : uri.getPort(), -1, "");

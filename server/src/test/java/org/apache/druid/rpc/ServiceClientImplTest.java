@@ -663,6 +663,34 @@ public class ServiceClientImplTest
         new ServiceLocation("1.2.3.4", -1, 443, ""),
         ServiceClientImpl.serviceLocationNoPathFromUri("https://1.2.3.4/foo")
     );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", 9999, -1, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("http://[1:2:3:4:5:6:7:8]:9999/foo")
+    );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", 80, -1, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("http://[1:2:3:4:5:6:7:8]/foo")
+    );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", -1, 9999, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("https://[1:2:3:4:5:6:7:8]:9999/foo")
+    );
+
+    Assert.assertEquals(
+            new ServiceLocation("1:2:3:4:5:6:7:8", -1, 443, ""),
+            ServiceClientImpl.serviceLocationNoPathFromUri("https://[1:2:3:4:5:6:7:8]/foo")
+    );
+  }
+
+  @Test
+  public void test_normalizeHost()
+  {
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("[1:2:3:4:5:6:7:8]"));
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("1:2:3:4:5:6:7:8"));
+    Assert.assertEquals("1.2.3.4", ServiceClientImpl.sanitizeHost("1.2.3.4"));
   }
 
   @Test

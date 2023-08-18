@@ -28,6 +28,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
+import type { JSX } from 'react';
 import React from 'react';
 import AceEditor from 'react-ace';
 

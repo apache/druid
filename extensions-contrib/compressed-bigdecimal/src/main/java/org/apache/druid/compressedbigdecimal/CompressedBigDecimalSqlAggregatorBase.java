@@ -178,7 +178,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
               OperandTypes.and(OperandTypes.ANY, OperandTypes.family(SqlTypeFamily.ANY)),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      "'" + name + "'(column, size)",
+                      "'" + name + "(column, size)'",
                       OperandTypes.ANY,
                       OperandTypes.POSITIVE_INTEGER_LITERAL
                   ),
@@ -186,7 +186,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      "'" + name + "'(column, size, scale)",
+                      "'" + name + "(column, size, scale)'",
                       OperandTypes.ANY,
                       OperandTypes.POSITIVE_INTEGER_LITERAL,
                       OperandTypes.POSITIVE_INTEGER_LITERAL
@@ -195,7 +195,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      "'" + name + "'(column, size, scale, strictNumberParsing)",
+                      "'" + name + "(column, size, scale, strictNumberParsing)'",
                       OperandTypes.ANY,
                       OperandTypes.POSITIVE_INTEGER_LITERAL,
                       OperandTypes.POSITIVE_INTEGER_LITERAL,

@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -69,7 +70,8 @@ public class ExternalTableScanRuleTest
         CatalogResolver.NULL_RESOLVER,
         "druid",
         new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.TEST_AUTHORIZER_MAPPER
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        AuthConfig.newBuilder().build()
     );
     final PlannerContext plannerContext = PlannerContext.create(
         toolbox,
@@ -85,7 +87,7 @@ public class ExternalTableScanRuleTest
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
     Assert.assertEquals(
-        "Cannot use 'EXTERN' with SQL engine 'native'.",
+        "Cannot use [EXTERN] with SQL engine [native].",
         plannerContext.getPlanningError()
     );
   }

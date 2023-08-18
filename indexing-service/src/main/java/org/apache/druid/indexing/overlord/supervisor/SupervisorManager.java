@@ -132,7 +132,7 @@ public class SupervisorManager
             createAndStartSupervisorInternal(spec, false);
           }
           catch (Exception ex) {
-            log.error(ex, "Failed to start supervisor: [%s]", spec.getId());
+            log.error(ex, "Failed to start supervisor: id [%s]", spec.getId());
           }
         }
       }
@@ -201,7 +201,7 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.isHealthy());
   }
 
-  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
+  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata resetDataSourceMetadata)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
@@ -212,7 +212,11 @@ public class SupervisorManager
       return false;
     }
 
-    supervisor.lhs.reset(dataSourceMetadata);
+    if (resetDataSourceMetadata == null) {
+      supervisor.lhs.reset(null);
+    } else {
+      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
+    }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
       autoscaler.reset();
@@ -313,10 +317,6 @@ public class SupervisorManager
       return false;
     }
 
-    if (persistSpec) {
-      metadataSupervisorManager.insert(id, spec);
-    }
-
     Supervisor supervisor;
     SupervisorTaskAutoScaler autoscaler;
     try {
@@ -326,18 +326,22 @@ public class SupervisorManager
       supervisor.start();
       if (autoscaler != null) {
         autoscaler.start();
-        autoscalers.put(id, autoscaler);
       }
     }
     catch (Exception e) {
-      // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
-      if (persistSpec) {
-        metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
-      }
+      log.error("Failed to create and start supervisor: [%s]", spec.getId());
       throw new RuntimeException(e);
     }
 
+    if (persistSpec) {
+      metadataSupervisorManager.insert(id, spec);
+    }
+
     supervisors.put(id, Pair.of(supervisor, spec));
+    if (autoscaler != null) {
+      autoscalers.put(id, autoscaler);
+    }
+
     return true;
   }
 }

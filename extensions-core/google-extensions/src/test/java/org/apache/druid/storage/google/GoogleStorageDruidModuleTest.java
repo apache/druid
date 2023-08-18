@@ -19,6 +19,11 @@
 
 package org.apache.druid.storage.google;
 
+import com.google.api.client.googleapis.testing.auth.oauth2.MockGoogleCredential;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.services.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.common.gcp.GcpMockModule;
@@ -32,22 +37,65 @@ public class GoogleStorageDruidModuleTest
   @Test
   public void testSegmentKillerBoundedSingleton()
   {
-    Injector injector = createInjector();
+    // This test is primarily validating 2 things
+    // 1. That the Google credentials are loaded lazily, they are loaded as part of instantiation of the
+    //    HttpRquestInitializer, the test throws an exception from that method, meaning that if they are not loaded
+    //    lazily, the exception should end up thrown.
+    // 2. That the same object is returned.
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            new GcpMockModule()
+            {
+
+              @Override
+              public HttpRequestInitializer mockRequestInitializer(
+                  HttpTransport transport,
+                  JsonFactory factory
+              )
+              {
+                return new MockGoogleCredential.Builder().setTransport(transport).setJsonFactory(factory).build();
+              }
+            },
+            new GoogleStorageDruidModule()
+        )
+    );
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
     Assert.assertSame(
         killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get(),
         killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get()
     );
+
+    final Storage storage = injector.getInstance(Storage.class);
+    Assert.assertSame(storage, injector.getInstance(Storage.class));
   }
 
-  private static Injector createInjector()
+  @Test
+  public void testLazyInstantiation()
   {
-    return GuiceInjectors.makeStartupInjectorWithModules(
+    // This test is primarily validating 2 things
+    // 1. That the Google credentials are loaded lazily, they are loaded as part of instantiation of the
+    //    HttpRquestInitializer, the test throws an exception from that method, meaning that if they are not loaded
+    //    lazily, the exception should end up thrown.
+    // 2. That the same object is returned.
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
-            new GcpMockModule(),
+            new GcpMockModule()
+            {
+
+              @Override
+              public HttpRequestInitializer mockRequestInitializer(
+                  HttpTransport transport,
+                  JsonFactory factory
+              )
+              {
+                throw new UnsupportedOperationException("should not be called, because this should be lazy");
+              }
+            },
             new GoogleStorageDruidModule()
         )
     );
+    final GoogleStorage instance = injector.getInstance(GoogleStorage.class);
+    Assert.assertSame(instance, injector.getInstance(GoogleStorage.class));
   }
 }

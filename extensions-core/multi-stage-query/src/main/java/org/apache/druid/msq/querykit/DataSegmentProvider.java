@@ -24,13 +24,18 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.function.Supplier;
+
 public interface DataSegmentProvider
 {
   /**
-   * Fetches the segment corresponding to the provided segmentId from deep storage, 
-   * segment fetched.
+   * Returns a supplier that fetches the segment corresponding to the provided segmentId from deep storage. The segment
+   * is not actually fetched until you call {@link Supplier#get()}. Once you call this, make sure to also call
+   * {@link ResourceHolder#close()}.
+   *
+   * It is not necessary to call {@link ResourceHolder#close()} if you never call {@link Supplier#get()}.
    */
-  ResourceHolder<Segment> fetchSegment(
+  Supplier<ResourceHolder<Segment>> fetchSegment(
       SegmentId segmentId,
       ChannelCounters channelCounters
   );

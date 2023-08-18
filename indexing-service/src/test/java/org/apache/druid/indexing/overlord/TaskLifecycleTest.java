@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
@@ -59,7 +60,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -71,6 +71,7 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -415,7 +416,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
@@ -607,28 +608,12 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         ),
         new TaskAuditLogConfig(true)
     );
-    final String taskDirA = temporaryFolder.newFolder().toString();
-    final String taskDirB = temporaryFolder.newFolder().toString();
-    taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        50000,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        ImmutableList.of(
-            taskDirA,
-            taskDirB
-        )
-    );
+    taskConfig = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.newFolder().toString())
+        .setDefaultRowFlushBoundary(50000)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .setTmpStorageBytesPerTask(-1L)
+        .build();
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -709,12 +694,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
         new NoopOverlordClient(),
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
-        null,
-        "1",
-        new TaskStorageDirTracker(taskConfig)
+        "1"
     );
   }
 
@@ -964,7 +948,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             "test_kill_task",
             Intervals.of("2011-04-01/P4D"),
             null,
-            false
+            false,
+            null,
+            null
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
@@ -972,6 +958,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 3, mdc.getNuked().size());
+    Assert.assertEquals("delete segment batch call count", 2, mdc.getDeleteSegmentsCount());
     Assert.assertTrue(
         "expected unused segments get killed",
         expectedUnusedSegments.containsAll(mdc.getNuked()) && mdc.getNuked().containsAll(
@@ -982,6 +969,104 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     for (File file : segmentFiles) {
       Assert.assertFalse("unused segments files get deleted", file.exists());
     }
+  }
+
+  @Test
+  public void testKillUnusedSegmentsTaskWithMaxSegmentsToKill() throws Exception
+  {
+    final File tmpSegmentDir = temporaryFolder.newFolder();
+
+    List<DataSegment> expectedUnusedSegments = Lists.transform(
+        ImmutableList.of(
+            "2011-04-01/2011-04-02",
+            "2011-04-02/2011-04-03",
+            "2011-04-04/2011-04-05"
+        ), new Function<String, DataSegment>()
+        {
+          @Override
+          public DataSegment apply(String input)
+          {
+            final Interval interval = Intervals.of(input);
+            try {
+              return DataSegment.builder()
+                  .dataSource("test_kill_task")
+                  .interval(interval)
+                  .loadSpec(
+                      ImmutableMap.of(
+                          "type",
+                          "local",
+                          "path",
+                          tmpSegmentDir.getCanonicalPath()
+                          + "/druid/localStorage/wikipedia/"
+                          + interval.getStart()
+                          + "-"
+                          + interval.getEnd()
+                          + "/"
+                          + "2011-04-6T16:52:46.119-05:00"
+                          + "/0/index.zip"
+                      )
+                  )
+                  .version("2011-04-6T16:52:46.119-05:00")
+                  .dimensions(ImmutableList.of())
+                  .metrics(ImmutableList.of())
+                  .shardSpec(NoneShardSpec.instance())
+                  .binaryVersion(9)
+                  .size(0)
+                  .build();
+            }
+            catch (IOException e) {
+              throw new ISE(e, "Error creating segments");
+            }
+          }
+        }
+    );
+
+    mdc.setUnusedSegments(expectedUnusedSegments);
+
+    // manually create local segments files
+    List<File> segmentFiles = new ArrayList<>();
+    for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+      File file = new File((String) segment.getLoadSpec().get("path"));
+      FileUtils.mkdirp(file.getParentFile());
+      Files.write(file.toPath(), ByteArrays.EMPTY_ARRAY);
+      segmentFiles.add(file);
+    }
+
+    final int maxSegmentsToKill = 2;
+    final Task killUnusedSegmentsTask =
+        new KillUnusedSegmentsTask(
+            null,
+            "test_kill_task",
+            Intervals.of("2011-04-01/P4D"),
+            null,
+            false,
+            null,
+            maxSegmentsToKill
+        );
+
+    final TaskStatus status = runTask(killUnusedSegmentsTask);
+    Assert.assertEquals(taskLocation, status.getLocation());
+    Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
+    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("num segments nuked", maxSegmentsToKill, mdc.getNuked().size());
+    Assert.assertTrue(
+        "expected unused segments get killed",
+        expectedUnusedSegments.containsAll(mdc.getNuked())
+    );
+
+    int expectedNumOfSegmentsRemaining = segmentFiles.size() - maxSegmentsToKill;
+    int actualNumOfSegmentsRemaining = 0;
+    for (File file : segmentFiles) {
+      if (file.exists()) {
+        actualNumOfSegmentsRemaining++;
+      }
+    }
+
+    Assert.assertEquals(
+        "Expected of segments deleted did not match expectations",
+        expectedNumOfSegmentsRemaining,
+        actualNumOfSegmentsRemaining
+    );
   }
 
   @Test

@@ -19,8 +19,6 @@
 
 package org.apache.druid.sql;
 
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
@@ -130,17 +128,7 @@ public abstract class AbstractStatement implements Closeable
     plannerContext = planner.getPlannerContext();
     plannerContext.setAuthenticationResult(queryPlus.authResult());
     plannerContext.setParameters(queryPlus.parameters());
-    try {
-      planner.validate();
-    }
-    // We can't collapse catch clauses since SqlPlanningException has
-    // type-sensitive constructors.
-    catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
+    planner.validate();
   }
 
   /**
@@ -152,7 +140,8 @@ public abstract class AbstractStatement implements Closeable
       final Function<Set<ResourceAction>, Access> authorizer
   )
   {
-    Set<String> securedKeys = this.sqlToolbox.authConfig.contextKeysToAuthorize(queryPlus.context().keySet());
+    Set<String> securedKeys = this.sqlToolbox.plannerFactory.getAuthConfig()
+        .contextKeysToAuthorize(queryPlus.context().keySet());
     Set<ResourceAction> contextResources = new HashSet<>();
     securedKeys.forEach(key -> contextResources.add(
         new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)

@@ -27,6 +27,7 @@ import './snitch-dialog.scss';
 
 export interface SnitchDialogProps {
   title: string;
+  children?: React.ReactNode;
   className?: string;
   onSave: (comment: string) => void | Promise<void>;
   saveDisabled?: boolean;
@@ -111,7 +112,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  renderHistoryDialog(): JSX.Element | null {
+  renderHistoryDialog() {
     const { title, historyRecords } = this.props;
     if (!historyRecords) return null;
 
@@ -154,7 +155,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             disabled={saveDisabled}
             text="Save"
             onClick={this.save}
-            intent={Intent.PRIMARY as any}
+            intent={Intent.PRIMARY}
             rightIcon={IconNames.TICK}
           />
         ) : (
@@ -162,7 +163,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             disabled={saveDisabled}
             text="Next"
             onClick={this.goToFinalStep}
-            intent={Intent.PRIMARY as any}
+            intent={Intent.PRIMARY}
             rightIcon={IconNames.ARROW_RIGHT}
           />
         )}
@@ -170,7 +171,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  render(): JSX.Element | null {
+  render() {
     const { children, saveDisabled } = this.props;
     const { showFinalStep, showHistory } = this.state;
 

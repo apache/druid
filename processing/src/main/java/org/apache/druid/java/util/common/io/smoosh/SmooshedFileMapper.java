@@ -48,7 +48,11 @@ import java.util.TreeMap;
  */
 public class SmooshedFileMapper implements Closeable
 {
-  private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+  /**
+   * Interner for smoosh internal files, which includes all column names since every column has an internal file
+   * associated with it
+   */
+  public static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
 
   public static SmooshedFileMapper load(File baseDir) throws IOException
   {

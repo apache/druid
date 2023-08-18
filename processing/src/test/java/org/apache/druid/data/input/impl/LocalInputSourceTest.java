@@ -40,6 +40,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -86,6 +87,13 @@ public class LocalInputSourceTest
     final byte[] json = mapper.writeValueAsBytes(source);
     final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
     Assert.assertEquals(source, fromJson);
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    final LocalInputSource source = new LocalInputSource(new File("myFile").getAbsoluteFile(), "myFilter");
+    Assert.assertEquals(Collections.singleton(LocalInputSource.TYPE_KEY), source.getTypes());
   }
 
   @Test

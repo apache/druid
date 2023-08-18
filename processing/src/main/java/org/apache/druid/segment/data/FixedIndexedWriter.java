@@ -24,7 +24,6 @@ import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.TypeStrategy;
-import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -39,7 +38,7 @@ import java.util.Iterator;
 /**
  * Writer for a {@link FixedIndexed}
  */
-public class FixedIndexedWriter<T> implements Serializer
+public class FixedIndexedWriter<T> implements DictionaryWriter<T>
 {
   private static final int PAGE_SIZE = 4096;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
@@ -73,9 +72,22 @@ public class FixedIndexedWriter<T> implements Serializer
     this.isSorted = isSorted;
   }
 
+  @Override
+  public boolean isSorted()
+  {
+    return isSorted;
+  }
+
+  @Override
   public void open() throws IOException
   {
     this.valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    return hasNulls ? numWritten + 1 : numWritten;
   }
 
   @Override
@@ -84,6 +96,7 @@ public class FixedIndexedWriter<T> implements Serializer
     return Byte.BYTES + Byte.BYTES + Integer.BYTES + valuesOut.size();
   }
 
+  @Override
   public void write(@Nullable T objectToWrite) throws IOException
   {
     if (prevObject != null && isSorted && comparator.compare(prevObject, objectToWrite) >= 0) {
@@ -135,6 +148,7 @@ public class FixedIndexedWriter<T> implements Serializer
   }
 
   @SuppressWarnings("unused")
+  @Override
   @Nullable
   public T get(int index) throws IOException
   {

@@ -25,10 +25,8 @@ import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -77,7 +75,7 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
     validateJoinAlgorithm(queryContext);
@@ -117,7 +115,7 @@ public class NativeSqlEngine implements SqlEngine
       case SCAN_NEEDS_SIGNATURE:
         return false;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(NativeSqlEngine.class.getSimpleName(), feature);
     }
   }
 
@@ -146,18 +144,12 @@ public class NativeSqlEngine implements SqlEngine
    * Validates that {@link PlannerContext#CTX_SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
    * only join algorithm supported by native queries.
    */
-  private static void validateJoinAlgorithm(final Map<String, Object> queryContext) throws ValidationException
+  private static void validateJoinAlgorithm(final Map<String, Object> queryContext)
   {
     final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
 
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
-      throw new ValidationException(
-          StringUtils.format(
-              "Join algorithm [%s] is not supported by engine [%s]",
-              joinAlgorithm,
-              NAME
-          )
-      );
+      throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);
     }
   }
 }

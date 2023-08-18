@@ -22,7 +22,10 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.easymock.Capture;
@@ -38,6 +41,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -261,6 +265,35 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testNoPersistOnFailedStart()
+  {
+    exception.expect(RuntimeException.class);
+
+    Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
+    supervisor1.start();
+    supervisor1.stop(true);
+    supervisor2.start();
+    EasyMock.expectLastCall().andThrow(new RuntimeException("supervisor failed to start"));
+    replayAll();
+
+    final SupervisorSpec testSpecOld = new TestSupervisorSpec("id1", supervisor1);
+    final SupervisorSpec testSpecNew = new TestSupervisorSpec("id1", supervisor2);
+
+    manager.start();
+    try {
+      manager.createOrUpdateAndStartSupervisor(testSpecOld);
+      manager.createOrUpdateAndStartSupervisor(testSpecNew);
+    }
+    catch (Exception e) {
+      Assert.assertEquals(testSpecOld, capturedInsert.getValue());
+      throw e;
+    }
+  }
+
+  @Test
   public void testStopThrowsException()
   {
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
@@ -293,6 +326,33 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
     Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testResetSupervisorWithSpecificOffsets()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    DataSourceMetadata datasourceMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of("0", "10", "1", "20", "2", "30"),
+            ImmutableSet.of()
+        )
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    supervisor1.resetOffsets(datasourceMetadata);
+    replayAll();
+
+    manager.start();
+    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", datasourceMetadata));
+    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", datasourceMetadata));
 
     verifyAll();
   }
