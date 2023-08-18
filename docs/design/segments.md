@@ -88,7 +88,7 @@ Druid also has a legacy mode which uses default values instead of nulls, which w
 
 In legacy mode, Druid segments created _at ingestion time_ have the following characteristics:
 
-* String columns can not distinguish `''` from `null`, they are treated interchangebly as the same value
+* String columns can not distinguish `''` from `null`, they are treated interchangeably as the same value
 * Numeric columns can not represent `null` valued rows, and instead store a `0`.
 
 In legacy mode, numeric columns do not have the null value bitmap, and so can have slightly decreased segment sizes, and queries involving numeric columns can have slightly increased performance in some cases since there is no need to check the null value bitmap.
