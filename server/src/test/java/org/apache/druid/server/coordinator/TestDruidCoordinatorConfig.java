@@ -337,7 +337,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
-    public Builder witAutoKillEnabled(Boolean autoKillEnabled)
+    public Builder withAutoKillEnabled(Boolean autoKillEnabled)
     {
       this.autoKillEnabled = autoKillEnabled;
       return this;

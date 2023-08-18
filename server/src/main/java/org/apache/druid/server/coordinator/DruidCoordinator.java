@@ -634,10 +634,10 @@ public class DruidCoordinator
   @VisibleForTesting
   KillUnusedSegments initializeKillUnusedSegmentsDuty()
   {
-    List<KillUnusedSegments> killUnusedSegmentsDutyFromCustomGroups = getKillUnusedSegmentsDutyFromCustomGroups();
     if (!config.getAutoKillEnabled()) {
       return null;
     }
+    List<KillUnusedSegments> killUnusedSegmentsDutyFromCustomGroups = getKillUnusedSegmentsDutyFromCustomGroups();
     if (killUnusedSegmentsDutyFromCustomGroups.isEmpty()) {
       return new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
     } else {
