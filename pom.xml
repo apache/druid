@@ -714,7 +714,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.12.4</version>
+                <version>2.12.5</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -1300,6 +1300,9 @@
                         <exclude>org/apache/druid/server/initialization/*Module*</exclude>
                         <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
                         <exclude>org/apache/druid/guice/http/*</exclude>
+
+                        <!-- Ignore cli tools -->
+                        <exclude>org/apache/druid/cli/UpdateTables*</exclude>
 
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->

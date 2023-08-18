@@ -131,6 +131,70 @@ to start and in flight tasks will fail. This operation enables you to recover fr
 
 Note that the supervisor must be running for this endpoint to be available.
 
+## Resetting Offsets for a Supervisor
+
+The supervisor must be running for this endpoint to be available.
+
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/resetOffsets` operation clears stored
+offsets, causing the supervisor to start reading from the specified offsets. After resetting stored
+offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions,
+so that tasks begin reading from specified offsets. For partitions that are not specified in this operation, the supervisor
+will resume from the last stored offset.
+
+Use care when using this operation! Resetting offsets for a supervisor may cause Kafka messages to be skipped or read
+twice, resulting in missing or duplicate data.
+
+#### Sample request
+
+The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
+from two kafka topics `ads_media_foo` and `ads_media_bar` and has the stored offsets: `{"ads_media_foo:0": 0, "ads_media_foo:1": 10, "ads_media_bar:0": 20, "ads_media_bar:1": 40}`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsets"
+--header 'Content-Type: application/json'
+--data-raw '{"type":"kafka","partitions":{"type":"end","stream":"ads_media_foo|ads_media_bar","partitionOffsetMap":{"ads_media_foo:0": 3, "ads_media_bar:1": 12}}}'
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/resetOffsets HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+  "type": "kafka",
+  "partitions": {
+    "type": "end",
+    "stream": "ads_media_foo|ads_media_bar",
+    "partitionOffsetMap": {
+      "ads_media_foo:0": 3,
+      "ads_media_bar:1": 12
+    }
+  }
+}
+```
+The above operation will reset offsets for `ads_media_foo` partition 0 and `ads_media_bar` partition 1 to offsets 3 and 12 respectively. After a successful reset,
+when the supervisor's tasks restart, they will resume reading from `{"ads_media_foo:0": 3, "ads_media_foo:1": 10, "ads_media_bar:0": 20, "ads_media_bar:1": 12}`.
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "id": "social_media"
+}
+  ```
+</details>
+
 ## Terminating Supervisors
 
 The `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` operation terminates a supervisor and causes all 
