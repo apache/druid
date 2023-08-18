@@ -324,13 +324,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     firehose.close();
 
     // handoff would timeout, resulting in exception
-    try {
-      statusFuture.get();
-    }
-    catch (Exception e) {
-      Assert.assertTrue(e.getMessage()
-                         .contains("java.util.concurrent.TimeoutException: Timeout waiting for task."));
-    }
+    TaskStatus status = statusFuture.get();
+    Assert.assertTrue(status.getErrorMsg()
+                            .contains("java.util.concurrent.TimeoutException: Waited 100 milliseconds"));
   }
 
   @Test(timeout = 60_000L)

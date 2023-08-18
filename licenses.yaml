@@ -380,16 +380,6 @@ libraries:
 
 ---
 
-name: listenablefuture
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 9999.0-empty-to-avoid-conflict-with-guava
-libraries:
-  - com.google.guava: listenablefuture
-
----
-
 name: Guice
 license_category: binary
 module: java-core
