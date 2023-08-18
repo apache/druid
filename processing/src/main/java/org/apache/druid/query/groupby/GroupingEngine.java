@@ -496,7 +496,7 @@ public class GroupingEngine
           mergeResults(
               (queryPlus, responseContext) -> finalResultSupplier.results(null),
               query,
-              null
+              ResponseContext.createEmpty()
           ),
           finalResultSupplier
       );
@@ -673,7 +673,7 @@ public class GroupingEngine
                   )
               ),
           subtotalQuery,
-          null
+          ResponseContext.createEmpty()
       );
     }
     catch (Throwable e) {
