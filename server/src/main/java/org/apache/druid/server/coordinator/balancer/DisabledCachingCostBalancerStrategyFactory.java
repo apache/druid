@@ -17,12 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime;
+package org.apache.druid.server.coordinator.balancer;
 
-import org.skife.config.Config;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.java.util.common.logger.Logger;
 
-public abstract class DbSegmentPublisherConfig
+public class DisabledCachingCostBalancerStrategyFactory implements BalancerStrategyFactory
 {
-  @Config("druid.metadata.storage.tables.segments")
-  public abstract String getSegmentTable();
+  private static final Logger log = new Logger(BalancerStrategyFactory.class);
+
+  @Override
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  {
+    log.warn("Balancer strategy 'cachingCost' is disabled. Using 'cost' strategy instead.");
+    return new CostBalancerStrategy(exec);
+  }
 }

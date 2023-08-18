@@ -199,7 +199,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit)
+  public List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit, DateTime maxUsedFlagLastUpdatedTime)
   {
     return null;
   }
@@ -208,5 +208,15 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public void poll()
   {
 
+  }
+
+  @Override
+  public void populateUsedFlagLastUpdatedAsync()
+  {
+  }
+
+  @Override
+  public void stopAsyncUsedFlagLastUpdatedUpdate()
+  {
   }
 }

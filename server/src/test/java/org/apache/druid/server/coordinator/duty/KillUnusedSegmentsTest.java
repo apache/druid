@@ -103,6 +103,7 @@ public class KillUnusedSegmentsTest
     Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
     Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
     Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
+    Mockito.doReturn(Duration.parse("PT3154000000S")).when(config).getCoordinatorKillBufferPeriod();
 
     Mockito.doReturn(Collections.singleton("DS1"))
            .when(coordinatorDynamicConfig).getSpecificDataSourcesToKillUnusedSegmentsIn();
@@ -129,7 +130,8 @@ public class KillUnusedSegmentsTest
         segmentsMetadataManager.getUnusedSegmentIntervals(
             ArgumentMatchers.anyString(),
             ArgumentMatchers.any(),
-            ArgumentMatchers.anyInt()
+            ArgumentMatchers.anyInt(),
+            ArgumentMatchers.any()
         )
     ).thenAnswer(invocation -> {
       DateTime maxEndTime = invocation.getArgument(1);
@@ -153,7 +155,8 @@ public class KillUnusedSegmentsTest
     Mockito.doReturn(null).when(segmentsMetadataManager).getUnusedSegmentIntervals(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
-        ArgumentMatchers.anyInt()
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any()
     );
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);

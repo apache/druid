@@ -72,7 +72,9 @@ The following sections describe filtering and grouping behavior based on the fol
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": ["t5","t6","t7"]}  #row3
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": []}                #row4
 ```
-> Be sure to remove the comments before trying out the sample data. 
+:::info
+ Be sure to remove the comments before trying out the sample data.
+:::
 
 ### Filtering
 

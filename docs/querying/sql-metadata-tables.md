@@ -23,8 +23,10 @@ sidebar_label: "SQL metadata tables"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
@@ -47,8 +49,10 @@ FROM INFORMATION_SCHEMA.COLUMNS
 WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
-> Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
-> `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::info
+ Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
+ `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::
 
 ### SCHEMATA table
 `INFORMATION_SCHEMA.SCHEMATA` provides a list of all known schemas, which include `druid` for standard [Druid Table datasources](datasource.md#table), `lookup` for [Lookups](datasource.md#lookup), `sys` for the virtual [System metadata tables](#system-schema), and `INFORMATION_SCHEMA` for these virtual tables. Tables are allowed to have the same name across different schemas, so the schema may be included in an SQL statement to distinguish them, e.g. `lookup.table` vs `druid.table`.
@@ -130,8 +134,10 @@ WHERE "IS_AGGREGATOR" = 'YES'
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
 
-> Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
-> `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::info
+ Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
+ `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::
 
 ### SEGMENTS table
 
