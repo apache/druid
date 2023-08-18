@@ -120,6 +120,8 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexBuilder;
@@ -390,6 +392,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
           };
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+          binder.bind(GroupingEngine.class)
+                .toInstance(
+                    GroupByQueryRunnerTest.makeQueryRunnerFactory(
+                        groupByQueryConfig,
+                        groupByBuffers
+                    ).getGroupingEngine()
+                );
 
           binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
           binder.bind(new TypeLiteral<Set<NodeRole>>()
