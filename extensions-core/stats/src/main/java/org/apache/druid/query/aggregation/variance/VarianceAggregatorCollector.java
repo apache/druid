@@ -127,7 +127,13 @@ public class VarianceAggregatorCollector
 
   public VarianceAggregatorCollector add(float v)
   {
-    return add((double)v);
+    count++;
+    sum += v;
+    if (count > 1) {
+      double t = count * v - sum;
+      nvariance += (t * t) / ((double) count * (count - 1));
+    }
+    return this;
   }
 
   public VarianceAggregatorCollector add(double v)
@@ -135,15 +141,21 @@ public class VarianceAggregatorCollector
     count++;
     sum += v;
     if (count > 1) {
-      double t = v - sum / count;
-      nvariance += (t * t) * count / (count - 1);
+      double t = count * v - sum;
+      nvariance += (t * t) / ((double) count * (count - 1));
     }
     return this;
   }
 
   public VarianceAggregatorCollector add(long v)
   {
-    return add((double)v);
+    count++;
+    sum += v;
+    if (count > 1) {
+      double t = count * v - sum;
+      nvariance += (t * t) / ((double) count * (count - 1));
+    }
+    return this;
   }
 
   @Nullable
