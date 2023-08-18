@@ -186,7 +186,7 @@ public class SQLMetadataConnectorTest
             final Batch batch = handle.createBatch();
             batch.add(
                 StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN used_status_last_updated",
+                    "ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()
@@ -202,7 +202,7 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTableAddUsedFlagLastUpdated();
     connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-        "used_status_last_updated"
+        "USED_STATUS_LAST_UPDATED"
     );
   }
 

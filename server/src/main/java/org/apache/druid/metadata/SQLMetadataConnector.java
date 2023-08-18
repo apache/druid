@@ -415,17 +415,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private void alterEntryTableAddTypeAndGroupId(final String tableName)
   {
     List<String> statements = new ArrayList<>();
-    if (!tableHasColumn(tableName, "type")) {
-      log.info("Adding column[type] column to table[%s].", tableName);
-      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
-    } else {
+    if (tableHasColumn(tableName, "type")) {
       log.info("Table[%s] already has column[type].", tableName);
-    }
-    if (!tableHasColumn(tableName, "group_id")) {
-      log.info("Adding column[group_id] column to table[%s].", tableName);
-      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
     } else {
+      log.info("Adding column[type] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+    }
+    if (tableHasColumn(tableName, "group_id")) {
       log.info("Table[%s] already has column[group_id].", tableName);
+    } else {
+      log.info("Adding column[group_id] to table[%s].", tableName);
+      statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
     }
     if (!statements.isEmpty()) {
       alterTable(tableName, statements);
@@ -495,7 +495,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   protected void alterSegmentTableAddUsedFlagLastUpdated()
   {
-    String tableName = tablesConfigSupplier.get().getSegmentsTable();
+    final String tableName = tablesConfigSupplier.get().getSegmentsTable();
     if (tableHasColumn(tableName, "used_status_last_updated")) {
       log.info("Table[%s] already has column[used_status_last_updated].", tableName);
     } else {

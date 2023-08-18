@@ -964,7 +964,7 @@ public class SqlSegmentsMetadataManagerTest
           {
             List<Map<String, Object>> lst = handle.select(
                 StringUtils.format(
-                    "SELECT * FROM %1$s WHERE used_status_last_updated IS NULL",
+                    "SELECT * FROM %1$s WHERE USED_STATUS_LAST_UPDATED IS NULL",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()

@@ -151,7 +151,7 @@ public class TestDerbyConnector extends DerbyConnector
               final Batch batch = handle.createBatch();
               batch.add(
                   StringUtils.format(
-                      "ALTER TABLE %1$s ALTER COLUMN used_status_last_updated NULL",
+                      "ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL",
                       dbTables.get().getSegmentsTable().toUpperCase(Locale.ENGLISH)
                   )
               );
