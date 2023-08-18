@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
@@ -54,6 +55,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final TaskConfig taskConfig;
   private final Properties properties;
   private final DruidKubernetesClient druidKubernetesClient;
+  private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
 
 
@@ -67,7 +69,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       @Self DruidNode druidNode,
       TaskConfig taskConfig,
       Properties properties,
-      DruidKubernetesClient druidKubernetesClient
+      DruidKubernetesClient druidKubernetesClient,
+      ServiceEmitter emitter
   )
   {
     this.smileMapper = smileMapper;
@@ -79,6 +82,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.taskConfig = taskConfig;
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
+    this.emitter = emitter;
   }
 
   @Override
@@ -88,7 +92,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
-        kubernetesTaskRunnerConfig.isDebugJobs()
+        kubernetesTaskRunnerConfig.isDebugJobs(),
+        emitter
     );
 
     runner = new KubernetesTaskRunner(
@@ -96,7 +101,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper)
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
+        emitter
     );
     return runner;
   }

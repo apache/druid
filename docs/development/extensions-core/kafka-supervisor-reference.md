@@ -37,7 +37,8 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|`topic`|String|The Kafka topic to read from. Must be a specific topic. Topic patterns are not supported.|yes|
+|`topic`|String|The Kafka topic to read from. Must be a specific topic. Use this setting when you want to ingest from a single Kafka topic.|yes, only if `topicPattern` is not set|
+|`topicPattern`|String|A regex pattern that can used to select multiple Kafka topics to ingest data from. Either this or `topic` can be used in a spec. See [Ingesting from multiple topics](#ingesting-from-multiple-topics) for more details.|yes, only if `topic` is not set|
 |`inputFormat`|Object|`inputFormat` to define input data parsing. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to pass to the Kafka consumer. See [More on consumer properties](#more-on-consumerproperties).|yes|
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds|no (default == 100)|
@@ -80,14 +81,18 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 ## Idle Supervisor Configuration
 
-> Note that Idle state transitioning is currently designated as experimental.
+:::info
+ Note that Idle state transitioning is currently designated as experimental.
+:::
 
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `enabled` | If `true`, Kafka supervisor will become idle if there is no data on input stream/topic for some time. | no (default == false) |
 | `inactiveAfterMillis` | Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds. | no (default == `600_000`) |
 
-> When the supervisor enters the idle state, no new tasks will be launched subsequent to the completion of the currently executing tasks. This strategy may lead to reduced costs for cluster operators while using topics that get sporadic data.
+:::info
+ When the supervisor enters the idle state, no new tasks will be launched subsequent to the completion of the currently executing tasks. This strategy may lead to reduced costs for cluster operators while using topics that get sporadic data.
+:::
 
 The following example demonstrates supervisor spec with `lagBased` autoScaler and idle config enabled:
 ```json
@@ -136,6 +141,22 @@ The following example demonstrates supervisor spec with `lagBased` autoScaler an
     }
 }
 ```
+## Ingesting from multiple topics
+
+To ingest data from multiple topics, you have to set `topicPattern` in the supervisor IO config and not set `topic`.
+Multiple topics can be passed as a regex pattern as the value for `topicPattern` in the IO config. For example, to
+ingest data from clicks and impressions, you will set `topicPattern` to `clicks|impressions` in the IO config.
+Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want to ingest from all the topics that
+start with `metrics-`. If new topics are added to the cluster that match the regex, Druid will automatically start
+ingesting from those new topics. A topic name that only matches partially such as `my-metrics-12` will not be
+included for ingestion. If you enable multi-topic ingestion for a datasource, downgrading to a version older than
+28.0.0 will cause the ingestion for that datasource to fail.
+
+When ingesting data from multiple topics, partitions are assigned based on the hashcode of the topic name and the
+id of the partition within that topic. The partition assignment might not be uniform across all the tasks. It's also
+assumed that partitions across individual topics have similar load. It is recommended that you have a higher number of
+partitions for a high load topic and a lower number of partitions for a low load topic. Assuming that you want to
+ingest from both high and low load topic in the same supervisor.
 
 ## More on consumerProperties
 

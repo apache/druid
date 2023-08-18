@@ -106,13 +106,6 @@ public class SqlExpressionBenchmark
     {
       return 1;
     }
-
-    @Override
-    public boolean useParallelMergePoolConfigured()
-    {
-      return true;
-    }
-
     @Override
     public String getFormatString()
     {

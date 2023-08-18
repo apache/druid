@@ -22,9 +22,11 @@ title: "Expressions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [native queries](../querying/querying.md) and [Druid SQL](../querying/sql.md).
-> This document describes the native language. For information about functions available in SQL, refer to the
-> [SQL documentation](../querying/sql-scalar.md).
+:::info
+ Apache Druid supports two query languages: [native queries](../querying/querying.md) and [Druid SQL](../querying/sql.md).
+ This document describes the native language. For information about functions available in SQL, refer to the
+ [SQL documentation](../querying/sql-scalar.md).
+:::
 
 Expressions are used in various places in the native query language, including
 [virtual columns](../querying/virtual-columns.md) and [join conditions](../querying/datasource.md#join). They are

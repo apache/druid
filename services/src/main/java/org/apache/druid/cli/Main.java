@@ -76,7 +76,8 @@ public class Main
         DumpSegment.class,
         ResetCluster.class,
         ValidateSegments.class,
-        ExportMetadata.class
+        ExportMetadata.class,
+        UpdateTables.class
     );
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")

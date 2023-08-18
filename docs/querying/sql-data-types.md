@@ -23,8 +23,10 @@ sidebar_label: "SQL data types"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 Druid associates each column with a specific data type. This topic describes supported data types in [Druid SQL](./sql.md).
 
@@ -84,10 +86,12 @@ You can treat multi-value string dimensions as arrays using special
 
 Grouping by multi-value dimensions observes the native Druid multi-value aggregation behavior, which is similar to an implicit SQL UNNEST. See [Grouping](multi-value-dimensions.md#grouping) for more information.
 
-> Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
+:::info
+ Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 `false`, even though it is possible for a single row to have both `'a'` and `'b'` as values for `multi_val_dim`.
->
-> The SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide nearly all possible native functionality.
+
+ The SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide nearly all possible native functionality.
+:::
 
 ## Arrays
 
@@ -113,9 +117,11 @@ distinguish between empty and null rows. An empty row will never appear natively
 but any multi-value function which manipulates the array form of the value may produce an empty array, which is handled
 separately while processing.
 
-> Do not mix the usage of multi-value functions and normal scalar functions within the same expression, as the planner will be unable
-> to determine how to properly process the value given its ambiguous usage. A multi-value string must be treated consistently within
-> an expression.
+:::info
+ Do not mix the usage of multi-value functions and normal scalar functions within the same expression, as the planner will be unable
+ to determine how to properly process the value given its ambiguous usage. A multi-value string must be treated consistently within
+ an expression.
+:::
 
 When converted to ARRAY or used with [array functions](./sql-array-functions.md), multi-value strings behave as standard SQL arrays and can no longer
 be manipulated with non-array functions.

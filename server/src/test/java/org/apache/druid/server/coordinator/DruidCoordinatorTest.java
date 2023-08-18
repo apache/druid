@@ -51,6 +51,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
@@ -585,25 +586,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testBalancerThreadNumber()
   {
-    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
-    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
-    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
-
-    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
-    EasyMock.expect(
-        configManager.watch(
-            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
-            EasyMock.anyObject(Class.class),
-            EasyMock.anyObject()
-        )
-    ).andReturn(new AtomicReference<>(dynamicConfig)).anyTimes();
-
     ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
-    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
+    EasyMock.replay(scheduledExecutorFactory);
 
     DruidCoordinator c = new DruidCoordinator(
         druidCoordinatorConfig,
-        configManager,
+        EasyMock.createNiceMock(JacksonConfigManager.class),
         null,
         null,
         null,
@@ -617,7 +605,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        null,
+        new RandomBalancerStrategyFactory(),
         null,
         null,
         null
@@ -628,20 +616,20 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNull(c.getBalancerExec());
 
     // first initialization
-    c.initBalancerExecutor();
+    c.createBalancerStrategy(5);
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService firstExec = c.getBalancerExec();
     Assert.assertNotNull(firstExec);
 
     // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
-    c.initBalancerExecutor();
+    c.createBalancerStrategy(5);
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService secondExec = c.getBalancerExec();
     Assert.assertNotNull(secondExec);
     Assert.assertSame(firstExec, secondExec);
 
     // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
-    c.initBalancerExecutor();
+    c.createBalancerStrategy(10);
     Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
     ListeningExecutorService thirdExec = c.getBalancerExec();
     Assert.assertNotNull(thirdExec);
@@ -690,7 +678,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupDoesNotContainsCompactSegments()
   {
-    CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null)));
+    CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
+        "group1",
+        Duration.standardSeconds(1),
+        ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null, druidCoordinatorConfig))
+    );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group));
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -729,15 +721,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupContainsCompactSegments()
   {
-    DruidCoordinatorConfig differentConfigUsedInCustomGroup = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
-        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillMaxSegments(10)
-        .withCompactionSkippedLockedIntervals(false)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new CompactSegments(differentConfigUsedInCustomGroup, null, null)));
+    CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
+        "group1",
+        Duration.standardSeconds(1),
+        ImmutableList.of(new CompactSegments(null, null))
+    );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -773,9 +761,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // CompactSegments returned by this method should be from the Custom Duty Group
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
     Assert.assertNotNull(duty);
-    Assert.assertNotEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
-    // We should get the CompactSegment from the custom duty group which was created with a different config than the config in DruidCoordinator
-    Assert.assertEquals(differentConfigUsedInCustomGroup.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
   }
 
   @Test(timeout = 3000)

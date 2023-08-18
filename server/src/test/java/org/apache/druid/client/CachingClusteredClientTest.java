@@ -67,10 +67,11 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -120,7 +121,6 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.ServerType;
@@ -774,15 +774,12 @@ public class CachingClusteredClientTest
         .threshold(3)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
+        .granularity(Granularities.HOUR)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
 
     testQueryCaching(
         runner,
@@ -853,10 +850,7 @@ public class CachingClusteredClientTest
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
 
     testQueryCaching(
         runner,
@@ -878,7 +872,6 @@ public class CachingClusteredClientTest
         .build();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
-
             new DateTime("2011-11-04", TIMEZONE), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
             new DateTime("2011-11-05", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-11-06", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
@@ -952,15 +945,13 @@ public class CachingClusteredClientTest
         .threshold(3)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
+        .granularity(Granularities.HOUR)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
+
     testQueryCaching(
         runner,
         builder.randomQueryId().build(),
@@ -1023,15 +1014,12 @@ public class CachingClusteredClientTest
         .threshold(3)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
+        .granularity(Granularities.HOUR)
         .aggregators(AGGS)
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
-    QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(),
-        new TopNQueryQueryToolChest(new TopNQueryConfig())
-    );
+    QueryRunner runner = makeTopNQueryRunner();
 
     testQueryCaching(
         runner,
@@ -1083,6 +1071,16 @@ public class CachingClusteredClientTest
         ),
         runner.run(QueryPlus.wrap(query))
     );
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private FluentQueryRunner makeTopNQueryRunner()
+  {
+    return FluentQueryRunner
+        .create(getDefaultQueryRunner(), new TopNQueryQueryToolChest(new TopNQueryConfig()))
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   @Test
@@ -2283,7 +2281,8 @@ public class CachingClusteredClientTest
                             )
                         ),
                         initializeResponseContext()
-                    )
+                    ).toList(),
+                    StringUtils.format("Run number [%d]", i)
                 );
                 if (queryCompletedCallback != null) {
                   queryCompletedCallback.run();
@@ -2664,7 +2663,7 @@ public class CachingClusteredClientTest
         index += 3;
       }
 
-      retVal.add(new Result<>(timestamp, new TopNResultValue(values)));
+      retVal.add(new Result<>(timestamp, TopNResultValue.create(values)));
     }
     return retVal;
   }
@@ -2829,19 +2828,26 @@ public class CachingClusteredClientTest
             return 0L;
           }
         },
-        new DruidProcessingConfig()
+        new BrokerParallelMergeConfig()
         {
           @Override
-          public String getFormatString()
+          public boolean useParallelMergePool()
           {
-            return null;
+            return true;
           }
 
           @Override
-          public int getMergePoolParallelism()
+          public int getParallelism()
           {
             // fixed so same behavior across all test environments
-            return 4;
+            return 1;
+          }
+
+          @Override
+          public int getDefaultMaxQueryParallelism()
+          {
+            // fixed so same behavior across all test environments
+            return 1;
           }
         },
         ForkJoinPool.commonPool(),
@@ -2851,7 +2857,6 @@ public class CachingClusteredClientTest
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         ),
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
   }

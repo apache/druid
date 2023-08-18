@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -58,7 +58,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   private static final Closer RESOURCE_CLOSER = Closer.create();
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private final QueryRunner<Row> runner;
+  private final QueryRunner<ResultRow> runner;
   private final GroupByQueryRunnerFactory factory;
 
   @BeforeClass
@@ -142,7 +142,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
 
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
-      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
@@ -155,6 +155,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
     return constructors;
   }
 
+  @SuppressWarnings("unused")
   public FixedBucketsHistogramGroupByQueryTest(
       String testName,
       GroupByQueryRunnerFactory factory,
@@ -230,7 +231,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
         )
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 
@@ -277,7 +278,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
         )
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 }

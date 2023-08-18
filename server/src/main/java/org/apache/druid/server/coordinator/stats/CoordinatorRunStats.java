@@ -255,6 +255,8 @@ public class CoordinatorRunStats
   {
     if (debugDimensions.isEmpty()) {
       return false;
+    } else if (rowKey.getValues().isEmpty()) {
+      return true;
     }
 
     for (Map.Entry<Dimension, String> entry : rowKey.getValues().entrySet()) {
