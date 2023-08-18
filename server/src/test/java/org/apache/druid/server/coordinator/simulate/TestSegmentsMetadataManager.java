@@ -203,7 +203,8 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       final String dataSource,
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
-      final int limit
+      final int limit,
+      final DateTime maxUsedFlagLastUpdatedTime
   )
   {
     return null;
@@ -213,5 +214,15 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public void poll()
   {
 
+  }
+
+  @Override
+  public void populateUsedFlagLastUpdatedAsync()
+  {
+  }
+
+  @Override
+  public void stopAsyncUsedFlagLastUpdatedUpdate()
+  {
   }
 }

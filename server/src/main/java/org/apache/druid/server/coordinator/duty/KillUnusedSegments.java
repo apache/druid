@@ -80,6 +80,7 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
    */
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
   private long lastKillTime = 0;
+  private final long bufferPeriod;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
@@ -108,6 +109,7 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
           this.retainDuration
       );
     }
+    this.bufferPeriod = config.getCoordinatorKillBufferPeriod().getMillis();
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
@@ -115,9 +117,10 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
     datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
 
     log.info(
-        "Kill Task scheduling enabled with period [%s], retainDuration [%s], maxSegmentsToKill [%s]",
+        "Kill Task scheduling enabled with period [%s], retainDuration [%s], bufferPeriod [%s], maxSegmentsToKill [%s]",
         this.period,
         this.ignoreRetainDuration ? "IGNORING" : this.retainDuration,
+        this.bufferPeriod,
         this.maxSegmentsToKill
     );
 
@@ -133,6 +136,13 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
       log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
       return params;
     }
+
+    return runInternal(params);
+  }
+
+  @VisibleForTesting
+  DruidCoordinatorRuntimeParams runInternal(DruidCoordinatorRuntimeParams params)
+  {
     TaskStats taskStats = new TaskStats();
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
@@ -159,7 +169,7 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
       }
 
       log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
-      lastKillTime = currentTimeMillis;
+      lastKillTime = System.currentTimeMillis();
       taskStats.submittedTasks = killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
 
     }
@@ -248,8 +258,9 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
     final DateTime maxEndTime = ignoreRetainDuration
                                 ? DateTimes.COMPARE_DATE_AS_STRING_MAX
                                 : DateTimes.nowUtc().minus(retainDuration);
+
     List<Interval> unusedSegmentIntervals = segmentsMetadataManager
-        .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill);
+        .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill, DateTimes.nowUtc().minus(bufferPeriod));
 
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;

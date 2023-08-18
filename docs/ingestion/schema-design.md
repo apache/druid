@@ -249,7 +249,9 @@ Druid can infer the schema for your data in one of two ways:
 
 #### Type-aware schema discovery
 
-> Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns.
+:::info
+ Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns.
+:::
 
 You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
 

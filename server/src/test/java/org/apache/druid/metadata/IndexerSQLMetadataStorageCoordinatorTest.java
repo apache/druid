@@ -385,10 +385,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           (int) derbyConnector.getDBI().<Integer>withHandle(
               handle -> {
                 String request = StringUtils.format(
-                    "UPDATE %s SET used = false WHERE id = :id",
+                    "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
                     derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                 );
-                return handle.createStatement(request).bind("id", segment.getId().toString()).execute();
+                return handle.createStatement(request).bind("id", segment.getId().toString()).bind("used_status_last_updated", DateTimes.nowUtc().toString()).execute();
               }
           )
       );
@@ -433,8 +433,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
                   table,
                   derbyConnector.getQuoteString()
               )
@@ -449,7 +449,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                          .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                          .bind("version", segment.getVersion())
                          .bind("used", true)
-                         .bind("payload", mapper.writeValueAsBytes(segment));
+                         .bind("payload", mapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", DateTimes.nowUtc().toString());
           }
 
           final int[] affectedRows = preparedBatch.execute();

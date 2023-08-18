@@ -61,6 +61,10 @@ public abstract class DruidCoordinatorConfig
   @Default("false")
   public abstract boolean getCoordinatorKillIgnoreDurationToRetain();
 
+  @Config("druid.coordinator.kill.bufferPeriod")
+  @Default("P30D")
+  public abstract Duration getCoordinatorKillBufferPeriod();
+
   @Config("druid.coordinator.kill.maxSegments")
   @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
@@ -135,12 +139,6 @@ public abstract class DruidCoordinatorConfig
   public int getHttpLoadQueuePeonBatchSize()
   {
     return 1;
-  }
-
-  @Config("druid.coordinator.compaction.skipLockedIntervals")
-  public boolean getCompactionSkipLockedIntervals()
-  {
-    return true;
   }
 
 }

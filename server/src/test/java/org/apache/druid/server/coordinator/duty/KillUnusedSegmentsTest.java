@@ -106,6 +106,7 @@ public class KillUnusedSegmentsTest
     Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
     Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
     Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
+    Mockito.doReturn(Duration.parse("PT3154000000S")).when(config).getCoordinatorKillBufferPeriod();
 
     Mockito.doReturn(Collections.singleton(DATASOURCE))
            .when(coordinatorDynamicConfig).getSpecificDataSourcesToKillUnusedSegmentsIn();
@@ -133,7 +134,8 @@ public class KillUnusedSegmentsTest
             ArgumentMatchers.anyString(),
             ArgumentMatchers.any(),
             ArgumentMatchers.any(),
-            ArgumentMatchers.anyInt()
+            ArgumentMatchers.anyInt(),
+            ArgumentMatchers.any()
         )
     ).thenAnswer(invocation -> {
       DateTime minStartTime = invocation.getArgument(1);
@@ -162,6 +164,14 @@ public class KillUnusedSegmentsTest
   @Test
   public void testRunWithNoIntervalShouldNotKillAnySegments()
   {
+    Mockito.doReturn(null).when(segmentsMetadataManager).getUnusedSegmentIntervals(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any()
+    );
+
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     target.run(params);
     Mockito.verify(overlordClient, Mockito.never())
@@ -274,8 +284,6 @@ public class KillUnusedSegmentsTest
         .when(config).getCoordinatorKillIgnoreDurationToRetain();
     Mockito.doReturn(2)
         .when(config).getCoordinatorKillMaxSegments();
-    Mockito.doReturn(null)
-        .when(config).getCoordinatorKillPeriod();
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
@@ -368,7 +376,7 @@ public class KillUnusedSegmentsTest
             ArgumentMatchers.anyString(),
             ArgumentMatchers.any(Interval.class),
             ArgumentMatchers.anyInt());
-    target.run(params);
+    target.runInternal(params);
 
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),

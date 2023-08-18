@@ -19,6 +19,8 @@
 import type { SqlBase, SqlQuery } from '@druid-toolkit/query';
 import { L } from '@druid-toolkit/query';
 
+import type { RowColumn } from './general';
+
 export const EMPTY_LITERAL = L('');
 
 const CRAZY_STRING = '$.X.@.X.$';
@@ -36,13 +38,6 @@ export function prettyPrintSql(b: SqlBase): string {
     .toString();
 }
 
-export interface RowColumn {
-  row: number;
-  column: number;
-  endRow?: number;
-  endColumn?: number;
-}
-
 export function findEmptyLiteralPosition(query: SqlQuery): RowColumn | undefined {
   const subQueryString = query.walk(b => (b === EMPTY_LITERAL ? L(CRAZY_STRING) : b)).toString();
 
@@ -54,7 +49,7 @@ export function findEmptyLiteralPosition(query: SqlQuery): RowColumn | undefined
   const row = lines.length - 1;
   const lastLine = lines[row];
   return {
-    row,
+    row: row,
     column: lastLine.length,
   };
 }

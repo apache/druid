@@ -74,7 +74,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class CoordinatorSimulationBuilder
 {
-  private static final long DEFAULT_COORDINATOR_PERIOD = 100L;
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper()
       .setInjectableValues(
           new InjectableValues.Std().addValue(
@@ -463,8 +462,8 @@ public class CoordinatorSimulationBuilder
 
       this.coordinatorConfig = new TestDruidCoordinatorConfig.Builder()
           .withCoordinatorStartDelay(new Duration(1L))
-          .withCoordinatorPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
-          .withCoordinatorKillPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
+          .withCoordinatorPeriod(Duration.standardMinutes(1))
+          .withCoordinatorKillPeriod(Duration.millis(100))
           .withLoadQueuePeonType("http")
           .withCoordinatorKillIgnoreDurationToRetain(false)
           .build();

@@ -43,7 +43,9 @@ is ongoing for a particular time range of a datasource, new ingestions for that 
 other time ranges proceed as normal. Read-only queries also proceed as normal, using the pre-existing version of the
 data.
 
-> Druid does not support single-record updates by primary key.
+:::info
+ Druid does not support single-record updates by primary key.
+:::
 
 ## Reindex
 

@@ -1366,13 +1366,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
-              const issue = issueWithSampleData(inputData, spec);
+              const issue = issueWithSampleData(
+                filterMap(inputData.data, l => l.input?.raw),
+                isStreamingSpec(spec),
+              );
               if (issue) {
                 AppToaster.show({
                   icon: IconNames.WARNING_SIGN,
                   intent: Intent.WARNING,
                   message: issue,
-                  timeout: 10000,
+                  timeout: 30000,
                 });
                 return false;
               }

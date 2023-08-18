@@ -87,7 +87,11 @@ Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.or
 
 See the [latest documentation](https://druid.apache.org/docs/latest/) for the documentation for the current official release. If you need information on a previous release, you can browse [previous releases documentation](https://druid.apache.org/docs/).
 
-Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a pull request.
+Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [Markdown](https://www.markdownguide.org/) or extended Markdown [(MDX)](https://mdxjs.com/). Then, open a pull request.
+
+To build the site locally, you need Node 16.14 or higher and to install Docusaurus 2 with `npm|yarn install`  in the `website` directory. Then you can run `npm|yarn start` to launch a local build of the docs.
+
+If you're looking to update non-doc pages like Use Cases, those files are in the [`druid-website-src`](https://github.com/apache/druid-website-src/tree/master) repo.
 
 ### Community
 

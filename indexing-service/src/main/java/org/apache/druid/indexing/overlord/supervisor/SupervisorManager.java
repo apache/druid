@@ -201,7 +201,7 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.isHealthy());
   }
 
-  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
+  public boolean resetSupervisor(String id, @Nullable DataSourceMetadata resetDataSourceMetadata)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
@@ -212,7 +212,11 @@ public class SupervisorManager
       return false;
     }
 
-    supervisor.lhs.reset(dataSourceMetadata);
+    if (resetDataSourceMetadata == null) {
+      supervisor.lhs.reset(null);
+    } else {
+      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
+    }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
       autoscaler.reset();
