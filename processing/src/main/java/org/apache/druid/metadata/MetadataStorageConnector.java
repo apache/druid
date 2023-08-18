@@ -90,4 +90,12 @@ public interface MetadataStorageConnector
   void createSupervisorsTable();
 
   void deleteAllRecords(String tableName);
+
+  /**
+   * Upgrade Compatibility Method.
+   *
+   * A new column, used_flag_last_updated, is added to druid_segments table. This method alters the table to add the column to make
+   * a cluster's metastore tables compatible with the updated Druid codebase in 0.24.x+
+   */
+  void alterSegmentTableAddUsedFlagLastUpdated();
 }

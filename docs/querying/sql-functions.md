@@ -23,8 +23,10 @@ sidebar_label: "All functions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 This page provides a reference of all Druid SQL functions in alphabetical order.

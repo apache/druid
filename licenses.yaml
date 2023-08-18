@@ -1579,7 +1579,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.4
+version: 2.12.5
 libraries:
   - joda-time: joda-time
 notices:
@@ -1701,7 +1701,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -3454,7 +3454,7 @@ name: commons-cli
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 1.5.0
 libraries:
   - commons-cli: commons-cli
 
@@ -4312,7 +4312,7 @@ name: XZ
 license_category: binary
 module: java-core
 license_name: Public Domain
-version: 1.8
+version: 1.9
 libraries:
   - org.tukaani: xz
 
