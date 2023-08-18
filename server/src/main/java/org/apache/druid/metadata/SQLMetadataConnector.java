@@ -994,7 +994,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    *
    * @throws RuntimeException if the "segments" table has an incompatible schema.
    *                          There is no recovering from an invalid schema, the program should crash.
-   * @see <a href="https://druid.apache.org/docs/latest/operations/upgrade-prep.html">upgrade-prep docs</a> for info
+   * @see <a href="https://druid.apache.org/docs/latest/operations/metadata-migration/">Metadata migration</a> for info
    * on manually preparing the "segments" table.
    */
   private void validateSegmentsTable()
