@@ -142,7 +142,7 @@ public class DruidCoordinator
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
   private final ScheduledExecutorFactory executorFactory;
-  private final ConcurrentHashMap<String, ScheduledExecutorService> dutyGroupExecutors = new ConcurrentHashMap<>();
+  private final Map<String, ScheduledExecutorService> dutyGroupExecutors = new HashMap<>();
   private final LoadQueueTaskMaster taskMaster;
   private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
   private final SegmentLoadQueueManager loadQueueManager;
@@ -543,6 +543,7 @@ public class DruidCoordinator
     }
   }
 
+  @GuardedBy("lock")
   private ScheduledExecutorService getOrCreateDutyGroupExecutor(String dutyGroup)
   {
     return dutyGroupExecutors.computeIfAbsent(
