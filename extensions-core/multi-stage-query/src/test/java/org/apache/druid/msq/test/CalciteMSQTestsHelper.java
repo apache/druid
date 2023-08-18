@@ -164,13 +164,11 @@ public class CalciteMSQTestsHelper
                 .toInstance((dataSegment, channelCounters) -> getSupplierForSegment(dataSegment));
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-          binder.bind(GroupingEngine.class)
-                .toInstance(
-                    GroupByQueryRunnerTest.makeQueryRunnerFactory(
-                        groupByQueryConfig,
-                        groupByBuffers
-                    ).getGroupingEngine()
-                );
+          GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+              groupByQueryConfig,
+              groupByBuffers
+          ).getGroupingEngine();
+          binder.bind(GroupingEngine.class).toInstance(groupingEngine);
         };
     return ImmutableList.of(
         customBindings,

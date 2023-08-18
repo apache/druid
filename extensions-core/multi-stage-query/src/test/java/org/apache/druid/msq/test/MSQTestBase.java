@@ -392,13 +392,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
           };
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-          binder.bind(GroupingEngine.class)
-                .toInstance(
-                    GroupByQueryRunnerTest.makeQueryRunnerFactory(
-                        groupByQueryConfig,
-                        groupByBuffers
-                    ).getGroupingEngine()
-                );
+          GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+              groupByQueryConfig,
+              groupByBuffers
+          ).getGroupingEngine();
+          binder.bind(GroupingEngine.class).toInstance(groupingEngine);
 
           binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
           binder.bind(new TypeLiteral<Set<NodeRole>>()
