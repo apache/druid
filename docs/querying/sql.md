@@ -23,8 +23,10 @@ sidebar_label: "Overview and syntax"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 You can query data in Druid datasources using Druid SQL. Druid translates SQL queries into its [native query language](querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](sql-translation.md).
 
@@ -85,8 +87,10 @@ documentation.
 
 ## UNNEST
 
-> The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
+:::info
+ The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
+ to change in future releases. It is not recommended to use this feature in production at this time.
+:::
 
 The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
 
@@ -220,7 +224,9 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-> With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
+:::info
+ With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
+:::
 
 ### Table-level
 
@@ -250,8 +256,10 @@ Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about ho
 the query will not actually be executed. Refer to the [Query translation](sql-translation.md#interpreting-explain-plan-output)
 documentation for more information on the output of EXPLAIN PLAN.
 
-> For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
+:::info
+ For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
 Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
+:::
 
 ## Identifiers and literals
 

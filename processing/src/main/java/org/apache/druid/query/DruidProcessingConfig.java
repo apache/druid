@@ -19,45 +19,82 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
-import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.skife.config.Config;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicReference;
 
-public abstract class DruidProcessingConfig extends ExecutorServiceConfig implements ColumnConfig
+public class DruidProcessingConfig implements ColumnConfig
 {
   private static final Logger log = new Logger(DruidProcessingConfig.class);
 
-  public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
-  public static final HumanReadableBytes DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = HumanReadableBytes.valueOf(-1);
-  public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
-  public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
-  public static final int DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL = 0;
+  @JsonProperty
+  private final String formatString;
+  @JsonProperty
+  private final int numThreads;
+  @JsonProperty
+  private final int numMergeBuffers;
+  @JsonProperty
+  private final boolean fifo;
+  @JsonProperty
+  private final String tmpDir;
+  @JsonProperty
+  private final DruidProcessingBufferConfig buffer;
+  @JsonProperty
+  private final DruidProcessingIndexesConfig indexes;
+  private final AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
+  private final boolean numThreadsConfigured;
+  private final boolean numMergeBuffersConfigured;
 
-  private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
-
-  @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
-  public HumanReadableBytes intermediateComputeSizeBytesConfigured()
+  @JsonCreator
+  public DruidProcessingConfig(
+      @JsonProperty("formatString") @Nullable String formatString,
+      @JsonProperty("numThreads") @Nullable Integer numThreads,
+      @JsonProperty("numMergeBuffers") @Nullable Integer numMergeBuffers,
+      @JsonProperty("fifo") @Nullable Boolean fifo,
+      @JsonProperty("tmpDir") @Nullable String tmpDir,
+      @JsonProperty("buffer") DruidProcessingBufferConfig buffer,
+      @JsonProperty("indexes") DruidProcessingIndexesConfig indexes
+  )
   {
-    return DEFAULT_PROCESSING_BUFFER_SIZE_BYTES;
+    this.formatString = Configs.valueOrDefault(formatString, "processing-%s");
+    this.numThreads = Configs.valueOrDefault(
+        numThreads,
+        Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1, 1)
+    );
+    this.numMergeBuffers = Configs.valueOrDefault(numMergeBuffers, Math.max(2, this.numThreads / 4));
+    this.fifo = fifo == null || fifo;
+    this.tmpDir = Configs.valueOrDefault(tmpDir, System.getProperty("java.io.tmpdir"));
+    this.buffer = Configs.valueOrDefault(buffer, new DruidProcessingBufferConfig());
+    this.indexes = Configs.valueOrDefault(indexes, new DruidProcessingIndexesConfig());
+
+    this.numThreadsConfigured = numThreads != null;
+    this.numMergeBuffersConfigured = numMergeBuffers != null;
+    initializeBufferSize();
   }
 
-  public int intermediateComputeSizeBytes()
+  @VisibleForTesting
+  public DruidProcessingConfig()
   {
-    HumanReadableBytes sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
-    if (!DEFAULT_PROCESSING_BUFFER_SIZE_BYTES.equals(sizeBytesConfigured)) {
+    this(null, null, null, null, null, null, null);
+  }
+
+  private void initializeBufferSize()
+  {
+    HumanReadableBytes sizeBytesConfigured = this.buffer.getBufferSize();
+    if (!DruidProcessingBufferConfig.DEFAULT_PROCESSING_BUFFER_SIZE_BYTES.equals(sizeBytesConfigured)) {
       if (sizeBytesConfigured.getBytes() > Integer.MAX_VALUE) {
         throw new IAE("druid.processing.buffer.sizeBytes must be less than 2GiB");
       }
-      return sizeBytesConfigured.getBytesInInt();
-    } else if (computedBufferSizeBytes.get() != null) {
-      return computedBufferSizeBytes.get();
+      computedBufferSizeBytes.set(sizeBytesConfigured.getBytesInInt());
     }
 
     long directSizeBytes;
@@ -70,173 +107,90 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     }
     catch (UnsupportedOperationException e) {
       // max direct memory defaults to max heap size on recent JDK version, unless set explicitly
-      directSizeBytes = computeMaxMemoryFromMaxHeapSize();
+      directSizeBytes = Runtime.getRuntime().maxMemory() / 4;
       log.info("Using up to [%,d] bytes of direct memory for computation buffers.", directSizeBytes);
     }
 
-    int numProcessingThreads = getNumThreads();
-    int numMergeBuffers = getNumMergeBuffers();
-    int totalNumBuffers = numMergeBuffers + numProcessingThreads;
+    int totalNumBuffers = this.numMergeBuffers + this.numThreads;
     int sizePerBuffer = (int) ((double) directSizeBytes / (double) (totalNumBuffers + 1));
 
-    final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
+    final int computedSizePerBuffer = Math.min(
+        sizePerBuffer,
+        DruidProcessingBufferConfig.MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES
+    );
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
           "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers. "
           + "If you run out of direct memory, you may need to set these parameters explicitly using the guidelines at "
           + "https://druid.apache.org/docs/latest/operations/basic-cluster-tuning.html#processing-threads-buffers.",
           computedSizePerBuffer,
-          numProcessingThreads,
-          numMergeBuffers
+          this.numThreads,
+          this.numMergeBuffers
       );
     }
-    return computedSizePerBuffer;
   }
 
-  public static long computeMaxMemoryFromMaxHeapSize()
+  public String getFormatString()
   {
-    return Runtime.getRuntime().maxMemory() / 4;
+    return formatString;
   }
 
-  @Config({"druid.computation.buffer.poolCacheMaxCount", "${base_path}.buffer.poolCacheMaxCount"})
-  public int poolCacheMaxCount()
+  public int getNumThreads()
   {
-    return Integer.MAX_VALUE;
-  }
-
-  @Config({
-      "druid.computation.buffer.poolCacheInitialCount",
-      "${base_path}.buffer.poolCacheInitialCount"
-  })
-  public int getNumInitalBuffersForIntermediatePool()
-  {
-    return DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL;
-  }
-
-  @Override
-  @Config(value = "${base_path}.numThreads")
-  public int getNumThreadsConfigured()
-  {
-    return DEFAULT_NUM_THREADS;
+    return numThreads;
   }
 
   public int getNumMergeBuffers()
   {
-    int numMergeBuffersConfigured = getNumMergeBuffersConfigured();
-    if (numMergeBuffersConfigured != DEFAULT_NUM_MERGE_BUFFERS) {
-      return numMergeBuffersConfigured;
-    } else {
-      return Math.max(2, getNumThreads() / 4);
-    }
+    return numMergeBuffers;
   }
 
-  /**
-   * Returns the number of merge buffers _explicitly_ configured, or -1 if it is not explicitly configured, that is not
-   * a valid number of buffers. To get the configured value or the default (valid) number, use {@link
-   * #getNumMergeBuffers()}. This method exists for ability to distinguish between the default value set when there is
-   * no explicit config, and an explicitly configured value.
-   */
-  @Config("${base_path}.numMergeBuffers")
-  public int getNumMergeBuffersConfigured()
-  {
-    return DEFAULT_NUM_MERGE_BUFFERS;
-  }
-
-  @Override
-  @Config(value = "${base_path}.indexes.skipValueRangeIndexScale")
-  public double skipValueRangeIndexScale()
-  {
-    return ColumnConfig.super.skipValueRangeIndexScale();
-  }
-
-  @Override
-  @Config(value = "${base_path}.indexes.skipValuePredicateIndexScale")
-  public double skipValuePredicateIndexScale()
-  {
-    return ColumnConfig.super.skipValuePredicateIndexScale();
-  }
-
-  @Config(value = "${base_path}.fifo")
   public boolean isFifo()
   {
-    return true;
+    return fifo;
   }
 
-  @Config(value = "${base_path}.tmpDir")
   public String getTmpDir()
   {
-    return System.getProperty("java.io.tmpdir");
+    return tmpDir;
   }
 
-  @Config(value = "${base_path}.merge.useParallelMergePool")
-  public boolean useParallelMergePoolConfigured()
+  public int intermediateComputeSizeBytes()
   {
-    return true;
+
+    return computedBufferSizeBytes.get();
   }
 
-  public boolean useParallelMergePool()
+  public int poolCacheMaxCount()
   {
-    final boolean useParallelMergePoolConfigured = useParallelMergePoolConfigured();
-    final int parallelism = getMergePoolParallelism();
-    // need at least 3 to do 2 layer merge
-    if (parallelism > 2) {
-      return useParallelMergePoolConfigured;
-    }
-    if (useParallelMergePoolConfigured) {
-      log.debug(
-          "Parallel merge pool is enabled, but there are not enough cores to enable parallel merges: %s",
-          parallelism
-      );
-    }
-    return false;
+    return buffer.getPoolCacheMaxCount();
   }
 
-  @Config(value = "${base_path}.merge.pool.parallelism")
-  public int getMergePoolParallelismConfigured()
+  public int getNumInitalBuffersForIntermediatePool()
   {
-    return DEFAULT_NUM_THREADS;
+    return buffer.getPoolCacheInitialCount();
   }
 
-  public int getMergePoolParallelism()
+  @Override
+  public double skipValueRangeIndexScale()
   {
-    int poolParallelismConfigured = getMergePoolParallelismConfigured();
-    if (poolParallelismConfigured != DEFAULT_NUM_THREADS) {
-      return poolParallelismConfigured;
-    } else {
-      // assume 2 hyper-threads per core, so that this value is probably by default the number of physical cores * 1.5
-      return (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75);
-    }
+    return indexes.getSkipValueRangeIndexScale();
   }
 
-  @Config(value = "${base_path}.merge.pool.awaitShutdownMillis")
-  public long getMergePoolAwaitShutdownMillis()
+  @Override
+  public double skipValuePredicateIndexScale()
   {
-    return DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
+    return indexes.getSkipValuePredicateIndexScale();
   }
 
-  @Config(value = "${base_path}.merge.pool.defaultMaxQueryParallelism")
-  public int getMergePoolDefaultMaxQueryParallelism()
+  public boolean isNumThreadsConfigured()
   {
-    // assume 2 hyper-threads per core, so that this value is probably by default the number of physical cores
-    return (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1);
+    return numThreadsConfigured;
   }
 
-  @Config(value = "${base_path}.merge.task.targetRunTimeMillis")
-  public int getMergePoolTargetTaskRunTimeMillis()
+  public boolean isNumMergeBuffersConfigured()
   {
-    return ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS;
-  }
-
-  @Config(value = "${base_path}.merge.task.initialYieldNumRows")
-  public int getMergePoolTaskInitialYieldRows()
-  {
-    return ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS;
-  }
-
-  @Config(value = "${base_path}.merge.task.smallBatchNumRows")
-  public int getMergePoolSmallBatchRows()
-  {
-    return ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS;
+    return numMergeBuffersConfigured;
   }
 }
 

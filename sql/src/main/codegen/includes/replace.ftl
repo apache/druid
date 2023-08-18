@@ -53,8 +53,7 @@ SqlNode DruidSqlReplaceEof() :
       partitionedBy = PartitionGranularity()
     ]
     [
-      <CLUSTERED> <BY>
-      clusteredBy = ClusterItems()
+      clusteredBy = ClusteredBy()
     ]
     {
         if (clusteredBy != null && partitionedBy.lhs == null) {
@@ -83,7 +82,7 @@ SqlNode ReplaceTimeQuery() :
       <ALL> { replaceQuery = SqlLiteral.createCharString("ALL", getPos()); }
     |
       // We parse all types of conditions and throw an exception if it is not supported to keep the parsing simple
-      replaceQuery = WhereOpt()
+      replaceQuery = Where()
     )
     {
       return replaceQuery;

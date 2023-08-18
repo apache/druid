@@ -212,6 +212,29 @@ public class SqlSegmentsMetadataQuery
     }
   }
 
+  /**
+   * Retrieve the used segment for a given id if it exists in the metadata store and null otherwise
+   */
+  public DataSegment retrieveUsedSegmentForId(String id)
+  {
+
+    final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
+
+    final Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
+        .bind("id", id);
+
+    final ResultIterator<DataSegment> resultIterator =
+        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+           .iterator();
+
+    if (resultIterator.hasNext()) {
+      return resultIterator.next();
+    }
+
+    return null;
+  }
+
   private CloseableIterator<DataSegment> retrieveSegments(
       final String dataSource,
       final Collection<Interval> intervals,

@@ -322,15 +322,6 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 
 // ----------------------------
 
-export function validJson(json: string): boolean {
-  try {
-    JSONBig.parse(json);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }

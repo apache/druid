@@ -347,7 +347,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       ))}
                       <MenuDivider />
                       <MenuCheckbox
-                        checked={selectDestination === 'taskReport' ? !query.unlimited : undefined}
+                        checked={selectDestination === 'taskReport' ? !query.unlimited : false}
                         intent={intent}
                         disabled={selectDestination !== 'taskReport'}
                         text="Limit SELECT results in taskReport"

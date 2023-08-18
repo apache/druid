@@ -52,6 +52,7 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -111,6 +112,22 @@ public class QueryRunnerTestHelper
       ),
       null
   );
+
+  public static final DataSource UNNEST_FILTER_DATA_SOURCE = UnnestDataSource.create(
+      FilteredDataSource.create(
+          new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+          new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null)
+      ),
+      new ExpressionVirtualColumn(
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+          "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+          null,
+          ExprMacroTable.nil()
+      ),
+      null
+  );
+
+
 
   public static final Granularity DAY_GRAN = Granularities.DAY;
   public static final Granularity ALL_GRAN = Granularities.ALL;

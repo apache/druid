@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from druidapi import consts
+import time
 
 class DisplayClient:
     '''
@@ -144,3 +145,36 @@ class DisplayClient:
 
     def tables(self, schema=consts.DRUID_SCHEMA):
         self._druid.sql._tables_query(schema).show(display=self)
+
+    def run_task(self, query):
+        '''
+        Run an MSQ task while displaying progress in the cell output.
+        :param query: INSERT/REPLACE statement to run
+        :return: None
+        '''
+        from tqdm import tqdm
+
+        task = self._druid.sql.task(query)
+        with tqdm(total=100.0) as pbar:
+            previous_progress = 0.0
+            while True:
+                reports=task.reports_no_wait()
+                # check if progress metric is available and display it
+                if 'multiStageQuery' in reports.keys():
+                    if 'payload' in reports['multiStageQuery'].keys():
+                        if 'counters' in reports['multiStageQuery']['payload'].keys():
+                            if ('0' in reports['multiStageQuery']['payload']['counters'].keys() ) and \
+                               ('0' in reports['multiStageQuery']['payload']['counters']['0'].keys()):
+                                if 'progressDigest' in reports['multiStageQuery']['payload']['counters']['0']['0']['sortProgress'].keys():
+                                    current_progress = reports['multiStageQuery']['payload']['counters']['0']['0']['sortProgress']['progressDigest']*100.0
+                                    pbar.update( current_progress - previous_progress ) # update requires a relative value
+                                    previous_progress = current_progress
+                        # present status if available
+                        if 'status' in reports['multiStageQuery']['payload'].keys():
+                            pbar.set_description(f"Loading data, status:[{reports['multiStageQuery']['payload']['status']['status']}]")
+                            # stop when job is done
+                            if reports['multiStageQuery']['payload']['status']['status'] in ['SUCCESS', 'FAILED']:
+                                break;
+                else:
+                    pbar.set_description('Initializing...')
+                time.sleep(1)
