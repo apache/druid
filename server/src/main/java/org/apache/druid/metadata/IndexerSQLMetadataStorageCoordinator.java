@@ -2301,7 +2301,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final ResultIterator<Pair<String, TaskLockInfo>> resultIterator = query.map((index, r, ctx) -> {
       String segmentId = r.getString("segment_id");
-      Interval interval = new Interval(r.getLong("start"), r.getLong("end"));
+      Interval interval = Intervals.utc(r.getLong("start"), r.getLong("end"));
       String version = r.getString("lock_version");
       return Pair.of(segmentId, new TaskLockInfo(interval, version));
     }).iterator();
