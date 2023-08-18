@@ -30,6 +30,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -88,8 +89,7 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
-
-  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private final TaskConfig taskConfig;
   @MonotonicNonNull
   private LogWatch logWatch;
 
@@ -101,7 +101,7 @@ public class KubernetesPeonLifecycle
       TaskLogs taskLogs,
       ObjectMapper mapper,
       TaskStateListener stateListener,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig
+      TaskConfig taskConfig
   )
   {
     this.taskId = new K8sTaskId(task);
@@ -109,7 +109,7 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
-    this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
+    this.taskConfig = taskConfig;
   }
 
   /**
@@ -127,7 +127,7 @@ public class KubernetesPeonLifecycle
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
       // Need to use the taskPayloadManager if we are not passing the task via env variable.
-      if (!kubernetesTaskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+      if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
         writeTaskPayload(task);
       }
 
@@ -142,7 +142,7 @@ public class KubernetesPeonLifecycle
       return join(timeout);
     }
     catch (IOException e) {
-      log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      log.info("Failed to write task payload for: %s", taskId.getOriginalTaskId());
       throw new RuntimeException(e);
     }
     catch (Exception e) {

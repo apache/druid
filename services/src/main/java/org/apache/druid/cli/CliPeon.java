@@ -238,8 +238,7 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
-                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile())
-                .setUseTaskPayloadManager(StringUtils.isNotEmpty(taskId));
+                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
             if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
               log.info("Running peon in k8s mode");
@@ -292,10 +291,10 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager)
+          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager, TaskConfig taskConfig)
           {
             try {
-              if (config.isUseTaskPayloadManager()) {
+              if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
                 String task = IOUtils.toString(taskPayloadManager.streamTaskPayload(taskId).get(), Charset.defaultCharset());
                 // write the remote task.json to task file location for ExecutorLifecycle to pickup
                 FileUtils.write(config.getTaskFile(), task, Charset.defaultCharset());

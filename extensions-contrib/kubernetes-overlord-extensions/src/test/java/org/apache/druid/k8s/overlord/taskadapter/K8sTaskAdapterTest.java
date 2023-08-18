@@ -59,6 +59,8 @@ import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.tasklogs.TaskLogs;
+import org.easymock.Mock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -84,6 +86,8 @@ class K8sTaskAdapterTest
   private final TaskConfig taskConfig;
   private final DruidNode node;
   private final ObjectMapper jsonMapper;
+  @Mock private TaskLogs taskLogs;
+
 
   public K8sTaskAdapterTest()
   {
@@ -141,7 +145,9 @@ class K8sTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         node,
-        jsonMapper
+        jsonMapper,
+        taskLogs
+
     );
     Task task = K8sTestUtils.getTask();
     Job jobFromSpec = adapter.fromTask(task);
@@ -168,7 +174,8 @@ class K8sTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         node,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
     Task task = K8sTestUtils.getTask();
     Job jobFromSpec = adapter.createJobFromPodSpec(
@@ -222,7 +229,8 @@ class K8sTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         node,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
     Task task = K8sTestUtils.getTask();
     Job job = adapter.fromTask(task);
@@ -342,7 +350,8 @@ class K8sTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         node,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
     Task task = K8sTestUtils.getTask();
     // no monitor in overlord, no monitor override
@@ -365,7 +374,8 @@ class K8sTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         node,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
     adapter.addEnvironmentVariables(container, context, task.toString());
     EnvVar env = container.getEnv()
@@ -382,7 +392,8 @@ class K8sTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         node,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
     container.getEnv().add(new EnvVarBuilder()
                                .withName("druid_monitoring_monitors")
@@ -407,13 +418,15 @@ class K8sTaskAdapterTest
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
         .build();
-    SingleContainerTaskAdapter adapter =
-        new SingleContainerTaskAdapter(testClient,
-                                       config, taskConfig,
-                                       startupLoggingConfig,
-                                       node,
-                                       jsonMapper
-        );
+    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
     NoopTask task = NoopTask.create("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),

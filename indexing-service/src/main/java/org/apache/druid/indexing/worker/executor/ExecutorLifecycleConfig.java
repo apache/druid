@@ -37,10 +37,6 @@ public class ExecutorLifecycleConfig
 
   @JsonProperty
   @NotNull
-  private boolean useTaskPayloadManager = false;
-
-  @JsonProperty
-  @NotNull
   private File statusFile = null;
 
   @JsonProperty
@@ -71,17 +67,6 @@ public class ExecutorLifecycleConfig
   public File getStatusFile()
   {
     return statusFile;
-  }
-
-  public ExecutorLifecycleConfig setUseTaskPayloadManager(boolean useTaskPayloadManager)
-  {
-    this.useTaskPayloadManager = useTaskPayloadManager;
-    return this;
-  }
-
-  public boolean isUseTaskPayloadManager()
-  {
-    return useTaskPayloadManager;
   }
 
   public ExecutorLifecycleConfig setStatusFile(File statusFile)

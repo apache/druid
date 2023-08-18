@@ -99,7 +99,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper, kubernetesTaskRunnerConfig),
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper, taskConfig),
         emitter
     );
     return runner;
@@ -135,7 +135,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           startupLoggingConfig,
           druidNode,
-          smileMapper
+          smileMapper,
+          taskLogs
       );
     } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
       return new PodTemplateTaskAdapter(
@@ -143,7 +144,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           druidNode,
           smileMapper,
-          properties
+          properties,
+          taskLogs
       );
     } else {
       return new SingleContainerTaskAdapter(
@@ -152,7 +154,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           startupLoggingConfig,
           druidNode,
-          smileMapper
+          smileMapper,
+          taskLogs
       );
     }
   }

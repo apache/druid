@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 
 import java.io.IOException;
 
@@ -31,4 +32,5 @@ public interface TaskAdapter
 
   Task toTask(Job from) throws IOException;
 
+  K8sTaskId getTaskId(Job from) throws IOException;
 }

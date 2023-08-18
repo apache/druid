@@ -35,6 +35,7 @@ import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
@@ -49,9 +50,12 @@ import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
@@ -86,13 +90,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private final DruidNode node;
   private final ObjectMapper mapper;
   private final HashMap<String, PodTemplate> templates;
+  private final TaskLogs taskLogs;
 
   public PodTemplateTaskAdapter(
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
       DruidNode node,
       ObjectMapper mapper,
-      Properties properties
+      Properties properties,
+      TaskLogs taskLogs
   )
   {
     this.taskRunnerConfig = taskRunnerConfig;
@@ -100,6 +106,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.node = node;
     this.mapper = mapper;
     this.templates = initializePodTemplates(properties);
+    this.taskLogs = taskLogs;
   }
 
   /**
@@ -162,6 +169,14 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Task toTask(Job from) throws IOException
   {
+    if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
+      com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
+      if (!taskBody.isPresent()) {
+        throw new IOE("Could not find task payload in task logs for job [%s]", from.getMetadata().getName());
+      }
+      String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
+      return mapper.readValue(task, Task.class);
+    }
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
       throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
@@ -171,6 +186,19 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       throw new IOE("No task annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
     return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
+  }
+
+  @Override
+  public K8sTaskId getTaskId(Job from) throws IOException {
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
+    if (annotations == null) {
+      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    String taskId = annotations.get(DruidK8sConstants.TASK_ID);
+    if (taskId == null) {
+      throw new IOE("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    return new K8sTaskId(taskId);
   }
 
   private HashMap<String, PodTemplate> initializePodTemplates(Properties properties)

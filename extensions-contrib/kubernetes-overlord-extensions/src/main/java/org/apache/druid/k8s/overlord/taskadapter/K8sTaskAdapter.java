@@ -41,6 +41,7 @@ import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
@@ -48,6 +49,7 @@ import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
@@ -57,8 +59,11 @@ import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -89,6 +94,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   protected final StartupLoggingConfig startupLoggingConfig;
   protected final DruidNode node;
   protected final ObjectMapper mapper;
+  protected final TaskLogs taskLogs;
 
   public K8sTaskAdapter(
       KubernetesClientApi client,
@@ -96,7 +102,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       TaskConfig taskConfig,
       StartupLoggingConfig startupLoggingConfig,
       DruidNode node,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      TaskLogs taskLogs
   )
   {
     this.client = client;
@@ -105,6 +112,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     this.startupLoggingConfig = startupLoggingConfig;
     this.node = node;
     this.mapper = mapper;
+    this.taskLogs = taskLogs;
   }
 
   @Override
@@ -126,6 +134,14 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   @Override
   public Task toTask(Job from) throws IOException
   {
+    if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
+      com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
+      if (!taskBody.isPresent()) {
+        throw new IOE("Could not find task payload in task logs for job [%s]", from.getMetadata().getName());
+      }
+      String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
+      return mapper.readValue(task, Task.class);
+    }
     PodSpec podSpec = from.getSpec().getTemplate().getSpec();
     massageSpec(podSpec, "main");
     List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
@@ -135,6 +151,19 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       throw new IOException("No TASK_JSON environment variable found in pod: " + from.getMetadata().getName());
     }
     return mapper.readValue(Base64Compression.decompressBase64(contents), Task.class);
+  }
+
+  @Override
+  public K8sTaskId getTaskId(Job from) throws IOException {
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
+    if (annotations == null) {
+      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    String taskId = annotations.get(DruidK8sConstants.TASK_ID);
+    if (taskId == null) {
+      throw new IOE("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    return new K8sTaskId(taskId);
   }
 
   @VisibleForTesting
@@ -409,11 +438,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       command.add("true");
     }
 
-    // If we are not passing the TASK_JSON, pass the taskId flag to pull the task payload.
-    if (!taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
-      command.add("--taskId");
-      command.add(task.getId());
-    }
+    command.add("--taskId");
+    command.add(task.getId());
     log.info(
         "Peon Command for K8s job: %s",
         ForkingTaskRunner.getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)

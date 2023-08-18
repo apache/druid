@@ -36,7 +36,9 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +61,7 @@ public class PodTemplateTaskAdapterTest
   private TaskConfig taskConfig;
   private DruidNode node;
   private ObjectMapper mapper;
+  @Mock private TaskLogs taskLogs;
 
   @BeforeEach
   public void setup()
@@ -89,7 +92,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        new Properties()
+        new Properties(),
+        taskLogs
     ));
   }
 
@@ -109,7 +113,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     ));
   }
 
@@ -127,7 +132,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Task task = new NoopTask(
@@ -168,7 +174,8 @@ public class PodTemplateTaskAdapterTest
             true
         ),
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Task task = new NoopTask(
@@ -204,7 +211,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     ));
   }
 
@@ -223,7 +231,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Task task = new NoopTask(
@@ -258,7 +267,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Task task = new NoopTask(
@@ -292,7 +302,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -315,7 +326,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Job baseJob = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -346,7 +358,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
@@ -371,7 +384,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Task task = new NoopTask(
@@ -406,7 +420,8 @@ public class PodTemplateTaskAdapterTest
         taskConfig,
         node,
         mapper,
-        props
+        props,
+        taskLogs
     );
 
     Task task = EasyMock.mock(Task.class);
