@@ -71,30 +71,13 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+  public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
   {
     final String path = StringUtils.format(
-        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s",
+        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s%s",
         StringUtils.urlEncode(dataSource),
-        StringUtils.urlEncode(segmentId)
-    );
-
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
-            new BytesFullResponseHandler()
-        ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), DataSegment.class)
-    );
-  }
-
-  @Override
-  public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId)
-  {
-    final String path = StringUtils.format(
-        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s?includeUnused",
-        StringUtils.urlEncode(dataSource),
-        StringUtils.urlEncode(segmentId)
+        StringUtils.urlEncode(segmentId),
+        includeUnused ? "?includeUnused" : ""
     );
 
     return FutureUtils.transform(

@@ -835,7 +835,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUsedSegmentForId()
   {
     insertUsedSegments(ImmutableSet.of(defaultSegment));
-    Assert.assertEquals(defaultSegment, coordinator.retrieveUsedSegmentForId(defaultSegment.getId().toString()));
+    Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), false));
   }
 
   @Test
@@ -843,7 +843,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     insertUsedSegments(ImmutableSet.of(defaultSegment));
     markAllSegmentsUnused(ImmutableSet.of(defaultSegment));
-    Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString()));
+    Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), true));
   }
 
   @Test

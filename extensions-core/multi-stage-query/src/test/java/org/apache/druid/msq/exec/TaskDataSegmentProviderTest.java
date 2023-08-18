@@ -231,7 +231,7 @@ public class TaskDataSegmentProviderTest
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
   {
     @Override
-    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       for (final DataSegment segment : segments) {
         if (segment.getDataSource().equals(dataSource) && segment.getId().toString().equals(segmentId)) {

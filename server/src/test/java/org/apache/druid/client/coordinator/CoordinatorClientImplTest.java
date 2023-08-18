@@ -113,7 +113,7 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         segment,
-        coordinatorClient.fetchUsedSegment("xyz", "def").get()
+        coordinatorClient.fetchSegment("xyz", "def", false).get()
     );
   }
 
@@ -138,7 +138,7 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         segment,
-        coordinatorClient.fetchSegment("xyz", "def").get()
+        coordinatorClient.fetchSegment("xyz", "def", true).get()
     );
   }
 
