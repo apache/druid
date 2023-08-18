@@ -1106,7 +1106,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND "
-                        + "%2$send%2$s <= :end AND used = false %3$s AND used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated ORDER BY start, %2$send%2$s",
+                        + "%2$send%2$s <= :end AND used = false AND used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated %3$s ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
                         connector.getQuoteString(),
                         null != minStartTime ? "AND start >= :start" : ""
