@@ -29,6 +29,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.dimension.DimensionSpec;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -96,6 +97,7 @@ public class GroupByQueryResources implements Closeable
     return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
   }
 
+  @Nullable
   private final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
   private final Deque<ByteBuffer> mergeBuffers;
 
