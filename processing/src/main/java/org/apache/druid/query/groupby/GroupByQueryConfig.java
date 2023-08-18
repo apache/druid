@@ -71,12 +71,6 @@ public class GroupByQueryConfig
   private boolean singleThreaded = false;
 
   @JsonProperty
-  private int maxIntermediateRows = 50000;
-
-  @JsonProperty
-  private int maxResults = 500000;
-
-  @JsonProperty
   // Not documented, only used for tests to force spilling
   private int bufferGrouperMaxSize = Integer.MAX_VALUE;
 
@@ -140,26 +134,6 @@ public class GroupByQueryConfig
   public void setSingleThreaded(boolean singleThreaded)
   {
     this.singleThreaded = singleThreaded;
-  }
-
-  public int getMaxIntermediateRows()
-  {
-    return maxIntermediateRows;
-  }
-
-  public void setMaxIntermediateRows(int maxIntermediateRows)
-  {
-    this.maxIntermediateRows = maxIntermediateRows;
-  }
-
-  public int getMaxResults()
-  {
-    return maxResults;
-  }
-
-  public void setMaxResults(int maxResults)
-  {
-    this.maxResults = maxResults;
   }
 
   public int getBufferGrouperMaxSize()
@@ -383,8 +357,6 @@ public class GroupByQueryConfig
   {
     return "GroupByQueryConfig{" +
            "singleThreaded=" + singleThreaded +
-           ", maxIntermediateRows=" + maxIntermediateRows +
-           ", maxResults=" + maxResults +
            ", bufferGrouperMaxSize=" + bufferGrouperMaxSize +
            ", bufferGrouperMaxLoadFactor=" + bufferGrouperMaxLoadFactor +
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +

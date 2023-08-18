@@ -125,9 +125,6 @@ public class GroupByTypeInterfaceBenchmark
   @Param({"100000"})
   private int rowsPerSegment;
 
-  @Param({"v2"})
-  private String defaultStrategy;
-
   @Param({"all"})
   private String queryGranularity;
 
@@ -357,8 +354,6 @@ public class GroupByTypeInterfaceBenchmark
       }
     };
     config.setSingleThreaded(false);
-    config.setMaxIntermediateRows(Integer.MAX_VALUE);
-    config.setMaxResults(Integer.MAX_VALUE);
 
     DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
     {
