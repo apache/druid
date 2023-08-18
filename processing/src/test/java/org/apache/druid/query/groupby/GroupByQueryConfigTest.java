@@ -51,7 +51,6 @@ public class GroupByQueryConfigTest
     final GroupByQueryConfig config = MAPPER.convertValue(CONFIG_MAP, GroupByQueryConfig.class);
 
     Assert.assertEquals(true, config.isSingleThreaded());
-    Assert.assertEquals("v2", config.getDefaultStrategy());
     Assert.assertEquals(1, config.getBufferGrouperInitialBuckets());
     Assert.assertEquals(2, config.getMaxIntermediateRows());
     Assert.assertEquals(3, config.getMaxResults());
@@ -76,7 +75,6 @@ public class GroupByQueryConfigTest
     );
 
     Assert.assertEquals(true, config2.isSingleThreaded());
-    Assert.assertEquals("v2", config2.getDefaultStrategy());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(2, config2.getMaxIntermediateRows());
     Assert.assertEquals(3, config2.getMaxResults());
@@ -98,7 +96,6 @@ public class GroupByQueryConfigTest
                     .setGranularity(Granularities.ALL)
                     .setContext(
                         ImmutableMap.<String, Object>builder()
-                                    .put("groupByStrategy", "v1")
                                     .put("maxOnDiskStorage", "3M")
                                     .put("maxResults", 2)
                                     .put("maxSelectorDictionarySize", 3)
@@ -110,7 +107,6 @@ public class GroupByQueryConfigTest
     );
 
     Assert.assertEquals(true, config2.isSingleThreaded());
-    Assert.assertEquals("v1", config2.getDefaultStrategy());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(2, config2.getMaxIntermediateRows());
     Assert.assertEquals(2, config2.getMaxResults());

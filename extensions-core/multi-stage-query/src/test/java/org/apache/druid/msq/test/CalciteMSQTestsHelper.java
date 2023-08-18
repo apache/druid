@@ -52,9 +52,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
@@ -164,9 +162,6 @@ public class CalciteMSQTestsHelper
                 .toInstance((dataSegment, channelCounters) -> getSupplierForSegment(dataSegment));
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-          binder.bind(GroupByStrategySelector.class)
-                .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-                                                  .getStrategySelector());
         };
     return ImmutableList.of(
         customBindings,

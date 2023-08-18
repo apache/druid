@@ -33,7 +33,6 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -106,10 +105,6 @@ public class NestedGroupByArrayQueryTest
         NestedDataTestUtils.getSegmentGenerators(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
 
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-        // group by v1 doesn't support array stuff
-        continue;
-      }
       for (BiFunction<TemporaryFolder, Closer, List<Segment>> generatorFn : segmentsGenerators) {
         // skip force because arrays don't really support vectorize engine, but we want the coverage for once they do...
         for (String vectorize : new String[]{"false", "true"}) {

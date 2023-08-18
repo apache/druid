@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.utils.JvmUtils;
 
 /**
@@ -37,7 +36,6 @@ public class GroupByQueryConfig
 
   public static final long AUTOMATIC = 0;
 
-  public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT = "applyLimitPushDownToSegment";
@@ -70,9 +68,6 @@ public class GroupByQueryConfig
   private static final double SELECTOR_DICTIONARY_HEAP_FRACTION = 0.1;
   private static final long MIN_AUTOMATIC_DICTIONARY_SIZE = 1;
   private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
-
-  @JsonProperty
-  private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
 
   @JsonProperty
   private boolean singleThreaded = false;
@@ -138,11 +133,6 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean enableMultiValueUnnesting = true;
-
-  public String getDefaultStrategy()
-  {
-    return defaultStrategy;
-  }
 
   public boolean isSingleThreaded()
   {
@@ -337,7 +327,6 @@ public class GroupByQueryConfig
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
     final QueryContext queryContext = query.context();
-    newConfig.defaultStrategy = queryContext.getString(CTX_KEY_STRATEGY, getDefaultStrategy());
     newConfig.singleThreaded = queryContext.getBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
     newConfig.maxIntermediateRows = Math.min(
         queryContext.getInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
@@ -403,8 +392,7 @@ public class GroupByQueryConfig
   public String toString()
   {
     return "GroupByQueryConfig{" +
-           "defaultStrategy='" + defaultStrategy + '\'' +
-           ", singleThreaded=" + singleThreaded +
+           "singleThreaded=" + singleThreaded +
            ", maxIntermediateRows=" + maxIntermediateRows +
            ", maxResults=" + maxResults +
            ", bufferGrouperMaxSize=" + bufferGrouperMaxSize +
