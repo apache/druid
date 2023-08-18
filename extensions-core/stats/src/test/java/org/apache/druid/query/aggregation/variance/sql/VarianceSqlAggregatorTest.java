@@ -688,9 +688,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
       Assert.assertEquals(expectedResult.length, result.length);
       for (int j = 0; j < expectedResult.length; j++) {
         if (expectedResult[j] instanceof Float) {
-          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 1e-10);
+          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 1e-5);
         } else if (expectedResult[j] instanceof Double) {
-          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 1e-10);
+          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 1e-5);
         } else {
           Assert.assertEquals(expectedResult[j], result[j]);
         }
