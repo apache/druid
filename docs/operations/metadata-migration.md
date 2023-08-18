@@ -57,6 +57,8 @@ Update your Druid runtime properties with the new metadata configuration.
 
 ### Create Druid tables
 
+**If you have set `druid.metadata.storage.connector.createTables` to `true` (which is the default), and your metadata connect user has DDL privileges, you can disregard this section as Druid will create metadtata tables automatically.**
+
 Druid provides a `metadata-init` tool for creating Druid's metadata tables. After initializing the Druid database, you can run the commands shown below from the root of the Druid package to initialize the tables.
 
 In the example commands below:

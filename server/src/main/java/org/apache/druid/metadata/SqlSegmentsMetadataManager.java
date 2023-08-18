@@ -337,7 +337,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   /**
-   * Populate used_flag_last_updated for unused segments whose current value for said column is NULL
+   * Populate used_status_last_updated for unused segments whose current value for said column is NULL
    *
    * The updates are made incrementally.
    */
@@ -346,7 +346,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     String segmentsTable = getSegmentsTable();
     log.info(
-        "Populating used_flag_last_updated with non-NULL values for unused segments in [%s]",
+        "Populating used_status_last_updated with non-NULL values for unused segments in [%s]",
         segmentsTable
     );
 
@@ -364,7 +364,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               {
                 segmentsToUpdate.addAll(handle.createQuery(
                     StringUtils.format(
-                        "SELECT id FROM %1$s WHERE used_flag_last_updated IS NULL and used = :used %2$s",
+                        "SELECT id FROM %1$s WHERE used_status_last_updated IS NULL and used = :used %2$s",
                         segmentsTable,
                         connector.limitClause(limit)
                     )
@@ -386,7 +386,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               public Void withHandle(Handle handle)
               {
                 Batch updateBatch = handle.createBatch();
-                String sql = "UPDATE %1$s SET used_flag_last_updated = '%2$s' WHERE id = '%3$s'";
+                String sql = "UPDATE %1$s SET used_status_last_updated = '%2$s' WHERE id = '%3$s'";
                 String now = DateTimes.nowUtc().toString();
                 for (String id : segmentsToUpdate) {
                   updateBatch.add(StringUtils.format(sql, segmentsTable, now, id));
@@ -398,13 +398,13 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         );
       }
       catch (Exception e) {
-        log.warn(e, "Population of used_flag_last_updated in [%s] has failed. There may be unused segments with"
-                    + " NULL values for used_flag_last_updated that won't be killed!", segmentsTable);
+        log.warn(e, "Population of used_status_last_updated in [%s] has failed. There may be unused segments with"
+                    + " NULL values for used_status_last_updated that won't be killed!", segmentsTable);
         return;
       }
 
       totalUpdatedEntries += segmentsToUpdate.size();
-      log.info("Updated a batch of %d rows in [%s] with a valid used_flag_last_updated date",
+      log.info("Updated a batch of %d rows in [%s] with a valid used_status_last_updated date",
                segmentsToUpdate.size(),
                segmentsTable
       );
@@ -417,7 +417,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       }
     }
     log.info(
-        "Finished updating [%s] with a valid used_flag_last_updated date. %d rows updated",
+        "Finished updating [%s] with a valid used_status_last_updated date. %d rows updated",
         segmentsTable,
         totalUpdatedEntries
     );
@@ -630,9 +630,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     try {
       int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
           (Handle handle) -> handle
-              .createStatement(StringUtils.format("UPDATE %s SET used=true, used_flag_last_updated = :used_flag_last_updated WHERE id = :id", getSegmentsTable()))
+              .createStatement(StringUtils.format("UPDATE %s SET used=true, used_status_last_updated = :used_status_last_updated WHERE id = :id", getSegmentsTable()))
               .bind("id", segmentId)
-              .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
+              .bind("used_status_last_updated", DateTimes.nowUtc().toString())
               .execute()
       );
       // Unlike bulk markAsUsed methods: markAsUsedAllNonOvershadowedSegmentsInDataSource(),
@@ -1093,7 +1093,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       DateTime maxUsedFlagLastUpdatedTime
   )
   {
-    // Note that we handle the case where used_flag_last_updated IS NULL here to allow smooth transition to Druid version that uses used_flag_last_updated column
+    // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column
     return connector.inReadOnlyTransaction(
         new TransactionCallback<List<Interval>>()
         {
@@ -1104,7 +1104,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND "
-                        + "%2$send%2$s <= :end AND used = false AND used_flag_last_updated IS NOT NULL AND used_flag_last_updated <= :used_flag_last_updated ORDER BY start, %2$send%2$s",
+                        + "%2$send%2$s <= :end AND used = false AND used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
                         connector.getQuoteString()
                     )
@@ -1113,7 +1113,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("end", maxEndTime.toString())
-                .bind("used_flag_last_updated", maxUsedFlagLastUpdatedTime.toString())
+                .bind("used_status_last_updated", maxUsedFlagLastUpdatedTime.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {

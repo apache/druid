@@ -168,7 +168,7 @@ public class SQLMetadataConnectorTest
   }
 
   /**
-   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_flag_last_updated
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_status_last_updated
    * in the segments table.
    */
   @Test
@@ -176,7 +176,7 @@ public class SQLMetadataConnectorTest
   {
     connector.createSegmentTable();
 
-    // Drop column used_flag_last_updated to bring us in line with pre-upgrade state
+    // Drop column used_status_last_updated to bring us in line with pre-upgrade state
     derbyConnectorRule.getConnector().retryWithHandle(
         new HandleCallback<Void>()
         {
@@ -186,7 +186,7 @@ public class SQLMetadataConnectorTest
             final Batch batch = handle.createBatch();
             batch.add(
                 StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN USED_FLAG_LAST_UPDATED",
+                    "ALTER TABLE %1$s DROP COLUMN used_status_last_updated",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()
@@ -202,7 +202,7 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTableAddUsedFlagLastUpdated();
     connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-        "USED_FLAG_LAST_UPDATED"
+        "used_status_last_updated"
     );
   }
 
