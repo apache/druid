@@ -374,32 +374,6 @@ public class SqlSegmentsMetadataManagerTest
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1)
-    );
-
-    // Test the DateTime maxEndTime argument of getUnusedSegmentIntervals
-    Assert.assertEquals(
-        ImmutableList.of(segment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of(2012, 1, 7, 0, 0), 1)
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5)
-    );
-  }
-
-  @Test
-  public void testGetUnusedSegmentIntervalsWithMinStartTime()
-  {
-    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    sqlSegmentsMetadataManager.poll();
-    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
-    int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource("wikipedia");
-    Assert.assertEquals(2, numChangedSegments);
-
-    Assert.assertEquals(
-        ImmutableList.of(segment2.getInterval()),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", null, DateTimes.of("3000"), 1)
     );
 

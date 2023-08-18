@@ -418,6 +418,11 @@ public class CliCoordinator extends ServerRunnable
           }
           List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<List<String>>() {});
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
+          String groupPeriodPropKey = StringUtils.format("druid.coordinator.%s.period", coordinatorCustomDutyGroupName);
+          if (Strings.isNullOrEmpty(props.getProperty(groupPeriodPropKey))) {
+            throw new IAE("Run period for coordinator custom duty group must be set for group %s", coordinatorCustomDutyGroupName);
+          }
+          Duration groupPeriod = new Duration(props.getProperty(groupPeriodPropKey));
           for (String dutyName : dutyForGroup) {
             final String dutyPropertyBase = StringUtils.format(
                 "druid.coordinator.%s.duty.%s",
@@ -436,6 +441,12 @@ public class CliCoordinator extends ServerRunnable
             } else {
               adjustedProps.put(typeProperty, dutyName);
             }
+            String dutyPeriodProperty = StringUtils.format("%s.dutyPeriod", dutyPropertyBase);
+            if (adjustedProps.containsKey(dutyPeriodProperty)) {
+              throw new IAE("'dutyPeriod' property [%s] is reserved.", dutyPeriodProperty);
+            } else {
+              adjustedProps.put(dutyPeriodProperty, props.getProperty(groupPeriodPropKey));
+            }
             coordinatorCustomDutyProvider.inject(adjustedProps, configurator);
             CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutyProvider.get();
             if (coordinatorCustomDuty == null) {
@@ -443,11 +454,6 @@ public class CliCoordinator extends ServerRunnable
             }
             coordinatorCustomDuties.add(coordinatorCustomDuty);
           }
-          String groupPeriodPropKey = StringUtils.format("druid.coordinator.%s.period", coordinatorCustomDutyGroupName);
-          if (Strings.isNullOrEmpty(props.getProperty(groupPeriodPropKey))) {
-            throw new IAE("Run period for coordinator custom duty group must be set for group %s", coordinatorCustomDutyGroupName);
-          }
-          Duration groupPeriod = new Duration(props.getProperty(groupPeriodPropKey));
           coordinatorCustomDutyGroups.add(new CoordinatorCustomDutyGroup(coordinatorCustomDutyGroupName, groupPeriod, coordinatorCustomDuties));
         }
         return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);

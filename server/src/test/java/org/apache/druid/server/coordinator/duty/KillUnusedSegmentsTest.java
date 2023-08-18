@@ -151,7 +151,12 @@ public class KillUnusedSegmentsTest
       return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
     });
 
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    target = new KillUnusedSegments(
+        segmentsMetadataManager,
+        overlordClient,
+        config,
+        config.getCoordinatorIndexingPeriod()
+    );
   }
 
   @Test
@@ -168,7 +173,12 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(Duration.standardDays(400))
            .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    target = new KillUnusedSegments(
+        segmentsMetadataManager,
+        overlordClient,
+        config,
+        config.getCoordinatorIndexingPeriod()
+    );
 
     // No unused segment is older than the retention period
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
@@ -197,7 +207,12 @@ public class KillUnusedSegmentsTest
     // Duration to retain = -1 day, reinit target for config to take effect
     Mockito.doReturn(DURATION_TO_RETAIN.negated())
            .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    target = new KillUnusedSegments(
+        segmentsMetadataManager,
+        overlordClient,
+        config,
+        config.getCoordinatorIndexingPeriod()
+    );
 
     // Segments upto 1 day in the future are killed
     Interval expectedKillInterval = new Interval(
@@ -215,7 +230,12 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(true)
            .when(config).getCoordinatorKillIgnoreDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    target = new KillUnusedSegments(
+        segmentsMetadataManager,
+        overlordClient,
+        config,
+        config.getCoordinatorIndexingPeriod()
+    );
 
     // All future and past unused segments are killed
     Interval expectedKillInterval = new Interval(
@@ -233,7 +253,12 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(1)
            .when(config).getCoordinatorKillMaxSegments();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    target = new KillUnusedSegments(
+        segmentsMetadataManager,
+        overlordClient,
+        config,
+        config.getCoordinatorIndexingPeriod()
+    );
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     // Only 1 unused segment is killed
@@ -251,7 +276,12 @@ public class KillUnusedSegmentsTest
         .when(config).getCoordinatorKillMaxSegments();
     Mockito.doReturn(null)
         .when(config).getCoordinatorKillPeriod();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    target = new KillUnusedSegments(
+        segmentsMetadataManager,
+        overlordClient,
+        config,
+        config.getCoordinatorIndexingPeriod()
+    );
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(new Interval(

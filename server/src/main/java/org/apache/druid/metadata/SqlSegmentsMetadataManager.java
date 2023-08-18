@@ -976,12 +976,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(final String dataSource, final DateTime maxEndTime, final int limit)
-  {
-    return getUnusedSegmentIntervals(dataSource, null, maxEndTime, limit);
-  }
-
-  @Override
   public List<Interval> getUnusedSegmentIntervals(
       final String dataSource,
       @Nullable final DateTime minStartTime,

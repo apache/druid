@@ -46,6 +46,7 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -639,13 +640,10 @@ public class DruidCoordinator
     }
     List<KillUnusedSegments> killUnusedSegmentsDutyFromCustomGroups = getKillUnusedSegmentsDutyFromCustomGroups();
     if (killUnusedSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+      return new KillUnusedSegments(segmentsMetadataManager, overlordClient, config, config.getCoordinatorIndexingPeriod());
     } else {
       if (killUnusedSegmentsDutyFromCustomGroups.size() > 1) {
-        log.warn(
-            "More than one KillUnusedSegments duty is configured in the Coordinator Custom Duty Group."
-            + " The first duty will be picked up."
-        );
+        throw new IAE("More than one KillUnusedSegments duty is configured in the Coordinator Custom Duty Group.");
       }
       return killUnusedSegmentsDutyFromCustomGroups.get(0);
     }

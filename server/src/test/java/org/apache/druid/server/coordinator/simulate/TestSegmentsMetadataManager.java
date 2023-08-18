@@ -199,12 +199,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit)
-  {
-    return null;
-  }
-
-  @Override
   public List<Interval> getUnusedSegmentIntervals(
       final String dataSource,
       @Nullable final DateTime minStartTime,

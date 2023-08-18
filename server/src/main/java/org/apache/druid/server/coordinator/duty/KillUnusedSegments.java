@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -40,6 +41,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -67,7 +69,7 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
                 && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
 
-  @Nullable private final Long period;
+  private final long period;
   private final long retainDuration;
   private final boolean ignoreRetainDuration;
   private final int maxSegmentsToKill;
@@ -87,13 +89,14 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
   public KillUnusedSegments(
       @JacksonInject SegmentsMetadataManager segmentsMetadataManager,
       @JacksonInject OverlordClient overlordClient,
-      @JacksonInject DruidCoordinatorConfig config
+      @JacksonInject DruidCoordinatorConfig config,
+      @JsonProperty("dutyPeriod") Duration dutyPeriod
   )
   {
-    this.period = null != config.getCoordinatorKillPeriod() ? config.getCoordinatorKillPeriod().getMillis() : null;
+    this.period = config.getCoordinatorKillPeriod().getMillis();
     Preconditions.checkArgument(
-        null == this.period || this.period > config.getCoordinatorIndexingPeriod().getMillis(),
-        "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
+         this.period >= dutyPeriod.getMillis(),
+        StringUtils.format("coordinator kill period must be greater than the duty period [%s]", dutyPeriod)
     );
 
     this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();
@@ -126,7 +129,7 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final long currentTimeMillis = System.currentTimeMillis();
-    if (null != period && (lastKillTime + period > currentTimeMillis)) {
+    if (lastKillTime + period > currentTimeMillis) {
       log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
       return params;
     }
