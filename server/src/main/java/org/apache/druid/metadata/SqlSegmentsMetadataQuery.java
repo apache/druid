@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -148,13 +149,13 @@ public class SqlSegmentsMetadataQuery
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET used = ? WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET used = ?, used_flag_last_updated = ? WHERE datasource = ? AND id = ?",
                 dbTables.getSegmentsTable()
             )
         );
 
     for (SegmentId segmentId : segmentIds) {
-      batch.add(used, dataSource, segmentId.toString());
+      batch.add(used, DateTimes.nowUtc().toString(), dataSource, segmentId.toString());
     }
 
     final int[] segmentChanges = batch.execute();
@@ -175,12 +176,13 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used WHERE dataSource = :dataSource",
+                  "UPDATE %s SET used=:used, used_flag_last_updated = :used_flag_last_updated WHERE dataSource = :dataSource",
                   dbTables.getSegmentsTable()
               )
           )
           .bind("dataSource", dataSource)
           .bind("used", false)
+          .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
           .execute();
     } else if (Intervals.canCompareEndpointsAsStrings(interval)
                && interval.getStart().getYear() == interval.getEnd().getYear()) {
@@ -190,7 +192,7 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used WHERE dataSource = :dataSource AND %s",
+                  "UPDATE %s SET used=:used, used_flag_last_updated = :used_flag_last_updated WHERE dataSource = :dataSource AND %s",
                   dbTables.getSegmentsTable(),
                   IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
               )
@@ -199,6 +201,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
+          .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
           .execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.

@@ -89,4 +89,10 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void alterSegmentTableAddUsedFlagLastUpdated()
+  {
+    throw new UnsupportedOperationException();
+  }
 }
