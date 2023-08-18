@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
-import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.apache.druid.tasklogs.TaskPayloadManager;
 

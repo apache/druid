@@ -32,9 +32,7 @@ import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
-import org.apache.druid.tasklogs.NoopTaskPayloadManager;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,7 +53,6 @@ public class KubernetesTaskRunnerFactoryTest
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
-  private TaskPayloadManager taskPayloadManager;
 
   @Before
   public void setup()
@@ -78,7 +75,6 @@ public class KubernetesTaskRunnerFactoryTest
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     properties = new Properties();
     druidKubernetesClient = new DruidKubernetesClient();
-    taskPayloadManager = new NoopTaskPayloadManager();
   }
 
   @Test

@@ -71,6 +71,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   private Task task;
   private K8sTaskId k8sTaskId;
   private TaskConfig taskConfig;
+
   @Before
   public void setup()
   {

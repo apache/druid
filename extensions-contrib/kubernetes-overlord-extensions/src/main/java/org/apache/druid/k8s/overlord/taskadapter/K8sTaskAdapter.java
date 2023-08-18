@@ -154,7 +154,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   }
 
   @Override
-  public K8sTaskId getTaskId(Job from) throws IOException {
+  public K8sTaskId getTaskId(Job from) throws IOException
+  {
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
       throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());

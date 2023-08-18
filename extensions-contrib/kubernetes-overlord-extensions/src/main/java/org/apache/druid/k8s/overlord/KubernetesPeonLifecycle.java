@@ -128,7 +128,6 @@ public class KubernetesPeonLifecycle
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
-      // Need to use the taskPayloadManager if we are not passing the task via env variable.
       if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
         writeTaskPayload(task);
       }
@@ -144,10 +143,6 @@ public class KubernetesPeonLifecycle
 
       return join(timeout);
     }
-    catch (IOException e) {
-      log.info("Failed to write task payload for: %s", taskId.getOriginalTaskId());
-      throw new RuntimeException(e);
-    }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
       shutdown();
@@ -158,15 +153,25 @@ public class KubernetesPeonLifecycle
     }
   }
 
-  private void writeTaskPayload(Task task) throws IOException {
-    Path file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
+  private void writeTaskPayload(Task task)
+  {
     try {
-      FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());
-      taskLogs.pushTaskPayload(task.getId(), file.toFile());
-    } catch (Exception e) {
+      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
+      try {
+        FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());
+        taskLogs.pushTaskPayload(task.getId(), file.toFile());
+      }
+      catch (Exception e) {
+        log.error("Failed to write task payload for task: %s", taskId.getOriginalTaskId());
+        throw new RuntimeException(e);
+      }
+      finally {
+        Files.deleteIfExists(file);
+      }
+    }
+    catch (IOException e) {
+      log.error("Failed to write task payload for task: %s", taskId.getOriginalTaskId());
       throw new RuntimeException(e);
-    } finally {
-      Files.deleteIfExists(file);
     }
   }
 

@@ -23,7 +23,6 @@ import com.google.common.base.Optional;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 
 public class NoopTaskLogs implements TaskLogs
@@ -67,12 +66,14 @@ public class NoopTaskLogs implements TaskLogs
   }
 
   @Override
-  public void pushTaskPayload(String taskid, File taskPayloadFile) {
+  public void pushTaskPayload(String taskid, File taskPayloadFile)
+  {
     log.info("Not pushing payload for task: %s", taskid);
   }
 
   @Override
-  public Optional<InputStream> streamTaskPayload(String taskid) {
+  public Optional<InputStream> streamTaskPayload(String taskid)
+  {
     return Optional.absent();
   }
 }

@@ -346,7 +346,8 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean isEnableTaskPayloadManagerPerTask() {
+  public boolean isEnableTaskPayloadManagerPerTask()
+  {
     return enableTaskPayloadManagerPerTask;
   }
 
