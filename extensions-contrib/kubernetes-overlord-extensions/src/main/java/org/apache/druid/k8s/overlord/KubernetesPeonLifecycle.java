@@ -73,9 +73,9 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long, Task)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long)} or {@link #join(long)} is called. */
     NOT_STARTED,
-    /** Lifecycle's state since {@link #run(Job, long, long, Task)} is called. */
+    /** Lifecycle's state since {@link #run(Job, long, long)} is called. */
     PENDING,
     /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
@@ -123,7 +123,7 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, Task task) throws IllegalStateException
+  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout) throws IllegalStateException
   {
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);

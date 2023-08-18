@@ -38,9 +38,7 @@ import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
-import org.apache.druid.tasklogs.NoopTaskPayloadManager;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -120,7 +118,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.run(job, 0L, 0L, task);
+    TaskStatus taskStatus = peonLifecycle.run(job, 0L, 0L);
 
     verifyAll();
 
@@ -166,12 +164,12 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    peonLifecycle.run(job, 0L, 0L, task);
+    peonLifecycle.run(job, 0L, 0L);
 
     Assert.assertThrows(
         "Task [id] failed to run: invalid peon lifecycle state transition [STOPPED]->[PENDING]",
         IllegalStateException.class,
-        () -> peonLifecycle.run(job, 0L, 0L, task)
+        () -> peonLifecycle.run(job, 0L, 0L)
     );
 
     verifyAll();
@@ -219,7 +217,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertThrows(
         Exception.class,
-        () -> peonLifecycle.run(job, 0L, 0L, task)
+        () -> peonLifecycle.run(job, 0L, 0L)
     );
 
     verifyAll();
