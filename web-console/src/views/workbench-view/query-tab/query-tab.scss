@@ -49,39 +49,20 @@ $vertical-gap: 6px;
       width: 100%;
       top: 0;
       bottom: 30px + $vertical-gap;
-      overflow: auto;
+      @include card-like;
+      overflow: hidden;
 
-      .helper-query {
-        margin-top: $vertical-gap;
+      .flexible-query-input {
+        height: 100%;
       }
 
-      .main-query {
-        position: relative;
-        @include card-like;
-        min-height: 100%;
-        overflow: hidden;
-
-        &.single {
-          height: 100%;
-
-          .flexible-query-input {
-            height: 100%;
-          }
-        }
-
-        &.multi {
-          min-height: calc(100% - 18px);
-          margin-top: $vertical-gap;
-        }
-
-        .corner {
-          position: absolute;
-          top: 0;
-          right: 0;
-          @include card-background;
-          z-index: 1;
-          padding: 3px;
-        }
+      .corner {
+        position: absolute;
+        top: 0;
+        right: 0;
+        @include card-background;
+        z-index: 1;
+        padding: 3px;
       }
     }
 
