@@ -25,10 +25,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
@@ -55,22 +53,20 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalciteQueryTest
 {
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TestDataBuilder.TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "m2"))
-          )
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TestDataBuilder.TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "m2"))
+      ),
+      null
   );
 
   private static final List<InputRow> ROWS1 =
-      TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, PARSER)).collect(Collectors.toList());
+      TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, SCHEMA)).collect(Collectors.toList());
 
   @Override
   public void configureGuice(DruidInjectorBuilder builder)

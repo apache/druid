@@ -16,20 +16,21 @@
  * limitations under the License.
  */
 
-import { Card, Icon, IconName, Intent } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Card, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
+import type { ExternalConfig, QueryContext, QueryWithContext } from '../../druid-models';
 import {
   Execution,
-  ExternalConfig,
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
-  QueryContext,
-  QueryWithContext,
 } from '../../druid-models';
-import { Capabilities, maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
+import type { Capabilities } from '../../helpers';
+import { maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
 import { useLocalStorageState } from '../../hooks';
 import { AppToaster } from '../../singletons';
 import { deepDelete, LocalStorageKeys } from '../../utils';
@@ -51,13 +52,13 @@ interface LoaderContent extends QueryWithContext {
 export interface SqlDataLoaderViewProps {
   capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { capabilities, goToQuery, goToIngestion } = props;
+  const { capabilities, goToQuery, goToTask } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
@@ -231,7 +232,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <IngestionProgressDialog
           taskId={content.id}
           goToQuery={goToQuery}
-          goToIngestion={goToIngestion}
+          goToTask={goToTask}
           onReset={() => setContent(undefined)}
           onClose={() => setContent(deepDelete(content, 'id'))}
         />

@@ -28,20 +28,22 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
+import type { JSX } from 'react';
 import React from 'react';
 import AceEditor from 'react-ace';
 
 import { Loader } from '../../../components';
-import { DruidEngine, isEmptyContext, QueryContext, QueryWithContext } from '../../../druid-models';
+import type { DruidEngine, QueryContext, QueryWithContext } from '../../../druid-models';
+import { isEmptyContext } from '../../../druid-models';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
+import type { QueryExplanation } from '../../../utils';
 import {
   deepGet,
   formatSignature,
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
-  QueryExplanation,
 } from '../../../utils';
 
 import './explain-dialog.scss';

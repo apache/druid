@@ -20,62 +20,59 @@
 package org.apache.druid.collections.bitmap;
 
 import com.google.common.annotations.VisibleForTesting;
+import it.unimi.dsi.fastutil.ints.IntIterators;
+import it.unimi.dsi.fastutil.ints.IntListIterator;
+import org.apache.druid.extendedset.intset.EmptyIntIterator;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.PeekableIntIterator;
-import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringBitmapWriter;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class WrappedRoaringBitmap implements MutableBitmap
 {
-  // attempt to compress long runs prior to serialization (requires RoaringBitmap version 0.5 or better)
-  // this may improve compression greatly in some cases at the expense of slower serialization
-  // in the worst case.
-  private final boolean compressRunOnSerialization;
+  private static final int ARRAY_SIZE = 4;
+  private static final int NOT_SET = -1;
+
   /**
    * Underlying bitmap.
    */
+  @Nullable
   private RoaringBitmapWriter<MutableRoaringBitmap> writer;
 
   /**
-   * Creates a new WrappedRoaringBitmap wrapping an empty MutableRoaringBitmap
+   * Array used instead of {@link #writer} when the number of distinct values is less than {@link #ARRAY_SIZE}.
+   * Saves memory vs. a full {@link RoaringBitmapWriter}.
+   */
+  @Nullable
+  private int[] smallArray;
+
+  /**
+   * Creates a new, empty bitmap.
    */
   public WrappedRoaringBitmap()
   {
-    this(RoaringBitmapFactory.DEFAULT_COMPRESS_RUN_ON_SERIALIZATION);
-  }
-
-  /**
-   * Creates a new WrappedRoaringBitmap wrapping an empty MutableRoaringBitmap
-   *
-   * @param compressRunOnSerialization indicates whether to call {@link RoaringBitmap#runOptimize()} before serializing
-   */
-  public WrappedRoaringBitmap(boolean compressRunOnSerialization)
-  {
-    this.writer = RoaringBitmapWriter.bufferWriter().get();
-    this.compressRunOnSerialization = compressRunOnSerialization;
   }
 
   @VisibleForTesting
   public ImmutableBitmap toImmutableBitmap()
   {
+    initializeWriterIfNeeded();
     MutableRoaringBitmap bitmap = writer.get().clone();
-    if (compressRunOnSerialization) {
-      bitmap.runOptimize();
-    }
+    bitmap.runOptimize();
     return new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap());
   }
 
   @Override
   public byte[] toBytes()
   {
+    initializeWriterIfNeeded();
     try {
       MutableRoaringBitmap bitmap = writer.get();
-      if (compressRunOnSerialization) {
-        bitmap.runOptimize();
-      }
+      bitmap.runOptimize();
       ByteBuffer buffer = ByteBuffer.allocate(bitmap.serializedSizeInBytes());
       bitmap.serialize(buffer);
       return buffer.array();
@@ -88,83 +85,173 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public void clear()
   {
-    this.writer.reset();
+    this.writer = null;
+    this.smallArray = null;
   }
 
   @Override
   public void or(MutableBitmap mutableBitmap)
   {
+    initializeWriterIfNeeded();
     WrappedRoaringBitmap other = (WrappedRoaringBitmap) mutableBitmap;
+    other.initializeWriterIfNeeded();
     MutableRoaringBitmap unwrappedOtherBitmap = other.writer.get();
     writer.get().or(unwrappedOtherBitmap);
   }
 
-
   @Override
   public int getSizeInBytes()
   {
+    initializeWriterIfNeeded();
     MutableRoaringBitmap bitmap = writer.get();
-    if (compressRunOnSerialization) {
-      bitmap.runOptimize();
-    }
+    bitmap.runOptimize();
     return bitmap.serializedSizeInBytes();
   }
 
   @Override
   public void add(int entry)
   {
-    writer.add(entry);
+    if (entry < 0) {
+      throw new IllegalArgumentException("Cannot add negative ints");
+    } else if (writer != null) {
+      writer.add(entry);
+    } else {
+      if (smallArray == null) {
+        smallArray = new int[ARRAY_SIZE];
+        Arrays.fill(smallArray, NOT_SET);
+      }
+
+      for (int i = 0; i < smallArray.length; i++) {
+        if (smallArray[i] == NOT_SET) {
+          if (i > 0 && entry <= smallArray[i - 1]) {
+            // Can't handle nonascending order with smallArray
+            break;
+          }
+
+          smallArray[i] = entry;
+          return;
+        }
+      }
+
+      initializeWriterIfNeeded();
+      smallArray = null;
+      writer.add(entry);
+    }
   }
 
   @Override
   public int size()
   {
-    return writer.get().getCardinality();
+    if (writer != null) {
+      return writer.get().getCardinality();
+    } else if (smallArray != null) {
+      for (int i = 0; i < smallArray.length; i++) {
+        if (smallArray[i] == NOT_SET) {
+          return i;
+        }
+      }
+
+      return ARRAY_SIZE;
+    } else {
+      return 0;
+    }
   }
 
   public void serialize(ByteBuffer buffer)
   {
+    initializeWriterIfNeeded();
     MutableRoaringBitmap bitmap = writer.get();
-    if (compressRunOnSerialization) {
-      bitmap.runOptimize();
-    }
+    bitmap.runOptimize();
     bitmap.serialize(buffer);
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + writer.getUnderlying();
+    if (writer != null) {
+      return getClass().getSimpleName() + writer.getUnderlying();
+    } else if (smallArray != null) {
+      return getClass().getSimpleName() + Arrays.toString(smallArray);
+    } else {
+      return getClass().getSimpleName() + "[]";
+    }
   }
 
   @Override
   public void remove(int entry)
   {
+    initializeWriterIfNeeded();
     writer.get().remove(entry);
   }
 
   @Override
   public IntIterator iterator()
   {
-    return writer.get().getIntIterator();
+    if (writer != null) {
+      return writer.get().getIntIterator();
+    } else if (smallArray != null) {
+      final int sz = size();
+
+      class SmallArrayIterator implements IntIterator
+      {
+        private final IntListIterator iterator;
+
+        public SmallArrayIterator(IntListIterator iterator)
+        {
+          this.iterator = iterator;
+        }
+
+        @Override
+        public IntIterator clone()
+        {
+          return new SmallArrayIterator(IntIterators.wrap(smallArray, 0, sz));
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+          return iterator.hasNext();
+        }
+
+        @Override
+        public int next()
+        {
+          return iterator.nextInt();
+        }
+      }
+
+      return new SmallArrayIterator(IntIterators.wrap(smallArray, 0, sz));
+    } else {
+      return EmptyIntIterator.instance();
+    }
   }
 
   @Override
   public PeekableIntIterator peekableIterator()
   {
-    return writer.get().getIntIterator();
+    if (writer != null) {
+      return writer.get().getIntIterator();
+    } else {
+      return new PeekableIteratorAdapter<>(iterator());
+    }
   }
 
   @Override
   public boolean isEmpty()
   {
-    return writer.get().isEmpty();
+    if (writer != null) {
+      return writer.get().isEmpty();
+    } else {
+      return smallArray == null;
+    }
   }
 
   @Override
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap)
   {
+    initializeWriterIfNeeded();
     WrappedRoaringBitmap other = (WrappedRoaringBitmap) otherBitmap;
+    other.initializeWriterIfNeeded();
     MutableRoaringBitmap unwrappedOtherBitmap = other.writer.get();
     return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.and(writer.get(), unwrappedOtherBitmap));
   }
@@ -172,6 +259,37 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public boolean get(int value)
   {
-    return writer.get().contains(value);
+    if (value < 0) {
+      return false;
+    } else if (writer != null) {
+      return writer.get().contains(value);
+    } else if (smallArray != null) {
+      for (int i : smallArray) {
+        if (i == value) {
+          return true;
+        }
+      }
+
+      return false;
+    } else {
+      return false;
+    }
+  }
+
+  private void initializeWriterIfNeeded()
+  {
+    if (writer == null) {
+      writer = RoaringBitmapWriter.bufferWriter().get();
+
+      if (smallArray != null) {
+        for (int i : smallArray) {
+          if (i != NOT_SET) {
+            writer.add(i);
+          }
+        }
+
+        smallArray = null;
+      }
+    }
   }
 }

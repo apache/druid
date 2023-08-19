@@ -31,8 +31,8 @@ import org.apache.druid.query.rowsandcols.column.ColumnValueSwapper;
 import org.apache.druid.query.rowsandcols.column.DefaultVectorCopier;
 import org.apache.druid.query.rowsandcols.column.LimitedColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
-import org.apache.druid.query.rowsandcols.column.ObjectColumnAccessorBase;
 import org.apache.druid.query.rowsandcols.column.VectorCopier;
+import org.apache.druid.query.rowsandcols.column.accessor.ObjectColumnAccessorBase;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
@@ -291,7 +291,8 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
       swappers.add(swapper);
     }
 
-    Arrays.quickSort(
+    // Use stable sort, so peer rows retain original order.
+    Arrays.mergeSort(
         0,
         rows.size(),
         (lhs, rhs) -> {

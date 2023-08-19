@@ -29,6 +29,13 @@ describe('TableCell', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot empty string', () => {
+    const tableCell = <TableCell value="" />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot simple', () => {
     const tableCell = <TableCell value="Hello World" />;
 

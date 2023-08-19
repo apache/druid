@@ -87,7 +87,7 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
-    return new AggregatorAndSize(factorize(metricFactory), getMaxIntermediateSize());
+    return new AggregatorAndSize(factorize(metricFactory), guessAggregatorHeapFootprint(0));
   }
 
   /**

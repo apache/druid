@@ -28,6 +28,7 @@ import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -59,7 +60,8 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           SEGMENT_CACHE_CONFIG_DEFAULT,
           new NoopEscalator(),
-          new BrokerInternalQueryConfig()
+          new BrokerInternalQueryConfig(),
+          new NoopServiceEmitter()
       );
 
       cache.start();

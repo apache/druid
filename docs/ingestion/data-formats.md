@@ -1,6 +1,7 @@
 ---
 id: data-formats
-title: "Data formats"
+title: Source input formats
+sidebar_label: Source input formats
 ---
 
 <!--
@@ -27,7 +28,7 @@ We welcome any contributions to new formats.
 
 This page lists all default and core extension data formats supported by Druid.
 For additional data formats supported with community extensions,
-please see our [community extensions list](../development/extensions.md#community-extensions).
+please see our [community extensions list](../configuration/extensions.md#community-extensions).
 
 ## Formatting data
 
@@ -76,7 +77,9 @@ parsing data is less efficient than writing a native Java parser or using an ext
 
 You can use the `inputFormat` field to specify the data format for your input data.
 
-> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+:::info
+ `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+:::
 
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
@@ -150,7 +153,7 @@ Configure the TSV `inputFormat` to load TSV data as follows:
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
- For example:
+For example:
 
 ```json
 "ioConfig": {
@@ -163,76 +166,12 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 }
 ```
 
-### Kafka
-
-Configure the Kafka `inputFormat` to load complete kafka records including header, key, and value.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `type` | String | Set value to `kafka`. | yes |
-| `headerLabelPrefix` | String | Custom label prefix for all the header columns. | no (default = "kafka.header.") |
-| `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
-| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
-| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
-| `keyFormat` | [InputFormat](#input-format) | Any existing `inputFormat` used to parse the Kafka key. It only processes the first entry of the input format. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
-| `valueFormat` | [InputFormat](#input-format) | `valueFormat` can be any existing `inputFormat` to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
-
-For example:
-
-```
-"ioConfig": {
-  "inputFormat": {
-      "type": "kafka",
-      "headerLabelPrefix": "kafka.header.",
-      "timestampColumnName": "kafka.timestamp",
-      "keyColumnName": "kafka.key",
-      "headerFormat":
-      {
-        "type": "string"
-      },
-      "keyFormat":
-      {
-        "type": "json"
-      },
-      "valueFormat":
-      {
-        "type": "json"
-      }
-  },
-  ...
-}
-```
-
-Note the following behaviors:
-
-- If there are conflicts between column names, Druid uses the column names from the payload and ignores the column name from the header or key. This behavior makes it easier to migrate to the the Kafka `inputFormat` from another Kafka ingestion spec without losing data.
-- The Kafka input format fundamentally blends information from the header, key, and value objects from a Kafka record to create a row in Druid. It extracts individual records from the value. Then it augments each value with the corresponding key or header columns.
-- The Kafka input format by default exposes Kafka timestamp `timestampColumnName` to make it available for use as the primary timestamp column. Alternatively you can choose timestamp column from either the key or value payload.
-
-For example, the following `timestampSpec` uses the default Kafka timestamp from the Kafka record:
-
-```json
-"timestampSpec":
-{
-    "column": "kafka.timestamp",
-    "format": "millis"
-}
-```
-
-If you are using "kafka.header." as the prefix for Kafka header columns and there is a timestamp field in the header, the header timestamp serves as the primary timestamp column. For example:
-
-```json
-"timestampSpec":
-{
-    "column": "kafka.header.timestamp",
-    "format": "millis"
-}
-```
-
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).
-> To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
+:::info
+ To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
+:::
 
 Configure the ORC `inputFormat` to load ORC data as follows:
 
@@ -354,9 +293,11 @@ If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 
 ###### Inline Schema Based Avro Bytes Decoder
 
-> The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
-> may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
-> allows the parser to identify the proper Avro schema for reading records.
+:::info
+ The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
+ may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
+ allows the parser to identify the proper Avro schema for reading records.
+:::
 
 This decoder can be used if all the input events can be read using the same schema. In this case, specify the schema in the input task JSON itself, as described below.
 
@@ -420,7 +361,7 @@ Note that it is essentially a map of integer schema ID to avro schema object. Th
 
 ##### SchemaRepo Based Avro Bytes Decoder
 
-This Avro bytes decoder first extracts `subject` and `id` from the input message bytes, and then uses them to look up the Avro schema used to decode the Avro record from bytes. For details, see the [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. For information on registering a schema on the message producer side, see `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
+This Avro bytes decoder first extracts `subject` and `id` from the input message bytes, and then uses them to look up the Avro schema used to decode the Avro record from bytes. For details, see the [schema repo](https://github.com/schema-repo/schema-repo). You need an HTTP service like schema repo to hold the Avro schema. For information on registering a schema on the message producer side, see `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -568,7 +509,9 @@ For example:
 
 ### Protobuf
 
-> You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
+:::info
+ You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
+:::
 
 Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
@@ -604,7 +547,88 @@ For example:
 }
 ```
 
-### FlattenSpec
+### Kafka
+
+`kafka` is a special input format that wraps a regular input format (which goes in `valueFormat`) and allows you
+to parse the Kafka metadata (timestamp, headers, and key) that is part of Kafka messages.
+It should only be used when ingesting from Apache Kafka. 
+
+Configure the Kafka `inputFormat` as follows:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `type` | String | Set value to `kafka`. | yes |
+| `valueFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
+| `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
+| `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
+| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
+| `keyFormat` | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
+| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
+
+The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
+
+If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
+This ensures that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.  
+
+Here is a minimal example that only augments the parsed payload with the Kafka timestamp column:
+
+```
+"ioConfig": {
+  "inputFormat": {
+    "type": "kafka",
+    "valueFormat": {
+      "type": "json"
+    }
+  },
+  ...
+}
+```
+
+Here is a complete example:
+
+```
+"ioConfig": {
+  "inputFormat": {
+    "type": "kafka",
+    "valueFormat": {
+      "type": "json"
+    }
+    "timestampColumnName": "kafka.timestamp",
+    "headerFormat": {
+      "type": "string",
+      "encoding": "UTF-8"
+    },
+    "headerColumnPrefix": "kafka.header.",
+    "keyFormat": {
+      "type": "tsv",
+      "findColumnsFromHeader": false,
+      "columns": ["x"]
+    },
+    "keyColumnName": "kafka.key",
+  },
+  ...
+}
+```
+
+If you want to use `kafka.timestamp` as Druid's primary timestamp (`__time`), specify it as the value for `column` in the `timestampSpec`:
+
+```json
+"timestampSpec": {
+  "column": "kafka.timestamp",
+  "format": "millis"
+}
+```
+
+Similarly, if you want to use a timestamp extracted from the Kafka header:
+
+```json
+"timestampSpec": {
+  "column": "kafka.header.myTimestampHeader",
+  "format": "millis"
+}
+```
+
+## FlattenSpec
 
 You can use the `flattenSpec` object to flatten nested data, as an alternative to the Druid [nested columns](../querying/nested-columns.md) feature, and for nested input formats unsupported by the feature. It is an object within the `inputFormat` object.
 
@@ -635,7 +659,7 @@ After Druid reads the input data records, it applies the flattenSpec before appl
 
 Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`, and `parquet`.
 
-#### Field flattening specifications
+### Field flattening specifications
 
 Each entry in the `fields` list can have the following components:
 
@@ -646,13 +670,13 @@ Each entry in the `fields` list can have the following components:
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
 | nodes | For `tree` only. Multiple-expression field for accessing the field while flattening, representing the hierarchy of field names to read. For other types, this parameter must not be provided. | none (required for type `tree`) |
 
-#### Notes on flattening
+### Notes on flattening
 
 - For convenience, when defining a root-level field, it is possible to define only the field name, as a string, instead of a JSON object. For example, `{"name": "baz", "type": "root"}` is equivalent to `"baz"`.
 - Enabling `useFieldDiscovery` will only automatically detect "simple" fields at the root level that correspond to data types that Druid supports. This includes strings, numbers, and lists of strings or numbers. Other types will not be automatically detected, and must be specified explicitly in the `fields` list.
 - Duplicate field `name`s are not allowed. An exception will be thrown.
 - If `useFieldDiscovery` is enabled, any discovered field with the same name as one already defined in the `fields` list will be skipped, rather than added twice.
-- [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing `path`-type expressions.
+- [JSONPath evaluator](https://jsonpath.com/) is useful for testing `path`-type expressions.
 - jackson-jq supports a subset of the full [jq](https://stedolan.github.io/jq/) syntax.  Please refer to the [jackson-jq documentation](https://github.com/eiiches/jackson-jq) for details.
 - [JsonPath](https://github.com/jayway/JsonPath) supports a bunch of functions, but not all of these functions are supported by Druid now. Following matrix shows the current supported JsonPath functions and corresponding data formats. Please also note the output data type of these functions.
   
@@ -670,12 +694,14 @@ Each entry in the `fields` list can have the following components:
 
 ## Parser
 
-> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
+:::info
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
 and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
+:::
 
 This section lists all default and core extension parsers.
-For community extension parsers, please see our [community extensions list](../development/extensions.md#community-extensions).
+For community extension parsers, please see our [community extensions list](../configuration/extensions.md#community-extensions).
 
 ### String Parser
 
@@ -689,9 +715,13 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 ### Avro Hadoop Parser
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::info
+ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`.
@@ -748,10 +778,14 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 
 ### ORC Hadoop Parser
 
-> You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
+:::info
+ You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
+:::
 
-> If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
-> please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+:::info
+ If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
+ please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+:::
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.orc.mapreduce.OrcInputFormat"`.
@@ -989,7 +1023,9 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Parquet Hadoop Parser
 
-> You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
+:::info
+ You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
+:::
 
 The Parquet Hadoop parser is for [Hadoop batch ingestion](./hadoop.md) and parses Parquet files directly.
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `org.apache.druid.data.input.parquet.DruidParquetInputFormat`.
@@ -1131,12 +1167,16 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 
 ### Parquet Avro Hadoop Parser
 
-> Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest
+:::info
+ Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest
 Parquet files. See [Parquet Hadoop Parser vs Parquet Avro Hadoop Parser](#parquet-hadoop-parser-vs-parquet-avro-hadoop-parser)
 for the differences between those parsers.
+:::
 
-> You need to include both the [`druid-parquet-extensions`](../development/extensions-core/parquet.md)
+:::info
+ You need to include both the [`druid-parquet-extensions`](../development/extensions-core/parquet.md)
 [`druid-avro-extensions`] as extensions to use the Parquet Avro Hadoop Parser.
+:::
 
 The Parquet Avro Hadoop Parser is for [Hadoop batch ingestion](./hadoop.md).
 This parser first converts the Parquet data into Avro records, and then parses them to ingest into Druid.
@@ -1218,9 +1258,13 @@ an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/ti
 
 ### Avro Stream Parser
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+:::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+:::
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::info
+ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Avro data from a stream directly.
 
@@ -1260,7 +1304,9 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
 
 ### Protobuf Parser
 
-> You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
+:::info
+ You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
+:::
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Protocol buffer data from a stream directly.
 
@@ -1414,9 +1460,11 @@ Multiple Instances:
 
 ## ParseSpec
 
-> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
+:::info
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
 and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
+:::
 
 ParseSpecs serve two purposes:
 
@@ -1452,7 +1500,9 @@ Sample spec:
 
 ### JSON Lowercase ParseSpec
 
-> The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+:::info
+ The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+:::
 
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
 
@@ -1592,7 +1642,9 @@ columns names ("column_1", "column2", ... "column_n") will be assigned. Ensure t
 Note with the JavaScript parser that data must be fully parsed and returned as a `{key:value}` format in the JS logic.
 This means any flattening or parsing multi-dimensional values must be done here.
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### TimeAndDims ParseSpec
 

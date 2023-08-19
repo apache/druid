@@ -77,7 +77,7 @@ public class HllSketchMergeBufferAggregatorHelper
    * Helper for implementing {@link org.apache.druid.query.aggregation.BufferAggregator#get} and
    * {@link org.apache.druid.query.aggregation.VectorAggregator#get}.
    */
-  public Object get(ByteBuffer buf, int position)
+  public HllSketch get(ByteBuffer buf, int position)
   {
     final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
     final Union union = Union.writableWrap(mem);

@@ -23,6 +23,7 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -31,6 +32,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 
 public class GoogleDataSegmentPullerTest extends EasyMockSupport
 {
@@ -63,5 +66,39 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
     finally {
       FileUtils.deleteDirectory(outDir);
     }
+  }
+
+  @Test
+  public void testGetVersionBucketNameWithUnderscores() throws IOException
+  {
+    String bucket = "bucket_test";
+    String prefix = "prefix/";
+    String version = "0";
+
+    GoogleStorage storage = createMock(GoogleStorage.class);
+    EasyMock.expect(storage.version(EasyMock.eq(bucket), EasyMock.eq(prefix))).andReturn("0");
+    EasyMock.replay(storage);
+
+    GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
+
+    String actual = puller.getVersion(URI.create(StringUtils.format("gs://%s/%s", bucket, prefix)));
+    Assert.assertEquals(version, actual);
+    EasyMock.verify(storage);
+  }
+
+  @Test
+  public void testGetInputStreamBucketNameWithUnderscores() throws IOException
+  {
+    String bucket = "bucket_test";
+    String prefix = "prefix/";
+
+    GoogleStorage storage = createMock(GoogleStorage.class);
+    EasyMock.expect(storage.get(EasyMock.eq(bucket), EasyMock.eq(prefix))).andReturn(EasyMock.createMock(InputStream.class));
+    EasyMock.replay(storage);
+
+    GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
+
+    puller.getInputStream(URI.create(StringUtils.format("gs://%s/%s", bucket, prefix)));
+    EasyMock.verify(storage);
   }
 }

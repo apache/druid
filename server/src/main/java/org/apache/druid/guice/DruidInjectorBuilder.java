@@ -186,7 +186,7 @@ public class DruidInjectorBuilder
     // Modules config is optional: it won't be present in tests or clients.
     String moduleClassName = moduleClass.getName();
     if (moduleClassName != null && modulesConfig.getExcludeList().contains(moduleClassName)) {
-      log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
+      log.info("Not loading module %s because it is present in excludeList", moduleClassName);
       return false;
     }
 

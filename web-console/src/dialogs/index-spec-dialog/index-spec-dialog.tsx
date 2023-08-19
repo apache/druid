@@ -19,8 +19,10 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
-import { INDEX_SPEC_FIELDS, IndexSpec } from '../../druid-models';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
+import type { IndexSpec } from '../../druid-models';
+import { INDEX_SPEC_FIELDS } from '../../druid-models';
 
 import './index-spec-dialog.scss';
 
@@ -48,22 +50,25 @@ export const IndexSpecDialog = React.memo(function IndexSpecDialog(props: IndexS
       canOutsideClickClose={false}
       title={title ?? 'Index spec'}
     >
-      <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+      <FormJsonSelector
+        tab={currentTab}
+        onChange={t => {
+          setJsonError(undefined);
+          setCurrentTab(t);
+        }}
+      />
       <div className="content">
         {currentTab === 'form' ? (
           <AutoForm
             fields={INDEX_SPEC_FIELDS}
             model={currentIndexSpec}
-            onChange={m => setCurrentIndexSpec(m)}
+            onChange={setCurrentIndexSpec}
           />
         ) : (
           <JsonInput
             value={currentIndexSpec}
-            onChange={v => {
-              setCurrentIndexSpec(v);
-              setJsonError(undefined);
-            }}
-            onError={setJsonError}
+            onChange={setCurrentIndexSpec}
+            setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, INDEX_SPEC_FIELDS)}
             height="100%"
           />

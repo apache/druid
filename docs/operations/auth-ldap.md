@@ -63,7 +63,9 @@ memberOf: cn=mygroup,ou=groups,dc=example,dc=com
 
 You use this information to map the LDAP group to Druid roles in a later step. 
 
-> Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles).
+:::info
+ Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles).
+:::
 
 ## Configure Druid for LDAP authentication
 
@@ -105,7 +107,9 @@ In the example below, the LDAP user is `internal@example.com`.
    - `userAttribute`: The user search attribute.
    - `internal@example.com` is the LDAP user you created in step 1. In the example it serves as both the internal client user and the initial admin user.
 
-   > In the above example, the [Druid escalator](../development/extensions-core/druid-basic-security.md#escalator) and LDAP initial admin user are set to the same user - `internal@example.com`. If the escalator is set to a different user, you must follow steps 4 and 5 to create the group mapping and allocate initial roles before the rest of the cluster can function.
+:::info
+ In the above example, the [Druid escalator](../development/extensions-core/druid-basic-security.md#escalator) and LDAP initial admin user are set to the same user - `internal@example.com`. If the escalator is set to a different user, you must follow steps 4 and 5 to create the group mapping and allocate initial roles before the rest of the cluster can function.
+:::
 
 4. Save your group mapping to a JSON file. An example file `groupmap.json` looks like this:
    
@@ -224,13 +228,13 @@ You only need to complete this step if:
 Example request to add the LDAP user `myuser` to Druid:
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/myuser 
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/myuser 
 ```
 
 Example request to assign the `myuser` user to the `queryRole` role:
 
 ```
-curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/myuser/roles/queryRole
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/myuser/roles/queryRole
 ```
 
 ## Enable LDAP over TLS (LDAPS)

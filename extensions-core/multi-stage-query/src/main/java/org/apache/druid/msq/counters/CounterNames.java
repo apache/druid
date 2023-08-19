@@ -35,6 +35,7 @@ public class CounterNames
   private static final String OUTPUT = "output";
   private static final String SHUFFLE = "shuffle";
   private static final String SORT_PROGRESS = "sortProgress";
+  private static final String SEGMENT_GENERATION_PROGRESS = "segmentGenerationProgress";
   private static final String WARNINGS = "warnings";
   private static final Comparator<String> COMPARATOR = new NameComparator();
 
@@ -81,6 +82,14 @@ public class CounterNames
   public static String warnings()
   {
     return WARNINGS;
+  }
+
+  /**
+   * Standard name for segment generation counter created by {@link CounterTracker#segmentGenerationProgress()}.
+   */
+  public static String getSegmentGenerationProgress()
+  {
+    return SEGMENT_GENERATION_PROGRESS;
   }
 
   /**

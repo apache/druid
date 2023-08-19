@@ -13,27 +13,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Unit & Integration tests CI
+name: "Unit & Integration tests CI"
 on:
   push:
+    paths-ignore:
+      - '**/*.md'
+      - 'dev/**'
+      - 'docs/**'
+      - 'examples/**/jupyter-notebooks/**'
+      - 'helm/**'
+      - 'web-console/**'
+      - 'website/**'
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'dev/**'
+      - 'docs/**'
+      - 'examples/**/jupyter-notebooks/**'
+      - 'helm/**'
+      - 'web-console/**'
+      - 'website/**'
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
 env:
+  MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
   build:
-    name: build (jdk${{ matrix.jdk }})
+    name: "build (jdk${{ matrix.jdk }})"
     strategy:
       fail-fast: false
       matrix:
@@ -43,11 +62,9 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Setup java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.jdk }}
+      - name: setup jdk${{ matrix.jdk }}
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ matrix.jdk }}_X64" >> $GITHUB_ENV
 
       - name: Cache Maven m2 repository
         id: maven
@@ -55,8 +72,6 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}
 
       - name: Cache targets
         id: target
@@ -65,8 +80,6 @@ jobs:
           path: |
             ./**/target
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
 
       - name: Cache image
         id: docker_container
@@ -76,8 +89,6 @@ jobs:
           path: |
             ./druid-container-jdk${{ matrix.jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
-          restore-keys: |
-            druid-container-jdk${{ matrix.jdk }}.tar.gz-
 
       - name: Maven build
         id: maven_build
@@ -96,35 +107,36 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
+  unit-tests-phase2:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 11, 17 ]
+    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
+    uses: ./.github/workflows/unit-tests.yml
+    needs: unit-tests
+    with:
+      jdk: ${{ matrix.jdk }}
+      sql_compatibility: true
+
   unit-tests:
     strategy:
       fail-fast: false
       matrix:
         sql_compatibility: [ false, true ]
-    name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
+    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
       jdk: 8
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
-  unit-tests-phase2:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [11, 17]
-        sql_compatibility: [ false, true ]
-    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
-    uses: ./.github/workflows/unit-tests.yml
-    needs: unit-tests
-    with:
-      jdk: ${{ matrix.jdk }}
-      sql_compatibility: ${{ matrix.sql_compatibility }}
-
   standard-its:
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml

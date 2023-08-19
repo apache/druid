@@ -21,8 +21,6 @@ package org.apache.druid.msq.querykit.common;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -33,7 +31,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.Cursor;
 
@@ -47,8 +44,10 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
   private final ReadableFrameChannel inputChannel;
   private final WritableFrameChannel outputChannel;
   private final FrameReader frameReader;
+  private final FrameWriterFactory frameWriterFactory;
   private final long offset;
   private final long limit;
+  private final boolean inputSignatureMatchesOutputSignature;
 
   long rowsProcessedSoFar = 0L;
 
@@ -56,6 +55,7 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
       ReadableFrameChannel inputChannel,
       WritableFrameChannel outputChannel,
       FrameReader frameReader,
+      FrameWriterFactory frameWriterFactory,
       long offset,
       long limit
   )
@@ -63,8 +63,10 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
     this.inputChannel = inputChannel;
     this.outputChannel = outputChannel;
     this.frameReader = frameReader;
+    this.frameWriterFactory = frameWriterFactory;
     this.offset = offset;
     this.limit = limit;
+    this.inputSignatureMatchesOutputSignature = frameReader.signature().equals(frameWriterFactory.signature());
 
     if (offset < 0 || limit < 0) {
       throw new ISE("Offset and limit must be nonnegative");
@@ -130,31 +132,25 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
       // Offset is past the end of the frame; skip it.
       rowsProcessedSoFar += frame.numRows();
       return null;
-    } else if (startRow == 0 && endRow == frame.numRows()) {
+    } else if (startRow == 0
+               && endRow == frame.numRows()
+               && inputSignatureMatchesOutputSignature
+               && frameWriterFactory.frameType().equals(frame.type())) {
+      // Want the whole frame; emit it as-is.
       rowsProcessedSoFar += frame.numRows();
       return frame;
     }
 
     final Cursor cursor = FrameProcessors.makeCursor(frame, frameReader);
 
-    // Using an unlimited memory allocator to make sure that atleast a single frame can always be generated
-    final HeapMemoryAllocator unlimitedAllocator = HeapMemoryAllocator.unlimited();
-
     long rowsProcessedSoFarInFrame = 0;
-
-    final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
-        unlimitedAllocator,
-        frameReader.signature(),
-        Collections.emptyList()
-    );
 
     try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
       while (!cursor.isDone() && rowsProcessedSoFarInFrame < endRow) {
         if (rowsProcessedSoFarInFrame >= startRow && !frameWriter.addSelection()) {
           // Don't retry; it can't work because the allocator is unlimited anyway.
           // Also, I don't think this line can be reached, because the allocator is unlimited.
-          throw new FrameRowTooLargeException(unlimitedAllocator.capacity());
+          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
         }
 
         cursor.advance();

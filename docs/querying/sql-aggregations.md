@@ -30,8 +30,10 @@ sidebar_label: "Aggregation functions"
   patterns in this markdown file and parse it to TypeScript file for web console
 -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 You can use aggregation functions in the SELECT clause of any [Druid SQL](./sql.md) query.
 
@@ -56,12 +58,14 @@ always return 0 as the initial value.
 
 In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
 
-> The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
-> functions can produce inconsistent results across the same query. 
->
-> Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
-> results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
-> consider using the `ROUND` function to smooth out the inconsistencies between queries.
+:::info
+ The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
+ functions can produce inconsistent results across the same query.
+
+ Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
+ results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
+ consider using the `ROUND` function to smooth out the inconsistencies between queries.
+:::
 
 |Function|Notes|Default|
 |--------|-----|-------|
@@ -86,7 +90,7 @@ In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and 
 |`EARLIEST(expr, maxBytesPerString)`|Like `EARLIEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit are truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
 |`EARLIEST_BY(expr, timestampExpr)`|Returns the earliest value of `expr`, which must be numeric. The earliest value of `expr` is taken from the row with the overall earliest non-null value of `timestampExpr`. If the earliest non-null value of `timestampExpr` appears in multiple rows, the `expr` may be taken from any of those rows.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`EARLIEST_BY(expr, timestampExpr, maxBytesPerString)`| Like `EARLIEST_BY(expr, timestampExpr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit are truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
-|`LATEST(expr)`|Returns the latest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like `__time` in a Druid datasource), the "latest" is taken from the row with the overall latest non-null value of the timestamp column. If the latest non-null value of the timestamp column appears in multiple rows, the `expr` may be taken from any of those rows. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
+|`LATEST(expr)`|Returns the latest value of `expr`, which must be numeric. The `expr` must come from a relation with a timestamp column (like `__time` in a Druid datasource) and the "latest" is taken from the row with the overall latest non-null value of the timestamp column. If the latest non-null value of the timestamp column appears in multiple rows, the `expr` may be taken from any of those rows. |`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit are truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
 |`LATEST_BY(expr, timestampExpr)`|Returns the latest value of `expr`, which must be numeric. The latest value of `expr` is taken from the row with the overall latest non-null value of `timestampExpr`. If the overall latest non-null value of `timestampExpr` appears in multiple rows, the `expr` may be taken from any of those rows.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`LATEST_BY(expr, timestampExpr, maxBytesPerString)`|Like `LATEST_BY(expr, timestampExpr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit are truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
@@ -97,8 +101,8 @@ In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and 
 |`ARRAY_AGG(DISTINCT expr, [size])`|Collects all distinct values of `expr` into an ARRAY, including null values, with `size` in bytes limit on aggregation size (default of 1024 bytes) per aggregate. If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_AGG` expression is not currently supported, and the ordering of results will be based on the default for the element type.|`null`|
 |`ARRAY_CONCAT_AGG(expr, [size])`|Concatenates all array `expr` into a single ARRAY, with `size` in bytes limit on aggregation size (default of 1024 bytes).   Input `expr` _must_ be an array. Null `expr` will be ignored, but any null values within an `expr` _will_ be included in the resulting array. If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_CONCAT_AGG` expression is not currently supported, and the ordering of results within the output array may vary depending on processing order.|`null`|
 |`ARRAY_CONCAT_AGG(DISTINCT expr, [size])`|Concatenates all distinct values of all array `expr` into a single ARRAY, with `size` in bytes limit on aggregation size (default of 1024 bytes) per aggregate. Input `expr` _must_ be an array. Null `expr` will be ignored, but any null values within an `expr` _will_ be included in the resulting array. If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_CONCAT_AGG` expression is not currently supported, and the ordering of results will be based on the default for the element type.|`null`|
-|`STRING_AGG(expr, separator, [size])`|Collects all values of `expr` into a single STRING, ignoring null values. Each value is joined by the `separator` which must be a literal STRING. An optional `size` in bytes can be supplied to limit aggregation size (default of 1024 bytes). If the aggregated string grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `STRING_AGG` expression is not currently supported, and the ordering of results within the output string may vary depending on processing order.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
-|`STRING_AGG(DISTINCT expr, separator, [size])`|Collects all distinct values of `expr` into a single STRING, ignoring null values. Each value is joined by the `separator` which must be a literal STRING. An optional `size` in bytes can be supplied to limit aggregation size (default of 1024 bytes). If the aggregated string grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `STRING_AGG` expression is not currently supported, and the ordering of results will be based on the default `STRING` ordering.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
+|`STRING_AGG([DISTINCT] expr, [separator, [size]])`|Collects all values (or all distinct values) of `expr` into a single STRING, ignoring null values. Each value is joined by an optional `separator`, which must be a literal STRING. If the `separator` is not provided, strings are concatenated without a separator.<br /><br />An optional `size` in bytes can be supplied to limit aggregation size (default of 1024 bytes). If the aggregated string grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `STRING_AGG` expression is not currently supported, and the ordering of results within the output string may vary depending on processing order.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
+|`LISTAGG([DISTINCT] expr, [separator, [size]])`|Synonym for `STRING_AGG`.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
 |`BIT_AND(expr)`|Performs a bitwise AND operation on all input values.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`BIT_OR(expr)`|Performs a bitwise OR operation on all input values.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`BIT_XOR(expr)`|Performs a bitwise XOR operation on all input values.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
@@ -137,6 +141,16 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 |--------|-----|-------|
 |`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) expressions. The `probability` value should be between 0 and 1, exclusive. The `k` parameter is described in the Quantiles sketch documentation.<br/><br/>See the [known issue](sql-translation.md#approximations) with this function.|`NaN`|
 |`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) on the values of `expr`, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation.<br/><br/>See the [known issue](sql-translation.md#approximations) with this function.|`'0'` (STRING)|
+
+
+### Tuple sketch functions
+
+Load the [DataSketches extension](../development/extensions-core/datasketches-extension.md) to use the following functions.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`DS_TUPLE_DOUBLES(expr, [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on the values of `expr` which is a column containing Tuple sketches which contain an array of double values as their Summary Objects. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
+|`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) which contains an array of double values as its Summary Object based on the dimension value of `dimensionColumnExpr` and the numeric metric values contained in one or more `metricColumnExpr` columns. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
 
 
 ### T-Digest sketch functions

@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
@@ -38,7 +39,6 @@ import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +58,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     indexMerger = TestHelper
         .getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     indexIO = TestHelper.getTestIndexIO();
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
   }
 
   private void testStringFirstLastRollup(
@@ -66,20 +66,14 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   ) throws Exception
   {
     List<Map<String, Object>> eventsList = Arrays.asList(
-        new HashMap<String, Object>()
-        {
-          {
-            put("d", "d1");
-            put("m", "m1");
-          }
-        },
-        new HashMap<String, Object>()
-        {
-          {
-            put("d", "d1");
-            put("m", "m2");
-          }
-        }
+        ImmutableMap.of(
+            "d", "d1",
+            "m", "m1"
+        ),
+        ImmutableMap.of(
+            "d", "d1",
+            "m", "m2"
+        )
     );
 
     final File tempDir = temporaryFolder.newFolder();

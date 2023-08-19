@@ -43,13 +43,12 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class QueryableIndexIndexableAdapterTest
 {
-  private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
-      new ConciseBitmapSerdeFactory(),
-      CompressionStrategy.LZ4,
-      CompressionStrategy.LZ4,
-      CompressionFactory.LongEncodingStrategy.LONGS
-  );
-
+  private static final IndexSpec INDEX_SPEC = IndexSpec.builder()
+                                                       .withBitmapSerdeFactory(new ConciseBitmapSerdeFactory())
+                                                       .withDimensionCompression(CompressionStrategy.LZ4)
+                                                       .withMetricCompression(CompressionStrategy.LZ4)
+                                                       .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+                                                       .build();
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()

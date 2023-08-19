@@ -42,7 +42,7 @@ variables. Thus there are two kinds:
 
 ## Configuration Flow
 
-We use `docker-compose` to gather up the variables. From most specific
+We use `docker compose` to gather up the variables. From most specific
 (highest priority) to most general, configuration comes from:
 
 * An environment variable set by the script which launches Docker Compose.

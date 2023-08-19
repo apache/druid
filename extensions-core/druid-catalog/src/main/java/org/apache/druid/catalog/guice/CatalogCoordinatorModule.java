@@ -36,8 +36,8 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.metadata.input.InputSourceModule;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -82,12 +82,17 @@ public class CatalogCoordinatorModule implements DruidModule
 
     // Public REST API and private cache sync API.
     Jerseys.addResource(binder, CatalogResource.class);
+
+    // The HTTP input source requires a HttpInputSourceConfig instance
+    // which is defined by the InputSourceModule. Note that MSQ also includes
+    // this module, but MSQ is not included in the Coordinator.
+    binder.install(new InputSourceModule());
   }
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.emptyList();
+    // We want this module to bring input sources along for the ride.
+    return new InputSourceModule().getJacksonModules();
   }
 }
-

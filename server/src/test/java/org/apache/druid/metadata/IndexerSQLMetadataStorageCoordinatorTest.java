@@ -146,6 +146,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       100
   );
 
+  private final DataSegment defaultSegment2WithBiggerSize = new DataSegment(
+          "fooDataSource",
+          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+          "version",
+          ImmutableMap.of(),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(1),
+          9,
+          200
+  );
+
   private final DataSegment defaultSegment3 = new DataSegment(
       "fooDataSource",
       Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
@@ -373,10 +385,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           (int) derbyConnector.getDBI().<Integer>withHandle(
               handle -> {
                 String request = StringUtils.format(
-                    "UPDATE %s SET used = false WHERE id = :id",
+                    "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
                     derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                 );
-                return handle.createStatement(request).bind("id", segment.getId().toString()).execute();
+                return handle.createStatement(request).bind("id", segment.getId().toString()).bind("used_status_last_updated", DateTimes.nowUtc().toString()).execute();
               }
           )
       );
@@ -421,8 +433,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
                   table,
                   derbyConnector.getQuoteString()
               )
@@ -437,7 +449,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                          .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                          .bind("version", segment.getVersion())
                          .bind("used", true)
-                         .bind("payload", mapper.writeValueAsBytes(segment));
+                         .bind("payload", mapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", DateTimes.nowUtc().toString());
           }
 
           final int[] affectedRows = preparedBatch.execute();
@@ -613,7 +626,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       {
         metadataUpdateCounter.getAndIncrement();
         if (attemptCounter.getAndIncrement() == 0) {
-          return DataStoreMetadataUpdateResult.TRY_AGAIN;
+          return new DataStoreMetadataUpdateResult(true, true, null);
         } else {
           return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
         }
@@ -680,7 +693,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [null], " +
+        "Target state: [ObjectMetadata{theObject={foo=bar}}]."), result1);
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -711,7 +727,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Not dropping segments, " +
+        "as not all segments belong to the datasource[fooDataSource]."), result1);
 
     // Should only be tried once. Since dropSegmentsWithHandle will return FAILURE (not TRY_AGAIN) as set of
     // segments to drop contains more than one datasource.
@@ -778,7 +795,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null
     );
     Assert.assertEquals(SegmentPublishResult.fail(
-        "org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result1);
+        "org.apache.druid.metadata.RetryTransactionException: Failed to drop some segments. " +
+            "Only 1 could be dropped out of 2. Trying again"), result1);
 
     Assert.assertEquals(MAX_SQL_MEATADATA_RETRY_FOR_TEST, segmentTableDropUpdateCounter.get());
 
@@ -805,7 +823,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result2);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
+        "Target state: [ObjectMetadata{theObject=null}]."), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -828,7 +849,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result2);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
+        "Target state: [ObjectMetadata{theObject={foo=qux}}]."), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -909,6 +933,22 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
+  @Test
+  public void testSimpleUnusedListWithLimit() throws IOException
+  {
+    coordinator.announceHistoricalSegments(SEGMENTS);
+    markAllSegmentsUnused();
+    int limit = SEGMENTS.size() - 1;
+    Set<DataSegment> retreivedUnusedSegments = ImmutableSet.copyOf(
+        coordinator.retrieveUnusedSegmentsForInterval(
+            defaultSegment.getDataSource(),
+            defaultSegment.getInterval(),
+            limit
+        )
+    );
+    Assert.assertEquals(limit, retreivedUnusedSegments.size());
+    Assert.assertTrue(SEGMENTS.containsAll(retreivedUnusedSegments));
+  }
 
   @Test
   public void testUsedOverlapLow() throws IOException
@@ -1400,6 +1440,46 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             )
         ).size()
     );
+  }
+
+  @Test
+  public void testUpdateSegmentsInMetaDataStorage() throws IOException
+  {
+    // Published segments to MetaDataStorage
+    coordinator.announceHistoricalSegments(SEGMENTS);
+
+    // check segments Published
+    Assert.assertEquals(
+            SEGMENTS,
+            ImmutableSet.copyOf(
+                    coordinator.retrieveUsedSegmentsForInterval(
+                            defaultSegment.getDataSource(),
+                            defaultSegment.getInterval(),
+                            Segments.ONLY_VISIBLE
+                    )
+            )
+    );
+
+    // update single metadata item
+    coordinator.updateSegmentMetadata(Collections.singleton(defaultSegment2WithBiggerSize));
+
+    Collection<DataSegment> updated = coordinator.retrieveUsedSegmentsForInterval(
+            defaultSegment.getDataSource(),
+            defaultSegment.getInterval(),
+            Segments.ONLY_VISIBLE);
+
+    Assert.assertEquals(SEGMENTS.size(), updated.size());
+
+    DataSegment defaultAfterUpdate = updated.stream().filter(s -> s.equals(defaultSegment)).findFirst().get();
+    DataSegment default2AfterUpdate = updated.stream().filter(s -> s.equals(defaultSegment2)).findFirst().get();
+
+    Assert.assertNotNull(defaultAfterUpdate);
+    Assert.assertNotNull(default2AfterUpdate);
+
+    // check that default did not change
+    Assert.assertEquals(defaultSegment.getSize(), defaultAfterUpdate.getSize());
+    // but that default 2 did change
+    Assert.assertEquals(defaultSegment2WithBiggerSize.getSize(), default2AfterUpdate.getSize());
   }
 
   @Test
@@ -2256,7 +2336,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           ImmutableSet.of(defaultSegment),
           defaultSegment.getDataSource()
       );
-      Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.TRY_AGAIN, result);
+      Assert.assertEquals(new IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult(
+          true,
+          true,
+          "Failed to drop some segments. Only 0 could be dropped out of 1. Trying again"),
+          result);
     }
   }
 

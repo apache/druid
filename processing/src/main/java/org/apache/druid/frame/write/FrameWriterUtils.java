@@ -23,10 +23,11 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReaders;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -96,6 +97,8 @@ public class FrameWriterUtils
    * @param multiValue if true, return an array that corresponds exactly to {@link DimensionSelector#getRow()}.
    *                   if false, always return a single-valued array. In particular, this means [] is
    *                   returned as [NULL_STRING_MARKER_ARRAY].
+   *
+   * @return UTF-8 strings. The list itself is never null.
    */
   public static List<ByteBuffer> getUtf8ByteBuffersFromStringSelector(
       final DimensionSelector selector,
@@ -130,14 +133,22 @@ public class FrameWriterUtils
    * selector you get for an {@code ARRAY<STRING>} column.
    *
    * Null strings are returned as {@link #NULL_STRING_MARKER_ARRAY}.
+   *
+   * If the entire array returned by {@link BaseObjectColumnValueSelector#getObject()} is null, returns either
+   * null or {@link #NULL_STRING_MARKER_ARRAY} depending on the value of "useNullArrays".
+   *
+   * @param selector array selector
+   *
+   * @return UTF-8 strings. The list itself may be null.
    */
+  @Nullable
   public static List<ByteBuffer> getUtf8ByteBuffersFromStringArraySelector(
-      @SuppressWarnings("rawtypes") final ColumnValueSelector selector
+      @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
   )
   {
     Object row = selector.getObject();
     if (row == null) {
-      return Collections.singletonList(getUtf8ByteBufferFromString(null));
+      return null;
     } else if (row instanceof String) {
       return Collections.singletonList(getUtf8ByteBufferFromString((String) row));
     }
@@ -181,23 +192,23 @@ public class FrameWriterUtils
    * @throws IllegalArgumentException if there is a problem
    */
   public static void verifySortColumns(
-      final List<SortColumn> sortColumns,
+      final List<KeyColumn> keyColumns,
       final RowSignature signature
   )
   {
-    if (!areSortColumnsPrefixOfSignature(sortColumns, signature)) {
+    if (!areKeyColumnsPrefixOfSignature(keyColumns, signature)) {
       throw new IAE(
           "Sort column [%s] must be a prefix of the signature",
-          sortColumns.stream().map(SortColumn::columnName).collect(Collectors.joining(", "))
+          keyColumns.stream().map(KeyColumn::columnName).collect(Collectors.joining(", "))
       );
     }
 
     // Verify that all sort columns are comparable.
-    for (final SortColumn sortColumn : sortColumns) {
-      final ColumnType columnType = signature.getColumnType(sortColumn.columnName()).orElse(null);
+    for (final KeyColumn keyColumn : keyColumns) {
+      final ColumnType columnType = signature.getColumnType(keyColumn.columnName()).orElse(null);
 
-      if (columnType == null || !FieldReaders.create(sortColumn.columnName(), columnType).isComparable()) {
-        throw new IAE("Sort column [%s] is not comparable (type = %s)", sortColumn.columnName(), columnType);
+      if (columnType == null || !FieldReaders.create(keyColumn.columnName(), columnType).isComparable()) {
+        throw new IAE("Sort column [%s] is not comparable (type = %s)", keyColumn.columnName(), columnType);
       }
     }
   }
@@ -229,7 +240,12 @@ public class FrameWriterUtils
       final byte b = src.get(p);
 
       if (!allowNullBytes && b == 0) {
-        throw new InvalidNullByteException();
+        ByteBuffer duplicate = src.duplicate();
+        duplicate.limit(srcEnd);
+        throw InvalidNullByteException.builder()
+                                      .value(StringUtils.fromUtf8(duplicate))
+                                      .position(p - src.position())
+                                      .build();
       }
 
       dst.putByte(q, b);
@@ -272,23 +288,34 @@ public class FrameWriterUtils
   }
 
   /**
-   * Returns whether the provided sortColumns are all a prefix of the signature.
+   * Returns whether the provided key columns are all a prefix of the signature.
    */
-  private static boolean areSortColumnsPrefixOfSignature(
-      final List<SortColumn> sortColumns,
+  private static boolean areKeyColumnsPrefixOfSignature(
+      final List<KeyColumn> keyColumns,
       final RowSignature signature
   )
   {
-    if (sortColumns.size() > signature.size()) {
+    if (keyColumns.size() > signature.size()) {
       return false;
     }
 
-    for (int i = 0; i < sortColumns.size(); i++) {
-      if (!sortColumns.get(i).columnName().equals(signature.getColumnName(i))) {
+    for (int i = 0; i < keyColumns.size(); i++) {
+      if (!keyColumns.get(i).columnName().equals(signature.getColumnName(i))) {
         return false;
       }
     }
 
     return true;
+  }
+
+  public static RowSignature replaceUnknownTypesWithNestedColumns(final RowSignature rowSignature)
+  {
+    RowSignature.Builder retBuilder = RowSignature.builder();
+    for (int i = 0; i < rowSignature.size(); ++i) {
+      String columnName = rowSignature.getColumnName(i);
+      ColumnType columnType = rowSignature.getColumnType(i).orElse(ColumnType.NESTED_DATA);
+      retBuilder.add(columnName, columnType);
+    }
+    return retBuilder.build();
   }
 }

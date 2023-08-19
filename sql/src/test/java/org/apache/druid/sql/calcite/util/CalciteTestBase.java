@@ -43,7 +43,7 @@ public abstract class CalciteTestBase
   public static void setupCalciteProperties()
   {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   /**
@@ -118,5 +118,10 @@ public abstract class CalciteTestBase
   protected static ResourceAction dataSourceWrite(final String dataSource)
   {
     return new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE);
+  }
+
+  protected static ResourceAction externalRead(final String inputSourceType)
+  {
+    return new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ);
   }
 }

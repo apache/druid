@@ -85,6 +85,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode rexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         Iterables.getOnlyElement(aggregateCall.getArgList())

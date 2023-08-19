@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
@@ -34,6 +35,7 @@ public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
 {
   private final ObjectMapper objectMapper;
 
+  @Inject
   public NewestSegmentFirstPolicy(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;

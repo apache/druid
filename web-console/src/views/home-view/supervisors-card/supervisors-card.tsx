@@ -19,7 +19,7 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { Capabilities } from '../../../helpers';
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { pluralIfNeeded, queryDruidSql } from '../../../utils';
@@ -68,8 +68,8 @@ FROM sys.supervisors`,
   return (
     <HomeViewCard
       className="supervisors-card"
-      href="#ingestion"
-      icon={IconNames.LIST_COLUMNS}
+      href="#supervisors"
+      icon={IconNames.EYE_OPEN}
       title="Supervisors"
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}

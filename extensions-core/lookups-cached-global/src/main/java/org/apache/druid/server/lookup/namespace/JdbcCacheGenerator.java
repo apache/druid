@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.namespace;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.java.util.common.ISE;
@@ -161,27 +160,21 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
           "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
-          toDoublyQuotedEscapedIdentifier(keyColumn),
-          toDoublyQuotedEscapedIdentifier(valueColumn),
-          toDoublyQuotedEscapedIdentifier(table),
-          toDoublyQuotedEscapedIdentifier(valueColumn)
+          keyColumn,
+          valueColumn,
+          table,
+          valueColumn
       );
     }
 
     return StringUtils.format(
         "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
-        toDoublyQuotedEscapedIdentifier(keyColumn),
-        toDoublyQuotedEscapedIdentifier(valueColumn),
-        toDoublyQuotedEscapedIdentifier(table),
+        keyColumn,
+        valueColumn,
+        table,
         filter,
-        toDoublyQuotedEscapedIdentifier(valueColumn)
+        valueColumn
     );
-  }
-
-  @VisibleForTesting
-  public static String toDoublyQuotedEscapedIdentifier(String identifier)
-  {
-    return "\"" + StringUtils.replace(identifier, "\"", "\"\"") + "\"";
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
@@ -215,7 +208,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         handle -> {
           final String query = StringUtils.format(
               "SELECT MAX(%s) FROM %s",
-              toDoublyQuotedEscapedIdentifier(tsColumn), toDoublyQuotedEscapedIdentifier(table)
+              tsColumn, table
           );
           return handle
               .createQuery(query)

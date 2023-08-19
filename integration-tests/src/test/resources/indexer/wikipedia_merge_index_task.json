@@ -3,6 +3,14 @@
     "spec": {
         "dataSchema": {
             "dataSource": "%%DATASOURCE%%",
+            "timestampSpec": {
+                "column": "timestamp"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "continent"
+                ]
+            },
             "metricsSpec": [
                 {
                     "type": "count",
@@ -38,27 +46,17 @@
                 "segmentGranularity": "DAY",
                 "queryGranularity": "DAY",
                 "intervals" : [ "2013-08-31/2013-09-02" ]
-            },
-            "parser": {
-                "parseSpec": {
-                    "format" : "json",
-                    "timestampSpec": {
-                        "column": "timestamp"
-                    },
-                    "dimensionsSpec": {
-                        "dimensions": [
-                            "continent"
-                        ]
-                    }
-                }
             }
         },
         "ioConfig": {
             "type": "index",
-            "firehose": {
+            "inputSource": {
                 "type": "local",
                 "baseDir": "/resources/data/batch_index/json",
                 "filter": "wikipedia_index_data*"
+            },
+            "inputFormat": {
+                "type" : "json"
             }
         },
         "tuningConfig": {

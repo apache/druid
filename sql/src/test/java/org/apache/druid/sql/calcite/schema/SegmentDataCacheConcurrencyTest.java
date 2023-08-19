@@ -140,7 +140,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -249,7 +250,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        new NoopServiceEmitter()
     )
     {
       @Override

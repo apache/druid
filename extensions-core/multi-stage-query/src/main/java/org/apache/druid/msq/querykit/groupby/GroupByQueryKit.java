@@ -22,12 +22,12 @@ package org.apache.druid.msq.querykit.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -80,6 +80,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,
+        originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
@@ -96,8 +97,9 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final Granularity segmentGranularity =
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final RowSignature intermediateSignature = computeIntermediateSignature(queryToRun);
+    final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(queryToRun);
     final ClusterBy resultClusterBy =
-        QueryKitUtils.clusterByWithSegmentGranularity(computeClusterByForResults(queryToRun), segmentGranularity);
+        QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
     final RowSignature resultSignature =
         QueryKitUtils.sortableSignature(
             QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(queryToRun), segmentGranularity),
@@ -113,12 +115,19 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
 
-    if (intermediateClusterBy.getColumns().isEmpty()) {
+    // There can be a situation where intermediateClusterBy is empty, while the result is non-empty
+    // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+    // (i.e. no GROUP BY clause)
+    // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+    // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
+    if (intermediateClusterBy.isEmpty() && resultClusterBy.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
     } else if (doOrderBy) {
-      shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.subQueryWithMaxWorkerCount(maxWorkerCount);
+      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+                                         ? ShuffleSpecFactories.singlePartition()
+                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
       shuffleSpecFactoryPostAggregation = doLimitOrOffset
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;
@@ -156,13 +165,12 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     if (doLimitOrOffset) {
       final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 2)
                          .inputs(new StageInputSpec(firstStageNumber + 1))
                          .signature(resultSignature)
                          .maxWorkerCount(1)
-                         .shuffleSpec(new MaxCountShuffleSpec(ClusterBy.none(), 1, false))
+                         .shuffleSpec(null) // no shuffling should be required after a limit processor.
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  limitSpec.getOffset(),
@@ -221,10 +229,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    */
   static ClusterBy computeIntermediateClusterBy(final GroupByQuery query)
   {
-    final List<SortColumn> columns = new ArrayList<>();
+    final List<KeyColumn> columns = new ArrayList<>();
 
     for (final DimensionSpec dimension : query.getDimensions()) {
-      columns.add(new SortColumn(dimension.getOutputName(), false));
+      columns.add(new KeyColumn(dimension.getOutputName(), KeyOrder.ASCENDING));
     }
 
     // Note: ignoring time because we assume granularity = all.
@@ -240,13 +248,15 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       final DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) query.getLimitSpec();
 
       if (!defaultLimitSpec.getColumns().isEmpty()) {
-        final List<SortColumn> clusterByColumns = new ArrayList<>();
+        final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
         for (final OrderByColumnSpec orderBy : defaultLimitSpec.getColumns()) {
           clusterByColumns.add(
-              new SortColumn(
+              new KeyColumn(
                   orderBy.getDimension(),
                   orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING
+                  ? KeyOrder.DESCENDING
+                  : KeyOrder.ASCENDING
               )
           );
         }

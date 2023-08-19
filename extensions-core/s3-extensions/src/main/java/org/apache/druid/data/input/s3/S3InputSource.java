@@ -25,11 +25,12 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -41,11 +42,10 @@ import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,23 +53,20 @@ import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
-import org.apache.druid.utils.Streams;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.nio.file.FileSystems;
-import java.nio.file.PathMatcher;
-import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class S3InputSource extends CloudObjectInputSource
 {
+  public static final String TYPE_KEY = S3StorageDruidModule.SCHEME;
   // We lazily initialize ServerSideEncryptingAmazonS3 to avoid costly s3 operation when we only need S3InputSource
   // for stored information (such as for task logs) and not for ingestion.
   // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceConfig given).
@@ -243,6 +240,14 @@ public class S3InputSource extends CloudObjectInputSource
     this.maxRetries = maxRetries;
   }
 
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
+  }
+
   private void applyAssumeRole(
       ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       S3InputSourceConfig s3InputSourceConfig,
@@ -318,18 +323,38 @@ public class S3InputSource extends CloudObjectInputSource
   }
 
   @Override
-  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
+  protected CloudObjectSplitWidget getSplitWidget()
   {
-    final Iterator<List<S3ObjectSummary>> splitIterator = splitHintSpec.split(
-        getIterableObjectsFromPrefixes().iterator(),
-        object -> new InputFileAttribute(object.getSize())
-    );
+    class SplitWidget implements CloudObjectSplitWidget
+    {
+      @Override
+      public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
+      {
+        return Iterators.transform(
+            S3Utils.objectSummaryIterator(
+                s3ClientSupplier.get(),
+                prefixes,
+                inputDataConfig.getMaxListingLength(),
+                maxRetries
+            ),
+            object -> new LocationWithSize(object.getBucketName(), object.getKey(), object.getSize())
+        );
+      }
 
-    return Streams.sequentialStreamFrom(splitIterator)
-                  .map(objects -> objects.stream()
-                                         .map(S3Utils::summaryToCloudObjectLocation)
-                                         .collect(Collectors.toList()))
-                  .map(InputSplit::new);
+      @Override
+      public long getObjectSize(CloudObjectLocation location)
+      {
+        final ObjectMetadata objectMetadata = S3Utils.getSingleObjectMetadata(
+            s3ClientSupplier.get(),
+            location.getBucket(),
+            location.getPath()
+        );
+
+        return objectMetadata.getContentLength();
+      }
+    }
+
+    return new SplitWidget();
   }
 
   @Override
@@ -389,29 +414,5 @@ public class S3InputSource extends CloudObjectInputSource
            ", awsEndpointConfig=" + getAwsEndpointConfig() +
            ", awsClientConfig=" + getAwsClientConfig() +
            '}';
-  }
-
-  private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
-  {
-    return () -> {
-      Iterator<S3ObjectSummary> iterator = S3Utils.objectSummaryIterator(
-          s3ClientSupplier.get(),
-          getPrefixes(),
-          inputDataConfig.getMaxListingLength(),
-          maxRetries
-      );
-
-      // Skip files that didn't match filter.
-      if (org.apache.commons.lang.StringUtils.isNotBlank(getObjectGlob())) {
-        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
-
-        iterator = Iterators.filter(
-            iterator,
-            object -> m.matches(Paths.get(object.getKey()))
-        );
-      }
-
-      return iterator;
-    };
   }
 }

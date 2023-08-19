@@ -32,12 +32,12 @@ public class ArrayOffsetOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_OFFSET")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,expr)",
+              "'ARRAY_OFFSET(array, expr)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)
               ),
-            OperandTypes.family(SqlTypeFamily.NUMERIC)
+              OperandTypes.family(SqlTypeFamily.NUMERIC)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)

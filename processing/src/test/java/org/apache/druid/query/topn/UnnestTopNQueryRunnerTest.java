@@ -167,7 +167,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             DateTimes.of("2020-04-02T00:00:00.000Z"),
-            new TopNResultValue(ImmutableList.of())
+            TopNResultValue.create(ImmutableList.of())
         )
     );
     assertExpectedResultsWithCustomRunner(expectedResults, query, queryRunner);
@@ -208,7 +208,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "a",
@@ -253,19 +253,15 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-            "vc",
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
-        ))
-        .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .virtualColumns(
             new ExpressionVirtualColumn(
-                "vc",
+                QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
                 "mv_to_array(\"placementish\")",
                 ColumnType.STRING_ARRAY,
                 TestExprMacroTable.INSTANCE
-            )
-        )
+            ),
+            null
+        ))
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
         .metric("rows")
         .threshold(4)
@@ -291,7 +287,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "preferred",
@@ -340,19 +336,15 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-            "vc",
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
-        ))
-        .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .virtualColumns(
             new ExpressionVirtualColumn(
-                "vc",
+                QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
                 "array(\"market\",\"quality\")",
                 ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
-            )
-        )
+            ),
+            null
+        ))
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
         .dimension(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
         .metric("rows")
         .threshold(2)
@@ -380,7 +372,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "spot",

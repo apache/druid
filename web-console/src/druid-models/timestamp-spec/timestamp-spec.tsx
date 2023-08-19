@@ -18,16 +18,17 @@
 
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { deepGet, EMPTY_ARRAY, EMPTY_OBJECT } from '../../utils';
-import { IngestionSpec } from '../ingestion-spec/ingestion-spec';
+import type { IngestionSpec } from '../ingestion-spec/ingestion-spec';
 import {
   BASIC_TIME_FORMATS,
   DATE_ONLY_TIME_FORMATS,
   DATETIME_TIME_FORMATS,
   OTHER_TIME_FORMATS,
 } from '../time/time';
-import { Transform } from '../transform-spec/transform-spec';
+import type { Transform } from '../transform-spec/transform-spec';
 
 const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
 
@@ -35,6 +36,12 @@ export const TIME_COLUMN = '__time';
 
 export const PLACEHOLDER_TIMESTAMP_SPEC: TimestampSpec = {
   column: NO_SUCH_COLUMN,
+  missingValue: '1970-01-01T00:00:00Z',
+};
+
+export const DETECTION_TIMESTAMP_SPEC: TimestampSpec = {
+  column: TIME_COLUMN,
+  format: 'millis',
   missingValue: '1970-01-01T00:00:00Z',
 };
 

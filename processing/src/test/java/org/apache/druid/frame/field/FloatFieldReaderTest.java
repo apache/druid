@@ -69,6 +69,20 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_isNull_defaultOrNull()
+  {
+    writeToMemory(NullHandling.defaultFloatValue());
+    Assert.assertEquals(NullHandling.sqlCompatible(), new FloatFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_aValue()
+  {
+    writeToMemory(5.1f);
+    Assert.assertFalse(new FloatFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
   public void test_makeColumnValueSelector_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultFloatValue());

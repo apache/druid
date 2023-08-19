@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import create, { State } from 'zustand';
+import { createStore } from 'zustand';
 
-interface MetadataState extends State {
+interface MetadataState {
   version: number;
   increment(): void;
 }
 
-export const useMetadataStateStore = create<MetadataState>(set => ({
+export const metadataStateStore = createStore<MetadataState>(set => ({
   version: 0,
   increment: () => set(state => ({ version: state.version + 1 })),
 }));

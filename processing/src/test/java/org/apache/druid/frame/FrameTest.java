@@ -26,7 +26,8 @@ import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.channel.ByteTracker;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -77,9 +78,9 @@ public class FrameTest
     {
       final StorageAdapter adapter = new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
 
-      final List<SortColumn> sortBy = ImmutableList.of(
-          new SortColumn("quality", true),
-          new SortColumn("__time", false)
+      final List<KeyColumn> sortBy = ImmutableList.of(
+          new KeyColumn("quality", KeyOrder.DESCENDING),
+          new KeyColumn("__time", KeyOrder.ASCENDING)
       );
 
       columnarFrame = Iterables.getOnlyElement(

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton, getLabeledInput, setLabeledInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
@@ -33,6 +33,7 @@ enum DatasourceColumn {
   AVAILABILITY,
   SEGMENT_LOAD_DROP,
   TOTAL_DATA_SIZE,
+  RUNNING_TASKS,
   SEGMENT_ROWS,
   // SEGMENT_SIZE, (Hidden by default)
   // SEGMENT_GRANULARITY, (Hidden by default)
@@ -99,7 +100,7 @@ export class DatasourcesOverview {
   private async openCompactionConfigurationDialog(datasourceName: string): Promise<void> {
     await this.openEditActions(datasourceName);
     await this.clickMenuItem('Edit compaction configuration');
-    await this.page.waitForSelector('div.compaction-dialog');
+    await this.page.waitForSelector('div.compaction-config-dialog');
   }
 
   private async clickMenuItem(text: string): Promise<void> {

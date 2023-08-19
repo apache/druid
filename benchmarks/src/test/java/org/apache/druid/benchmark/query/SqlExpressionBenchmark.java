@@ -36,9 +36,11 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -65,7 +67,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -105,13 +106,6 @@ public class SqlExpressionBenchmark
     {
       return 1;
     }
-
-    @Override
-    public boolean useParallelMergePoolConfigured()
-    {
-      return true;
-    }
-
     @Override
     public String getFormatString()
     {
@@ -322,7 +316,9 @@ public class SqlExpressionBenchmark
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     try {
@@ -345,7 +341,7 @@ public class SqlExpressionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void querySql(Blackhole blackhole) throws Exception
+  public void querySql(Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,

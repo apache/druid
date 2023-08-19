@@ -395,7 +395,7 @@ public class QueryTestRunner
         expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query, queryJsonMapper));
       }
 
-      final List<Query> recordedQueries = queryResults.recordedQueries
+      final List<Query<?>> recordedQueries = queryResults.recordedQueries
           .stream()
           .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
           .collect(Collectors.toList());
@@ -609,7 +609,6 @@ public class QueryTestRunner
     }
   }
 
-
   private final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
   private final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();
 
@@ -619,7 +618,9 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
-    Assume.assumeTrue(!config.isRunningMSQ() || builder.msqCompatible);
+    if (config.isRunningMSQ()) {
+      Assume.assumeTrue(builder.msqCompatible);
+    }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
@@ -662,7 +663,7 @@ public class QueryTestRunner
 
       // Verify native queries before results. (Note: change from prior pattern
       // that reversed the steps.
-      if (builder.verifyNativeQueries && builder.expectedQueries != null) {
+      if (builder.expectedQueries != null && builder.verifyNativeQueries.test(builder.expectedQueries)) {
         verifySteps.add(new VerifyNativeQueries(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {

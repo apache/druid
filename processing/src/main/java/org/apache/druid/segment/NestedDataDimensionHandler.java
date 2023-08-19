@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
@@ -56,7 +56,7 @@ public class NestedDataDimensionHandler implements DimensionHandler<StructuredDa
   @Override
   public DimensionSpec getDimensionSpec()
   {
-    return new DefaultDimensionSpec(name, name, NestedDataComplexTypeSerde.TYPE);
+    return new DefaultDimensionSpec(name, name, ColumnType.NESTED_DATA);
   }
 
   @Override
@@ -80,7 +80,7 @@ public class NestedDataDimensionHandler implements DimensionHandler<StructuredDa
       Closer closer
   )
   {
-    return new NestedDataColumnMerger(name, indexSpec, segmentWriteOutMedium, progress, closer);
+    return new NestedDataColumnMerger(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

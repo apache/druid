@@ -16,34 +16,35 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
+import type { TreeNodeInfo } from '@blueprintjs/core';
+import { Classes, HTMLSelect, Icon, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlExpression } from '@druid-toolkit/query';
 import {
   C,
   F,
   N,
   SqlColumn,
   SqlComparison,
-  SqlExpression,
   SqlJoinPart,
   SqlQuery,
   SqlTable,
   T,
-} from 'druid-query-toolkit';
-import React, { ChangeEvent } from 'react';
+} from '@druid-toolkit/query';
+import type { ChangeEvent } from 'react';
+import React from 'react';
 
 import { Deferred, Loader } from '../../../components';
-import {
-  ColumnMetadata,
-  copyAndAlert,
-  dataTypeToIcon,
-  groupBy,
-  oneOf,
-  prettyPrintSql,
-} from '../../../utils';
+import type { ColumnMetadata } from '../../../utils';
+import { copyAndAlert, dataTypeToIcon, groupBy, oneOf, prettyPrintSql } from '../../../utils';
 
-import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
+import {
+  ComplexMenuItems,
+  NumberMenuItems,
+  StringMenuItems,
+  TimeMenuItems,
+} from './column-tree-menu';
 
 import './column-tree.scss';
 
@@ -404,7 +405,15 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
               childNodes: metadata.map(
                 (columnData): TreeNodeInfo => ({
                   id: columnData.COLUMN_NAME,
-                  icon: dataTypeToIcon(columnData.DATA_TYPE),
+                  icon: (
+                    <Icon
+                      className={Classes.TREE_NODE_ICON}
+                      icon={dataTypeToIcon(columnData.DATA_TYPE)}
+                      aria-hidden
+                      tabIndex={-1}
+                      title={columnData.DATA_TYPE}
+                    />
+                  ),
                   label: (
                     <Popover2
                       position={Position.RIGHT}
@@ -454,6 +463,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     table={tableName}
                                     schema={schemaName}
                                     columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
+                                  />
+                                )}
+                                {parsedQuery && columnData.DATA_TYPE.startsWith('COMPLEX<') && (
+                                  <ComplexMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    columnType={columnData.DATA_TYPE}
                                     parsedQuery={parsedQuery}
                                     onQueryChange={onQueryChange}
                                   />
@@ -522,8 +541,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return null;
   }
 
-  constructor(props: ColumnTreeProps, context: any) {
-    super(props, context);
+  constructor(props: ColumnTreeProps) {
+    super(props);
     this.state = {
       selectedTreeIndex: -1,
     };
@@ -576,7 +595,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.forceUpdate();
   };
 
-  render(): JSX.Element | null {
+  render() {
     const { columnMetadataLoading } = this.props;
     const { currentSchemaSubtree } = this.state;
 

@@ -20,11 +20,13 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.inject.Injector;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
+import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 
 /**
  * Create the injector used for {@link CalciteTests#INJECTOR}, but in a way
@@ -38,8 +40,10 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
         .withEmptyProperties()
         .build());
     add(
-        new BasicTestModule(),
-        new SqlAggregationModule()
+        new SegmentWranglerModule(),
+        new LookylooModule(),
+        new SqlAggregationModule(),
+        new CalciteTestOperatorModule()
     );
   }
 

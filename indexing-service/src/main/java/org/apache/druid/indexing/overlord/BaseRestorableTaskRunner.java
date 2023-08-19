@@ -30,8 +30,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -41,6 +43,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -61,14 +64,22 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   protected final ConcurrentHashMap<String, WorkItemType> tasks = new ConcurrentHashMap<>();
   protected final ObjectMapper jsonMapper;
   protected final TaskConfig taskConfig;
+  private final TaskStorageDirTracker tracker;
 
   public BaseRestorableTaskRunner(
       ObjectMapper jsonMapper,
-      TaskConfig taskConfig
+      TaskConfig taskConfig,
+      TaskStorageDirTracker tracker
   )
   {
     this.jsonMapper = jsonMapper;
     this.taskConfig = taskConfig;
+    this.tracker = tracker;
+  }
+
+  protected TaskStorageDirTracker getTracker()
+  {
+    return tracker;
   }
 
   @Override
@@ -89,18 +100,32 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     }
 
     final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
+    final Map<String, TaskStorageDirTracker.StorageSlot> existingTaskDirs =
+        tracker.findExistingTaskDirs(taskRestoreInfo.getRunningTasks());
     for (final String taskId : taskRestoreInfo.getRunningTasks()) {
+
+      final TaskStorageDirTracker.StorageSlot storageSlot = existingTaskDirs.get(taskId);
+      if (storageSlot == null) {
+        LOG.warn("restorable task [%s] didn't actually exist!?", taskId);
+        continue;
+      }
+
       try {
-        final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
+        final File taskFile = storageSlot.getDirectory().toPath().resolve(taskId).resolve("task.json").toFile();
         final Task task = jsonMapper.readValue(taskFile, Task.class);
 
         if (!task.getId().equals(taskId)) {
-          throw new ISE("Task[%s] restore file had wrong id[%s]", taskId, task.getId());
+          throw new ISE("Task [%s] restore file had wrong id[%s]", taskId, task.getId());
         }
 
         if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
           LOG.info("Restoring task[%s].", task.getId());
           retVal.add(Pair.of(task, run(task)));
+        } else {
+          final File dir = new File(storageSlot.getDirectory(), taskId);
+          LOG.info("Task [%s] is not restorable, cleaning up the directory [%s]", taskId, dir);
+          tracker.returnStorageSlot(storageSlot);
+          FileUtils.deleteDirectory(dir);
         }
       }
       catch (Exception e) {
@@ -109,7 +134,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     }
 
     if (!retVal.isEmpty()) {
-      LOG.info("Restored %,d tasks: %s", retVal.size(), Joiner.on(", ").join(retVal));
+      LOG.info("Restored [%,d] tasks: [%s]", retVal.size(), Joiner.on(", ").join(retVal));
     }
 
     return retVal;

@@ -81,7 +81,11 @@ public class Columns
     if (sqlType == null) {
       return null;
     }
-    return SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(sqlType));
+    ColumnType druidType = SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(sqlType));
+    if (druidType != null) {
+      return druidType;
+    }
+    return ColumnType.fromString(sqlType);
   }
 
   public static void validateScalarColumn(String name, String type)
@@ -105,7 +109,7 @@ public class Columns
     for (ColumnSpec col : columns) {
       ColumnType druidType = null;
       if (col.sqlType() != null) {
-        druidType = Columns.SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(col.sqlType()));
+        druidType = Columns.druidType(col.sqlType());
       }
       if (druidType == null) {
         druidType = ColumnType.STRING;

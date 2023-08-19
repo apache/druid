@@ -20,17 +20,14 @@
 package org.apache.druid.msq.test;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.QueryTestRunner;
 import org.junit.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -98,11 +95,11 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
           if (!payload.getStatus().getStatus().isComplete()) {
             throw new ISE("Query task [%s] should have finished", taskId);
           }
-          Optional<Pair<RowSignature, List<Object[]>>> signatureListPair = MSQTestBase.getSignatureWithRows(payload.getResults());
-          if (!signatureListPair.isPresent()) {
+          final List<Object[]> resultRows = MSQTestBase.getRows(payload.getResults());
+          if (resultRows == null) {
             throw new ISE("Results report not present in the task's report payload");
           }
-          extractedResults.add(results.withResults(signatureListPair.get().rhs));
+          extractedResults.add(results.withResults(resultRows));
         }
       }
 

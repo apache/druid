@@ -24,8 +24,11 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -38,7 +41,6 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
@@ -58,6 +60,7 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
@@ -96,6 +99,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.handoff.CoordinatorBasedSegmentHandoffNotifierConfig;
@@ -108,6 +112,7 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -123,11 +128,14 @@ import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.eclipse.jetty.server.Server;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -191,6 +199,7 @@ public class CliPeon extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new IndexingServiceTaskLogsModule(),
         new Module()
@@ -240,7 +249,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             bindRealtimeCache(binder);
-            bindCoordinatorHandoffNotiferAndClient(binder);
+            bindCoordinatorHandoffNotifer(binder);
 
             binder.bind(AppenderatorsManager.class)
                   .to(PeonAppenderatorsManager.class)
@@ -252,14 +261,23 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, Server.class);
 
             if ("true".equals(loadBroadcastSegments)) {
-              binder.bind(SegmentManager.class).in(LazySingleton.class);
-              binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
-              Jerseys.addResource(binder, HistoricalResource.class);
-
-              if (isZkEnabled) {
-                LifecycleModule.register(binder, ZkCoordinator.class);
-              }
+              binder.install(new BroadcastSegmentLoadingModule());
             }
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
+          public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
+          {
+            return Suppliers.ofInstance(
+                ImmutableMap.of(
+                    DruidMetrics.TASK_ID, task.getId(),
+                    DruidMetrics.DATASOURCE, task.getDataSource(),
+                    DruidMetrics.TASK_TYPE, task.getType(),
+                    DruidMetrics.GROUP_ID, task.getGroupId()
+                )
+            );
           }
 
           @Provides
@@ -448,7 +466,7 @@ public class CliPeon extends GuiceRunnable
     binder.install(new CacheModule());
   }
 
-  static void bindCoordinatorHandoffNotiferAndClient(Binder binder)
+  static void bindCoordinatorHandoffNotifer(Binder binder)
   {
     JsonConfigProvider.bind(
         binder,
@@ -458,8 +476,6 @@ public class CliPeon extends GuiceRunnable
     binder.bind(SegmentHandoffNotifierFactory.class)
           .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
           .in(LazySingleton.class);
-
-    binder.bind(CoordinatorClient.class).in(LazySingleton.class);
   }
 
   static void configureIntermediaryData(Binder binder)
@@ -489,5 +505,29 @@ public class CliPeon extends GuiceRunnable
     );
     shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
     shuffleClientBiddy.addBinding("deepstore").to(DeepStorageShuffleClient.class).in(LazySingleton.class);
+  }
+
+  public class BroadcastSegmentLoadingModule implements Module
+  {
+    @Override
+    public void configure(Binder binder)
+    {
+      binder.bind(SegmentManager.class).in(LazySingleton.class);
+      binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+      Jerseys.addResource(binder, HistoricalResource.class);
+
+      if (isZkEnabled) {
+        LifecycleModule.register(binder, ZkCoordinator.class);
+      }
+    }
+
+    @Provides
+    @LazySingleton
+    public List<StorageLocation> getCliPeonStorageLocations(TaskConfig config)
+    {
+      File broadcastStorage = new File(new File(taskDirPath, "broadcast"), "segments");
+
+      return ImmutableList.of(new StorageLocation(broadcastStorage, config.getTmpStorageBytesPerTask(), null));
+    }
   }
 }

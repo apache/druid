@@ -136,11 +136,6 @@ public class TimeseriesBenchmark
         JSON_MAPPER,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -245,7 +240,7 @@ public class TimeseriesBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     setupQueries();
 
@@ -332,7 +327,7 @@ public class TimeseriesBenchmark
         File indexFile = INDEX_MERGER_V9.persist(
             incIndex,
             new File(qIndexesDir, String.valueOf(i)),
-            new IndexSpec(),
+            IndexSpec.DEFAULT,
             null
         );
         incIndex.close();

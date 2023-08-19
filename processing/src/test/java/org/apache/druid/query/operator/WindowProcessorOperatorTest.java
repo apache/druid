@@ -58,7 +58,7 @@ public class WindowProcessorOperatorTest
     );
 
     new OperatorTestHelper()
-        .withPushFn(
+        .withPushFn(() ->
             rowsAndColumns -> {
               Assert.assertSame(rac, rowsAndColumns);
               return Operator.Signal.GO;

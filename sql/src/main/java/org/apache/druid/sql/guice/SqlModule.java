@@ -34,7 +34,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
@@ -42,6 +41,7 @@ import org.apache.druid.sql.avatica.AvaticaModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidCalciteSchemaModule;
@@ -121,6 +121,9 @@ public class SqlModule implements Module
     if (isAvaticaEnabled()) {
       binder.install(new AvaticaModule());
     }
+
+    // Default do-nothing catalog resolver
+    binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
   }
 
   private boolean isEnabled()
@@ -161,7 +164,6 @@ public class SqlModule implements Module
         final ServiceEmitter emitter,
         final RequestLogger requestLogger,
         final QueryScheduler queryScheduler,
-        final AuthConfig authConfig,
         final Supplier<DefaultQueryConfig> defaultQueryConfig,
         final SqlLifecycleManager sqlLifecycleManager
     )
@@ -172,7 +174,6 @@ public class SqlModule implements Module
           emitter,
           requestLogger,
           queryScheduler,
-          authConfig,
           defaultQueryConfig.get(),
           sqlLifecycleManager
       );

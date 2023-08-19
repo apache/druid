@@ -27,13 +27,19 @@ import com.google.common.base.Suppliers;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -41,9 +47,9 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -64,7 +70,7 @@ import java.util.function.Supplier;
  * Each stage has a {@link ShuffleSpec} describing the shuffle that occurs as part of the stage. The shuffle spec is
  * optional: if none is provided, then the {@link FrameProcessorFactory} directly writes to output partitions. If a
  * shuffle spec is provided, then the {@link FrameProcessorFactory} is expected to sort each output frame individually
- * according to {@link ShuffleSpec#getClusterBy()}. The execution system handles the rest, including sorting data across
+ * according to {@link ShuffleSpec#clusterBy()}. The execution system handles the rest, including sorting data across
  * frames and producing the appropriate output partitions.
  * <p>
  * The rarely-used parameter {@link #getShuffleCheckHasMultipleValues()} controls whether the execution system
@@ -86,7 +92,6 @@ public class StageDefinition
   private final FrameProcessorFactory processorFactory;
   private final RowSignature signature;
   private final int maxWorkerCount;
-  private final long maxInputBytesPerWorker;
   private final boolean shuffleCheckHasMultipleValues;
 
   @Nullable
@@ -104,8 +109,7 @@ public class StageDefinition
       @JsonProperty("signature") final RowSignature signature,
       @Nullable @JsonProperty("shuffleSpec") final ShuffleSpec shuffleSpec,
       @JsonProperty("maxWorkerCount") final int maxWorkerCount,
-      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues,
-      @JsonProperty("maxInputBytesPerWorker") final Long maxInputBytesPerWorker
+      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -125,10 +129,8 @@ public class StageDefinition
     this.maxWorkerCount = maxWorkerCount;
     this.shuffleCheckHasMultipleValues = shuffleCheckHasMultipleValues;
     this.frameReader = Suppliers.memoize(() -> FrameReader.create(signature))::get;
-    this.maxInputBytesPerWorker = maxInputBytesPerWorker == null ?
-                                  Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER : maxInputBytesPerWorker;
 
-    if (shuffleSpec != null && shuffleSpec.needsStatistics() && shuffleSpec.getClusterBy().getColumns().isEmpty()) {
+    if (mustGatherResultKeyStatistics() && shuffleSpec.clusterBy().isEmpty()) {
       throw new IAE("Cannot shuffle with spec [%s] and nil clusterBy", shuffleSpec);
     }
 
@@ -157,7 +159,7 @@ public class StageDefinition
         .broadcastInputs(stageDef.getBroadcastInputNumbers())
         .processorFactory(stageDef.getProcessorFactory())
         .signature(stageDef.getSignature())
-        .shuffleSpec(stageDef.getShuffleSpec().orElse(null))
+        .shuffleSpec(stageDef.doesShuffle() ? stageDef.getShuffleSpec() : null)
         .maxWorkerCount(stageDef.getMaxWorkerCount())
         .shuffleCheckHasMultipleValues(stageDef.getShuffleCheckHasMultipleValues());
   }
@@ -212,16 +214,25 @@ public class StageDefinition
 
   public boolean doesSortDuringShuffle()
   {
-    if (shuffleSpec == null) {
+    if (shuffleSpec == null || shuffleSpec.clusterBy().isEmpty()) {
       return false;
     } else {
-      return !shuffleSpec.getClusterBy().getColumns().isEmpty() || shuffleSpec.needsStatistics();
+      return shuffleSpec.clusterBy().sortable();
     }
   }
 
-  public Optional<ShuffleSpec> getShuffleSpec()
+  /**
+   * Returns the {@link ShuffleSpec} for this stage, if {@link #doesShuffle()}.
+   *
+   * @throws IllegalStateException if this stage does not shuffle
+   */
+  public ShuffleSpec getShuffleSpec()
   {
-    return Optional.ofNullable(shuffleSpec);
+    if (shuffleSpec == null) {
+      throw new IllegalStateException("Stage does not shuffle");
+    }
+
+    return shuffleSpec;
   }
 
   /**
@@ -229,7 +240,25 @@ public class StageDefinition
    */
   public ClusterBy getClusterBy()
   {
-    return shuffleSpec != null ? shuffleSpec.getClusterBy() : ClusterBy.none();
+    if (shuffleSpec != null) {
+      return shuffleSpec.clusterBy();
+    } else {
+      return ClusterBy.none();
+    }
+  }
+
+  /**
+   * Returns the key used for sorting each individual partition, or an empty list if partitions are unsorted.
+   */
+  public List<KeyColumn> getSortKey()
+  {
+    final ClusterBy clusterBy = getClusterBy();
+
+    if (clusterBy.sortable()) {
+      return clusterBy.getColumns();
+    } else {
+      return Collections.emptyList();
+    }
   }
 
   @Nullable
@@ -246,15 +275,9 @@ public class StageDefinition
     return maxWorkerCount;
   }
 
-  @JsonProperty
-  public long getMaxInputBytesPerWorker()
-  {
-    return maxInputBytesPerWorker;
-  }
-
   @JsonProperty("shuffleCheckHasMultipleValues")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  boolean getShuffleCheckHasMultipleValues()
+  public boolean getShuffleCheckHasMultipleValues()
   {
     return shuffleCheckHasMultipleValues;
   }
@@ -285,38 +308,75 @@ public class StageDefinition
    */
   public boolean mustGatherResultKeyStatistics()
   {
-    return shuffleSpec != null && shuffleSpec.needsStatistics();
+    return shuffleSpec != null
+           && shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT
+           && ((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics();
   }
 
-  public Either<Long, ClusterByPartitions> generatePartitionsForShuffle(
+  public Either<Long, ClusterByPartitions> generatePartitionBoundariesForShuffle(
       @Nullable ClusterByStatisticsCollector collector
   )
   {
     if (shuffleSpec == null) {
       throw new ISE("No shuffle for stage[%d]", getStageNumber());
+    } else if (shuffleSpec.kind() != ShuffleKind.GLOBAL_SORT) {
+      throw new ISE(
+          "Shuffle of kind [%s] cannot generate partition boundaries for stage[%d]",
+          shuffleSpec.kind(),
+          getStageNumber()
+      );
     } else if (mustGatherResultKeyStatistics() && collector == null) {
       throw new ISE("Statistics required, but not gathered for stage[%d]", getStageNumber());
     } else if (!mustGatherResultKeyStatistics() && collector != null) {
       throw new ISE("Statistics gathered, but not required for stage[%d]", getStageNumber());
     } else {
-      return shuffleSpec.generatePartitions(collector, MAX_PARTITIONS);
+      return ((GlobalSortShuffleSpec) shuffleSpec).generatePartitionsForGlobalSort(collector, MAX_PARTITIONS);
     }
   }
 
   public ClusterByStatisticsCollector createResultKeyStatisticsCollector(final int maxRetainedBytes)
   {
     if (!mustGatherResultKeyStatistics()) {
-      throw new ISE("No statistics needed");
+      throw new ISE("No statistics needed for stage[%d]", getStageNumber());
     }
 
     return ClusterByStatisticsCollectorImpl.create(
-        shuffleSpec.getClusterBy(),
+        shuffleSpec.clusterBy(),
         signature,
         maxRetainedBytes,
         PARTITION_STATS_MAX_BUCKETS,
-        shuffleSpec.doesAggregateByClusterKey(),
+        shuffleSpec.doesAggregate(),
         shuffleCheckHasMultipleValues
     );
+  }
+
+  /**
+   * Create the {@link FrameWriterFactory} that must be used by {@link #getProcessorFactory()}.
+   *
+   * Calls {@link MemoryAllocatorFactory#newAllocator()} for each frame.
+   */
+  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory memoryAllocatorFactory)
+  {
+    return FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        memoryAllocatorFactory,
+        signature,
+
+        // Main processor does not sort when there is a hash going on, even if isSort = true. This is because
+        // FrameChannelHashPartitioner is expected to be attached to the processor and do the sorting. We don't
+        // want to double-sort.
+        doesShuffle() && !shuffleSpec.kind().isHash() ? getClusterBy().getColumns() : Collections.emptyList()
+    );
+  }
+
+  /**
+   * Create the {@link FrameWriterFactory} that must be used by {@link #getProcessorFactory()}.
+   *
+   * Re-uses the same {@link MemoryAllocator} for each frame.
+   */
+  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocator allocator)
+  {
+    return createFrameWriterFactory(new SingleMemoryAllocatorFactory(allocator));
   }
 
   public FrameReader getFrameReader()
@@ -341,8 +401,7 @@ public class StageDefinition
            && Objects.equals(broadcastInputNumbers, that.broadcastInputNumbers)
            && Objects.equals(processorFactory, that.processorFactory)
            && Objects.equals(signature, that.signature)
-           && Objects.equals(shuffleSpec, that.shuffleSpec)
-           && Objects.equals(maxInputBytesPerWorker, that.maxInputBytesPerWorker);
+           && Objects.equals(shuffleSpec, that.shuffleSpec);
   }
 
   @Override
@@ -356,8 +415,7 @@ public class StageDefinition
         signature,
         maxWorkerCount,
         shuffleCheckHasMultipleValues,
-        shuffleSpec,
-        maxInputBytesPerWorker
+        shuffleSpec
     );
   }
 
@@ -373,7 +431,6 @@ public class StageDefinition
            ", maxWorkerCount=" + maxWorkerCount +
            ", shuffleSpec=" + shuffleSpec +
            (shuffleCheckHasMultipleValues ? ", shuffleCheckHasMultipleValues=" + shuffleCheckHasMultipleValues : "") +
-           ", maxInputBytesPerWorker=" + maxInputBytesPerWorker +
            '}';
   }
 }

@@ -20,7 +20,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
-import { Capabilities } from '../../../helpers';
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { lookupBy, queryDruidSql } from '../../../utils';

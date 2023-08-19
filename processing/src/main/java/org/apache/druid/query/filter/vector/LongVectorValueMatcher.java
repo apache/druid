@@ -19,10 +19,12 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -30,7 +32,6 @@ import javax.annotation.Nullable;
 public class LongVectorValueMatcher implements VectorValueMatcherFactory
 {
   private final VectorValueSelector selector;
-  private final boolean canHaveNulls = !NullHandling.replaceWithDefault();
 
   public LongVectorValueMatcher(final VectorValueSelector selector)
   {
@@ -40,7 +41,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
-    if (value == null && canHaveNulls) {
+    if (value == null) {
       return makeNullValueMatcher(selector);
     }
 
@@ -52,6 +53,25 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
 
     final long matchValLong = matchVal;
 
+    return makeLongMatcher(matchValLong);
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
+    if (castForComparison == null) {
+      return BooleanVectorValueMatcher.of(selector, false);
+    }
+    if (castForComparison.isNumericNull()) {
+      return makeNullValueMatcher(selector);
+    }
+    return makeLongMatcher(castForComparison.asLong());
+  }
+
+  private BaseVectorValueMatcher makeLongMatcher(long matchValLong)
+  {
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -62,7 +82,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         final long[] vector = selector.getLongVector();
         final int[] selection = match.getSelection();
         final boolean[] nulls = selector.getNullVector();
-        final boolean hasNulls = canHaveNulls && nulls != null;
+        final boolean hasNulls = nulls != null;
 
         int numRows = 0;
 
@@ -77,7 +97,6 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
@@ -98,7 +117,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         final long[] vector = selector.getLongVector();
         final int[] selection = match.getSelection();
         final boolean[] nulls = selector.getNullVector();
-        final boolean hasNulls = canHaveNulls && nulls != null;
+        final boolean hasNulls = nulls != null;
 
         int numRows = 0;
 
@@ -114,7 +133,6 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

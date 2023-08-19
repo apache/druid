@@ -71,6 +71,7 @@ import java.util.Map;
  */
 public class S3InputSourceDefn extends FormattedInputSourceDefn
 {
+  public static final String TYPE_KEY = S3StorageDruidModule.SCHEME;
   public static final String URIS_PARAMETER = "uris";
   public static final String PREFIXES_PARAMETER = "prefixes";
   public static final String BUCKET_PARAMETER = "bucket";
@@ -117,7 +118,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
   @Override
   public String typeValue()
   {
-    return S3StorageDruidModule.SCHEME;
+    return TYPE_KEY;
   }
 
   @Override

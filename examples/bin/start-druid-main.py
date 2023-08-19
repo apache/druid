@@ -154,7 +154,7 @@ sample usage:
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
                              'conf/druid/auto directory is used.\n'
-                             'Note. zookeeper config cannot be overriden.\n')
+                             'Note. zookeeper config cannot be overridden.\n')
     parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
@@ -471,7 +471,7 @@ def build_memory_config(service, allocated_memory):
         heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
         heap_memory = int(heap_memory)
-        memory_type, task_count, task_memory = compute_tasks_memory(allocated_memory)
+        task_count, task_memory = compute_tasks_memory(allocated_memory)
         return ['-D{0}={1}'.format(TASK_WORKER_CAPACITY_PROPERTY, task_count),
                 '-Xms{0}m -Xmx{0}m -XX:MaxDirectMemorySize={1}m'.format(heap_memory, direct_memory)], \
                task_memory * task_count

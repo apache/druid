@@ -19,7 +19,7 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { Capabilities } from '../../../helpers';
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { pluralIfNeeded, queryDruidSql } from '../../../utils';

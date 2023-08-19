@@ -23,9 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
@@ -105,23 +107,14 @@ public class TaskToolboxTest
     EasyMock.expect(mockIndexMergerV9.create(true)).andReturn(indexMergerV9).anyTimes();
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
+    TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.newFile().toString())
+        .setDefaultRowFlushBoundary(50000)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+
     taskToolbox = new TaskToolboxFactory(
-        new TaskConfig(
-            temporaryFolder.newFile().toString(),
-            null,
-            null,
-            50000,
-            null,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false
-        ),
+        taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
         mockEmitter,
@@ -154,7 +147,7 @@ public class TaskToolboxTest
         new DropwizardRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
-        null,
+        new NoopCoordinatorClient(),
         null,
         null,
         null,

@@ -17,7 +17,8 @@
  */
 
 import React from 'react';
-import { Filter, ReactTableDefaults } from 'react-table';
+import type { Filter } from 'react-table';
+import { ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components';
 import {
@@ -39,7 +40,12 @@ export function bootstrapReactTable() {
     className: DEFAULT_TABLE_CLASS_NAME,
     defaultFilterMethod: (filter: Filter, row: any) => {
       const id = filter.pivotId || filter.id;
-      return booleanCustomTableFilter(filter, row[id]);
+      const subRows = row._subRows;
+      if (Array.isArray(subRows)) {
+        return subRows.some(r => booleanCustomTableFilter(filter, r[id]));
+      } else {
+        return booleanCustomTableFilter(filter, row[id]);
+      }
     },
     LoadingComponent: Loader,
     loadingText: '',

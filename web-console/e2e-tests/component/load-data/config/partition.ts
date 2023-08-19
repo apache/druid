@@ -18,7 +18,7 @@
 
 /* eslint-disable max-classes-per-file */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import {
   getLabeledInput,

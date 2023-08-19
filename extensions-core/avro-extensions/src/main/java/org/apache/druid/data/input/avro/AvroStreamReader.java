@@ -66,7 +66,7 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
             false,
             binaryAsString,
             extractUnionsByType,
-            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+            inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
         )
     );
   }

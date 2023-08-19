@@ -81,6 +81,7 @@ public class QuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -93,6 +94,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -108,6 +110,7 @@ public class QuantileSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -210,8 +213,8 @@ public class QuantileSqlAggregator implements SqlAggregator
 
   private static class QuantileSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, resolution)'\n";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, resolution)'";
 
     QuantileSqlAggFunction()
     {

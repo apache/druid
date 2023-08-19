@@ -32,17 +32,21 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctUtf8SqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -50,6 +54,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -402,26 +407,35 @@ public class SqlBenchmark
       "SELECT * FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100')",
       "SELECT * FROM foo WHERE dimSequential > '10' AND dimSequential < '8500'",
       "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100') GROUP BY 1, 2",
-      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential > '10' AND dimSequential < '8500' GROUP BY 1, 2"
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential > '10' AND dimSequential < '8500' GROUP BY 1, 2",
 
-
+      // 28, 29, 30, 31: Approximate count distinct of strings
+      "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dimZipf) FROM foo",
+      "SELECT APPROX_COUNT_DISTINCT_DS_HLL(dimZipf) FROM foo",
+      "SELECT APPROX_COUNT_DISTINCT_DS_HLL_UTF8(dimZipf) FROM foo",
+      "SELECT APPROX_COUNT_DISTINCT_DS_THETA(dimZipf) FROM foo"
   );
 
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"false", "force"})
+  // Can be "false", "true", or "force"
+  @Param({"force"})
   private String vectorize;
-  @Param({"none", "front-coded-4", "front-coded-16"})
+
+  // Can be "none" or "front-coded-N"
+  @Param({"none", "front-coded-4"})
   private String stringEncoding;
 
-  @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23", "26", "27"})
+  @Param({"28", "29", "30", "31"})
   private String query;
 
-  @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
+  // Can be STORAGE_MMAP, STORAGE_FRAME_ROW, or STORAGE_FRAME_COLUMNAR
+  @Param({STORAGE_MMAP})
   private String storageType;
 
   private SqlEngine engine;
+
   @Nullable
   private PlannerFactory plannerFactory;
   private final Closer closer = Closer.create();
@@ -447,22 +461,14 @@ public class SqlBenchmark
     if (stringEncoding.startsWith("front-coded")) {
       String[] split = stringEncoding.split("-");
       int bucketSize = Integer.parseInt(split[2]);
-      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
     } else {
       encodingStrategy = new StringEncodingStrategy.Utf8();
     }
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
-        new IndexSpec(
-            null,
-            null,
-            encodingStrategy,
-            null,
-            null,
-            null,
-            null
-        ),
+        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
         Granularities.NONE,
         rowsPerSegment
     );
@@ -485,7 +491,9 @@ public class SqlBenchmark
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
   }
 
@@ -523,13 +531,19 @@ public class SqlBenchmark
     try {
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
       extractionOperators.add(CalciteTests.INJECTOR.getInstance(QueryLookupOperatorConversion.class));
-      final Set<SqlAggregator> aggregators = new HashSet<>();
-      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchApproxQuantileSqlAggregator.class));
-      aggregators.add(CalciteTests.INJECTOR.getInstance(DoublesSketchObjectSqlAggregator.class));
       final ApproxCountDistinctSqlAggregator countDistinctSqlAggregator =
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
-      aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
-      aggregators.add(countDistinctSqlAggregator);
+      final Set<SqlAggregator> aggregators = new HashSet<>(
+          ImmutableList.of(
+              new DoublesSketchApproxQuantileSqlAggregator(),
+              new DoublesSketchObjectSqlAggregator(),
+              new HllSketchApproxCountDistinctSqlAggregator(),
+              new HllSketchApproxCountDistinctUtf8SqlAggregator(),
+              new ThetaSketchApproxCountDistinctSqlAggregator(),
+              new CountSqlAggregator(countDistinctSqlAggregator),
+              countDistinctSqlAggregator
+          )
+      );
       return new DruidOperatorTable(aggregators, extractionOperators);
     }
     catch (Exception e) {
@@ -546,7 +560,7 @@ public class SqlBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void querySql(Blackhole blackhole) throws Exception
+  public void querySql(Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,
@@ -564,7 +578,7 @@ public class SqlBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void planSql(Blackhole blackhole) throws Exception
+  public void planSql(Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,

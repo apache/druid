@@ -19,15 +19,18 @@
 
 package org.apache.druid.emitter.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class KafkaEmitterConfigTest
 {
@@ -42,8 +45,8 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeserKafkaEmitterConfig() throws IOException
   {
-    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
-        "alertTest", "requestTest",
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", null, "metricTest",
+        "alertTest", "requestTest", "metadataTest",
         "clusterNameTest", ImmutableMap.<String, String>builder()
         .put("testKey", "testValue").build()
     );
@@ -56,8 +59,24 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeserKafkaEmitterConfigNullRequestTopic() throws IOException
   {
-    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
-        "alertTest", null,
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", null, "metricTest",
+        "alertTest", null, "metadataTest",
+        "clusterNameTest", ImmutableMap.<String, String>builder()
+        .put("testKey", "testValue").build()
+    );
+    String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
+    KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
+        .readValue(kafkaEmitterConfigString);
+    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+  }
+
+  @Test
+  public void testSerDeserKafkaEmitterConfigNullMetricsTopic() throws IOException
+  {
+    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<KafkaEmitterConfig.EventType>();
+    eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENT_METADATA);
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", eventTypeSet, null,
+        null, null, "metadataTest",
         "clusterNameTest", ImmutableMap.<String, String>builder()
         .put("testKey", "testValue").build()
     );
@@ -70,8 +89,8 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeNotRequiredKafkaProducerConfig()
   {
-    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
-        "alertTest", null,
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", null, "metricTest",
+        "alertTest", null, "metadataTest",
         "clusterNameTest", null
     );
     try {
@@ -81,6 +100,14 @@ public class KafkaEmitterConfigTest
     catch (NullPointerException e) {
       Assert.fail();
     }
+  }
+
+  @Test
+  public void testDeserializeEventTypesWithDifferentCase() throws JsonProcessingException
+  {
+    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENT_METADATA, mapper.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertEquals(KafkaEmitterConfig.EventType.ALERTS, mapper.readValue("\"alerts\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertThrows(ValueInstantiationException.class, () -> mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
   }
 
   @Test

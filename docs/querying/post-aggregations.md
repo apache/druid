@@ -22,10 +22,12 @@ title: "Post-aggregations"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql-aggregations.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the native
+ language. For information about functions available in SQL, refer to the
+ [SQL documentation](sql-aggregations.md).
+:::
 
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Apache Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
@@ -92,7 +94,7 @@ The constant post-aggregator always returns the specified value.
 
 
 ### Expression post-aggregator
-The expression post-aggregator is defined using a Druid [expression](../misc/math-expr.md).
+The expression post-aggregator is defined using a Druid [expression](math-expr.md).
 
 ```json
 {
@@ -147,7 +149,9 @@ Example JavaScript aggregator:
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### HyperUnique Cardinality post-aggregator
 

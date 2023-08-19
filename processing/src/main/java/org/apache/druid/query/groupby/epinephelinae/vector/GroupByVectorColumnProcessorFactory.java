@@ -107,12 +107,25 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   }
 
   @Override
+  public GroupByVectorColumnSelector makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+  {
+    throw new UnsupportedOperationException(
+        "Vectorized groupBys on ARRAY columns are not yet implemented"
+    );
+  }
+
+  @Override
   public GroupByVectorColumnSelector makeObjectProcessor(
       final ColumnCapabilities capabilities,
       final VectorObjectSelector selector
   )
   {
     if (capabilities.is(ValueType.STRING)) {
+      if (capabilities.hasMultipleValues().isTrue()) {
+        throw new UnsupportedOperationException(
+            "Vectorized groupBys on multi-value dictionary-encoded dimensions are not yet implemented"
+        );
+      }
       return new DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(selector);
     }
     return NilGroupByVectorColumnSelector.INSTANCE;

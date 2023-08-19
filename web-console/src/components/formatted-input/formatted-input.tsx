@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import { InputGroup, InputGroupProps2, Intent, TextArea } from '@blueprintjs/core';
+import type { InputGroupProps2 } from '@blueprintjs/core';
+import { InputGroup, Intent, TextArea } from '@blueprintjs/core';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
-import { Formatter } from '../../utils';
+import type { Formatter } from '../../utils';
 
 import './formatted-input.scss';
 
@@ -47,6 +48,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
     intent,
     placeholder,
     multiline,
+    height,
     ...rest
   } = props;
 
@@ -104,6 +106,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
           onBlur={myOnBlur}
           intent={myIntent}
           placeholder={placeholder}
+          style={height ? { height } : undefined}
         />
       ) : (
         <InputGroup

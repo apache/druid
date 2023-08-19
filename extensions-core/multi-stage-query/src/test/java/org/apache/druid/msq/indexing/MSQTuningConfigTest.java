@@ -24,6 +24,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,15 +53,11 @@ public class MSQTuningConfigTest
         2,
         3,
         4,
-        new IndexSpec(
-            null,
-            null,
-            new StringEncodingStrategy.FrontCoded(null),
-            null,
-            null,
-            null,
-            null
-        )
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(
+                     new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1)
+                 )
+                 .build()
     );
 
     Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsString(config), MSQTuningConfig.class));
@@ -68,6 +66,13 @@ public class MSQTuningConfigTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(MSQTuningConfig.class).usingGetClass().verify();
+    EqualsVerifier.forClass(MSQTuningConfig.class)
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }

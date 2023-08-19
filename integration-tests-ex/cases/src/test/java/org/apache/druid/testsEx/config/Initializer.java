@@ -35,9 +35,9 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
-import org.apache.druid.guice.DruidProcessingConfigModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SQLMetadataStorageDruidModule;
@@ -168,7 +168,11 @@ public class Initializer
       JsonConfigProvider.bind(binder, MetadataStorageTablesConfig.PROPERTY_BASE, MetadataStorageTablesConfig.class);
 
       // Build from properties provided in the config
-      JsonConfigProvider.bind(binder, MetadataStorageConnectorConfig.PROPERTY_BASE, MetadataStorageConnectorConfig.class);
+      JsonConfigProvider.bind(
+          binder,
+          MetadataStorageConnectorConfig.PROPERTY_BASE,
+          MetadataStorageConnectorConfig.class
+      );
     }
 
     @Provides
@@ -275,6 +279,7 @@ public class Initializer
       property("druid.client.https.certAlias", "druid");
       property("druid.client.https.keyManagerPassword", "druid123");
       property("druid.client.https.keyStorePassword", "druid123");
+      propertyEnvVarBinding("druid.metadata.mysql.driver.driverClassName", "MYSQL_DRIVER_CLASSNAME");
 
       // More env var bindings for properties formerly passed in via
       // a generated config file.
@@ -326,7 +331,7 @@ public class Initializer
      * <p>
      * The builder registers {@code DruidNodeDiscoveryProvider} by default: add any
      * test-specific instances as needed.
-      */
+     */
     public Builder eagerInstance(Class<?> theClass)
     {
       this.eagerCreation.add(theClass);
@@ -342,7 +347,7 @@ public class Initializer
       return this;
     }
 
-    public Builder modules(Module...modules)
+    public Builder modules(Module... modules)
     {
       return modules(Arrays.asList(modules));
     }
@@ -491,7 +496,7 @@ public class Initializer
             new AnnouncerModule(),
             new DiscoveryModule(),
             // Dependencies from other modules
-            new DruidProcessingConfigModule(),
+            new LegacyBrokerParallelMergeConfigModule(),
             // Dependencies from other modules
             new StorageNodeModule(),
 

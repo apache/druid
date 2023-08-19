@@ -72,7 +72,9 @@ The following sections describe filtering and grouping behavior based on the fol
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": ["t5","t6","t7"]}  #row3
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": []}                #row4
 ```
-> Be sure to remove the comments before trying out the sample data. 
+:::info
+ Be sure to remove the comments before trying out the sample data.
+:::
 
 ### Filtering
 
@@ -140,12 +142,11 @@ This "selector" filter would match row4 of the dataset above:
 ### Grouping
 
 topN and groupBy queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
-from matching rows will be used to generate one group per value. This can be thought of as the equivalent to the
-`UNNEST` operator used on an `ARRAY` type that many SQL dialects support. This means it's possible for a query to return
-more groups than there are rows. For example, a topN on the dimension `tags` with filter `"t1" AND "t3"` would match
-only row1, and generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
-your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
-improve performance.
+from matching rows will be used to generate one group per value. This behaves similarly to an implicit SQL `UNNEST`
+operation. This means it's possible for a query to return more groups than there are rows. For example, a topN on the
+dimension `tags` with filter `"t1" AND "t3"` would match only row1, and generate a result with three groups:
+`t1`, `t2`, and `t3`. If you only need to include values that match your filter, you can use a
+[filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also improve performance.
 
 ## Example: GroupBy query with no filtering
 

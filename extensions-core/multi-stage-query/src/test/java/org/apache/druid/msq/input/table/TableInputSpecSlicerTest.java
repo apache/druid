@@ -29,6 +29,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,13 +80,25 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
       BYTES_PER_SEGMENT
   );
 
+  private static final DataSegment SEGMENT3 = new DataSegment(
+      DATASOURCE,
+      Intervals.of("2001/2002"),
+      "1",
+      Collections.emptyMap(),
+      Collections.emptyList(),
+      Collections.emptyList(),
+      TombstoneShardSpec.INSTANCE,
+      null,
+      null,
+      BYTES_PER_SEGMENT
+  );
   private SegmentTimeline timeline;
   private TableInputSpecSlicer slicer;
 
   @Before
   public void setUp()
   {
-    timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2));
+    timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3));
     DataSegmentTimelineView timelineView = (dataSource, intervals) -> {
       if (DATASOURCE.equals(dataSource)) {
         return Optional.of(timeline);
@@ -106,7 +119,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
   public void test_sliceStatic_noDataSource()
   {
     final TableInputSpec spec = new TableInputSpec("no such datasource", null, null);
-    Assert.assertEquals(Collections.emptyList(), slicer.sliceStatic(spec, 2));
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
   }
 
   @Test
@@ -166,7 +182,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
         null
     );
 
-    Assert.assertEquals(Collections.emptyList(), slicer.sliceStatic(spec, 2));
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
   }
 
   @Test

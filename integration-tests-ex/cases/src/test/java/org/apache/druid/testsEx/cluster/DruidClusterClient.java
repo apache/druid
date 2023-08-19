@@ -32,6 +32,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testsEx.config.ClusterConfig;
 import org.apache.druid.testsEx.config.ResolvedConfig;
 import org.apache.druid.testsEx.config.ResolvedDruidService;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedInstance;
@@ -335,8 +336,8 @@ public class DruidClusterClient
    */
   public void validate()
   {
-    RE exception = new RE("Just building for the stack trace");
-    log.info(exception, "Starting cluster validation");
+    log.info("Starting cluster validation");
+    log.info("This cluster uses " + (ClusterConfig.isIndexer() ? "Indexer" : "Middle Manager"));
     for (ResolvedDruidService service : config.requireDruid().values()) {
       for (ResolvedInstance instance : service.requireInstances()) {
         validateInstance(service, instance);

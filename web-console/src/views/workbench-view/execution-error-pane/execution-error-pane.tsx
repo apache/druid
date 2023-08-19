@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 
 import { ClickToCopy, ExternalLink } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { getLink } from '../../../links';
 import { downloadQueryDetailArchive } from '../../../utils';
 

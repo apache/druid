@@ -35,9 +35,9 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFac
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -130,6 +130,12 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  @Nullable
+  public <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return context == null ? null : (ContextValueType) context.get(key);
   }
 
   public ServiceEmitter getEmitter()

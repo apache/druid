@@ -17,10 +17,8 @@
  */
 
 import { formatBytesCompact, pluralIfNeeded } from '../../utils';
-import {
-  CompactionConfig,
-  compactionConfigHasLegacyInputSegmentSizeBytesSet,
-} from '../compaction-config/compaction-config';
+import type { CompactionConfig } from '../compaction-config/compaction-config';
+import { compactionConfigHasLegacyInputSegmentSizeBytesSet } from '../compaction-config/compaction-config';
 
 function capitalizeFirst(str: string): string {
   return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();

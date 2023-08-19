@@ -13,12 +13,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Github workflow that runs revised/new ITs
+# GitHub workflow that runs revised/new ITs
+
+name: "Revised ITs workflow"
 on:
-  workflow_call
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    # Required permissions
+    permissions:
+      pull-requests: read
+    # Set job outputs to values from filter step
+    outputs:
+      # run everything if not a PR
+      core: ${{ steps.filter.outputs.core || github.event_name != 'pull_request'}}
+      # the common extension in revised ITs is different from the one in standard ITs
+      common-extensions: ${{ steps.filter.outputs.common-extensions }}
+    steps:
+      - uses: dorny/paths-filter@v2
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          filters: |
+            common-extensions:
+              - 'extension-core/(mysql-metadata-storage|druid-it-tools|druid-lookups-cached-global|druid-histogram|druid-datasketches|druid-parquet-extensions|druid-avro-extensions|druid-protobuf-extensions|druid-orc-extensions|druid-kafka-indexing-service|druid-s3-extensions|druid-multi-stage-query|druid-catalog)/**'
+            core:
+              - '!extension*/**'
+
   it:
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
@@ -28,9 +54,28 @@ jobs:
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
       script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}
+      mysql_driver: com.mysql.jdbc.Driver
+
+  s3-deep-storage-minio:
+    needs: changes
+    uses: ./.github/workflows/reusable-revised-its.yml
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    with:
+      build_jdk: 8
+      runtime_jdk: 11
+      use_indexer: middleManager
+      script: ./it.sh github S3DeepStorage
+      it: S3DeepStorage
+      mysql_driver: com.mysql.jdbc.Driver
+      DRUID_CLOUD_BUCKET: druid-qa
+      DRUID_CLOUD_PATH: aws-${{ github.run_id }}-${{ github.run_attempt }}
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: miniopassword

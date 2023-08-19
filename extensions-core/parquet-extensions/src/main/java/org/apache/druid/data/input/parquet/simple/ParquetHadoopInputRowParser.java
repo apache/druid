@@ -60,7 +60,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<Group>
         flattenSpec,
         new ParquetGroupFlattenerMaker(
             this.binaryAsString,
-            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+            dimensionsSpec != null && dimensionsSpec.useSchemaDiscovery()
         )
     );
     this.parser = new MapInputRowParser(parseSpec);

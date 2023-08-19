@@ -21,8 +21,8 @@ package org.apache.druid.frame.write;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.write.columnar.ColumnarFrameWriterFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -45,20 +45,27 @@ public class FrameWriters
   }
 
   /**
-   * Creates a {@link FrameWriterFactory} that produces frames of the given {@link FrameType}.
+   * Creates a {@link FrameWriterFactory}.
+   *
+   * @param frameType        type of the frames
+   * @param allocatorFactory supplier of allocators, which ultimately determine frame size. Frames are closed and
+   *                         written once the allocator runs out of memory.
+   * @param signature        signature of the frames
+   * @param sortColumns      sort columns for the frames. If nonempty, {@link FrameSort#sort} is used to sort the
+   *                         resulting frames.
    */
   public static FrameWriterFactory makeFrameWriterFactory(
       final FrameType frameType,
-      final MemoryAllocator allocator,
+      final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
-      final List<SortColumn> sortColumns
+      final List<KeyColumn> sortColumns
   )
   {
     switch (Preconditions.checkNotNull(frameType, "frameType")) {
       case COLUMNAR:
-        return new ColumnarFrameWriterFactory(allocator, signature, sortColumns);
+        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
       case ROW_BASED:
-        return new RowBasedFrameWriterFactory(allocator, signature, sortColumns);
+        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns);
       default:
         throw new ISE("Unrecognized frame type [%s]", frameType);
     }
@@ -73,12 +80,12 @@ public class FrameWriters
    */
   public static RowSignature sortableSignature(
       final RowSignature signature,
-      final List<SortColumn> sortColumns
+      final List<KeyColumn> keyColumns
   )
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
-    for (final SortColumn columnName : sortColumns) {
+    for (final KeyColumn columnName : keyColumns) {
       final Optional<ColumnType> columnType = signature.getColumnType(columnName.columnName());
       if (!columnType.isPresent()) {
         throw new IAE("Column [%s] not present in signature", columnName);
@@ -88,7 +95,7 @@ public class FrameWriters
     }
 
     final Set<String> sortColumnNames =
-        sortColumns.stream().map(SortColumn::columnName).collect(Collectors.toSet());
+        keyColumns.stream().map(KeyColumn::columnName).collect(Collectors.toSet());
 
     for (int i = 0; i < signature.size(); i++) {
       final String columnName = signature.getColumnName(i);

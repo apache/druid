@@ -70,7 +70,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
         flattenSpec,
         new ParquetGroupFlattenerMaker(
             binaryAsString,
-            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+            inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
         )
     );
   }

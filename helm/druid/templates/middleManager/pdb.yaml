@@ -18,7 +18,7 @@
 */}}
 
 {{- if .Values.middleManager.podDisruptionBudget.enabled }}
-apiVersion: policy/v1beta1
+apiVersion: {{ include "capabilities.policy.apiVersion" . }}
 kind: PodDisruptionBudget
 metadata:
   labels:

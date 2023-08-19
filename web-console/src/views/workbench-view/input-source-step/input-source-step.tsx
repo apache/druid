@@ -27,22 +27,22 @@ import {
   RadioGroup,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { QueryResult } from '@druid-toolkit/query';
+import { SqlColumnDeclaration } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { QueryResult } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 
 import { AutoForm, ExternalLink } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
+import type { Execution, ExecutionError, InputFormat, InputSource } from '../../../druid-models';
 import {
-  Execution,
-  ExecutionError,
   externalConfigToTableExpression,
   getIngestionImage,
   getIngestionTitle,
-  guessInputFormat,
+  guessSimpleInputFormat,
   INPUT_SOURCE_FIELDS,
-  InputFormat,
-  InputSource,
+  issueWithSampleData,
   PLACEHOLDER_TIMESTAMP_SPEC,
 } from '../../../druid-models';
 import {
@@ -51,9 +51,10 @@ import {
   submitTaskQuery,
 } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { UrlBaser } from '../../../singletons';
+import { AppToaster, UrlBaser } from '../../../singletons';
 import { filterMap, IntermediateQueryState } from '../../../utils';
-import { postToSampler, SampleSpec } from '../../../utils/sampler';
+import type { SampleSpec } from '../../../utils/sampler';
+import { postToSampler } from '../../../utils/sampler';
 
 import { EXAMPLE_INPUTS } from './example-inputs';
 import { InputSourceInfo } from './input-source-info';
@@ -62,7 +63,7 @@ import './input-source-step.scss';
 
 function resultToInputFormat(result: QueryResult): InputFormat {
   if (!result.rows.length) throw new Error('No data returned from sample query');
-  return guessInputFormat(result.rows.map((r: any) => r[0]));
+  return guessSimpleInputFormat(result.rows.map((r: any) => r[0]));
 }
 
 const BOGUS_LIST_DELIMITER = '56616469-6de2-9da4-efb8-8f416e6e6965'; // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
@@ -93,7 +94,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     Execution
   >({
     processQuery: async ({ inputSource, suggestedInputFormat }, cancelToken) => {
-      let guessedInputFormat: InputFormat | undefined;
+      let sampleLines: string[];
       if (mode === 'sampler') {
         const sampleSpec: SampleSpec = {
           type: 'index_parallel',
@@ -125,12 +126,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
 
         const sampleResponse = await postToSampler(sampleSpec, 'input-source-step');
 
-        const sampleLines: string[] = filterMap(sampleResponse.data, l =>
-          l.input ? l.input.raw : undefined,
-        );
-
-        if (!sampleLines.length) throw new Error('No data returned from sampler');
-        guessedInputFormat = guessInputFormat(sampleLines);
+        sampleLines = filterMap(sampleResponse.data, l => (l.input ? l.input.raw : undefined));
       } else {
         const tableExpression = externalConfigToTableExpression({
           inputSource,
@@ -140,7 +136,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             listDelimiter: BOGUS_LIST_DELIMITER,
             columns: ['raw'],
           },
-          signature: [{ name: 'raw', type: 'string' }],
+          signature: [SqlColumnDeclaration.create('raw', 'VARCHAR')],
         });
 
         const result = extractResult(
@@ -154,8 +150,23 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         );
 
         if (result instanceof IntermediateQueryState) return result;
-        guessedInputFormat = resultToInputFormat(result);
+        sampleLines = result.rows.map((r: string[]) => r[0]);
       }
+
+      if (!sampleLines.length) throw new Error('No data returned from sampler');
+
+      const issue = issueWithSampleData(sampleLines, false);
+      if (issue) {
+        AppToaster.show({
+          icon: IconNames.WARNING_SIGN,
+          intent: Intent.WARNING,
+          message: issue,
+          timeout: 30000,
+        });
+        throw new Error(`Issue detected in sample data.`);
+      }
+
+      const guessedInputFormat = guessSimpleInputFormat(sampleLines);
 
       if (suggestedInputFormat?.type === guessedInputFormat.type) {
         return suggestedInputFormat;
@@ -265,18 +276,18 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
                 <p>Your raw data can be in any of the following formats:</p>
                 <ul>
                   <li>
-                    <ExternalLink href="http://ndjson.org/">JSON (new line delimited)</ExternalLink>
+                    <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>
                   </li>
                   <li>CSV</li>
                   <li>TSV</li>
                   <li>
-                    <ExternalLink href="https://parquet.apache.org/">Parquet</ExternalLink>
+                    <ExternalLink href="https://parquet.apache.org">Parquet</ExternalLink>
                   </li>
                   <li>
-                    <ExternalLink href="https://orc.apache.org/">ORC</ExternalLink>
+                    <ExternalLink href="https://orc.apache.org">ORC</ExternalLink>
                   </li>
                   <li>
-                    <ExternalLink href="https://avro.apache.org/">Avro</ExternalLink>
+                    <ExternalLink href="https://avro.apache.org">Avro</ExternalLink>
                   </li>
                   <li>
                     Any line format that can be parsed with a custom regular expression (regex)

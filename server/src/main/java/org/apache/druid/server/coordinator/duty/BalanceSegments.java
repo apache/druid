@@ -19,293 +19,117 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.Lists;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.coordinator.BalancerSegmentHolder;
-import org.apache.druid.server.coordinator.BalancerStrategy;
-import org.apache.druid.server.coordinator.CoordinatorStats;
-import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadPeonCallback;
-import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
+import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.joda.time.Duration;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.SortedSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
+ *
  */
 public class BalanceSegments implements CoordinatorDuty
 {
-  protected static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
+  private static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
 
-  protected final DruidCoordinator coordinator;
+  private final Duration coordinatorPeriod;
 
-  protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
-      new HashMap<>();
-
-  public BalanceSegments(DruidCoordinator coordinator)
+  public BalanceSegments(Duration coordinatorPeriod)
   {
-    this.coordinator = coordinator;
-  }
-
-  protected void reduceLifetimes(String tier)
-  {
-    for (BalancerSegmentHolder holder : currentlyMovingSegments.get(tier).values()) {
-      holder.reduceLifetime();
-      if (holder.getLifetime() <= 0) {
-        log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
-           .addData("segment", holder.getSegment().getId())
-           .addData("server", holder.getFromServer().getMetadata())
-           .emit();
-      }
-    }
+    this.coordinatorPeriod = coordinatorPeriod;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    final CoordinatorStats stats = new CoordinatorStats();
-    params.getDruidCluster().getHistoricals().forEach((String tier, NavigableSet<ServerHolder> servers) -> {
-      balanceTier(params, tier, servers, stats);
-    });
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
-  }
-
-  private void balanceTier(
-      DruidCoordinatorRuntimeParams params,
-      String tier,
-      SortedSet<ServerHolder> servers,
-      CoordinatorStats stats
-  )
-  {
-
-    log.info("Balancing segments in tier [%s]", tier);
-    if (params.getUsedSegments().size() == 0) {
-      log.info("Metadata segments are not available. Cannot balance.");
-      // suppress emit zero stats
-      return;
-    }
-    currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
-
-    if (!currentlyMovingSegments.get(tier).isEmpty()) {
-      reduceLifetimes(tier);
-      log.info(
-          "[%s]: Still waiting on %,d segments to be moved. Skipping balance.",
-          tier,
-          currentlyMovingSegments.get(tier).size()
-      );
-      // suppress emit zero stats
-      return;
+    if (params.getUsedSegments().isEmpty()) {
+      log.info("Skipping balance as there are no used segments.");
+      return params;
     }
 
-    /*
-      Take as many segments from decommissioning servers as decommissioningMaxPercentOfMaxSegmentsToMove allows and find
-      the best location for them on active servers. After that, balance segments within active servers pool.
-     */
-    Map<Boolean, List<ServerHolder>> partitions =
-        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
-    final List<ServerHolder> decommissioningServers = partitions.get(true);
-    final List<ServerHolder> activeServers = partitions.get(false);
-    log.info(
-        "Found %d active servers, %d decommissioning servers",
-        activeServers.size(),
-        decommissioningServers.size()
-    );
+    final DruidCluster cluster = params.getDruidCluster();
+    final SegmentLoadingConfig loadingConfig = params.getSegmentLoadingConfig();
 
-    if ((decommissioningServers.isEmpty() && activeServers.size() <= 1) || activeServers.isEmpty()) {
-      log.warn("[%s]: insufficient active servers. Cannot balance.", tier);
-      // suppress emit zero stats
-      return;
-    }
-
-    int numSegments = 0;
-    for (ServerHolder sourceHolder : servers) {
-      numSegments += sourceHolder.getServer().getNumSegments();
-    }
-
-    if (numSegments == 0) {
-      log.info("No segments found. Cannot balance.");
-      // suppress emit zero stats
-      return;
-    }
-
-    final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
-
-    // Prioritize moving segments from decomissioning servers.
-    int decommissioningMaxPercentOfMaxSegmentsToMove =
-        params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
-    int maxSegmentsToMoveFromDecommissioningNodes =
-        (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
-    log.info(
-        "Processing %d segments for moving from decommissioning servers",
-        maxSegmentsToMoveFromDecommissioningNodes
-    );
-    Pair<Integer, Integer> decommissioningResult =
-        balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
-
-    // After moving segments from decomissioning servers, move the remaining segments from the rest of the servers.
-    int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
-    log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
-    Pair<Integer, Integer> generalResult =
-        balanceServers(params, activeServers, activeServers, maxGeneralSegmentsToMove);
-
-    int moved = generalResult.lhs + decommissioningResult.lhs;
-    int unmoved = generalResult.rhs + decommissioningResult.rhs;
-    if (unmoved == maxSegmentsToMove) {
-      // Cluster should be alive and constantly adjusting
-      log.info("No good moves found in tier [%s]", tier);
-    }
-    stats.addToTieredStat("unmovedCount", tier, unmoved);
-    stats.addToTieredStat("movedCount", tier, moved);
-
-    if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
-      final BalancerStrategy strategy = params.getBalancerStrategy();
-      strategy.emitStats(tier, stats, Lists.newArrayList(servers));
-    }
-    log.info("[%s]: Segments Moved: [%d] Segments Let Alone: [%d]", tier, moved, unmoved);
-  }
-
-  private Pair<Integer, Integer> balanceServers(
-      DruidCoordinatorRuntimeParams params,
-      List<ServerHolder> toMoveFrom,
-      List<ServerHolder> toMoveTo,
-      int maxSegmentsToMove
-  )
-  {
+    final int maxSegmentsToMove = getMaxSegmentsToMove(params);
     if (maxSegmentsToMove <= 0) {
-      log.debug("maxSegmentsToMove is 0; no balancing work can be performed.");
-      return new Pair<>(0, 0);
-    } else if (toMoveFrom.isEmpty()) {
-      log.debug("toMoveFrom is empty; no balancing work can be performed.");
-      return new Pair<>(0, 0);
-    } else if (toMoveTo.isEmpty()) {
-      log.debug("toMoveTo is empty; no balancing work can be peformed.");
-      return new Pair<>(0, 0);
-    }
-
-    final BalancerStrategy strategy = params.getBalancerStrategy();
-    final int maxIterations = 2 * maxSegmentsToMove;
-    final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
-    int moved = 0, unmoved = 0;
-
-    Iterator<BalancerSegmentHolder> segmentsToMove;
-    // The pick method depends on if the operator has enabled batched segment sampling in the Coorinator dynamic config.
-    if (params.getCoordinatorDynamicConfig().useBatchedSegmentSampler()) {
-      segmentsToMove = strategy.pickSegmentsToMove(
-          toMoveFrom,
-          params.getBroadcastDatasources(),
-          maxSegmentsToMove
-      );
+      log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
+      return params;
     } else {
-      segmentsToMove = strategy.pickSegmentsToMove(
-          toMoveFrom,
-          params.getBroadcastDatasources(),
-          params.getCoordinatorDynamicConfig().getPercentOfSegmentsToConsiderPerMove()
+      log.info(
+          "Balancing segments in tiers [%s] with maxSegmentsToMove[%,d] and maxLifetime[%d].",
+          cluster.getTierNames(), maxSegmentsToMove, loadingConfig.getMaxLifetimeInLoadQueue()
       );
     }
 
-    //noinspection ForLoopThatDoesntUseLoopVariable
-    for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      if (!segmentsToMove.hasNext()) {
-        log.info("All servers to move segments from are empty, ending run.");
-        break;
-      }
-      final BalancerSegmentHolder segmentToMoveHolder = segmentsToMove.next();
+    cluster.getHistoricals().forEach(
+        (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
+    );
 
-      // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadataManager, i. e. that's a set of segments
-      // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
-      // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such
-      // discrepancies eventually via UnloadUnusedSegments). Therefore the picked segmentToMoveHolder's segment may not
-      // need to be balanced.
-      boolean needToBalancePickedSegment = params.getUsedSegments().contains(segmentToMoveHolder.getSegment());
-      if (needToBalancePickedSegment) {
-        final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
-        final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer();
-        // we want to leave the server the segment is currently on in the list...
-        // but filter out replicas that are already serving the segment, and servers with a full load queue
-        final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
-            toMoveTo.stream()
-                    .filter(s -> s.getServer().equals(fromServer) ||
-                                 (!s.isServingSegment(segmentToMove) &&
-                                  (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)))
-                    .collect(Collectors.toList());
+    CoordinatorRunStats runStats = params.getCoordinatorStats();
+    params.getBalancerStrategy()
+          .getStats()
+          .forEachStat(runStats::add);
 
-        if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {
-          final ServerHolder destinationHolder =
-              strategy.findNewSegmentHomeBalancer(segmentToMove, toMoveToWithLoadQueueCapacityAndNotServingSegment);
-
-          if (destinationHolder != null && !destinationHolder.getServer().equals(fromServer)) {
-            if (moveSegment(segmentToMoveHolder, destinationHolder.getServer(), params)) {
-              moved++;
-            } else {
-              unmoved++;
-            }
-          } else {
-            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
-            unmoved++;
-          }
-        } else {
-          log.debug("No valid movement destinations for segment [%s].", segmentToMove.getId());
-          unmoved++;
-        }
-      }
-      if (iter >= maxIterations) {
-        log.info(
-            "Unable to select %d remaining candidate segments out of %d total to balance "
-            + "after %d iterations, ending run.",
-            (maxSegmentsToMove - moved - unmoved),
-            maxSegmentsToMove,
-            iter
-        );
-        break;
-      }
-    }
-    return new Pair<>(moved, unmoved);
+    return params;
   }
 
-  protected boolean moveSegment(
-      final BalancerSegmentHolder segment,
-      final ImmutableDruidServer toServer,
-      final DruidCoordinatorRuntimeParams params
-  )
+  /**
+   * Recomputes the value of {@code maxSegmentsToMove} if smart segment loading
+   * is enabled. {@code maxSegmentsToMove} defines only the upper bound, the actual
+   * number of segments picked for moving is determined by the {@link TierSegmentBalancer}
+   * based on the level of skew in the tier.
+   */
+  private int getMaxSegmentsToMove(DruidCoordinatorRuntimeParams params)
   {
-    final LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServer.getName());
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    if (dynamicConfig.isSmartSegmentLoading()) {
+      final Pair<Integer, Integer> numHistoricalsAndSegments = getNumHistoricalsAndSegments(params.getDruidCluster());
+      final int totalSegmentsInCluster = numHistoricalsAndSegments.rhs;
 
-    final ImmutableDruidServer fromServer = segment.getFromServer();
-    final DataSegment segmentToMove = segment.getSegment();
-    final SegmentId segmentId = segmentToMove.getId();
+      final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
+      final int maxSegmentsToMove = SegmentToMoveCalculator
+          .computeMaxSegmentsToMovePerTier(totalSegmentsInCluster, numBalancerThreads, coordinatorPeriod);
+      log.info(
+          "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
+          maxSegmentsToMove, totalSegmentsInCluster, numHistoricalsAndSegments.lhs
+      );
 
-    if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-        (toServer.getSegment(segmentId) == null) &&
-        new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.debug("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
+      return maxSegmentsToMove;
+    } else {
+      return dynamicConfig.getMaxSegmentsToMove();
+    }
+  }
 
-      ConcurrentMap<SegmentId, BalancerSegmentHolder> movingSegments =
-          currentlyMovingSegments.get(toServer.getTier());
-      movingSegments.put(segmentId, segment);
-      final LoadPeonCallback callback = moveSuccess -> movingSegments.remove(segmentId);
-      try {
-        coordinator
-            .moveSegment(params, fromServer, toServer, segmentToMove, callback);
-        return true;
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "[%s] : Moving exception", segmentId).emit();
-        callback.execute(false);
+  /**
+   * Calculates the total number of historicals (active and decommissioning) and
+   * the total number of segments on these historicals that would participate in
+   * cost computations. This includes all replicas of all loaded, loading, dropping
+   * and moving segments.
+   * <p>
+   * This is calculated here to ensure that all assignments done by the preceding
+   * {@link RunRules} duty are accounted for.
+   */
+  private Pair<Integer, Integer> getNumHistoricalsAndSegments(DruidCluster cluster)
+  {
+    int numHistoricals = 0;
+    int numSegments = 0;
+
+    for (Set<ServerHolder> historicals : cluster.getHistoricals().values()) {
+      for (ServerHolder historical : historicals) {
+        ++numHistoricals;
+        numSegments += historical.getServer().getNumSegments() + historical.getNumQueuedSegments();
       }
     }
-    return false;
+
+    return Pair.of(numHistoricals, numSegments);
   }
+
 }

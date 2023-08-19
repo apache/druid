@@ -23,12 +23,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testsEx.utils.S3TestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static junit.framework.Assert.fail;
 
 /**
  * This class defines methods to upload and delete the data files used by the tests, which will inherit this class.
@@ -56,7 +55,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
     catch (Exception e) {
       LOG.error(e, "Unable to upload files to s3");
       // Fail if exception
-      fail();
+      Assert.fail(e.getMessage());
     }
   }
 

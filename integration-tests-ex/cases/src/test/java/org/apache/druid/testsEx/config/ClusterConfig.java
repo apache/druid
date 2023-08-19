@@ -170,6 +170,11 @@ public class ClusterConfig
     return new ResolvedConfig(clusterName, resolveIncludes(), configTags);
   }
 
+  public static boolean isIndexer()
+  {
+    return "indexer".equals(System.getenv("USE_INDEXER"));
+  }
+
   /**
    * Create the set of configuration tags for this run. At present, the only options
    * are "middleManager" or "indexer" corresponding to the value of the

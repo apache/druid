@@ -35,7 +35,7 @@ public class SlicerUtils
    *
    * Items are assigned round-robin.
    */
-  public static <T> List<List<T>> makeSlices(final Iterator<T> iterator, final int numSlices)
+  public static <T> List<List<T>> makeSlicesStatic(final Iterator<T> iterator, final int numSlices)
   {
     final List<List<T>> slicesList = new ArrayList<>(numSlices);
 
@@ -57,10 +57,10 @@ public class SlicerUtils
    * Creates "numSlices" lists from "iterator", trying to keep each one as evenly-weighted as possible. Some lists may
    * be empty.
    *
-   * Each item is assigned to the split list that has the lowest weight at the time that item is encountered, which
+   * Items are assigned to the slice that has the lowest weight at the time that item is encountered, which
    * leads to pseudo-round-robin assignment.
    */
-  public static <T> List<List<T>> makeSlices(
+  public static <T> List<List<T>> makeSlicesStatic(
       final Iterator<T> iterator,
       final ToLongFunction<T> weightFunction,
       final int numSlices
@@ -91,6 +91,69 @@ public class SlicerUtils
               listWithWeight.getList(),
               listWithWeight.getPosition(),
               listWithWeight.getWeight() + itemWeight
+          )
+      );
+    }
+
+    return slicesList;
+  }
+
+  /**
+   * Creates up to "maxNumSlices" lists from "iterator".
+   *
+   * This method creates as few slices as possible, while keeping each slice under the provided limits.
+   *
+   * This function uses a greedy algorithm that starts out with a single empty slice. Items are assigned to the slice
+   * that has the lowest weight at the time that item is encountered. New slices are created, up to maxNumSlices, when
+   * the lightest existing slice exceeds either maxFilesPerSlice or maxWeightPerSlice.
+   *
+   * Slices may have more than maxFilesPerSlice files, or more than maxWeightPerSlice weight, if necessary to
+   * keep the total number of slices at or below maxNumSlices.
+   */
+  public static <T> List<List<T>> makeSlicesDynamic(
+      final Iterator<T> iterator,
+      final ToLongFunction<T> weightFunction,
+      final int maxNumSlices,
+      final int maxFilesPerSlice,
+      final long maxWeightPerSlice
+  )
+  {
+    final List<List<T>> slicesList = new ArrayList<>();
+    final PriorityQueue<ListWithWeight<T>> pq = new PriorityQueue<>(
+        // Break ties with position, so earlier slices fill first.
+        Comparator.<ListWithWeight<T>, Long>comparing(ListWithWeight::getWeight)
+                  .thenComparing(ListWithWeight::getPosition)
+    );
+
+    while (iterator.hasNext()) {
+      final T item = iterator.next();
+      final long itemWeight = weightFunction.applyAsLong(item);
+
+      // Get lightest-weight list.
+      ListWithWeight<T> lightestList = pq.poll();
+
+      if (lightestList == null) {
+        // Populate the initial list.
+        lightestList = new ListWithWeight<>(new ArrayList<>(), 0, 0);
+        slicesList.add(lightestList.getList());
+      }
+
+      if (!lightestList.getList().isEmpty()
+          && slicesList.size() < maxNumSlices
+          && (lightestList.getWeight() + itemWeight > maxWeightPerSlice
+              || lightestList.getList().size() >= maxFilesPerSlice)) {
+        // Lightest list can't hold this item without overflowing. Add it back and make another one.
+        pq.add(lightestList);
+        lightestList = new ListWithWeight<>(new ArrayList<>(), slicesList.size(), 0);
+        slicesList.add(lightestList.getList());
+      }
+
+      lightestList.getList().add(item);
+      pq.add(
+          new ListWithWeight<>(
+              lightestList.getList(),
+              lightestList.getPosition(),
+              lightestList.getWeight() + itemWeight
           )
       );
     }
