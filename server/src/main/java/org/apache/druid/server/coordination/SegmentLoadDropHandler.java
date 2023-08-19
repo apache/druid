@@ -27,9 +27,11 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -49,6 +51,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,7 +69,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
- *
+ * Handles segment load and unload in both Curator-based and HTTP-based loading.
+ * Curator-based loading uses only the method {@link #submitCuratorRequest}
+ * whereas HTTP-based loading uses only {@link #submitRequestBatch}.
  */
 @ManageLifecycle
 public class SegmentLoadDropHandler
@@ -143,7 +148,7 @@ public class SegmentLoadDropHandler
           loadLocalCache();
         }
 
-        if (shouldAnnounce()) {
+        if (shouldAnnounceSelfAsDataServer()) {
           serverAnnouncer.announce();
         }
       }
@@ -166,7 +171,7 @@ public class SegmentLoadDropHandler
 
       log.info("Stopping SegmentLoadDropHandler...");
       try {
-        if (shouldAnnounce()) {
+        if (shouldAnnounceSelfAsDataServer()) {
           serverAnnouncer.unannounce();
         }
       }
@@ -430,24 +435,18 @@ public class SegmentLoadDropHandler
       throw new ISE("SegmentLoadDropHandler has not started yet.");
     }
 
-    final List<LoadDropTask> tasks =
-        changeRequests.stream()
-                      .filter(request -> !isNoopRequest(request))
-                      .map(request -> new LoadDropTask(request, null))
-                      .collect(Collectors.toList());
-
-    final LoadDropBatch newBatch = new LoadDropBatch(tasks);
-
+    final LoadDropBatch newBatch = new LoadDropBatch(changeRequests);
     synchronized (taskQueueLock) {
       final LoadDropBatch oldBatch = currentBatch.getAndSet(newBatch);
       if (oldBatch != null) {
+        oldBatch.cancelTaskIfNotRequiredBy(newBatch);
         oldBatch.resolve();
       }
 
-      tasks.forEach(
-          task -> segmentToTasks.computeIfAbsent(task.segment, s -> new SegmentTaskPair())
-                                .setWaitingTask(task)
-      );
+      for (SegmentTask task : newBatch.requestToTask.values()) {
+        segmentToTasks.computeIfAbsent(task.segment, s -> new SegmentTaskPair())
+                      .setWaitingTask(task);
+      }
     }
     processQueuedTasks();
     return newBatch;
@@ -467,7 +466,7 @@ public class SegmentLoadDropHandler
 
     synchronized (taskQueueLock) {
       segmentToTasks.computeIfAbsent(request.getSegment(), s -> new SegmentTaskPair())
-                    .setWaitingTask(new LoadDropTask(request, callback));
+                    .setWaitingTask(createTaskFor(request, callback));
     }
     processQueuedTasks();
   }
@@ -510,7 +509,7 @@ public class SegmentLoadDropHandler
         return;
       }
 
-      final LoadDropTask waitingTask = pair.waitingTask;
+      final SegmentTask waitingTask = pair.waitingTask;
       if (waitingTask == null) {
         segmentsWithNoTasks.add(segment);
       } else if (waitingTask.isPreCompleted()) {
@@ -525,16 +524,17 @@ public class SegmentLoadDropHandler
   }
 
   /**
-   * Returns whether or not we should announce ourselves as a data server using {@link DataSegmentServerAnnouncer}.
+   * Whether this server should announce itself as a data server using
+   * {@link DataSegmentServerAnnouncer}.
    * <p>
-   * Returns true if _either_:
+   * Returns true if:
    * <p>
-   * (1) Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
-   * to detect that we exist.
-   * (2) We have non-empty storage locations in {@link #config}. This is necessary for Coordinators to be able to
-   * assign segments to us.
+   * (1) EITHER the {@link #serverTypeConfig} indicates that the node is a segment server.
+   * This is necessary for Brokers to be able to detect that we exist.
+   * (2) OR the {@link #config} has non-empty storage locations. This is necessary
+   * for the Coordinator to be able to assign segments to the server.
    */
-  private boolean shouldAnnounce()
+  private boolean shouldAnnounceSelfAsDataServer()
   {
     return serverTypeConfig.getServerType().isSegmentServer() || !config.getLocations().isEmpty();
   }
@@ -542,18 +542,41 @@ public class SegmentLoadDropHandler
   /**
    * Represents the future result of a single batch of segment load drop requests.
    */
-  private static class LoadDropBatch extends AbstractFuture<List<DataSegmentChangeResponse>>
+  private class LoadDropBatch extends AbstractFuture<List<DataSegmentChangeResponse>>
   {
-    private final List<LoadDropTask> tasks;
+    private final List<DataSegmentChangeRequest> changeRequests;
+    private final Map<DataSegmentChangeRequest, SegmentTask> requestToTask =new HashMap<>();
+    private final boolean hasNoopRequests;
 
-    LoadDropBatch(List<LoadDropTask> tasks)
+    LoadDropBatch(List<DataSegmentChangeRequest> changeRequests)
     {
-      this.tasks = tasks;
+      this.changeRequests = changeRequests;
+
+      boolean hasNoopRequests = false;
+      final Set<DataSegment> requestedSegments = new HashSet<>();
+      for (DataSegmentChangeRequest request : changeRequests) {
+        if (isNoopRequest(request)) {
+          hasNoopRequests = true;
+        } else if (requestedSegments.contains(request.getSegment())) {
+          throw InvalidInput.exception("Batch has multiple requests for segment[%s]", request.getSegment().getId());
+        } else {
+          requestToTask.put(request, createTaskFor(request, null));
+          requestedSegments.add(request.getSegment());
+        }
+      }
+      this.hasNoopRequests = hasNoopRequests;
     }
 
-    void cancelTaskIfNotIn(List<LoadDropTask> task)
+    void cancelTaskIfNotRequiredBy(LoadDropBatch latestBatch)
     {
-
+      Set<DataSegment> latestRequestedSegments
+          = latestBatch.requestToTask.keySet()
+                                     .stream()
+                                     .map(DataSegmentChangeRequest::getSegment)
+                                     .collect(Collectors.toSet());
+      requestToTask.values().stream()
+                   .filter(task -> latestRequestedSegments.contains(task.segment))
+                   .forEach(SegmentTask::cancel);
     }
 
     void resolveIfResultsReady()
@@ -562,7 +585,7 @@ public class SegmentLoadDropHandler
         return;
       }
 
-      if (tasks.stream().anyMatch(LoadDropTask::isResultReady)) {
+      if (hasNoopRequests || requestToTask.values().stream().anyMatch(SegmentTask::isResultReady)) {
         resolve();
       }
     }
@@ -573,10 +596,12 @@ public class SegmentLoadDropHandler
         return;
       }
 
-      final List<DataSegmentChangeResponse> results
-          = tasks.stream()
-                 .map(LoadDropTask::getResult)
-                 .collect(Collectors.toList());
+      final List<DataSegmentChangeResponse> results = new ArrayList<>();
+      for (DataSegmentChangeRequest request : changeRequests) {
+        SegmentTask task = requestToTask.get(request);
+        SegmentChangeStatus status = task == null ? SegmentChangeStatus.SUCCESS : task.getStatus();
+        results.add(new DataSegmentChangeResponse(request, status));
+      }
       set(results);
     }
   }
@@ -585,45 +610,33 @@ public class SegmentLoadDropHandler
    * Task for loading or dropping a single segment. For any given segment, only
    * a single task can be running on the executor at any point.
    */
-  private class LoadDropTask implements Runnable, DataSegmentChangeHandler
+  private abstract class SegmentTask implements Runnable
   {
     @Nullable
     private final DataSegmentChangeCallback callback;
-    private final DataSegmentChangeRequest request;
-    private final DataSegment segment;
-    private final TaskType type;
+    final DataSegment segment;
 
     private final AtomicBoolean completed = new AtomicBoolean(false);
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
     private final AtomicReference<SegmentChangeStatus> status = new AtomicReference<>();
 
-    LoadDropTask(DataSegmentChangeRequest request, @Nullable DataSegmentChangeCallback callback)
+    SegmentTask(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
     {
-      this.request = request;
+      this.segment = segment;
       this.callback = callback;
-      this.segment = request.getSegment();
       this.status.set(SegmentChangeStatus.PENDING);
-      this.type = request instanceof SegmentChangeRequestLoad ? TaskType.LOAD : TaskType.DROP;
     }
 
-    boolean isPreCompleted()
+    abstract boolean isAlreadySucceeded();
+    abstract boolean isAlreadyComplete();
+    abstract void perform();
+
+    final boolean isPreCompleted()
     {
-      final boolean isAnnounced = announcer.isSegmentAnnounced(segment);
-      final boolean isCached = segmentCacheManager.isSegmentCached(segment);
-
-      final boolean isSuccess;
-      final boolean isCompleted;
-      if (type == TaskType.LOAD) {
-        isSuccess = isCached && isAnnounced;
-        isCompleted = isCached && isAnnounced;
-      } else {
-        isSuccess = !isAnnounced;
-        isCompleted = !isAnnounced && !isCached;
-      }
-
-      if (isSuccess) {
+      if (isAlreadySucceeded()) {
         setStatus(SegmentChangeStatus.SUCCESS);
       }
+      final boolean isCompleted = isAlreadyComplete();
       if (isCompleted) {
         markCompleted();
       }
@@ -636,13 +649,75 @@ public class SegmentLoadDropHandler
       if (isComplete()) {
         return;
       }
-
-      request.go(this, null);
+      perform();
       processQueuedTasks();
     }
 
+    /**
+     * Load requests complete after segment has been downloaded and announced.
+     * Drop requests complete after segment has been unannounced and dropped.
+     */
+    boolean isComplete()
+    {
+      return completed.get() || cancelled.get();
+    }
+
+    void markCompleted()
+    {
+      completed.set(true);
+      segmentsToDrop.remove(segment);
+    }
+
+    boolean isResultReady()
+    {
+      return status.get().getState() != SegmentChangeStatus.State.PENDING;
+    }
+
+    void cancel()
+    {
+      cancelled.set(true);
+    }
+
+    void setStatus(SegmentChangeStatus status)
+    {
+      boolean updated = this.status.compareAndSet(SegmentChangeStatus.PENDING, status);
+      if (updated && callback != null) {
+        callback.execute();
+      }
+    }
+
+    SegmentChangeStatus getStatus()
+    {
+      return status.get();
+    }
+  }
+
+  /**
+   * Task that loads and announces a segment. The result becomes ready and the
+   * task completes when the segment has been both loaded and announced.
+   */
+  private class LoadTask extends SegmentTask
+  {
+    LoadTask(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+    {
+      super(segment, callback);
+    }
+
     @Override
-    public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+    boolean isAlreadySucceeded()
+    {
+      return announcer.isSegmentAnnounced(segment)
+             && segmentCacheManager.isSegmentCached(segment);
+    }
+
+    @Override
+    boolean isAlreadyComplete()
+    {
+      return isAlreadySucceeded();
+    }
+
+    @Override
+    void perform()
     {
       try {
         log.info("Loading segment[%s]", segment.getId());
@@ -658,9 +733,35 @@ public class SegmentLoadDropHandler
         markCompleted();
       }
     }
+  }
+
+  /**
+   * Task that unannounces and drops a segment. The result is ready after the
+   * segment has been unannounced but the task completes after the segment files
+   * have been removed as well.
+   */
+  private class DropTask extends SegmentTask
+  {
+    DropTask(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+    {
+      super(segment, callback);
+    }
 
     @Override
-    public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+    boolean isAlreadyComplete()
+    {
+      return !announcer.isSegmentAnnounced(segment)
+             && !segmentCacheManager.isSegmentCached(segment);
+    }
+
+    @Override
+    boolean isAlreadySucceeded()
+    {
+      return !announcer.isSegmentAnnounced(segment);
+    }
+
+    @Override
+    void perform()
     {
       try {
         announcer.unannounceSegment(segment);
@@ -690,53 +791,6 @@ public class SegmentLoadDropHandler
           TimeUnit.MILLISECONDS
       );
     }
-
-    /**
-     * Load requests complete after segment has been downloaded and announced.
-     * Drop requests complete after segment has been unannounced and dropped.
-     */
-    boolean isComplete()
-    {
-      return completed.get() || cancelled.get();
-    }
-
-    void markCompleted()
-    {
-      completed.set(true);
-      segmentsToDrop.remove(request.getSegment());
-    }
-
-    /**
-     * The result of a Drop request is ready after segment has been unannounced.
-     * The result of a Load request is ready after segment has been loaded and announced.
-     */
-    boolean isResultReady()
-    {
-      return status.get().getState() != SegmentChangeStatus.State.PENDING;
-    }
-
-    void cancel()
-    {
-      cancelled.set(true);
-    }
-
-    void setStatus(SegmentChangeStatus status)
-    {
-      boolean updated = this.status.compareAndSet(SegmentChangeStatus.PENDING, status);
-      if (updated && callback != null) {
-        callback.execute();
-      }
-    }
-
-    DataSegmentChangeResponse getResult()
-    {
-      return new DataSegmentChangeResponse(request, status.get());
-    }
-  }
-
-  private enum TaskType
-  {
-    LOAD, DROP
   }
 
   /**
@@ -746,20 +800,20 @@ public class SegmentLoadDropHandler
   private static class SegmentTaskPair
   {
     @Nullable
-    private LoadDropTask runningTask;
+    private SegmentTask runningTask;
 
     @Nullable
-    private LoadDropTask waitingTask;
+    private SegmentTask waitingTask;
 
     private synchronized void startWaitingTask()
     {
       runningTask = waitingTask;
     }
 
-    private synchronized void setWaitingTask(LoadDropTask task)
+    private synchronized void setWaitingTask(SegmentTask task)
     {
       waitingTask = task;
-      if (runningTask != null && runningTask.type != waitingTask.type) {
+      if (runningTask != null && !runningTask.getClass().equals(waitingTask.getClass())) {
         runningTask.cancel();
       }
     }
@@ -768,6 +822,20 @@ public class SegmentLoadDropHandler
   private static boolean isNoopRequest(DataSegmentChangeRequest request)
   {
     return request instanceof SegmentChangeRequestNoop;
+  }
+
+  private SegmentTask createTaskFor(
+      DataSegmentChangeRequest request,
+      @Nullable DataSegmentChangeCallback callback
+  )
+  {
+    if (request instanceof SegmentChangeRequestLoad) {
+      return new LoadTask(request.getSegment(), callback);
+    } else if (request instanceof SegmentChangeRequestDrop) {
+      return new DropTask(request.getSegment(), callback);
+    } else {
+      throw new IAE("Could not create segment task for invalid request[%s].", request);
+    }
   }
 
 }
