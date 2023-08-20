@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * Represents the status of compaction for a given list of candidate segments.
@@ -110,13 +111,19 @@ public class CompactionStatus
     );
   }
 
+  /**
+   * Determines the CompactionStatus of the given candidate segments by comparing
+   * them with the compaction config.
+   *
+   * @see CompactionStatus
+   */
   static CompactionStatus of(
       SegmentsToCompact candidateSegments,
       DataSourceCompactionConfig config,
       ObjectMapper objectMapper
   )
   {
-    return new Builder(candidateSegments, config, objectMapper).build();
+    return new Evaluator(candidateSegments, config, objectMapper).evaluate();
   }
 
   static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
@@ -135,7 +142,7 @@ public class CompactionStatus
     }
   }
 
-  private static class Builder
+  private static class Evaluator
   {
     private final ObjectMapper objectMapper;
     private final DataSourceCompactionConfig compactionConfig;
@@ -145,7 +152,7 @@ public class CompactionStatus
     private final ClientCompactionTaskGranularitySpec existingGranularitySpec;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
-    private Builder(
+    private Evaluator(
         SegmentsToCompact candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         ObjectMapper objectMapper
@@ -174,7 +181,11 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus build()
+    /**
+     * Compares all configured fields with the current compaction state of the
+     * segments to determine the CompactionStatus.
+     */
+    private CompactionStatus evaluate()
     {
       if (lastCompactionState == null) {
         return CompactionStatus.incomplete("Not compacted yet");
@@ -188,7 +199,7 @@ public class CompactionStatus
       }
 
       // Compare all fields to determine if compaction is required
-      final List<Supplier<CompactionStatus>> checks = Arrays.asList(
+      final Stream<Supplier<CompactionStatus>> checks = Stream.of(
           this::comparePartitionsSpec,
           this::compareIndexSpec,
           this::compareSegmentGranularity,
@@ -198,7 +209,7 @@ public class CompactionStatus
           this::compareMetricsSpec,
           this::compareTransformsSpecFilters
       );
-      return checks.stream().map(Supplier::get)
+      return checks.map(Supplier::get)
                    .filter(status -> !status.isComplete())
                    .findFirst().orElse(COMPLETE);
     }

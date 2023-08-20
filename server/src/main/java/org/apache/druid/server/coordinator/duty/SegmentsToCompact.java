@@ -38,7 +38,7 @@ class SegmentsToCompact
 
   private final List<DataSegment> segments;
   private final Interval umbrellaInterval;
-  private final long totalSize;
+  private final long totalBytes;
   private final int numIntervals;
 
   static SegmentsToCompact empty()
@@ -58,14 +58,15 @@ class SegmentsToCompact
   private SegmentsToCompact()
   {
     this.segments = Collections.emptyList();
-    this.totalSize = 0L;
+    this.totalBytes = 0L;
     this.numIntervals = 0;
     this.umbrellaInterval = null;
   }
 
-  private SegmentsToCompact(List<DataSegment> segments) {
+  private SegmentsToCompact(List<DataSegment> segments)
+  {
     this.segments = segments;
-    this.totalSize = segments.stream().mapToLong(DataSegment::getSize).sum();
+    this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
     this.umbrellaInterval = JodaUtils.umbrellaInterval(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
     );
@@ -91,12 +92,12 @@ class SegmentsToCompact
     return segments.isEmpty();
   }
 
-  public long getTotalSize()
+  public long getTotalBytes()
   {
-    return totalSize;
+    return totalBytes;
   }
 
-  public long getNumberOfSegments()
+  public int size()
   {
     return segments.size();
   }
@@ -106,7 +107,7 @@ class SegmentsToCompact
     return umbrellaInterval;
   }
 
-  public long getNumberOfIntervals()
+  public long getNumIntervals()
   {
     return numIntervals;
   }
@@ -116,7 +117,7 @@ class SegmentsToCompact
   {
     return "SegmentsToCompact{" +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
-           ", totalSize=" + totalSize +
+           ", totalSize=" + totalBytes +
            '}';
   }
 }

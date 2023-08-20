@@ -23,7 +23,6 @@ import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**

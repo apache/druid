@@ -344,12 +344,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
       if (compactionStatus.isComplete()) {
         addSegmentStatsTo(compactedSegmentStats, dataSourceName, candidates);
-      } else if (candidates.getTotalSize() > inputSegmentSize) {
+      } else if (candidates.getTotalBytes() > inputSegmentSize) {
         addSegmentStatsTo(skippedSegmentStats, dataSourceName, candidates);
         log.warn(
             "Skipping compaction for datasource[%s], interval[%s] as total segment size[%d]"
             + " is larger than allowed inputSegmentSize[%d].",
-            dataSourceName, interval, candidates.getTotalSize(), inputSegmentSize
+            dataSourceName, interval, candidates.getTotalBytes(), inputSegmentSize
         );
       } else if (config.getGranularitySpec() != null
                  && config.getGranularitySpec().getSegmentGranularity() != null) {
@@ -381,9 +381,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         dataSourceName,
         v -> CompactionStatistics.create()
     );
-    statistics.incrementTotalBytes(segments.getTotalSize());
-    statistics.incrementNumIntervals(segments.getNumberOfIntervals());
-    statistics.incrementNumSegments(segments.getNumberOfSegments());
+    statistics.incrementTotalBytes(segments.getTotalBytes());
+    statistics.incrementNumIntervals(segments.getNumIntervals());
+    statistics.incrementNumSegments(segments.size());
   }
 
   /**
