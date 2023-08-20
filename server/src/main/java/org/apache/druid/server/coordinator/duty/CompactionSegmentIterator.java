@@ -30,7 +30,7 @@ import java.util.Map;
  * Segments in the lists which are the elements of this iterator are sorted according to the natural segment order
  * (see {@link DataSegment#compareTo}).
  */
-public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
+public interface CompactionSegmentIterator extends Iterator<SegmentsToCompact>
 {
   /**
    * Return a map of dataSourceName to CompactionStatistics.

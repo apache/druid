@@ -364,7 +364,8 @@ public class CompactSegments implements CoordinatorCustomDuty
     int numCompactionTasksAndSubtasks = 0;
 
     while (iterator.hasNext() && numCompactionTasksAndSubtasks < numAvailableCompactionTaskSlots) {
-      final List<DataSegment> segmentsToCompact = iterator.next();
+      final SegmentsToCompact entry = iterator.next();
+      final List<DataSegment> segmentsToCompact = entry.getSegments();
       if (segmentsToCompact.isEmpty()) {
         throw new ISE("segmentsToCompact is empty?");
       }
@@ -403,11 +404,13 @@ public class CompactSegments implements CoordinatorCustomDuty
           catch (IllegalArgumentException iae) {
             // This case can happen if the existing segment interval result in complicated periods.
             // Fall back to setting segmentGranularity as null
-            LOG.warn("Cannot determine segmentGranularity from interval [%s]", interval);
+            LOG.warn("Cannot determine segmentGranularity from interval[%s].", interval);
           }
         } else {
           LOG.warn(
-              "segmentsToCompact does not have the same interval. Fallback to not setting segmentGranularity for auto compaction task");
+              "Not setting 'segmentGranularity' for auto-compaction task as"
+              + " the segments to compact do not have the same interval."
+          );
         }
       } else {
         segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
@@ -478,13 +481,17 @@ public class CompactSegments implements CoordinatorCustomDuty
           newAutoCompactionContext(config.getTaskContext())
       );
 
-      LOG.info("Submitted a compactionTask[%s] for [%d] segments", taskId, segmentsToCompact.size());
-      LOG.infoSegments(segmentsToCompact, "Compacting segments");
+      LOG.info(
+          "Submitted a compaction task[%s] for [%d] segments in datasource[%s], umbrella interval[%s].",
+          taskId, segmentsToCompact.size(), dataSourceName, entry.getUmbrellaInterval()
+      );
+      LOG.debugSegments(segmentsToCompact, "Compacting segments");
       // Count the compaction task itself + its sub tasks
       numSubmittedTasks++;
       numCompactionTasksAndSubtasks += findMaxNumTaskSlotsUsedByOneCompactionTask(config.getTuningConfig());
     }
 
+    LOG.info("Submitted a total of [%d] compaction tasks.", numSubmittedTasks);
     return numSubmittedTasks;
   }
 
@@ -505,7 +512,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     // Mark all the segments remaining in the iterator as "awaiting compaction"
     while (iterator.hasNext()) {
-      final List<DataSegment> segmentsToCompact = iterator.next();
+      final SegmentsToCompact entry = iterator.next();
+      final List<DataSegment> segmentsToCompact = entry.getSegments();
       if (!segmentsToCompact.isEmpty()) {
         final String dataSourceName = segmentsToCompact.get(0).getDataSource();
         AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
@@ -536,9 +544,9 @@ public class CompactSegments implements CoordinatorCustomDuty
           dataSource,
           k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
       );
-      builder.incrementBytesCompacted(dataSourceCompactedStatistics.getByteSum());
-      builder.incrementSegmentCountCompacted(dataSourceCompactedStatistics.getSegmentNumberCountSum());
-      builder.incrementIntervalCountCompacted(dataSourceCompactedStatistics.getSegmentIntervalCountSum());
+      builder.incrementBytesCompacted(dataSourceCompactedStatistics.getTotalBytes());
+      builder.incrementSegmentCountCompacted(dataSourceCompactedStatistics.getNumSegments());
+      builder.incrementIntervalCountCompacted(dataSourceCompactedStatistics.getNumIntervals());
     }
 
     // Statistics of all segments considered skipped after this run
@@ -550,9 +558,9 @@ public class CompactSegments implements CoordinatorCustomDuty
           dataSource,
           k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
       );
-      builder.incrementBytesSkipped(dataSourceSkippedStatistics.getByteSum());
-      builder.incrementSegmentCountSkipped(dataSourceSkippedStatistics.getSegmentNumberCountSum());
-      builder.incrementIntervalCountSkipped(dataSourceSkippedStatistics.getSegmentIntervalCountSum());
+      builder.incrementBytesSkipped(dataSourceSkippedStatistics.getTotalBytes());
+      builder.incrementSegmentCountSkipped(dataSourceSkippedStatistics.getNumSegments());
+      builder.incrementIntervalCountSkipped(dataSourceSkippedStatistics.getNumIntervals());
     }
 
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();

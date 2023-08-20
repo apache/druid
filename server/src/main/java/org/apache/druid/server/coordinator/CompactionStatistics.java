@@ -19,55 +19,47 @@
 
 package org.apache.druid.server.coordinator;
 
+/**
+ * Used to track statistics for segments in different states of compaction.
+ */
 public class CompactionStatistics
 {
-  private long byteSum;
-  private long segmentNumberCountSum;
-  private long segmentIntervalCountSum;
+  private long totalBytes;
+  private long numSegments;
+  private long numIntervals;
 
-  public CompactionStatistics(
-      long byteSum,
-      long segmentNumberCountSum,
-      long segmentIntervalCountSum
-  )
+  public static CompactionStatistics create()
   {
-    this.byteSum = byteSum;
-    this.segmentNumberCountSum = segmentNumberCountSum;
-    this.segmentIntervalCountSum = segmentIntervalCountSum;
+    return new CompactionStatistics();
   }
 
-  public static CompactionStatistics initializeCompactionStatistics()
+  public long getTotalBytes()
   {
-    return new CompactionStatistics(0, 0, 0);
+    return totalBytes;
   }
 
-  public long getByteSum()
+  public long getNumSegments()
   {
-    return byteSum;
+    return numSegments;
   }
 
-  public long getSegmentNumberCountSum()
+  public long getNumIntervals()
   {
-    return segmentNumberCountSum;
+    return numIntervals;
   }
 
-  public long getSegmentIntervalCountSum()
+  public void incrementTotalBytes(long incrementValue)
   {
-    return segmentIntervalCountSum;
+    totalBytes += incrementValue;
   }
 
-  public void incrementCompactedByte(long incrementValue)
+  public void incrementNumSegments(long incrementValue)
   {
-    byteSum = byteSum + incrementValue;
+    numSegments += incrementValue;
   }
 
-  public void incrementCompactedSegments(long incrementValue)
+  public void incrementNumIntervals(long incrementValue)
   {
-    segmentNumberCountSum = segmentNumberCountSum + incrementValue;
-  }
-
-  public void incrementCompactedIntervals(long incrementValue)
-  {
-    segmentIntervalCountSum = segmentIntervalCountSum + incrementValue;
+    numIntervals += incrementValue;
   }
 }
