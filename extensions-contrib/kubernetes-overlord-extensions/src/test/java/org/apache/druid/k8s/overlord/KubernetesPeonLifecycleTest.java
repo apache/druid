@@ -47,6 +47,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -123,6 +124,51 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     verifyAll();
 
+    Assert.assertTrue(taskStatus.isSuccess());
+    Assert.assertEquals(ID, taskStatus.getId());
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
+  }
+
+  @Test
+  public void test_run_useTaskManager() throws IOException {
+    TaskConfig taskConfigTaskManager = new TaskConfigBuilder().setEnableTaskPayloadManagerPerTask(true).build();
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        kubernetesClient,
+        taskLogs,
+        mapper,
+        stateListener,
+        taskConfigTaskManager
+    )
+    {
+      @Override
+      protected synchronized TaskStatus join(long timeout)
+      {
+        return TaskStatus.success(ID);
+      }
+    };
+
+    Job job = new JobBuilder().withNewMetadata().withName(ID).endMetadata().build();
+
+    EasyMock.expect(kubernetesClient.launchPeonJobAndWaitForStart(
+        EasyMock.eq(job),
+        EasyMock.eq(task),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(null);
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
+
+    stateListener.stateChanged(KubernetesPeonLifecycle.State.PENDING, ID);
+    EasyMock.expectLastCall().once();
+    stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
+    EasyMock.expectLastCall().once();
+
+    taskLogs.pushTaskPayload(EasyMock.anyString(), EasyMock.anyObject());
+    replayAll();
+
+    TaskStatus taskStatus = peonLifecycle.run(job, 0L, 0L);
+
+    verifyAll();
     Assert.assertTrue(taskStatus.isSuccess());
     Assert.assertEquals(ID, taskStatus.getId());
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());

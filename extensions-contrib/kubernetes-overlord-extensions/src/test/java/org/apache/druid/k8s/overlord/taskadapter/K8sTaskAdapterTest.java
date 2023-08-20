@@ -37,6 +37,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
@@ -50,8 +51,10 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesExecutor;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
@@ -59,13 +62,20 @@ import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.easymock.Mock;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -86,7 +96,7 @@ class K8sTaskAdapterTest
   private final TaskConfig taskConfig;
   private final DruidNode node;
   private final ObjectMapper jsonMapper;
-  @Mock private TaskLogs taskLogs;
+  private final TaskLogs taskLogs;
 
 
   public K8sTaskAdapterTest()
@@ -111,6 +121,7 @@ class K8sTaskAdapterTest
     );
     startupLoggingConfig = new StartupLoggingConfig();
     taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
+    taskLogs = new NoopTaskLogs();
   }
 
   @Test
@@ -199,7 +210,7 @@ class K8sTaskAdapterTest
   }
 
   @Test
-  public void toTask_dontSetTaskJSON() throws IOException
+  public void fromTask_dontSetTaskJSON() throws IOException
   {
     final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
     TestKubernetesClient testClient = new TestKubernetesClient(client)
@@ -257,6 +268,103 @@ class K8sTaskAdapterTest
     );
   }
 
+  @Test
+  public void toTask_useTaskPayloadManager() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .build();
+    Task taskInTaskPayloadManager = K8sTestUtils.getTask();
+    TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
+    Mockito.when(mockTestLogs.streamTaskPayload("ID")).thenReturn(com.google.common.base.Optional.of(
+        new ByteArrayInputStream(jsonMapper.writeValueAsString(taskInTaskPayloadManager).getBytes(Charset.defaultCharset()))
+    ));
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        new TaskConfigBuilder().setEnableTaskPayloadManagerPerTask(true).build(),
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        mockTestLogs
+    );
+
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .addToAnnotations(DruidK8sConstants.TASK_ID,"ID")
+        .endMetadata().endTemplate().endSpec().build();
+
+    Task taskFromJob = adapter.toTask(job);
+    assertEquals(taskInTaskPayloadManager, taskFromJob);
+  }
+
+  @Test
+  public void getTaskId() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .addToAnnotations(DruidK8sConstants.TASK_ID,"ID")
+        .endMetadata().endTemplate().endSpec().build();
+
+    assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
+  }
+
+  @Test
+  public void getTaskId_noAnnotations()
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .endMetadata().endTemplate().endSpec()
+        .editMetadata().withName("job").endMetadata().build();
+
+    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
+  }
+
+  @Test
+  public void getTaskId_missingTaskIdAnnotation()
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .addToAnnotations(DruidK8sConstants.TASK_GROUP_ID,"ID")
+        .endMetadata().endTemplate().endSpec()
+        .editMetadata().withName("job").endMetadata().build();
+
+    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
+  }
   @Test
   void testGrabbingTheLastXmxValueFromACommand()
   {

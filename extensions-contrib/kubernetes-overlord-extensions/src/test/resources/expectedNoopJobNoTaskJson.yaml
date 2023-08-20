@@ -41,5 +41,7 @@ spec:
               value: "/tmp"
             - name: "TASK_ID"
               value: "id"
+            - name: "LOAD_BROADCAST_SEGMENTS"
+              value: "false"
           image: one
           name: primary
