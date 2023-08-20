@@ -20,16 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
-
-import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
@@ -41,76 +32,27 @@ import javax.annotation.Nullable;
  * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
  * - 8 bytes: encoded long: big-endian order, with sign flipped
  */
-public class LongFieldReader implements FieldReader
+public class LongFieldReader extends NumericFieldReader<Long>
 {
   LongFieldReader()
   {
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
+  public ValueType getValueType()
   {
-    return new Selector(memory, fieldPointer);
+    return ValueType.LONG;
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(
-      Memory memory,
-      ReadableFieldPointer fieldPointer,
-      @Nullable ExtractionFn extractionFn
-  )
+  public Class<? extends Long> getClassOfObject()
   {
-    return ValueTypes.makeNumericWrappingDimensionSelector(
-        ValueType.LONG,
-        makeColumnValueSelector(memory, fieldPointer),
-        extractionFn
-    );
+    return Long.class;
   }
 
   @Override
-  public boolean isNull(Memory memory, long position)
+  public Long getValueFromMemory(Memory memory, long position)
   {
-    return memory.getByte(position) == LongFieldWriter.NULL_BYTE;
-  }
-
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
-
-  /**
-   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
-   */
-  private static class Selector implements LongColumnSelector
-  {
-    private final Memory memory;
-    private final ReadableFieldPointer fieldPointer;
-
-    private Selector(final Memory memory, final ReadableFieldPointer fieldPointer)
-    {
-      this.memory = memory;
-      this.fieldPointer = fieldPointer;
-    }
-
-    @Override
-    public long getLong()
-    {
-      assert NullHandling.replaceWithDefault() || !isNull();
-      final long bits = memory.getLong(fieldPointer.position() + Byte.BYTES);
-      return LongFieldWriter.detransform(bits);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return memory.getByte(fieldPointer.position()) == LongFieldWriter.NULL_BYTE;
-    }
-
-    @Override
-    public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
-    {
-      // Do nothing.
-    }
+    return TransformUtils.detransformToLong(memory.getLong(position));
   }
 }

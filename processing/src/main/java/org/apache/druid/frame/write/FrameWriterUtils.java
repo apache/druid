@@ -172,6 +172,14 @@ public class FrameWriterUtils
     return retVal;
   }
 
+  @Nullable
+  public static List<? extends Number> getNumericArrayFromNumericArraySelector(
+      @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
+  )
+  {
+    return new ArrayList<>();
+  }
+
   /**
    * Checks the provided signature for any disallowed field names. Returns any that are found.
    */

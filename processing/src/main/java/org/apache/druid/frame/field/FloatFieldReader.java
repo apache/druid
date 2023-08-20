@@ -20,16 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
-
-import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link FloatFieldWriter}.
@@ -39,75 +30,29 @@ import javax.annotation.Nullable;
  * Format:
  *
  * - 1 byte: {@link FloatFieldWriter#NULL_BYTE} or {@link FloatFieldWriter#NOT_NULL_BYTE}
- * - 4 bytes: encoded float, using {@link FloatFieldWriter#transform}
+ * - 4 bytes: encoded float, using {@link TransformUtils#transformFromFloat(float)}
  */
-public class FloatFieldReader implements FieldReader
+public class FloatFieldReader extends NumericFieldReader<Float>
 {
   FloatFieldReader()
   {
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
+  public ValueType getValueType()
   {
-    return new Selector(memory, fieldPointer);
+    return ValueType.FLOAT;
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(
-      Memory memory,
-      ReadableFieldPointer fieldPointer,
-      @Nullable ExtractionFn extractionFn
-  )
+  public Class<? extends Float> getClassOfObject()
   {
-    return ValueTypes.makeNumericWrappingDimensionSelector(
-        ValueType.FLOAT,
-        makeColumnValueSelector(memory, fieldPointer),
-        extractionFn
-    );
+    return Float.class;
   }
 
   @Override
-  public boolean isNull(Memory memory, long position)
+  public Float getValueFromMemory(Memory memory, long position)
   {
-    return memory.getByte(position) == FloatFieldWriter.NULL_BYTE;
-  }
-
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
-
-  private static class Selector implements FloatColumnSelector
-  {
-    private final Memory dataRegion;
-    private final ReadableFieldPointer fieldPointer;
-
-    private Selector(final Memory dataRegion, final ReadableFieldPointer fieldPointer)
-    {
-      this.dataRegion = dataRegion;
-      this.fieldPointer = fieldPointer;
-    }
-
-    @Override
-    public float getFloat()
-    {
-      assert NullHandling.replaceWithDefault() || !isNull();
-      final int bits = dataRegion.getInt(fieldPointer.position() + Byte.BYTES);
-      return FloatFieldWriter.detransform(bits);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return dataRegion.getByte(fieldPointer.position()) == FloatFieldWriter.NULL_BYTE;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      // Do nothing.
-    }
+    return TransformUtils.detransformToFloat(memory.getInt(position));
   }
 }
