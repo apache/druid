@@ -41,34 +41,32 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
+import java.util.function.Function;
 
 /**
  * Represents the status of compaction for a given list of candidate segments.
- * Compaction may be considered incomplete if any of the following is true:
- * <ul>
- * <li>Segments have never been compacted</li>
- * <li>Segments have different last compaction states</li>
- * <li>
- *   Configured value of any of the following parameters is different from its
- *   current value (as determined from the segments):
- *   <ul>
- *     <li>Partitions spec</li>
- *     <li>Index spec</li>
- *     <li>Segment granularity</li>
- *     <li>Query granularity</li>
- *     <li>Rollup</li>
- *     <li>Dimensions spec</li>
- *     <li>Metrics spec</li>
- *     <li>Filters in transform spec</li>
- *   </ul>
- * </li>
- * </ul>
  */
 public class CompactionStatus
 {
   private static final CompactionStatus COMPLETE = new CompactionStatus(true, null);
+
+  /**
+   * List of checks performed to determine if compaction is already complete.
+   * <p>
+   * The order of the checks must be honored while evaluating them.
+   */
+  private static final List<Function<Evaluator, CompactionStatus>> CHECKS = Arrays.asList(
+      Evaluator::segmentsHaveBeenCompactedAtLeastOnce,
+      Evaluator::allCandidatesHaveSameCompactionState,
+      Evaluator::partitionsSpecIsUpToDate,
+      Evaluator::indexSpecIsUpToDate,
+      Evaluator::segmentGranularityIsUpToDate,
+      Evaluator::queryGranularityIsUpToDate,
+      Evaluator::rollupIsUpToDate,
+      Evaluator::dimensionsSpecIsUpToDate,
+      Evaluator::metricsSpecIsUpToDate,
+      Evaluator::transformSpecFilterIsUpToDate
+  );
 
   private final boolean complete;
   private final String reasonToCompact;
@@ -112,10 +110,9 @@ public class CompactionStatus
   }
 
   /**
-   * Determines the CompactionStatus of the given candidate segments by comparing
-   * them with the compaction config.
-   *
-   * @see CompactionStatus
+   * Determines the CompactionStatus of the given candidate segments by evaluating
+   * the {@link #CHECKS} one by one. If any check returns an incomplete status,
+   * further checks are not performed and the incomplete status is returned.
    */
   static CompactionStatus of(
       SegmentsToCompact candidateSegments,
@@ -182,39 +179,38 @@ public class CompactionStatus
     }
 
     /**
-     * Compares all configured fields with the current compaction state of the
-     * segments to determine the CompactionStatus.
+     * Performs all the listed {@link #CHECKS} and returns the first incomplete
+     * status obtained.
      */
     private CompactionStatus evaluate()
     {
-      if (lastCompactionState == null) {
-        return CompactionStatus.incomplete("Not compacted yet");
-      }
-
-      final boolean allHaveSameCompactionState = candidateSegments.getSegments().stream().allMatch(
-          segment -> lastCompactionState.equals(segment.getLastCompactionState())
-      );
-      if (!allHaveSameCompactionState) {
-        return CompactionStatus.incomplete("Candidate segments have different last compaction states.");
-      }
-
-      // Compare all fields to determine if compaction is required
-      final Stream<Supplier<CompactionStatus>> checks = Stream.of(
-          this::comparePartitionsSpec,
-          this::compareIndexSpec,
-          this::compareSegmentGranularity,
-          this::compareQueryGranularity,
-          this::compareRollup,
-          this::compareDimensionsSpec,
-          this::compareMetricsSpec,
-          this::compareTransformsSpecFilters
-      );
-      return checks.map(Supplier::get)
+      return CHECKS.stream().map(f -> f.apply(this))
                    .filter(status -> !status.isComplete())
                    .findFirst().orElse(COMPLETE);
     }
 
-    private CompactionStatus comparePartitionsSpec()
+    private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
+    {
+      if (lastCompactionState == null) {
+        return CompactionStatus.incomplete("Not compacted yet");
+      } else {
+        return COMPLETE;
+      }
+    }
+
+    private CompactionStatus allCandidatesHaveSameCompactionState()
+    {
+      final boolean allHaveSameCompactionState = candidateSegments.getSegments().stream().allMatch(
+          segment -> lastCompactionState.equals(segment.getLastCompactionState())
+      );
+      if (allHaveSameCompactionState) {
+        return COMPLETE;
+      } else {
+        return CompactionStatus.incomplete("Candidate segments have different last compaction states.");
+      }
+    }
+
+    private CompactionStatus partitionsSpecIsUpToDate()
     {
       return CompactionStatus.compareConfigs(
           "partitionsSpec",
@@ -223,7 +219,7 @@ public class CompactionStatus
       );
     }
 
-    private CompactionStatus compareIndexSpec()
+    private CompactionStatus indexSpecIsUpToDate()
     {
       return CompactionStatus.compareConfigs(
           "indexSpec",
@@ -232,7 +228,7 @@ public class CompactionStatus
       );
     }
 
-    private CompactionStatus compareSegmentGranularity()
+    private CompactionStatus segmentGranularityIsUpToDate()
     {
       if (configuredGranularitySpec == null
           || configuredGranularitySpec.getSegmentGranularity() == null) {
@@ -268,7 +264,7 @@ public class CompactionStatus
       return COMPLETE;
     }
 
-    private CompactionStatus compareRollup()
+    private CompactionStatus rollupIsUpToDate()
     {
       if (configuredGranularitySpec == null) {
         return COMPLETE;
@@ -281,7 +277,7 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus compareQueryGranularity()
+    private CompactionStatus queryGranularityIsUpToDate()
     {
       if (configuredGranularitySpec == null) {
         return COMPLETE;
@@ -294,7 +290,7 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus compareDimensionsSpec()
+    private CompactionStatus dimensionsSpecIsUpToDate()
     {
       if (compactionConfig.getDimensionsSpec() == null) {
         return COMPLETE;
@@ -308,7 +304,7 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus compareMetricsSpec()
+    private CompactionStatus metricsSpecIsUpToDate()
     {
       final AggregatorFactory[] configuredMetricsSpec = compactionConfig.getMetricsSpec();
       if (ArrayUtils.isEmpty(configuredMetricsSpec)) {
@@ -331,7 +327,7 @@ public class CompactionStatus
       }
     }
 
-    private CompactionStatus compareTransformsSpecFilters()
+    private CompactionStatus transformSpecFilterIsUpToDate()
     {
       if (compactionConfig.getTransformSpec() == null) {
         return COMPLETE;
