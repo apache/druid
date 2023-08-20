@@ -174,4 +174,25 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
       );
     }
   }
+
+  @Ignore
+  @Override
+  public void testEquiJoin2()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testEquiJoin3()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testEquiJoin4()
+  {
+
+  }
 }

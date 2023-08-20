@@ -33,13 +33,17 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -56,6 +60,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -86,7 +91,10 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
+      DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
+      DataSource dataSource = query.getDataSource();
+      List<Interval> defaultIntervals = query.getIntervals();
+      if (Intervals.ONLY_ETERNITY.equals(findMaxBaseDataSourceIntervals(dataSource, analysis, defaultIntervals))) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -155,12 +163,47 @@ public class NativeQueryMaker implements QueryMaker
     );
   }
 
-  private List<Interval> findBaseDataSourceIntervals(Query<?> query)
+  private List<Interval> findMaxBaseDataSourceIntervals(DataSource dataSource, DataSourceAnalysis dsAnalysis, List<Interval> defaults)
   {
-    return query.getDataSource().getAnalysis()
-                .getBaseQuerySegmentSpec()
-                .map(QuerySegmentSpec::getIntervals)
-                .orElseGet(query::getIntervals);
+    Optional<List<Interval>> intervals = dsAnalysis.getBaseQuerySegmentSpec().map(QuerySegmentSpec::getIntervals);
+    if (intervals.isPresent()) {
+      return intervals.get();
+    }
+
+    // If dataSource is a instance of JoinDataSource, find the base intervals of left and right data sources
+    if (dataSource instanceof JoinDataSource) {
+      JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+      DataSource right = joinDataSource.getRight();
+      DataSource left = joinDataSource.getLeft();
+
+      // right data source has a subquery
+      if (right instanceof QueryDataSource) {
+        DataSource rightInner = ((QueryDataSource) right).getQuery().getDataSource();
+        DataSourceAnalysis rightAnlaysisInner = rightInner.getAnalysis();
+        if (rightInner instanceof JoinDataSource) {
+          return findMaxBaseDataSourceIntervals(rightInner, rightAnlaysisInner, defaults);
+        }
+      }
+
+      // right data source
+      Optional<List<Interval>> rightIntervals = right.getAnalysis().getBaseQuerySegmentSpec().map(QuerySegmentSpec::getIntervals);
+      if (Intervals.ONLY_ETERNITY.equals(rightIntervals.orElse(defaults))) {
+        return Intervals.ONLY_ETERNITY;
+      }
+
+      // left data source
+      DataSourceAnalysis leftAnalysis = left.getAnalysis();
+      if (left instanceof JoinDataSource) {
+        return findMaxBaseDataSourceIntervals(left, leftAnalysis, defaults);
+      } else {
+        Optional<List<Interval>> leftIntervals = leftAnalysis
+            .getBaseQuerySegmentSpec()
+            .map(QuerySegmentSpec::getIntervals);
+        return leftIntervals.orElse(defaults);
+      }
+    }
+
+    return defaults;
   }
 
   @SuppressWarnings("unchecked")

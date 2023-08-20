@@ -14301,4 +14301,462 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}
         ));
   }
+
+  @Test
+  public void testEquiJoin()
+  {
+    GroupByQuery subquery =
+        GroupByQuery.builder()
+            .setDataSource(CalciteTests.DATASOURCE1)
+            .setGranularity(Granularities.ALL)
+            .setInterval(querySegmentSpec(Intervals.of("2000-01-01/2000-01-02")))
+            .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+            .build();
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT a.__time, a.cnt, b.cnt\n"
+            + "FROM (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") a\n"
+            + "JOIN (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") b on (a.__time = b.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(JoinDataSource.create(
+                    new QueryDataSource(subquery),
+                    new QueryDataSource(subquery),
+                    "j0.",
+                    "(\"d0\" == \"j0.d0\")",
+                    JoinType.INNER,
+                    null,
+                    ExprMacroTable.nil(),
+                    CalciteTests.createJoinableFactoryWrapper()
+                ))
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("a0", "d0", "j0.a0")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01"), 1L, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testEquiJoin2()
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("__time column");
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT a.__time, a.cnt, b.cnt\n"
+            + "FROM (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  GROUP BY __time\n"
+            + ") a\n"
+            + "JOIN (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") b on (a.__time = b.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testEquiJoin3()
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("__time column");
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT a.__time, a.cnt, b.cnt\n"
+            + "FROM (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") a\n"
+            + "JOIN (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  GROUP BY __time\n"
+            + ") b on (a.__time = b.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testEquiJoin4()
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("__time column");
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT a.__time, a.cnt, b.cnt\n"
+            + "FROM (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  GROUP BY __time\n"
+            + ") a\n"
+            + "JOIN (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  GROUP BY __time\n"
+            + ") b on (a.__time = b.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testEquiJoin5()
+  {
+    GroupByQuery subquery =
+        GroupByQuery.builder()
+            .setDataSource(CalciteTests.DATASOURCE1)
+            .setGranularity(Granularities.ALL)
+            .setInterval(querySegmentSpec(Intervals.of("2000-01-01/2000-01-02")))
+            .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+            .build();
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT a.__time, a.cnt, b.cnt, c.cnt\n"
+            + "FROM (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") a\n"
+            + "JOIN (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") b on (a.__time = b.__time)"
+            + "JOIN (\n"
+            + "  SELECT __time, SUM(cnt) cnt\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "  GROUP BY __time\n"
+            + ") c on (a.__time = c.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(JoinDataSource.create(
+                    JoinDataSource.create(
+                        new QueryDataSource(subquery),
+                        new QueryDataSource(subquery),
+                        "j0.",
+                        "(\"d0\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    ),
+                    new QueryDataSource(subquery),
+                    "_j0.",
+                    "(\"d0\" == \"_j0.d0\")",
+                    JoinType.INNER,
+                    null,
+                    ExprMacroTable.nil(),
+                    CalciteTests.createJoinableFactoryWrapper()
+                ))
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("_j0.a0", "a0", "d0", "j0.a0")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01"), 1L, 1L, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testEquiJoin6()
+  {
+    GroupByQuery subquery =
+        GroupByQuery.builder()
+            .setDataSource(CalciteTests.DATASOURCE1)
+            .setGranularity(Granularities.ALL)
+            .setInterval(querySegmentSpec(Intervals.of("2000-01-01/2000-01-02")))
+            .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+            .build();
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT ab.__time, ab.cnt1, ab.cnt2, c.cnt\n"
+            + "FROM "
+            + "( SELECT a.__time, a.cnt cnt1, b.cnt cnt2\n"
+            + "  FROM (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) a\n"
+            + "  JOIN (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) b on (a.__time = b.__time)"
+            + ") ab\n"
+            + "JOIN (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + ") c on (ab.__time = c.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(JoinDataSource.create(
+                    JoinDataSource.create(
+                        new QueryDataSource(subquery),
+                        new QueryDataSource(subquery),
+                        "j0.",
+                        "(\"d0\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    ),
+                    new QueryDataSource(subquery),
+                    "_j0.",
+                    "(\"d0\" == \"_j0.d0\")",
+                    JoinType.INNER,
+                    null,
+                    ExprMacroTable.nil(),
+                    CalciteTests.createJoinableFactoryWrapper()
+                ))
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("_j0.a0", "a0", "d0", "j0.a0")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01"), 1L, 1L, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testEquiJoin7()
+  {
+    GroupByQuery subquery =
+        GroupByQuery.builder()
+            .setDataSource(CalciteTests.DATASOURCE1)
+            .setGranularity(Granularities.ALL)
+            .setInterval(querySegmentSpec(Intervals.of("2000-01-01/2000-01-02")))
+            .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+            .build();
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT a.__time, a.cnt, cd.cnt1, cd.cnt2\n"
+            + "FROM "
+            + "(\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + ") a\n"
+            + "JOIN ( SELECT c.__time, c.cnt cnt1, d.cnt cnt2\n"
+            + "  FROM (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) c\n"
+            + "  JOIN (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) d on (c.__time = d.__time)"
+            + ") cd on (a.__time = cd.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(JoinDataSource.create(
+                    new QueryDataSource(subquery),
+                    new QueryDataSource(
+                          Druids.newScanQueryBuilder()
+                          .dataSource(JoinDataSource.create(
+                              Druids.newScanQueryBuilder()
+                                  .dataSource(new QueryDataSource(subquery))
+                                  .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .columns("j0.a0", "a0")
+                                  .legacy(false)
+                                  .build()
+                                  .getDataSource(),
+                              new QueryDataSource(subquery),
+                              "j0.",
+                              "(\"d0\" == \"j0.d0\")",
+                              JoinType.INNER,
+                              null,
+                              ExprMacroTable.nil(),
+                              CalciteTests.createJoinableFactoryWrapper()
+                          ))
+                          .intervals(querySegmentSpec(Intervals.ETERNITY))
+                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                          .columns("a0", "d0", "j0.a0")
+                          .legacy(false)
+                          .build()),
+                    "_j0.",
+                    "(\"d0\" == \"_j0.d0\")",
+                    JoinType.INNER,
+                    null,
+                    ExprMacroTable.nil(),
+                    CalciteTests.createJoinableFactoryWrapper()
+                ))
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("_j0.a0", "_j0.j0.a0", "a0", "d0")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01"), 1L, 1L, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testEquiJoin8()
+  {
+    GroupByQuery subquery =
+        GroupByQuery.builder()
+            .setDataSource(CalciteTests.DATASOURCE1)
+            .setGranularity(Granularities.ALL)
+            .setInterval(querySegmentSpec(Intervals.of("2000-01-01/2000-01-02")))
+            .setDimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG))
+            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+            .build();
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT ab.__time, ab.cnt1, ab.cnt2, cd.cnt1, cd.cnt2\n"
+            + "FROM "
+            + "( SELECT a.__time, a.cnt cnt1, b.cnt cnt2\n"
+            + "  FROM (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) a\n"
+            + "  JOIN (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) b on (a.__time = b.__time)"
+            + ") ab\n"
+            + "JOIN ( SELECT c.__time, c.cnt cnt1, d.cnt cnt2\n"
+            + "  FROM (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) c\n"
+            + "  JOIN (\n"
+            + "    SELECT __time, SUM(cnt) cnt\n"
+            + "    FROM druid.foo\n"
+            + "    WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00'\n"
+            + "    GROUP BY __time\n"
+            + "  ) d on (c.__time = d.__time)"
+            + ") cd on (ab.__time = cd.__time)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(JoinDataSource.create(
+                    JoinDataSource.create(
+                        Druids.newScanQueryBuilder()
+                            .dataSource(new QueryDataSource(subquery))
+                            .intervals(querySegmentSpec(Intervals.ETERNITY))
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .columns("j0.a0", "a0")
+                            .legacy(false)
+                            .build()
+                            .getDataSource(),
+                        new QueryDataSource(subquery),
+                        "j0.",
+                        "(\"d0\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    ),
+                    new QueryDataSource(
+                        Druids.newScanQueryBuilder()
+                            .dataSource(JoinDataSource.create(
+                                Druids.newScanQueryBuilder()
+                                    .dataSource(new QueryDataSource(subquery))
+                                    .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .columns("j0.a0", "a0")
+                                    .legacy(false)
+                                    .build()
+                                    .getDataSource(),
+                                new QueryDataSource(subquery),
+                                "j0.",
+                                "(\"d0\" == \"j0.d0\")",
+                                JoinType.INNER,
+                                null,
+                                ExprMacroTable.nil(),
+                                CalciteTests.createJoinableFactoryWrapper()
+                            ))
+                            .intervals(querySegmentSpec(Intervals.ETERNITY))
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .columns("a0", "d0", "j0.a0")
+                            .legacy(false)
+                            .build()),
+                    "_j0.",
+                    "(\"d0\" == \"_j0.d0\")",
+                    JoinType.INNER,
+                    null,
+                    ExprMacroTable.nil(),
+                    CalciteTests.createJoinableFactoryWrapper()
+                ))
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("_j0.a0", "_j0.j0.a0", "a0", "d0", "j0.a0")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01"), 1L, 1L, 1L, 1L}
+        )
+    );
+  }
 }

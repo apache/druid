@@ -368,4 +368,60 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   {
 
   }
+
+  @Override
+  @Ignore
+  public void testEquiJoin()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin2()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin3()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin4()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin5()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin6()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin7()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testEquiJoin8()
+  {
+
+  }
 }
