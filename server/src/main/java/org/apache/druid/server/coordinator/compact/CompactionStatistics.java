@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.compact;
 
 /**
  * Used to track statistics for segments in different states of compaction.
@@ -48,18 +48,10 @@ public class CompactionStatistics
     return numIntervals;
   }
 
-  public void incrementTotalBytes(long incrementValue)
+  public void addFrom(SegmentsToCompact segments)
   {
-    totalBytes += incrementValue;
-  }
-
-  public void incrementNumSegments(long incrementValue)
-  {
-    numSegments += incrementValue;
-  }
-
-  public void incrementNumIntervals(long incrementValue)
-  {
-    numIntervals += incrementValue;
+    totalBytes += segments.getTotalBytes();
+    numIntervals += segments.getNumIntervals();
+    numSegments += segments.size();
   }
 }

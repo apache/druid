@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.compact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -192,17 +191,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     final SegmentsToCompact entry = queue.poll();
-
     if (entry == null) {
       throw new NoSuchElementException();
     }
 
     final List<DataSegment> resultSegments = entry.getSegments();
-
     Preconditions.checkState(!resultSegments.isEmpty(), "Queue entry must not be empty");
 
     final String dataSource = resultSegments.get(0).getDataSource();
-
     updateQueue(dataSource, compactionConfigs.get(dataSource));
 
     return entry;
@@ -215,20 +211,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    */
   private void updateQueue(String dataSourceName, DataSourceCompactionConfig config)
   {
-    final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor
-        = timelineIterators.get(dataSourceName);
-
-    if (compactibleTimelineObjectHolderCursor == null) {
-      log.warn("Cannot find timeline for dataSource[%s]. Skip this dataSource", dataSourceName);
-      return;
-    }
-
-    final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(
-        dataSourceName,
-        compactibleTimelineObjectHolderCursor,
-        config
-    );
-
+    final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(dataSourceName, config);
     if (!segmentsToCompact.isEmpty()) {
       queue.add(segmentsToCompact);
     }
@@ -310,19 +293,22 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   /**
-   * Find segments to compact together for the given intervalToSearch. It progressively searches the given
-   * intervalToSearch in time order (latest first). The timeline lookup duration is one day. It means, the timeline is
-   * looked up for the last one day of the given intervalToSearch, and the next day is searched again if the size of
-   * found segments are not enough to compact. This is repeated until enough amount of segments are found.
+   * Finds segments to compact together for the given datasource.
    *
-   * @return segments to compact
+   * @return An empty {@link SegmentsToCompact} if there are no eligible candidates.
    */
   private SegmentsToCompact findSegmentsToCompact(
       final String dataSourceName,
-      final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor,
       final DataSourceCompactionConfig config
   )
   {
+    final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor
+        = timelineIterators.get(dataSourceName);
+    if (compactibleTimelineObjectHolderCursor == null) {
+      log.warn("Skipping dataSource[%s] as there is no timeline for it.", dataSourceName);
+      return SegmentsToCompact.empty();
+    }
+
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
 
     while (compactibleTimelineObjectHolderCursor.hasNext()) {
@@ -337,8 +323,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final CompactionStatus compactionStatus = CompactionStatus.of(candidates, config, objectMapper);
       if (!compactionStatus.isComplete()) {
         log.debug(
-            "Candidate segments of datasource[%s], interval[%s] need to be compacted because [%s].",
-            dataSourceName, interval, compactionStatus.getReasonToCompact()
+            "Datasource[%s], interval[%s] has [%d] segments that need to be compacted because [%s].",
+            dataSourceName, interval, candidates.size(), compactionStatus.getReasonToCompact()
         );
       }
 
@@ -377,13 +363,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       SegmentsToCompact segments
   )
   {
-    CompactionStatistics statistics = statisticsMap.computeIfAbsent(
-        dataSourceName,
-        v -> CompactionStatistics.create()
-    );
-    statistics.incrementTotalBytes(segments.getTotalBytes());
-    statistics.incrementNumIntervals(segments.getNumIntervals());
-    statistics.incrementNumSegments(segments.size());
+    statisticsMap.computeIfAbsent(dataSourceName, v -> CompactionStatistics.create())
+                 .addFrom(segments);
   }
 
   /**

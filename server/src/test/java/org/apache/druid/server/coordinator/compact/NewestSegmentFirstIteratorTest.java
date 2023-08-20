@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.compact;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;

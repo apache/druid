@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.compact;
 
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.SegmentUtils;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 /**
  * List of segments to compact.
  */
-class SegmentsToCompact
+public class SegmentsToCompact
 {
   private static final SegmentsToCompact EMPTY_INSTANCE = new SegmentsToCompact();
 
@@ -46,7 +46,7 @@ class SegmentsToCompact
     return EMPTY_INSTANCE;
   }
 
-  static SegmentsToCompact from(List<DataSegment> segments)
+  public static SegmentsToCompact from(List<DataSegment> segments)
   {
     if (segments == null || segments.isEmpty()) {
       return empty();
