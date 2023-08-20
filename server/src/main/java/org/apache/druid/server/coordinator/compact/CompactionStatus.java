@@ -92,7 +92,7 @@ public class CompactionStatus
     return new CompactionStatus(false, StringUtils.format(reasonFormat, args));
   }
 
-  private static CompactionStatus compareConfigs(String field, Object configured, Object current)
+  private static CompactionStatus completeIfEqual(String field, Object configured, Object current)
   {
     if (configured == null || configured.equals(current)) {
       return COMPLETE;
@@ -120,7 +120,10 @@ public class CompactionStatus
       ObjectMapper objectMapper
   )
   {
-    return new Evaluator(candidateSegments, config, objectMapper).evaluate();
+    final Evaluator evaluator = new Evaluator(candidateSegments, config, objectMapper);
+    return CHECKS.stream().map(f -> f.apply(evaluator))
+                 .filter(status -> !status.isComplete())
+                 .findFirst().orElse(COMPLETE);
   }
 
   static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
@@ -139,6 +142,9 @@ public class CompactionStatus
     }
   }
 
+  /**
+   * Evaluates {@link #CHECKS} to determine the compaction status.
+   */
   private static class Evaluator
   {
     private final ObjectMapper objectMapper;
@@ -178,17 +184,6 @@ public class CompactionStatus
       }
     }
 
-    /**
-     * Performs all the listed {@link #CHECKS} and returns the first incomplete
-     * status obtained.
-     */
-    private CompactionStatus evaluate()
-    {
-      return CHECKS.stream().map(f -> f.apply(this))
-                   .filter(status -> !status.isComplete())
-                   .findFirst().orElse(COMPLETE);
-    }
-
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       if (lastCompactionState == null) {
@@ -212,7 +207,7 @@ public class CompactionStatus
 
     private CompactionStatus partitionsSpecIsUpToDate()
     {
-      return CompactionStatus.compareConfigs(
+      return CompactionStatus.completeIfEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
           lastCompactionState.getPartitionsSpec()
@@ -221,7 +216,7 @@ public class CompactionStatus
 
     private CompactionStatus indexSpecIsUpToDate()
     {
-      return CompactionStatus.compareConfigs(
+      return CompactionStatus.completeIfEqual(
           "indexSpec",
           Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
           objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class)
@@ -269,7 +264,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.compareConfigs(
+        return CompactionStatus.completeIfEqual(
             "rollup",
             configuredGranularitySpec.isRollup(),
             existingGranularitySpec == null ? null : existingGranularitySpec.isRollup()
@@ -282,7 +277,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.compareConfigs(
+        return CompactionStatus.completeIfEqual(
             "queryGranularity",
             configuredGranularitySpec.getQueryGranularity(),
             existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity()
@@ -296,7 +291,7 @@ public class CompactionStatus
         return COMPLETE;
       } else {
         final DimensionsSpec existingDimensionsSpec = lastCompactionState.getDimensionsSpec();
-        return CompactionStatus.compareConfigs(
+        return CompactionStatus.completeIfEqual(
             "dimensionsSpec",
             compactionConfig.getDimensionsSpec().getDimensions(),
             existingDimensionsSpec == null ? null : existingDimensionsSpec.getDimensions()
@@ -337,7 +332,7 @@ public class CompactionStatus
           lastCompactionState.getTransformSpec(),
           ClientCompactionTaskTransformSpec.class
       );
-      return CompactionStatus.compareConfigs(
+      return CompactionStatus.completeIfEqual(
           "transformSpec filter",
           compactionConfig.getTransformSpec().getFilter(),
           existingTransformSpec == null ? null : existingTransformSpec.getFilter()
