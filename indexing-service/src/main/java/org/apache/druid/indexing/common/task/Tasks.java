@@ -23,7 +23,6 @@ import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstIterator;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.joda.time.Interval;
 
@@ -69,7 +68,7 @@ public class Tasks
    * This context is used in compaction. When it is set in the context, the segments created by the task
    * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
    * See {@link org.apache.druid.timeline.DataSegment} and {@link
-   * NewestSegmentFirstIterator} for more details.
+   * org.apache.druid.server.coordinator.compact.NewestSegmentFirstIterator} for more details.
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
