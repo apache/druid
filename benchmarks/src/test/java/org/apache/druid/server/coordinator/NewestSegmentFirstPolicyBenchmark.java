@@ -142,8 +142,7 @@ public class NewestSegmentFirstPolicyBenchmark
   {
     final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources, Collections.emptyMap());
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
-      final List<DataSegment> segments = iterator.next();
-      blackhole.consume(segments);
+      blackhole.consume(iterator.next());
     }
   }
 }
