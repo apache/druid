@@ -33,6 +33,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.DateTimes;
@@ -185,6 +186,10 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       // stopGracefully for resource cleaning
       log.info("Starting graceful shutdown of task[%s].", task.getId());
       task.stopGracefully(taskConfig);
+      // Only certain tasks, primarily from unit tests, are not subclasses of AbstractTask.
+      if (task instanceof AbstractTask) {
+        ((AbstractTask) task).waitForCleanupToFinish();
+      }
 
       if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
