@@ -176,6 +176,23 @@ public class AuthorizationUtils
   }
 
   /**
+   * Sets the {@link AuthConfig#DRUID_AUTHORIZATION_CHECKED} attribute in the {@link HttpServletRequest} to true. This method is generally used
+   * when no {@link ResourceAction} need to be checked for the API. If resources are present, users should call
+   * {@link AuthorizationUtils#authorizeAllResourceActions(HttpServletRequest, Iterable, AuthorizerMapper)}
+   */
+  public static void setRequestAuthorizationAttributeIfNeeded(final HttpServletRequest request)
+  {
+    if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
+      // do nothing
+      return;
+    }
+    if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
+      throw new ISE("Request already had authorization check.");
+    }
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+  }
+
+  /**
    * Filter a collection of resources by applying the resourceActionGenerator to each resource, return an iterable
    * containing the filtered resources.
    *

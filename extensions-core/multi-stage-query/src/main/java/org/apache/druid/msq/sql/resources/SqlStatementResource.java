@@ -74,7 +74,6 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -105,7 +104,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -151,16 +149,8 @@ public class SqlStatementResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response isEnabled(@Context final HttpServletRequest request)
   {
-    // All authenticated users are authorized for this API: check an empty resource list.
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        Collections.emptyList(),
-        authorizerMapper
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
-    }
+    // All authenticated users are authorized for this API.
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
 
     return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
@@ -240,14 +230,7 @@ public class SqlStatementResource
   )
   {
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
@@ -288,14 +271,7 @@ public class SqlStatementResource
   )
   {
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       if (page != null && page < 0) {
@@ -376,14 +352,7 @@ public class SqlStatementResource
   {
 
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
@@ -776,7 +745,7 @@ public class SqlStatementResource
                                         finalStage.getId(),
                                         (int) pageInformation.getId(),
                                         (int) pageInformation.getId()
-// we would always have partition number == worker number
+                                        // we would always have partition number == worker number
                                     ));
                                   }
                                   catch (Exception e) {
