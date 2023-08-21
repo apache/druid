@@ -20,7 +20,7 @@ import type { QueryResult } from '@druid-toolkit/query';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 
-import { stringifyValue } from './general';
+import { copyAndAlert, stringifyValue } from './general';
 
 export function downloadUrl(url: string, filename: string) {
   // Create a link and set the URL using `createObjectURL`
@@ -106,4 +106,21 @@ export function downloadQueryResults(
 
   const lineBreak = '\n';
   downloadFile(lines.join(lineBreak), format, filename);
+}
+
+export function copyJSONResultsToClipboard(queryResult: QueryResult): void {
+  let lines: string[] = [];
+  lines = queryResult.rows.map(r => {
+    const outputObject: Record<string, any> = {};
+    for (let k = 0; k < r.length; k++) {
+      const newName = queryResult.header[k];
+      if (newName) {
+        outputObject[newName.name] = r[k];
+      }
+    }
+    return JSONBig.stringify(outputObject);
+  });
+
+  const lineBreak = '\n';
+  copyAndAlert(lines.join(lineBreak), 'Query results copied to clipboard');
 }

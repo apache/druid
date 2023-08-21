@@ -24,6 +24,7 @@ import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
 import {
+  copyJSONResultsToClipboard,
   downloadQueryResults,
   formatDurationHybrid,
   formatInteger,
@@ -97,10 +98,14 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           className="download-button"
           content={
             <Menu>
-              <MenuDivider title="Download results as..." />
+              <MenuDivider title="Save Query Results:" />
               <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
               <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
               <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+              <MenuItem
+                text="JSON (copy to clipboard)"
+                onClick={() => copyJSONResultsToClipboard(queryResult)}
+              />
             </Menu>
           }
           position={Position.BOTTOM_RIGHT}
