@@ -29,6 +29,13 @@ integration-tests/gen-scripts/
 /bin/
 *.hprof
 **/.ipynb_checkpoints/
+website/.yarn/
+website/node_modules/
+website/.docusaurus/
+website/build/
+
+# Local Netlify folder
+.netlify
 *.pyc
 **/.ipython/
 **/.jupyter/

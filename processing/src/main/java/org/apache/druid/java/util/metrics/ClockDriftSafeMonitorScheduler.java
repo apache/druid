@@ -41,7 +41,7 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
   private final ExecutorService monitorRunner;
 
   public ClockDriftSafeMonitorScheduler(
-      MonitorSchedulerConfig config,
+      DruidMonitorSchedulerConfig config,
       ServiceEmitter emitter,
       List<Monitor> monitors,
       CronScheduler monitorScheduler,
@@ -57,7 +57,7 @@ public class ClockDriftSafeMonitorScheduler extends MonitorScheduler
   void startMonitor(final Monitor monitor)
   {
     monitor.start();
-    long rate = getConfig().getEmitterPeriod().getMillis();
+    long rate = getConfig().getEmissionDuration().getMillis();
     final AtomicReference<Future<?>> futureReference = new AtomicReference<>();
     Future<?> future = monitorScheduler.scheduleAtFixedRate(
         rate,

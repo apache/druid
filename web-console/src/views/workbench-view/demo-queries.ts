@@ -23,7 +23,7 @@ const BASE_QUERY = WorkbenchQuery.blank();
 
 export function getDemoQueries(): TabEntry[] {
   function makeDemoQuery(queryString: string): WorkbenchQuery {
-    return BASE_QUERY.duplicate().changeQueryString(queryString.trim());
+    return BASE_QUERY.changeQueryString(queryString.trim());
   }
 
   return [

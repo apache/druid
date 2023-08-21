@@ -43,6 +43,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -62,6 +64,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientAsyncImpl;
@@ -96,6 +99,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
@@ -440,6 +444,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             );
             return;
           }
+          if (SupervisorStateManager.BasicState.IDLE == getState()) {
+            log.info(
+                "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is idle",
+                dataSource
+            );
+            return;
+          }
           log.debug("PendingCompletionTaskGroups is [%s] for dataSource [%s]", pendingCompletionTaskGroups,
                     dataSource
           );
@@ -600,6 +611,31 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     public void handle()
     {
       resetInternal(dataSourceMetadata);
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
+  }
+
+  private class ResetOffsetsNotice implements Notice
+  {
+    final DataSourceMetadata dataSourceMetadata;
+    private static final String TYPE = "reset_offsets_notice";
+
+    ResetOffsetsNotice(
+        final DataSourceMetadata dataSourceMetadata
+    )
+    {
+      this.dataSourceMetadata = dataSourceMetadata;
+    }
+
+    @Override
+    public void handle()
+    {
+      resetOffsetsInternal(dataSourceMetadata);
     }
 
     @Override
@@ -1003,10 +1039,57 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public void reset(DataSourceMetadata dataSourceMetadata)
+  public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {
-    log.info("Posting ResetNotice");
+    log.info("Posting ResetNotice with datasource metadata [%s]", dataSourceMetadata);
     addNotice(new ResetNotice(dataSourceMetadata));
+  }
+
+  /**
+   * Reset offsets with provided dataSource metadata. Validates {@code resetDataSourceMetadata},
+   * creates a {@code ResetOffsetsNotice} with the metadata and adds it to the notice queue. The resulting stored offsets
+   * is a union of existing checkpointed offsets and provided offsets.
+   * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
+   * @throws DruidException if any metadata attribute doesn't match the supervisor's.
+   */
+  @Override
+  public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
+  {
+    if (resetDataSourceMetadata == null) {
+      throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
+    }
+
+    if (!checkSourceMetadataMatch(resetDataSourceMetadata)) {
+      throw InvalidInput.exception(
+          "Datasource metadata instance does not match required, found instance of [%s].",
+          resetDataSourceMetadata.getClass()
+      );
+    }
+    @SuppressWarnings("unchecked")
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) resetDataSourceMetadata;
+
+    final SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> streamSequenceNumbers = resetMetadata.getSeekableStreamSequenceNumbers();
+    if (!(streamSequenceNumbers instanceof SeekableStreamEndSequenceNumbers)) {
+      throw InvalidInput.exception(
+          "Provided datasourceMetadata[%s] is invalid. Sequence numbers can only be of type[%s], but found[%s].",
+          resetMetadata,
+          SeekableStreamEndSequenceNumbers.class.getSimpleName(),
+          streamSequenceNumbers.getClass().getSimpleName()
+      );
+    }
+
+    final String resetStream = streamSequenceNumbers.getStream();
+    if (!ioConfig.getStream().equals(resetStream)) {
+      throw InvalidInput.exception(
+          "Stream[%s] doesn't exist in the supervisor[%s]. Supervisor is consuming stream[%s].",
+          resetStream,
+          supervisorId,
+          ioConfig.getStream()
+      );
+    }
+    log.info("Posting ResetOffsetsNotice with reset dataSource metadata[%s]", resetDataSourceMetadata);
+    addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
   public ReentrantLock getRecordSupplierLock()
@@ -1697,6 +1780,70 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
   }
+
+  /**
+   * Reset offsets with the data source metadata. If checkpoints exist, the resulting stored offsets will be a union of
+   * existing checkpointed offsets and provided offsets; any checkpointed offsets not specified in the metadata will be
+   * preserved as-is. If checkpoints don't exist, the provided reset datasource metdadata will be inserted into
+   * the metadata storage. Once the offsets are reset, any active tasks serving the partition offsets will be restarted.
+   * @param dataSourceMetadata Required reset data source metdata. Assumed that the metadata is validated.
+   */
+  public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
+  {
+    log.info("Reset offsets for dataSource[%s] with metadata[%s]", dataSource, dataSourceMetadata);
+
+    @SuppressWarnings("unchecked")
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
+
+    final boolean metadataUpdateSuccess;
+    final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
+    if (metadata == null) {
+      log.info("Checkpointed metadata in null for dataSource[%s] - inserting metadata[%s]", dataSource, resetMetadata);
+      metadataUpdateSuccess = indexerMetadataStorageCoordinator.insertDataSourceMetadata(dataSource, resetMetadata);
+    } else {
+      if (!checkSourceMetadataMatch(metadata)) {
+        throw InvalidInput.exception(
+            "Datasource metadata instance does not match required, found instance of [%s]",
+            metadata.getClass()
+        );
+      }
+      @SuppressWarnings("unchecked")
+      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
+          (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
+      final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
+      log.info("Current checkpointed metadata[%s], new metadata[%s] for dataSource[%s]", currentMetadata, newMetadata, dataSource);
+      try {
+        metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(dataSource, newMetadata);
+      }
+      catch (IOException e) {
+        log.error("Reset offsets for dataSource[%s] with metadata[%s] failed [%s]", dataSource, newMetadata, e.getMessage());
+        throw new RuntimeException(e);
+      }
+    }
+
+    if (!metadataUpdateSuccess) {
+      throw new ISE("Unable to reset metadata[%s] for datasource[%s]", dataSource, dataSourceMetadata);
+    }
+
+    resetMetadata.getSeekableStreamSequenceNumbers()
+                 .getPartitionSequenceNumberMap()
+                 .keySet()
+                 .forEach(partition -> {
+                   final int groupId = getTaskGroupIdForPartition(partition);
+                   killTaskGroupForPartitions(
+                       ImmutableSet.of(partition),
+                       "DataSourceMetadata is updated while reset offsets is called"
+                   );
+                   activelyReadingTaskGroups.remove(groupId);
+                   // killTaskGroupForPartitions() cleans up partitionGroups.
+                   // Add the removed groups back.
+                   partitionGroups.computeIfAbsent(groupId, k -> new HashSet<>());
+                   partitionOffsets.put(partition, getNotSetMarker());
+                 });
+
+  }
+
 
   private void killTask(final String id, String reasonFormat, Object... args)
   {
@@ -4082,13 +4229,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     reportingExec.scheduleAtFixedRate(
         this::emitLag,
         ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
         TimeUnit.MILLISECONDS
     );
     reportingExec.scheduleAtFixedRate(
         this::emitNoticesQueueSize,
         ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
         TimeUnit.MILLISECONDS
     );
   }
