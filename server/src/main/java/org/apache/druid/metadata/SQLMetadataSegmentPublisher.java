@@ -55,8 +55,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.config = config;
     this.connector = connector;
     this.statement = StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_flag_last_updated) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_flag_last_updated)",
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
         config.getSegmentsTable(), connector.getQuoteString()
     );
   }
@@ -131,7 +131,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
                     .bind("version", version)
                     .bind("used", used)
                     .bind("payload", payload)
-                    .bind("used_flag_last_updated", usedFlagLastUpdated)
+                    .bind("used_status_last_updated", usedFlagLastUpdated)
                     .execute();
 
               return null;

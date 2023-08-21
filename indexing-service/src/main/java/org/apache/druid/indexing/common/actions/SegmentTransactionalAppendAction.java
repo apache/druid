@@ -163,7 +163,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public String toString()
   {
-    return "SegmentTransactionalInsertAction{" +
+    return "SegmentTransactionalAppendAction{" +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
