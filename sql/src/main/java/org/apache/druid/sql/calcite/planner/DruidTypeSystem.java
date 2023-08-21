@@ -110,24 +110,27 @@ public class DruidTypeSystem implements RelDataTypeSystem
   public RelDataType deriveSumType(final RelDataTypeFactory typeFactory, final RelDataType argumentType)
   {
     // Widen all sums to 64-bits regardless of the size of the inputs.
-    RelDataType type = widenType(typeFactory, argumentType);
-    if (type != null) {
-      return type;
+
+    if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, argumentType.isNullable());
+    } else {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
     }
-    return RelDataTypeSystem.DEFAULT.deriveSumType(typeFactory, argumentType);
   }
 
   @Override
   public RelDataType deriveAvgAggType(
       final RelDataTypeFactory typeFactory,
-      final RelDataType argumentType)
+      final RelDataType argumentType
+  )
   {
     // Widen all averages to 64-bits regardless of the size of the inputs.
-    RelDataType type = widenType(typeFactory, argumentType);
-    if (type != null) {
-      return type;
+
+    if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, argumentType.isNullable());
+    } else {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
     }
-    return RelDataTypeSystem.DEFAULT.deriveAvgAggType(typeFactory, argumentType);
   }
 
   @Override
@@ -162,18 +165,5 @@ public class DruidTypeSystem implements RelDataTypeSystem
   public boolean shouldConvertRaggedUnionTypesToVarying()
   {
     return true;
-  }
-
-
-  private RelDataType widenType(RelDataTypeFactory typeFactory, RelDataType argumentType)
-  {
-    if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
-      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, argumentType.isNullable());
-    }
-    if (SqlTypeName.APPROX_TYPES.contains(argumentType.getSqlTypeName())) {
-      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
-    }
-    return null;
-
   }
 }

@@ -30,7 +30,6 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -61,17 +60,17 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   private static final String STDDEV_NAME = "STDDEV";
 
   private static final SqlAggFunction VARIANCE_SQL_AGG_FUNC_INSTANCE =
-      buildSqlVarianceAggFunction(VARIANCE_NAME);
+      buildSqlAvgAggFunction(VARIANCE_NAME);
   private static final SqlAggFunction VARIANCE_POP_SQL_AGG_FUNC_INSTANCE =
-      buildSqlVarianceAggFunction(SqlKind.VAR_POP.name());
+      buildSqlAvgAggFunction(SqlKind.VAR_POP.name());
   private static final SqlAggFunction VARIANCE_SAMP_SQL_AGG_FUNC_INSTANCE =
-      buildSqlVarianceAggFunction(SqlKind.VAR_SAMP.name());
+      buildSqlAvgAggFunction(SqlKind.VAR_SAMP.name());
   private static final SqlAggFunction STDDEV_SQL_AGG_FUNC_INSTANCE =
-      buildSqlVarianceAggFunction(STDDEV_NAME);
+      buildSqlAvgAggFunction(STDDEV_NAME);
   private static final SqlAggFunction STDDEV_POP_SQL_AGG_FUNC_INSTANCE =
-      buildSqlVarianceAggFunction(SqlKind.STDDEV_POP.name());
+      buildSqlAvgAggFunction(SqlKind.STDDEV_POP.name());
   private static final SqlAggFunction STDDEV_SAMP_SQL_AGG_FUNC_INSTANCE =
-      buildSqlVarianceAggFunction(SqlKind.STDDEV_SAMP.name());
+      buildSqlAvgAggFunction(SqlKind.STDDEV_SAMP.name());
 
   @Nullable
   @Override
@@ -161,15 +160,14 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   }
 
   /**
-   * Creates a {@link SqlAggFunction}
-   *
-   * It accepts variance aggregator objects in addition to numeric inputs.
+   * Creates a {@link SqlAggFunction} that is the same as {@link org.apache.calcite.sql.fun.SqlAvgAggFunction}
+   * but with an operand type that accepts variance aggregator objects in addition to numeric inputs.
    */
-  private static SqlAggFunction buildSqlVarianceAggFunction(String name)
+  private static SqlAggFunction buildSqlAvgAggFunction(String name)
   {
     return OperatorConversions
         .aggregatorBuilder(name)
-        .returnTypeInference(ReturnTypes.explicit(SqlTypeName.DOUBLE))
+        .returnTypeInference(ReturnTypes.AVG_AGG_FUNCTION)
         .operandTypeChecker(
             OperandTypes.or(
                 OperandTypes.NUMERIC,
