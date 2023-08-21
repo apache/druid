@@ -75,6 +75,7 @@ import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.hamcrest.core.IsInstanceOf;
@@ -399,7 +400,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         null,
         new CacheConfig(),
         null,
-        httpClientConfig
+        httpClientConfig,
+        new SubqueryCountStatsProvider()
     );
 
     defineMocks();

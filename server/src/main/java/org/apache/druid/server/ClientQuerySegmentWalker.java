@@ -28,10 +28,11 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -64,6 +65,7 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -107,6 +109,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final SubqueryLimitUtils subqueryLimitUtils;
+  private final SubqueryCountStatsProvider statsProvider;
 
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
@@ -120,7 +123,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       LookupExtractorFactoryContainerProvider lookupManager,
-      DruidHttpClientConfig httpClientConfig
+      DruidHttpClientConfig httpClientConfig,
+      SubqueryCountStatsProvider statsProvider
   )
   {
     this.emitter = emitter;
@@ -138,6 +142,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         Runtime.getRuntime().maxMemory(),
         httpClientConfig.getNumConnections()
     );
+    this.statsProvider = statsProvider;
   }
 
   @Inject
@@ -153,7 +158,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       LookupExtractorFactoryContainerProvider lookupManager,
-      @Client DruidHttpClientConfig httpClientConfig
+      @Client DruidHttpClientConfig httpClientConfig,
+      SubqueryCountStatsProvider statsProvider
   )
   {
     this(
@@ -168,7 +174,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         cache,
         cacheConfig,
         lookupManager,
-        httpClientConfig
+        httpClientConfig,
+        statsProvider
     );
   }
 
@@ -444,7 +451,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             cannotMaterializeToFrames,
             maxSubqueryRows,
             maxSubqueryMemory,
-            useNestedForUnknownTypeInSubquery
+            useNestedForUnknownTypeInSubquery,
+            statsProvider
         );
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
@@ -659,7 +667,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicBoolean cannotMaterializeToFrames,
       final int limit,
       long memoryLimit,
-      boolean useNestedForUnknownTypeInSubquery
+      boolean useNestedForUnknownTypeInSubquery,
+      SubqueryCountStatsProvider statsProvider
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
@@ -674,6 +683,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               rowLimitToUse
           );
         }
+        statsProvider.incrementSubqueriesWithRowBasedLimit();
         dataSource = materializeResultsAsArray(
             query,
             results,
@@ -696,7 +706,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             limitAccumulator,
             memoryLimitAccumulator,
             memoryLimit,
-            useNestedForUnknownTypeInSubquery
+            useNestedForUnknownTypeInSubquery,
+            statsProvider
         );
         if (!maybeDataSource.isPresent()) {
           cannotMaterializeToFrames.set(true);
@@ -707,6 +718,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 memoryLimit
             );
           }
+          statsProvider.incrementSubqueriesWithRowBasedLimit();
+          statsProvider.incrementSubqueriesFallingBackToRowBasedLimit();
           dataSource = materializeResultsAsArray(
               query,
               results,
@@ -715,11 +728,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               limit
           );
         } else {
+          statsProvider.incrementSubqueriesWithByteBasedLimit();
           dataSource = maybeDataSource.get();
         }
         break;
       default:
-        throw new IAE("Only row based and memory based limiting is supported");
+        throw DruidException.defensive("Only row based and memory based limiting is supported");
     }
     return dataSource;
   }
@@ -735,7 +749,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       long memoryLimit,
-      boolean useNestedForUnknownTypeInSubquery
+      boolean useNestedForUnknownTypeInSubquery,
+      final SubqueryCountStatsProvider statsProvider
   )
   {
     Optional<Sequence<FrameSignaturePair>> framesOptional;
@@ -747,6 +762,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           new ArenaMemoryAllocatorFactory(FRAME_SIZE),
           useNestedForUnknownTypeInSubquery
       );
+    }
+    catch (UnsupportedColumnTypeException e) {
+      statsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
+      log.debug(e, "Type info in signature insufficient to materialize rows as frames.");
+      return Optional.empty();
     }
     catch (Exception e) {
       log.debug(e, "Unable to materialize the results as frames due to an unhandleable exception "

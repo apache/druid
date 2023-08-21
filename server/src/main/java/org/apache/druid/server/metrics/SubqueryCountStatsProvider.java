@@ -30,25 +30,56 @@ public class SubqueryCountStatsProvider
   private final AtomicLong subqueriesFallingBackDueToUnsufficientTypeInfo = new AtomicLong();
 
   /**
-   * @return Count of subqueries that are executed where the results are materialized as
+   * @return Count of subqueries where the results are materialized as rows {@code List<Object>}
    */
   public long subqueriesWithRowBasedLimit()
   {
     return successfulSubqueriesWithRowBasedLimit.get();
   }
 
+  /**
+   * @return Count of subqueries where the results are materialized as {@link org.apache.druid.frame.Frame}
+   */
   public long subqueriesWithByteBasedLimit()
   {
     return successfulSubqueriesWithByteBasedLimit.get();
   }
 
+  /**
+   * @return Count of subqueries where the results are materialized as
+   */
   public long subqueriesFallingBackToRowBasedLimit()
   {
     return subqueriesFallingBackToRowBasedLimit.get();
   }
 
+  /**
+   * @return Subset of subqueries that are falling back, which fall back due to insufficient type information in the
+   * {@link org.apache.druid.segment.column.RowSignature}. This is expected to be the most common and already known
+   * cause of fallback, therefore this is added as a separate metric, so that we can know
+   */
   public long subqueriesFallingBackDueToUnsufficientTypeInfo()
   {
     return subqueriesFallingBackDueToUnsufficientTypeInfo.get();
+  }
+
+  public void incrementSubqueriesWithRowBasedLimit()
+  {
+    successfulSubqueriesWithRowBasedLimit.incrementAndGet();
+  }
+
+  public void incrementSubqueriesWithByteBasedLimit()
+  {
+    successfulSubqueriesWithByteBasedLimit.incrementAndGet();
+  }
+
+  public void incrementSubqueriesFallingBackToRowBasedLimit()
+  {
+    subqueriesFallingBackToRowBasedLimit.incrementAndGet();
+  }
+
+  public void incrementSubqueriesFallingBackDueToUnsufficientTypeInfo()
+  {
+    subqueriesFallingBackDueToUnsufficientTypeInfo.incrementAndGet();
   }
 }
