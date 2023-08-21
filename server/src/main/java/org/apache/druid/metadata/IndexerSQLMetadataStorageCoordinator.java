@@ -1419,8 +1419,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       PreparedBatch preparedBatch = handle.prepareBatch(
           StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
               dbTables.getSegmentsTable(),
               connector.getQuoteString()
           )
@@ -1428,16 +1428,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
+          String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
               .bind("id", segment.getId().toString())
               .bind("dataSource", segment.getDataSource())
-              .bind("created_date", DateTimes.nowUtc().toString())
+              .bind("created_date", now)
               .bind("start", segment.getInterval().getStart().toString())
               .bind("end", segment.getInterval().getEnd().toString())
               .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
               .bind("version", segment.getVersion())
               .bind("used", usedSegments.contains(segment))
-              .bind("payload", jsonMapper.writeValueAsBytes(segment));
+              .bind("payload", jsonMapper.writeValueAsBytes(segment))
+              .bind("used_status_last_updated", now);
         }
         final int[] affectedRows = preparedBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);

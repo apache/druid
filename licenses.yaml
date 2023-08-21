@@ -1579,7 +1579,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.4
+version: 2.12.5
 libraries:
   - joda-time: joda-time
 notices:
@@ -3965,8 +3965,8 @@ libraries:
 name: ICU4J
 license_category: binary
 module: java-core
-license_name: ICU License
-version: 55.1
+license_name: Unicode/ICU License
+version: 73.2
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
