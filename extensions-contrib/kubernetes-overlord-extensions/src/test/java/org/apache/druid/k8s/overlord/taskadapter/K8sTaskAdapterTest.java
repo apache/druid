@@ -64,12 +64,9 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.easymock.EasyMockRunner;
-import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
@@ -292,7 +289,7 @@ class K8sTaskAdapterTest
 
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
-        .addToAnnotations(DruidK8sConstants.TASK_ID,"ID")
+        .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
     Task taskFromJob = adapter.toTask(job);
@@ -315,7 +312,7 @@ class K8sTaskAdapterTest
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
-        .addToAnnotations(DruidK8sConstants.TASK_ID,"ID")
+        .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
     assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
@@ -359,7 +356,7 @@ class K8sTaskAdapterTest
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
-        .addToAnnotations(DruidK8sConstants.TASK_GROUP_ID,"ID")
+        .addToAnnotations(DruidK8sConstants.TASK_GROUP_ID, "ID")
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 

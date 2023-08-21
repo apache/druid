@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -37,7 +36,6 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
-import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
@@ -338,7 +336,7 @@ public class PodTemplateTaskAdapterTest
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
-        .addToAnnotations(DruidK8sConstants.TASK_ID,"ID")
+        .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
     assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
@@ -386,7 +384,7 @@ public class PodTemplateTaskAdapterTest
     );
     Job job = new JobBuilder()
         .editSpec().editTemplate().editMetadata()
-        .addToAnnotations(DruidK8sConstants.TASK_GROUP_ID,"ID")
+        .addToAnnotations(DruidK8sConstants.TASK_GROUP_ID, "ID")
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 

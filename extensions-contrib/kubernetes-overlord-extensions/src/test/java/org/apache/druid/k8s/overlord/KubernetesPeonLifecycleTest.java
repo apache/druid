@@ -47,7 +47,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -130,7 +129,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_run_useTaskManager() throws IOException {
+  public void test_run_useTaskManager() throws IOException
+  {
     TaskConfig taskConfigTaskManager = new TaskConfigBuilder().setEnableTaskPayloadManagerPerTask(true).build();
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
