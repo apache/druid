@@ -197,7 +197,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Override
   public String toString()
   {
-    return "SegmentTransactionalInsertAction{" +
+    return "SegmentTransactionalReplaceAction{" +
            "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +

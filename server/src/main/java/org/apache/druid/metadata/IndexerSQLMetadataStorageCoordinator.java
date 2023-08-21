@@ -110,6 +110,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
 
+  private final String insertSegmentQuery;
+
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
       ObjectMapper jsonMapper,
@@ -120,6 +122,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
+    this.insertSegmentQuery = StringUtils.format(
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_flag_last_updated) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_flag_last_updated)",
+        dbTables.getSegmentsTable(),
+        connector.getQuoteString()
+    );
   }
 
   @LifecycleStart
@@ -1732,18 +1740,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
       );
 
-      PreparedBatch preparedBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_flag_last_updated) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_flag_last_updated)",
-              dbTables.getSegmentsTable(),
-              connector.getQuoteString()
-          )
-      );
+      PreparedBatch preparedBatch = handle.prepareBatch(insertSegmentQuery);
 
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
-          String now = DateTimes.nowUtc().toString();
+          final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
                        .bind("id", segment.getId().toString())
                        .bind("dataSource", segment.getDataSource())
@@ -1805,26 +1806,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
       );
 
-      PreparedBatch preparedBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(),
-              connector.getQuoteString()
-          )
-      );
+      PreparedBatch preparedBatch = handle.prepareBatch(insertSegmentQuery);
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
+          final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
                        .bind("id", segment.getId().toString())
                        .bind("dataSource", segment.getDataSource())
-                       .bind("created_date", DateTimes.nowUtc().toString())
+                       .bind("created_date", now)
                        .bind("start", segment.getInterval().getStart().toString())
                        .bind("end", segment.getInterval().getEnd().toString())
                        .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
-                       .bind("payload", jsonMapper.writeValueAsBytes(segment));
+                       .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                       .bind("used_flag_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -1843,14 +1839,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
       }
 
-      PreparedBatch appendBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, start, %2$send%2$s, segment_id, lock_version) "
-              + "VALUES (:id, :dataSource, :start, :end, :segment_id, :lock_version)",
-              dbTables.getSegmentVersionsTable(),
-              connector.getQuoteString()
-          )
-      );
       Map<String, TaskLockInfo> segmentsToBeForwarded = getAppendedSegmentIds(
           handle,
           segments.iterator().next().getDataSource(),
@@ -1895,16 +1883,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               oldSegment.getBinaryVersion(),
               oldSegment.getSize()
           );
+          final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
                        .bind("id", newSegment.getId().toString())
                        .bind("dataSource", newSegment.getDataSource())
-                       .bind("created_date", DateTimes.nowUtc().toString())
+                       .bind("created_date", now)
                        .bind("start", newSegment.getInterval().getStart().toString())
                        .bind("end", newSegment.getInterval().getEnd().toString())
                        .bind("partitioned", (newSegment.getShardSpec() instanceof NoneShardSpec) ? false : true)
                        .bind("version", newSegment.getVersion())
                        .bind("used", true)
-                       .bind("payload", jsonMapper.writeValueAsBytes(newSegment));
+                       .bind("payload", jsonMapper.writeValueAsBytes(newSegment))
+                       .bind("used_flag_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -1949,26 +1939,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
       );
 
-      PreparedBatch preparedBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(),
-              connector.getQuoteString()
-          )
-      );
+      PreparedBatch preparedBatch = handle.prepareBatch(insertSegmentQuery);
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
+          final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
                        .bind("id", segment.getId().toString())
                        .bind("dataSource", segment.getDataSource())
-                       .bind("created_date", DateTimes.nowUtc().toString())
+                       .bind("created_date", now)
                        .bind("start", segment.getInterval().getStart().toString())
                        .bind("end", segment.getInterval().getEnd().toString())
                        .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
-                       .bind("payload", jsonMapper.writeValueAsBytes(segment));
+                       .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                       .bind("used_flag_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -2064,26 +2049,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
       );
 
-      PreparedBatch preparedBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(),
-              connector.getQuoteString()
-          )
-      );
+      PreparedBatch preparedBatch = handle.prepareBatch(StringUtils.format(insertSegmentQuery));
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
+          final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
                        .bind("id", segment.getId().toString())
                        .bind("dataSource", segment.getDataSource())
-                       .bind("created_date", DateTimes.nowUtc().toString())
+                       .bind("created_date", now)
                        .bind("start", segment.getInterval().getStart().toString())
                        .bind("end", segment.getInterval().getEnd().toString())
-                       .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+                       .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
-                       .bind("payload", jsonMapper.writeValueAsBytes(segment));
+                       .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                       .bind("used_flag_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -2197,7 +2177,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        .bind("created_date", DateTimes.nowUtc().toString())
                        .bind("start", newSegment.getInterval().getStart().toString())
                        .bind("end", newSegment.getInterval().getEnd().toString())
-                       .bind("partitioned", (newSegment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+                       .bind("partitioned", !(newSegment.getShardSpec() instanceof NoneShardSpec))
                        .bind("version", newSegment.getVersion())
                        .bind("used", true)
                        .bind("payload", jsonMapper.writeValueAsBytes(newSegment));
