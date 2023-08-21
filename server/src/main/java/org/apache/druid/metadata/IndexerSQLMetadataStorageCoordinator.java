@@ -123,8 +123,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.dbTables = dbTables;
     this.connector = connector;
     this.insertSegmentQuery = StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_flag_last_updated) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_flag_last_updated)",
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
         dbTables.getSegmentsTable(),
         connector.getQuoteString()
     );
@@ -1741,7 +1741,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
 
       PreparedBatch preparedBatch = handle.prepareBatch(insertSegmentQuery);
-
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
           final String now = DateTimes.nowUtc().toString();
@@ -1755,7 +1754,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
                        .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                       .bind("used_flag_last_updated", now);
+                       .bind("used_status_last_updated", now);
         }
         final int[] affectedRows = preparedBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
@@ -1820,7 +1819,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
                        .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                       .bind("used_flag_last_updated", now);
+                       .bind("used_status_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -1894,7 +1893,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        .bind("version", newSegment.getVersion())
                        .bind("used", true)
                        .bind("payload", jsonMapper.writeValueAsBytes(newSegment))
-                       .bind("used_flag_last_updated", now);
+                       .bind("used_status_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -1953,7 +1952,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
                        .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                       .bind("used_flag_last_updated", now);
+                       .bind("used_status_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
@@ -2063,7 +2062,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        .bind("version", segment.getVersion())
                        .bind("used", usedSegments.contains(segment))
                        .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                       .bind("used_flag_last_updated", now);
+                       .bind("used_status_last_updated", now);
         }
         final int[] affectedInsertRows = preparedBatch.execute();
 
