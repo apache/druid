@@ -1990,7 +1990,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Query<Map<String, Object>> query = handle.createQuery(
         StringUtils.format(
             "SELECT payload FROM %s WHERE id in (%s)",
-            segmentIdCsv, dbTables.getSegmentsTable()
+            dbTables.getSegmentsTable(), segmentIdCsv
         )
     ).setFetchSize(connector.getStreamingFetchSize());
 

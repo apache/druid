@@ -175,18 +175,13 @@ public class AppendTask extends AbstractTask
 
   public SegmentIdWithShardSpec allocateOrGetSegmentForTimestamp(String timestamp)
   {
-    final DateTime time = DateTime.parse(timestamp);
+    final DateTime time = DateTimes.of(timestamp);
     for (SegmentIdWithShardSpec pendingSegment : pendingSegments) {
       if (pendingSegment.getInterval().contains(time)) {
         return pendingSegment;
       }
     }
     return allocateNewSegmentForDate(time);
-  }
-
-  public SegmentIdWithShardSpec allocateNewSegmentForTimestamp(String timestamp)
-  {
-    return allocateNewSegmentForDate(DateTime.parse(timestamp));
   }
 
   private SegmentIdWithShardSpec allocateNewSegmentForDate(DateTime time)
