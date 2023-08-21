@@ -222,7 +222,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
           allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegments(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
                       segments,
                       segmentsToBeDropped,
                       startMetadata,

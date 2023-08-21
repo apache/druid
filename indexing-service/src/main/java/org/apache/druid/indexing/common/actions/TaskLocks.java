@@ -26,20 +26,24 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class TaskLocks
 {
@@ -114,26 +118,49 @@ public class TaskLocks
     );
   }
 
-  public static Set<TaskLock> findReplaceLocksForSegments(
+  /**
+   * Finds locks of type {@link TaskLockType#REPLACE} for each of the given segments
+   * that have an interval completely covering the interval of the respective segments.
+   *
+   * @return Map from segment to REPLACE lock that completely covers it. The map
+   * does not contain an entry for segments that have no covering REPLACE lock.
+   */
+  public static Map<DataSegment, TaskLockInfo> findReplaceLocksCoveringSegments(
       final String datasource,
       final TaskLockbox taskLockbox,
-      final Collection<DataSegment> segments
+      final Set<DataSegment> segments
   )
   {
-    final Set<TaskLock> found = new HashSet<>();
-    final Set<TaskLock> locks = taskLockbox.getAllReplaceLocksForDatasource(datasource);
-    segments.forEach(segment -> {
-      locks.forEach(lock -> {
-        if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {
-          final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
-          if (timeChunkLock.getInterval().contains(segment.getInterval())
-              && timeChunkLock.getDataSource().equals(segment.getDataSource())) {
-            found.add(lock);
-          }
+    // Identify unique segment intervals
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    segments.forEach(
+        segment -> intervalToSegments.computeIfAbsent(
+            segment.getInterval(), interval -> new ArrayList<>()
+        ).add(segment)
+    );
+
+    final Set<TaskLockInfo> replaceLocks = taskLockbox.getAllReplaceLocksForDatasource(datasource).stream()
+                                                      .map(TaskLocks::toLockInfo)
+                                                      .collect(Collectors.toSet());
+
+    final Map<DataSegment, TaskLockInfo> segmentToReplaceLock = new HashMap<>();
+
+    intervalToSegments.forEach((interval, segmentsForInterval) -> {
+      // For each interval, find the lock that covers it, if any
+      for (TaskLockInfo lock : replaceLocks) {
+        if (lock.getInterval().contains(interval)) {
+          segmentsForInterval.forEach(s -> segmentToReplaceLock.put(s, lock));
+          return;
         }
-      });
+      }
     });
-    return found;
+
+    return segmentToReplaceLock;
+  }
+
+  public static TaskLockInfo toLockInfo(TaskLock taskLock)
+  {
+    return new TaskLockInfo(taskLock.getInterval(), taskLock.getVersion());
   }
 
   public static List<TaskLock> findLocksForSegments(

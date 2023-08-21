@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -33,10 +32,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -119,32 +116,21 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
-    final SegmentPublishResult retVal;
-
-    final Set<DataSegment> allSegments = new HashSet<>(segments);
-
-    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), allSegments);
-
     String datasource = task.getDataSource();
-    Map<Interval, TaskLock> replaceLocks = new HashMap<>();
-    for (TaskLock lock : TaskLocks.findReplaceLocksForSegments(datasource, toolbox.getTaskLockbox(), segments)) {
-      replaceLocks.put(lock.getInterval(), lock);
-    }
-    Set<TaskLockInfo> taskLockInfos = new HashSet<>();
-    for (TaskLock taskLock : replaceLocks.values()) {
-      taskLockInfos.add(getTaskLockInfo(taskLock));
-    }
+    final Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
 
+    final SegmentPublishResult retVal;
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitReplaceSegments(
                       segments,
                       segmentsToBeDropped,
-                      taskLockInfos
+                      new HashSet<>(segmentToReplaceLock.values())
                   )
               )
               .onInvalidLocks(
@@ -166,26 +152,18 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
     if (retVal.isSuccess()) {
       toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
+
+      for (DataSegment segment : retVal.getSegments()) {
+        final String partitionType = segment.getShardSpec() == null ? null : segment.getShardSpec().getType();
+        metricBuilder.setDimension(DruidMetrics.PARTITIONING_TYPE, partitionType);
+        metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+        toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+      }
     } else {
       toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
     }
 
-    // getSegments() should return an empty set if announceHistoricalSegments() failed
-    for (DataSegment segment : retVal.getSegments()) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      metricBuilder.setDimension(
-          DruidMetrics.PARTITIONING_TYPE,
-          segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
-      );
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-    }
-
     return retVal;
-  }
-
-  private TaskLockInfo getTaskLockInfo(TaskLock taskLock)
-  {
-    return new TaskLockInfo(taskLock.getInterval(), taskLock.getVersion());
   }
 
   @Override

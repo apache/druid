@@ -309,7 +309,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public Set<DataSegment> commitSegments(final Set<DataSegment> segments) throws IOException
   {
-    final SegmentPublishResult result = commitSegments(segments, null, null, null);
+    final SegmentPublishResult result = commitSegmentsAndMetadata(segments, null, null, null);
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
@@ -320,7 +320,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public SegmentPublishResult commitSegments(
+  public SegmentPublishResult commitSegmentsAndMetadata(
       final Set<DataSegment> segments,
       final Set<DataSegment> segmentsToDrop,
       @Nullable final DataSourceMetadata startMetadata,
@@ -459,41 +459,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     try {
       return connector.retryTransaction(
-          new TransactionCallback<SegmentPublishResult>()
-          {
-            @Override
-            public SegmentPublishResult inTransaction(
-                final Handle handle,
-                final TransactionStatus transactionStatus
-            ) throws Exception
-            {
-              // Set definitelyNotUpdated back to false upon retrying.
-              definitelyNotUpdated.set(false);
+          (handle, transactionStatus) -> {
+            // Set definitelyNotUpdated back to false upon retrying.
+            definitelyNotUpdated.set(false);
 
+            if (segmentsToDrop != null && !segmentsToDrop.isEmpty()) {
+              final DataStoreMetadataUpdateResult result = dropSegmentsWithHandle(
+                  handle,
+                  segmentsToDrop,
+                  dataSource
+              );
+              if (result.isFailed()) {
+                // Metadata store was definitely not updated.
+                transactionStatus.setRollbackOnly();
+                definitelyNotUpdated.set(true);
 
-              if (segmentsToDrop != null && !segmentsToDrop.isEmpty()) {
-                final DataStoreMetadataUpdateResult result = dropSegmentsWithHandle(
-                    handle,
-                    segmentsToDrop,
-                    dataSource
-                );
-                if (result.isFailed()) {
-                  // Metadata store was definitely not updated.
-                  transactionStatus.setRollbackOnly();
-                  definitelyNotUpdated.set(true);
-
-                  if (result.canRetry()) {
-                    throw new RetryTransactionException(result.getErrorMsg());
-                  } else {
-                    throw new RuntimeException(result.getErrorMsg());
-                  }
+                if (result.canRetry()) {
+                  throw new RetryTransactionException(result.getErrorMsg());
+                } else {
+                  throw new RuntimeException(result.getErrorMsg());
                 }
               }
-
-              final Set<DataSegment> inserted = commitReplaceSegmentBatch(handle, newSegments, usedSegments, taskLockInfos);
-
-              return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
+
+            final Set<DataSegment> inserted = commitReplaceSegmentBatch(handle, newSegments, usedSegments, taskLockInfos);
+            return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -514,43 +504,28 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Set<DataSegment> segments,
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap,
-      @Nullable Set<TaskLockInfo> taskLockInfos
+      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap
   )
   {
     if (segments.isEmpty()) {
-      throw new IllegalArgumentException("segment set must not be empty");
+      throw new IllegalArgumentException("No segments to append");
     }
 
     final String dataSource = segments.iterator().next().getDataSource();
     for (DataSegment segment : segments) {
       if (!dataSource.equals(segment.getDataSource())) {
-        throw new IllegalArgumentException("segments must all be from the same dataSource");
+        throw new IllegalArgumentException("All segments to append must belong to the same dataSource");
       }
     }
 
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
-      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+      throw new IllegalArgumentException("Start and end metadata must either be both null or both non-null");
     }
 
     // Find which segments are used (i.e. not overshadowed).
     Set<DataSegment> newSegments = new HashSet<>(segments);
     final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewMetadataMap = connector.retryTransaction(
-        new TransactionCallback<Map<DataSegment, Set<SegmentIdWithShardSpec>>>()
-        {
-          @Override
-          public Map<DataSegment, Set<SegmentIdWithShardSpec>> inTransaction(
-              final Handle handle,
-              final TransactionStatus transactionStatus
-          ) throws Exception
-          {
-            return allocateNewSegmentIds(
-                handle,
-                dataSource,
-                segments
-            );
-          }
-        },
+        (handle, transactionStatus) -> allocateNewSegmentIds(handle, dataSource, segments),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
@@ -572,49 +547,36 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
     Set<DataSegment> usedSegments = new HashSet<>(newSegments);
 
-
-
     final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
-
     try {
       return connector.retryTransaction(
-          new TransactionCallback<SegmentPublishResult>()
-          {
-            @Override
-            public SegmentPublishResult inTransaction(
-                final Handle handle,
-                final TransactionStatus transactionStatus
-            ) throws Exception
-            {
-              // Set definitelyNotUpdated back to false upon retrying.
-              definitelyNotUpdated.set(false);
+          (handle, transactionStatus) -> {
+            // Set definitelyNotUpdated back to false upon retrying.
+            definitelyNotUpdated.set(false);
 
-              if (startMetadata != null) {
-                final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
-                    handle,
-                    dataSource,
-                    startMetadata,
-                    endMetadata
-                );
+            if (startMetadata != null) {
+              final DataStoreMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
+                  handle,
+                  dataSource,
+                  startMetadata,
+                  endMetadata
+              );
 
-                if (result.isFailed()) {
-                  // Metadata was definitely not updated.
-                  transactionStatus.setRollbackOnly();
-                  definitelyNotUpdated.set(true);
+              if (result.isFailed()) {
+                // Metadata was definitely not updated.
+                transactionStatus.setRollbackOnly();
+                definitelyNotUpdated.set(true);
 
-                  if (result.canRetry()) {
-                    throw new RetryTransactionException(result.getErrorMsg());
-                  } else {
-                    throw new RuntimeException(result.getErrorMsg());
-                  }
+                if (result.canRetry()) {
+                  throw new RetryTransactionException(result.getErrorMsg());
+                } else {
+                  throw new RuntimeException(result.getErrorMsg());
                 }
               }
-
-
-              final Set<DataSegment> inserted = commitAppendSegmentBatch(handle, newSegments, usedSegments, segmentLockMap);
-
-              return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
+
+            final Set<DataSegment> inserted = commitAppendSegmentBatch(handle, newSegments, usedSegments, segmentLockMap);
+            return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -1299,7 +1261,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
         for (DataSegment segment : intervalToSegments.get(interval)) {
           SegmentCreateRequest request = new SegmentCreateRequest(
-              segment.getId().toString() + version,
+              segment.getId() + version,
               null,
               version,
               NumberedPartialShardSpec.instance()
@@ -1867,7 +1829,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         for (Map.Entry<String, TaskLockInfo> entry : batch) {
           batchMap.put(entry.getKey(), entry.getValue());
         }
-        List<DataSegment> oldSegments = retrieveSegments(handle, batchMap.keySet());
+        List<DataSegment> oldSegments = retrieveSegmentsById(handle, batchMap.keySet());
         for (DataSegment oldSegment : oldSegments) {
           Interval newInterval = oldSegment.getInterval();
           for (DataSegment segment : segments) {
@@ -2007,7 +1969,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           DataSegment segment = entry.getKey();
           TaskLockInfo lock = entry.getValue();
           appendBatch.add()
-                     .bind("id", segment.getId().toString() + ":" + lock.hashCode())
+                     .bind("id", segment.getId() + ":" + lock.hashCode())
                      .bind("dataSource", segment.getDataSource())
                      .bind("start", lock.getInterval().getStartMillis())
                      .bind("end", lock.getInterval().getEndMillis())
@@ -2037,220 +1999,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return toInsertSegments;
   }
 
-  private Set<DataSegment> commitSegmentBatch(
-      final Handle handle,
-      final Set<DataSegment> segments,
-      final Set<DataSegment> usedSegments,
-      @Nullable Map<DataSegment, TaskLockInfo> appendSegmentLockMap,
-      @Nullable Set<TaskLockInfo> replaceLocks,
-      boolean append
-  ) throws IOException
+  private List<DataSegment> retrieveSegmentsById(Handle handle, Set<String> segmentIds)
   {
-    final Set<DataSegment> toInsertSegments = new HashSet<>();
-    try {
-      Set<String> existedSegments = segmentExistsBatch(handle, segments);
-      log.info("Found these segments already exist in DB: %s", existedSegments);
-      for (DataSegment segment : segments) {
-        if (!existedSegments.contains(segment.getId().toString())) {
-          toInsertSegments.add(segment);
-        }
-      }
+    final String segmentIdCsv = segmentIds.stream().map(id -> "'" + id + "'")
+                                          .collect(Collectors.joining(","));
+    final Query<Map<String, Object>> query = handle.createQuery(
+        StringUtils.format(
+            "SELECT payload FROM %s WHERE id in (%s)",
+            segmentIdCsv, dbTables.getSegmentsTable()
+        )
+    ).setFetchSize(connector.getStreamingFetchSize());
 
-      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
-      // Avoiding ON DUPLICATE KEY since it's not portable.
-      // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-      final List<List<DataSegment>> partitionedSegments = Lists.partition(
-          new ArrayList<>(toInsertSegments),
-          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
-      );
+    ResultIterator<DataSegment> resultIterator = query.map(
+        (index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class)
+    ).iterator();
 
-      PreparedBatch preparedBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(),
-              connector.getQuoteString()
-          )
-      );
-      for (List<DataSegment> partition : partitionedSegments) {
-        for (DataSegment segment : partition) {
-          preparedBatch.add()
-                       .bind("id", segment.getId().toString())
-                       .bind("dataSource", segment.getDataSource())
-                       .bind("created_date", DateTimes.nowUtc().toString())
-                       .bind("start", segment.getInterval().getStart().toString())
-                       .bind("end", segment.getInterval().getEnd().toString())
-                       .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-                       .bind("version", segment.getVersion())
-                       .bind("used", usedSegments.contains(segment))
-                       .bind("payload", jsonMapper.writeValueAsBytes(segment));
-        }
-        final int[] affectedInsertRows = preparedBatch.execute();
-
-        final boolean succeeded = Arrays.stream(affectedInsertRows).allMatch(eachAffectedRow -> eachAffectedRow == 1);
-        if (succeeded) {
-          log.infoSegments(partition, "Published segments to DB");
-        } else {
-          final List<DataSegment> failedToPublish = IntStream.range(0, partition.size())
-                                                             .filter(i -> affectedInsertRows[i] != 1)
-                                                             .mapToObj(partition::get)
-                                                             .collect(Collectors.toList());
-          throw new ISE(
-              "Failed to publish segments to DB: %s",
-              SegmentUtils.commaSeparatedIdentifiers(failedToPublish)
-          );
-        }
-      }
-
-      PreparedBatch appendBatch = handle.prepareBatch(
-          StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, start, %2$send%2$s, segment_id, lock_version) "
-              + "VALUES (:id, :dataSource, :start, :end, :segment_id, :lock_version)",
-              dbTables.getSegmentVersionsTable(),
-              connector.getQuoteString()
-          )
-      );
-      if (appendSegmentLockMap == null) {
-        appendSegmentLockMap = new HashMap<>();
-      }
-      final List<List<Map.Entry<DataSegment, TaskLockInfo>>> appendSegmentPartitions = Lists.partition(
-          new ArrayList<>(appendSegmentLockMap.entrySet()),
-          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
-      );
-      for (List<Map.Entry<DataSegment, TaskLockInfo>> partition : appendSegmentPartitions) {
-        for (Map.Entry<DataSegment, TaskLockInfo> entry : partition) {
-          DataSegment segment = entry.getKey();
-          TaskLockInfo lock = entry.getValue();
-          appendBatch.add()
-                     .bind("id", segment.getId().toString() + ":" + lock.hashCode())
-                     .bind("dataSource", segment.getDataSource())
-                     .bind("start", lock.getInterval().getStartMillis())
-                     .bind("end", lock.getInterval().getEndMillis())
-                     .bind("segment_id", segment.getId().toString())
-                     .bind("lock_version", lock.getVersion());
-        }
-        final int[] affectedAppendRows = appendBatch.execute();
-        final boolean succeeded = Arrays.stream(affectedAppendRows).allMatch(eachAffectedRow -> eachAffectedRow == 1);
-        if (!succeeded) {
-          final List<DataSegment> failedToForward = IntStream.range(0, partition.size())
-                                                             .filter(i -> affectedAppendRows[i] != 1)
-                                                             .mapToObj(partition::get)
-                                                             .map(x -> x.getKey())
-                                                             .collect(Collectors.toList());
-          throw new ISE(
-              "Failed to forward appended segments to DB: %s",
-              SegmentUtils.commaSeparatedIdentifiers(failedToForward)
-          );
-        }
-      }
-
-      Map<String, TaskLockInfo> segmentsToBeForwarded = new HashMap<>();
-      if (!append) {
-        segmentsToBeForwarded = getAppendedSegmentIds(
-            handle,
-            segments.iterator().next().getDataSource(),
-            replaceLocks
-        );
-      }
-      final int numCorePartitions = segments.size();
-      int partitionNum = segments.size();
-      final List<List<Map.Entry<String, TaskLockInfo>>> forwardSegmentsBatch = Lists.partition(
-          new ArrayList<>(segmentsToBeForwarded.entrySet()),
-          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
-      );
-      for (List<Map.Entry<String, TaskLockInfo>> batch : forwardSegmentsBatch) {
-        Map<String, TaskLockInfo> batchMap = new HashMap<>();
-        for (Map.Entry<String, TaskLockInfo> entry : batch) {
-          batchMap.put(entry.getKey(), entry.getValue());
-        }
-        List<DataSegment> oldSegments = retrieveSegments(handle, batchMap.keySet());
-        for (DataSegment oldSegment : oldSegments) {
-          Interval newInterval = oldSegment.getInterval();
-          for (DataSegment segment : segments) {
-            if (segment.getInterval().overlaps(newInterval)) {
-              if (segment.getInterval().contains(newInterval)) {
-                newInterval = segment.getInterval();
-              } else {
-                throw new ISE("Incompatible segment intervals for commit: [%s] and [%s].",
-                              newInterval,
-                              segment.getInterval()
-                );
-              }
-            }
-          }
-          TaskLockInfo lock = batchMap.get(oldSegment.getId().toString());
-          ShardSpec shardSpec = new NumberedShardSpec(partitionNum++, numCorePartitions);
-          DataSegment newSegment = new DataSegment(
-              oldSegment.getDataSource(),
-              newInterval,
-              lock.getVersion(),
-              oldSegment.getLoadSpec(),
-              oldSegment.getDimensions(),
-              oldSegment.getMetrics(),
-              shardSpec,
-              oldSegment.getBinaryVersion(),
-              oldSegment.getSize()
-          );
-          preparedBatch.add()
-                       .bind("id", newSegment.getId().toString())
-                       .bind("dataSource", newSegment.getDataSource())
-                       .bind("created_date", DateTimes.nowUtc().toString())
-                       .bind("start", newSegment.getInterval().getStart().toString())
-                       .bind("end", newSegment.getInterval().getEnd().toString())
-                       .bind("partitioned", (newSegment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-                       .bind("version", newSegment.getVersion())
-                       .bind("used", true)
-                       .bind("payload", jsonMapper.writeValueAsBytes(newSegment));
-        }
-        final int[] affectedInsertRows = preparedBatch.execute();
-
-        final boolean succeeded = Arrays.stream(affectedInsertRows).allMatch(eachAffectedRow -> eachAffectedRow == 1);
-        if (succeeded) {
-          log.info("Published segments with updated metadata to DB");
-        } else {
-          throw new ISE("Failed to update segment metadatas in DB");
-        }
-      }
-    }
-    catch (Exception e) {
-      log.errorSegments(segments, "Exception inserting segment metadata");
-      throw e;
-    }
-
-    return toInsertSegments;
-  }
-
-  private List<DataSegment> retrieveSegments(final Handle handle, final Set<String> segmentIds)
-  {
-    final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE id in (");
-
-    List<String> segmentIdList = new ArrayList<>(segmentIds);
-    int n = segmentIdList.size();
-    for (int i = 0; i < n; i++) {
-      sb.append("'");
-      sb.append(segmentIdList.get(i));
-      sb.append("'");
-      if (i < n - 1) {
-        sb.append(", ");
-      }
-    }
-
-    sb.append(")");
-
-    final Query<Map<String, Object>> sql = handle
-        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
-        .setFetchSize(connector.getStreamingFetchSize());
-
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
-
-    List<DataSegment> retVal = new ArrayList<>();
-    while (resultIterator.hasNext()) {
-      retVal.add(resultIterator.next());
-    }
-    return retVal;
+    return Lists.newArrayList(resultIterator);
   }
 
   private Map<String, TaskLockInfo> getAppendedSegmentIds(
@@ -2383,7 +2147,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return SUCCESS if dataSource metadata was updated from matching startMetadata to matching endMetadata, FAILURE or
    * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
-   * {@link #commitSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
+   * {@link #commitSegmentsAndMetadata(Set, Set, DataSourceMetadata, DataSourceMetadata)}
    * achieve its own guarantee.
    *
    * @throws RuntimeException if state is unknown after this call
@@ -2513,7 +2277,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return SUCCESS if segment was marked unused, FAILURE or
    * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
-   * {@link #commitSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
+   * {@link #commitSegmentsAndMetadata(Set, Set, DataSourceMetadata, DataSourceMetadata)}
    * achieve its own guarantee.
    *
    * @throws RuntimeException if state is unknown after this call

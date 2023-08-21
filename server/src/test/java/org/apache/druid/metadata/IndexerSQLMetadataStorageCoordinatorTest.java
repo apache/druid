@@ -558,7 +558,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testTransactionalAnnounceSuccess() throws IOException
   {
     // Insert first segment.
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -577,7 +577,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     // Insert second segment.
-    final SegmentPublishResult result2 = coordinator.commitSegments(
+    final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
@@ -634,7 +634,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     };
 
     // Insert first segment.
-    final SegmentPublishResult result1 = failOnceCoordinator.commitSegments(
+    final SegmentPublishResult result1 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -656,7 +656,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     attemptCounter.set(0);
 
     // Insert second segment.
-    final SegmentPublishResult result2 = failOnceCoordinator.commitSegments(
+    final SegmentPublishResult result2 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
@@ -687,7 +687,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testTransactionalAnnounceFailDbNullWantNotNull() throws IOException
   {
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
@@ -721,7 +721,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                                             .build();
     Set<DataSegment> dropSegments = ImmutableSet.of(existingSegment1, existingSegment2, dataSegmentBar);
 
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         SEGMENTS,
         dropSegments,
         null,
@@ -750,7 +750,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         retrieveUsedSegmentIds()
     );
 
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         SEGMENTS,
         ImmutableSet.of(existingSegment1, existingSegment2),
         null,
@@ -788,7 +788,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     Set<DataSegment> dropSegments = ImmutableSet.of(existingSegment1, defaultSegment4);
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         SEGMENTS,
         dropSegments,
         null,
@@ -809,7 +809,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testTransactionalAnnounceFailDbNotNullWantNull() throws IOException
   {
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -817,7 +817,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
-    final SegmentPublishResult result2 = coordinator.commitSegments(
+    final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -835,7 +835,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
   {
-    final SegmentPublishResult result1 = coordinator.commitSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -843,7 +843,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
-    final SegmentPublishResult result2 = coordinator.commitSegments(
+    final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
@@ -1391,7 +1391,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testDeleteDataSourceMetadata() throws IOException
   {
-    coordinator.commitSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -2347,7 +2347,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testRemoveDataSourceMetadataOlderThanDatasourceActiveShouldNotBeDeleted() throws Exception
   {
-    coordinator.commitSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -2376,7 +2376,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveAndOlderThanTimeShouldBeDeleted() throws Exception
   {
-    coordinator.commitSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),
@@ -2402,7 +2402,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveButNotOlderThanTimeShouldNotBeDeleted()
       throws Exception
   {
-    coordinator.commitSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         ImmutableSet.of(),
         new ObjectMetadata(null),

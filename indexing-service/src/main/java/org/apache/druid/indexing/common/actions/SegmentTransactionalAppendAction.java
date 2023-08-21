@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -31,14 +30,10 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -111,42 +106,22 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    final String datasource = task.getDataSource();
+    final Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
+
     final SegmentPublishResult retVal;
-
-    final Set<DataSegment> allSegments = new HashSet<>(segments);
-
-    String datasource = task.getDataSource();
-    Map<Interval, TaskLock> replaceLocks = new HashMap<>();
-    for (TaskLock lock : TaskLocks.findReplaceLocksForSegments(datasource, toolbox.getTaskLockbox(), segments)) {
-      replaceLocks.put(lock.getInterval(), lock);
-    }
-    Map<DataSegment, TaskLockInfo> appendSegmentLockMap = new HashMap<>();
-    Set<TaskLockInfo> taskLockInfos = new HashSet<>();
-    for (TaskLock taskLock : replaceLocks.values()) {
-      taskLockInfos.add(getTaskLockInfo(taskLock));
-    }
-
-    for (DataSegment segment : segments) {
-      Interval interval = segment.getInterval();
-      for (Interval key : replaceLocks.keySet()) {
-        if (key.contains(interval)) {
-          appendSegmentLockMap.put(segment, getTaskLockInfo(replaceLocks.get(key)));
-        }
-      }
-    }
-
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
                       segments,
                       startMetadata,
                       endMetadata,
-                      appendSegmentLockMap,
-                      taskLockInfos
+                      segmentToReplaceLock
                   )
               )
               .onInvalidLocks(
@@ -168,27 +143,15 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
 
     if (retVal.isSuccess()) {
       toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
+      for (DataSegment segment : retVal.getSegments()) {
+        IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
+        toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+      }
     } else {
       toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
     }
 
-    // getSegments() should return an empty set if announceHistoricalSegments() failed
-    for (DataSegment segment : retVal.getSegments()) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      metricBuilder.setDimension(
-          DruidMetrics.PARTITIONING_TYPE,
-          segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
-      );
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-    }
-
     return retVal;
-  }
-
-
-  private TaskLockInfo getTaskLockInfo(TaskLock taskLock)
-  {
-    return new TaskLockInfo(taskLock.getInterval(), taskLock.getVersion());
   }
 
   @Override

@@ -346,7 +346,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createSegmentVersionTable(final String tableName)
+  private void createSegmentVersionTable(final String tableName)
   {
     createTable(
         tableName,

@@ -254,7 +254,7 @@ public interface IndexerMetadataStorageCoordinator
    * commit metadata.
    *
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
-   * {@param segments} and dropping {@param segmentsToDrop}
+   * {@param segments} and dropping {@param segmentsToDrop}.
    *
    * @param segments       set of segments to add, must all be from the same dataSource
    * @param segmentsToDrop set of segments to drop, must all be from the same dataSource
@@ -272,7 +272,7 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
    * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
-  SegmentPublishResult commitSegments(
+  SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       Set<DataSegment> segmentsToDrop,
       @Nullable DataSourceMetadata startMetadata,
@@ -283,8 +283,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap,
-      @Nullable Set<TaskLockInfo> taskLockInfos
+      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap
   ) throws IOException;
 
   SegmentPublishResult commitReplaceSegments(
