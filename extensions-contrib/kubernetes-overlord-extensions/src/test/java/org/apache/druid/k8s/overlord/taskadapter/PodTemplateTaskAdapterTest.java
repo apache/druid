@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -459,7 +460,7 @@ public class PodTemplateTaskAdapterTest
 
     Task expected = NoopTask.create("id", 1);
     TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
-    Mockito.when(mockTestLogs.streamTaskPayload("id")).thenReturn(com.google.common.base.Optional.of(
+    Mockito.when(mockTestLogs.streamTaskPayload("id")).thenReturn(Optional.of(
         new ByteArrayInputStream(mapper.writeValueAsString(expected).getBytes(Charset.defaultCharset()))
     ));
 
