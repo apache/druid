@@ -17,20 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.compact;
 
-import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Segments in the lists which are the elements of this iterator are sorted according to the natural segment order
  * (see {@link DataSegment#compareTo}).
  */
-public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
+public interface CompactionSegmentIterator extends Iterator<SegmentsToCompact>
 {
   /**
    * Return a map of dataSourceName to CompactionStatistics.
