@@ -359,7 +359,7 @@
     ]]></notes>
     <cve>CVE-2022-45855</cve>
     <cve>CVE-2022-42009</cve>
-    <!-- from shaded hadoop-annotations dependency -->
+    <!-- Suppress hadoop CVEs that not applicable to hadoop-annotations -->
     <cve>CVE-2022-25168</cve>
     <cve>CVE-2021-33036</cve>
   </suppress>
