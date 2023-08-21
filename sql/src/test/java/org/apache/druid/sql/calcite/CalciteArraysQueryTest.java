@@ -2881,6 +2881,253 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
+  {
+    cannotVectorize();
+    String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
+                 + "      ( SELECT * FROM \n"
+                 + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
+                 + "           ,UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest2) \n"
+                 + "      ), UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest3) "
+                 + " WHERE dimZipf=27 AND dim3_unnest1='Baz'";
+    List<Query<?>> expectedQuerySc = ImmutableList.of(
+        Druids.newScanQueryBuilder()
+              .dataSource(
+                  UnnestDataSource.create(
+                      UnnestDataSource.create(
+                          FilteredDataSource.create(
+                              UnnestDataSource.create(
+                                  new TableDataSource(CalciteTests.DATASOURCE5),
+                                  expressionVirtualColumn(
+                                      "j0.unnest",
+                                      "\"dimMultivalEnumerated\"",
+                                      ColumnType.STRING
+                                  ),
+                                  null
+                              ),
+                              and(
+                                  NullHandling.sqlCompatible()
+                                  ? equality("dimZipf", "27", ColumnType.LONG)
+                                  : bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
+                                  equality("j0.unnest", "Baz", ColumnType.STRING)
+                              )
+                          ),
+                          expressionVirtualColumn(
+                              "_j0.unnest",
+                              "\"dimMultivalEnumerated\"",
+                              ColumnType.STRING
+                          ), null
+                      ),
+                      expressionVirtualColumn(
+                          "__j0.unnest",
+                          "\"dimMultivalEnumerated\"",
+                          ColumnType.STRING
+                      ),
+                      null
+                  )
+              )
+              .intervals(querySegmentSpec(Filtration.eternity()))
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .legacy(false)
+              .context(QUERY_CONTEXT_UNNEST)
+              .virtualColumns(expressionVirtualColumn(
+                  "v0",
+                  "'Baz'",
+                  ColumnType.STRING
+              ))
+              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "dimZipf", "v0"))
+              .build()
+    );
+    testQuery(
+        sql,
+        QUERY_CONTEXT_UNNEST,
+        expectedQuerySc,
+        ImmutableList.of(
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Hello"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Hello"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Hello", "Baz"},
+            new Object[]{"27", "Baz", "Hello", "Baz"},
+            new Object[]{"27", "Baz", "Hello", "Hello"},
+            new Object[]{"27", "Baz", "Hello", "World"},
+            new Object[]{"27", "Baz", "World", "Baz"},
+            new Object[]{"27", "Baz", "World", "Baz"},
+            new Object[]{"27", "Baz", "World", "Hello"},
+            new Object[]{"27", "Baz", "World", "World"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Hello"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Baz"},
+            new Object[]{"27", "Baz", "Baz", "Hello"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Hello", "Baz"},
+            new Object[]{"27", "Baz", "Hello", "Baz"},
+            new Object[]{"27", "Baz", "Hello", "Hello"},
+            new Object[]{"27", "Baz", "Hello", "World"},
+            new Object[]{"27", "Baz", "World", "Baz"},
+            new Object[]{"27", "Baz", "World", "Baz"},
+            new Object[]{"27", "Baz", "World", "Hello"},
+            new Object[]{"27", "Baz", "World", "World"}
+        )
+    );
+  }
+  @Test
+  public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
+  {
+    cannotVectorize();
+    String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
+                 + "      ( SELECT * FROM \n"
+                 + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
+                 + "           ,UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest2) \n"
+                 + "      ), UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest3) "
+                 + " WHERE dimZipf=27 AND dim3_unnest1='Baz' AND dim3_unnest2='Hello' AND dim3_unnest3='World'";
+    List<Query<?>> expectedQuerySc = ImmutableList.of(
+        Druids.newScanQueryBuilder()
+              .dataSource(
+                  UnnestDataSource.create(
+                      UnnestDataSource.create(
+                          FilteredDataSource.create(
+                              UnnestDataSource.create(
+                                  new TableDataSource(CalciteTests.DATASOURCE5),
+                                  expressionVirtualColumn(
+                                      "j0.unnest",
+                                      "\"dimMultivalEnumerated\"",
+                                      ColumnType.STRING
+                                  ),
+                                  null
+                              ),
+                              and(
+                                  NullHandling.sqlCompatible()
+                                  ? equality("dimZipf", "27", ColumnType.LONG)
+                                  : bound("dimZipf", "27", "27", false, false, null, StringComparators.NUMERIC),
+                                  equality("j0.unnest", "Baz", ColumnType.STRING)
+                              )
+                          ),
+                          expressionVirtualColumn(
+                              "_j0.unnest",
+                              "\"dimMultivalEnumerated\"",
+                              ColumnType.STRING
+                          ), equality("_j0.unnest", "Hello", ColumnType.STRING)
+                      ),
+                      expressionVirtualColumn(
+                          "__j0.unnest",
+                          "\"dimMultivalEnumerated\"",
+                          ColumnType.STRING
+                      ),
+                      equality("__j0.unnest", "World", ColumnType.STRING)
+                  )
+              )
+              .intervals(querySegmentSpec(Filtration.eternity()))
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .virtualColumns(expressionVirtualColumn(
+                  "v0",
+                  "'Baz'",
+                  ColumnType.STRING
+              ))
+              .legacy(false)
+              .context(QUERY_CONTEXT_UNNEST)
+              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "dimZipf", "v0"))
+              .build()
+    );
+    testQuery(
+        sql,
+        QUERY_CONTEXT_UNNEST,
+        expectedQuerySc,
+        ImmutableList.of(
+            new Object[]{"27", "Baz", "Hello", "World"},
+            new Object[]{"27", "Baz", "Hello", "World"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestThriceWithFiltersOnDimAndUnnestColumnsORCombinations()
+  {
+    cannotVectorize();
+    skipVectorize();
+    String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
+                 + "      ( SELECT * FROM \n"
+                 + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
+                 + "           ,UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest2) \n"
+                 + "      ), UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest3) "
+                 + " WHERE dimZipf=27 AND (dim3_unnest1='Baz' OR dim3_unnest2='Hello') AND dim3_unnest3='World'";
+    List<Query<?>> expectedQuerySqlCom = ImmutableList.of(
+        Druids.newScanQueryBuilder()
+              .dataSource(
+                  UnnestDataSource.create(
+                      FilteredDataSource.create(
+                          UnnestDataSource.create(
+                              FilteredDataSource.create(
+                                  UnnestDataSource.create(
+                                      new TableDataSource(CalciteTests.DATASOURCE5),
+                                      expressionVirtualColumn(
+                                          "j0.unnest",
+                                          "\"dimMultivalEnumerated\"",
+                                          ColumnType.STRING
+                                      ),
+                                      null
+                                  ),
+                                  NullHandling.sqlCompatible() ? equality("dimZipf", "27", ColumnType.LONG) : range(
+                                      "dimZipf",
+                                      ColumnType.LONG,
+                                      "27",
+                                      "27",
+                                      false,
+                                      false
+                                  )
+                              ),
+                              expressionVirtualColumn(
+                                  "_j0.unnest",
+                                  "\"dimMultivalEnumerated\"",
+                                  ColumnType.STRING
+                              ),
+                              null
+                          ),
+                          or(
+                              equality("j0.unnest", "Baz", ColumnType.STRING),
+                              equality("_j0.unnest", "Hello", ColumnType.STRING)
+                          ) // (j0.unnest = Baz || _j0.unnest = Hello)
+                      ),
+                      expressionVirtualColumn(
+                          "__j0.unnest",
+                          "\"dimMultivalEnumerated\"",
+                          ColumnType.STRING
+                      ),
+                      equality("__j0.unnest", "World", ColumnType.STRING)
+                  )
+              )
+              .intervals(querySegmentSpec(Filtration.eternity()))
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .legacy(false)
+              .context(QUERY_CONTEXT_UNNEST)
+              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "dimZipf", "j0.unnest"))
+              .build()
+    );
+    testQuery(
+        sql,
+        QUERY_CONTEXT_UNNEST, expectedQuerySqlCom,
+        ImmutableList.of(
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Hello", "World"},
+            new Object[]{"27", "Baz", "World", "World"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Baz", "World"},
+            new Object[]{"27", "Baz", "Hello", "World"},
+            new Object[]{"27", "Baz", "World", "World"},
+            new Object[]{"27", "Hello", "Hello", "World"},
+            new Object[]{"27", "World", "Hello", "World"}
+        )
+    );
+  }
+  @Test
   public void testUnnestWithGroupBy()
   {
     // This tells the test to skip generating (vectorize = force) path
@@ -3148,6 +3395,95 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testUnnestVirtualWithColumns1()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT strings, m1 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (strings) where (strings='a' and (m1<=10 or strings='b'))",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(Druids.newScanQueryBuilder()
+                               .dataSource(UnnestDataSource.create(
+                                   new TableDataSource(CalciteTests.DATASOURCE3),
+                                   expressionVirtualColumn(
+                                       "j0.unnest",
+                                       "\"dim3\"",
+                                       ColumnType.STRING
+                                   ),
+                                   equality("j0.unnest", "a", ColumnType.STRING)
+                               ))
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                               .legacy(false)
+                               .filters(or(
+                                   NullHandling.sqlCompatible()
+                                   ? range("m1", ColumnType.LONG, null, "10", false, false)
+                                   : bound(
+                                       "m1",
+                                       null,
+                                       "10",
+                                       false,
+                                       false,
+                                       null,
+                                       StringComparators.NUMERIC
+                                   ),
+                                   equality("j0.unnest", "b", ColumnType.STRING)
+                               ))
+                               .context(QUERY_CONTEXT_UNNEST)
+                               .columns(ImmutableList.of("j0.unnest", "m1"))
+                               .build()),
+        ImmutableList.of(new Object[]{"a", 1.0f})
+    );
+  }
+
+  @Test
+  public void testUnnestVirtualWithColumns2()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT strings, m1 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (strings) where (strings='a' or (m1=2 and strings='b'))",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(Druids.newScanQueryBuilder()
+                               .dataSource(UnnestDataSource.create(
+                                   new TableDataSource(CalciteTests.DATASOURCE3),
+                                   expressionVirtualColumn(
+                                       "j0.unnest",
+                                       "\"dim3\"",
+                                       ColumnType.STRING
+                                   ),
+                                   null
+                               ))
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                               .legacy(false) // (j0.unnest = a || (m1 = 2 && j0.unnest = b))
+                               .filters(or(
+                                   equality("j0.unnest", "a", ColumnType.STRING),
+                                   and(
+                                       NullHandling.sqlCompatible()
+                                       ? equality("m1", "2", ColumnType.FLOAT)
+                                       : equality("m1", "2", ColumnType.STRING),
+                                       equality("j0.unnest", "b", ColumnType.STRING)
+                                   )
+                               ))
+                               .context(QUERY_CONTEXT_UNNEST)
+                               .columns(ImmutableList.of("j0.unnest", "m1"))
+                               .build()),
+        ImmutableList.of(
+            new Object[]{"a", 1.0f},
+            new Object[]{"b", 2.0f}
+        )
+    );
+  }
   @Test
   public void testUnnestWithFilters()
   {

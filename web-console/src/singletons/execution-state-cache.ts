@@ -33,10 +33,4 @@ export class ExecutionStateCache {
   static deleteState(id: string): void {
     delete ExecutionStateCache.cache[id];
   }
-
-  static deleteStates(ids: string[]): void {
-    for (const id of ids) {
-      delete ExecutionStateCache.cache[id];
-    }
-  }
 }

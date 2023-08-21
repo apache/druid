@@ -51,13 +51,14 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
-import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.loading.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
@@ -585,25 +586,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testBalancerThreadNumber()
   {
-    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
-    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
-    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
-
-    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
-    EasyMock.expect(
-        configManager.watch(
-            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
-            EasyMock.anyObject(Class.class),
-            EasyMock.anyObject()
-        )
-    ).andReturn(new AtomicReference<>(dynamicConfig)).anyTimes();
-
     ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
-    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
+    EasyMock.replay(scheduledExecutorFactory);
 
     DruidCoordinator c = new DruidCoordinator(
         druidCoordinatorConfig,
-        configManager,
+        EasyMock.createNiceMock(JacksonConfigManager.class),
         null,
         null,
         null,
@@ -617,7 +605,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        null,
+        new RandomBalancerStrategyFactory(),
         null,
         null,
         null
@@ -628,20 +616,20 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNull(c.getBalancerExec());
 
     // first initialization
-    c.initBalancerExecutor();
+    c.createBalancerStrategy(5);
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService firstExec = c.getBalancerExec();
     Assert.assertNotNull(firstExec);
 
     // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
-    c.initBalancerExecutor();
+    c.createBalancerStrategy(5);
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
     ListeningExecutorService secondExec = c.getBalancerExec();
     Assert.assertNotNull(secondExec);
     Assert.assertSame(firstExec, secondExec);
 
     // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
-    c.initBalancerExecutor();
+    c.createBalancerStrategy(10);
     Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
     ListeningExecutorService thirdExec = c.getBalancerExec();
     Assert.assertNotNull(thirdExec);

@@ -85,37 +85,7 @@ public class SequenceMetadataTest
         "Stream ingestion task unexpectedly attempted to overwrite segments: " + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment)
     );
 
-    transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, null, ImmutableSet.of(), null);
-  }
-
-  @Test
-  public void testPublishAnnotatedSegmentsThrowExceptionIfDropSegmentsNotNullAndNotEmpty() throws Exception
-  {
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource("foo")
-                                         .interval(Intervals.of("2001/P1D"))
-                                         .shardSpec(new LinearShardSpec(1))
-                                         .version("b")
-                                         .size(0)
-                                         .build();
-
-    Set<DataSegment> notNullNotEmptySegment = ImmutableSet.of(dataSegment);
-    SequenceMetadata<Integer, Integer> sequenceMetadata = new SequenceMetadata<>(
-        1,
-        "test",
-        ImmutableMap.of(),
-        ImmutableMap.of(),
-        true,
-        ImmutableSet.of()
-    );
-    TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
-
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(
-        "Stream ingestion task unexpectedly attempted to drop segments: " + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment)
-    );
-
-    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableSet.of(), null);
+    transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null);
   }
 
   @Test
@@ -143,6 +113,6 @@ public class SequenceMetadataTest
     );
     TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, false);
 
-    transactionalSegmentPublisher.publishAnnotatedSegments(null, null, notNullNotEmptySegment, ImmutableMap.of());
+    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of());
   }
 }

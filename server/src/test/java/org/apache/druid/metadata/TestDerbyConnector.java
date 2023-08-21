@@ -25,10 +25,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.junit.Assert;
 import org.junit.rules.ExternalResource;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.UUID;
 
 public class TestDerbyConnector extends DerbyConnector
@@ -134,6 +138,28 @@ public class TestDerbyConnector extends DerbyConnector
     public Supplier<MetadataStorageTablesConfig> metadataTablesConfigSupplier()
     {
       return dbTables;
+    }
+
+    public void allowUsedFlagLastUpdatedToBeNullable()
+    {
+      connector.retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              final Batch batch = handle.createBatch();
+              batch.add(
+                  StringUtils.format(
+                      "ALTER TABLE %1$s ALTER COLUMN USED_STATUS_LAST_UPDATED NULL",
+                      dbTables.get().getSegmentsTable().toUpperCase(Locale.ENGLISH)
+                  )
+              );
+              batch.execute();
+              return null;
+            }
+          }
+      );
     }
   }
 }
