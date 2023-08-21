@@ -1525,16 +1525,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       @Override
       public SegmentPublishResult announceHistoricalSegments(
           Set<DataSegment> segments,
-          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
 
-        Assert.assertFalse(
+        Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
-            segmentLatch == null
+            segmentLatch
         );
 
         publishedSegments.addAll(result.getSegments());

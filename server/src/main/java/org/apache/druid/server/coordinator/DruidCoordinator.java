@@ -20,12 +20,12 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
@@ -47,6 +47,7 @@ import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -62,10 +63,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CollectSegmentAndServerStats;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
@@ -101,7 +102,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -143,7 +143,8 @@ public class DruidCoordinator
 
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
-  private final ScheduledExecutorService exec;
+  private final ScheduledExecutorFactory executorFactory;
+  private final Map<String, ScheduledExecutorService> dutyGroupExecutors = new HashMap<>();
   private final LoadQueueTaskMaster taskMaster;
   private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
   private final SegmentLoadQueueManager loadQueueManager;
@@ -219,7 +220,7 @@ public class DruidCoordinator
     this.metadataStoreManagementDuties = metadataStoreManagementDuties;
     this.customDutyGroups = customDutyGroups;
 
-    this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
+    this.executorFactory = scheduledExecutorFactory;
 
     this.balancerStrategyFactory = balancerStrategyFactory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
@@ -399,7 +400,7 @@ public class DruidCoordinator
 
       started = false;
 
-      exec.shutdownNow();
+      stopAllDutyGroupExecutors();
 
       if (balancerExec != null) {
         balancerExec.shutdownNow();
@@ -496,12 +497,10 @@ public class DruidCoordinator
       }
 
       for (final DutiesRunnable dutiesRunnable : dutiesRunnables) {
-        // CompactSegmentsDuty can takes a non trival amount of time to complete.
-        // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
-        // config.getCoordinatorIndexingPeriod() period. Note that cautious should be taken
-        // if setting config.getCoordinatorIndexingPeriod() lower than the default value.
+        // Several coordinator duties can take a non trival amount of time to complete.
+        // Hence, we schedule each duty group on a dedicated executor
         ScheduledExecutors.scheduleAtFixedRate(
-            exec,
+            getOrCreateDutyGroupExecutor(dutiesRunnable.dutyGroupName),
             config.getCoordinatorStartDelay(),
             dutiesRunnable.getPeriod(),
             () -> {
@@ -546,6 +545,22 @@ public class DruidCoordinator
         balancerExec = null;
       }
     }
+  }
+
+  @GuardedBy("lock")
+  private ScheduledExecutorService getOrCreateDutyGroupExecutor(String dutyGroup)
+  {
+    return dutyGroupExecutors.computeIfAbsent(
+        dutyGroup,
+        group -> executorFactory.create(1, "Coordinator-Exec-" + dutyGroup + "-%d")
+    );
+  }
+
+  @GuardedBy("lock")
+  private void stopAllDutyGroupExecutors()
+  {
+    dutyGroupExecutors.values().forEach(ScheduledExecutorService::shutdownNow);
+    dutyGroupExecutors.clear();
   }
 
   /**
@@ -775,7 +790,7 @@ public class DruidCoordinator
               && coordLeaderSelector.isLeader()
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
-            dutyRunTime.reset().start();
+            dutyRunTime.restart();
             params = duty.run(params);
             dutyRunTime.stop();
 
@@ -785,7 +800,7 @@ public class DruidCoordinator
               return;
             } else {
               final RowKey rowKey = RowKey.of(Dimension.DUTY, dutyName);
-              final long dutyRunMillis = dutyRunTime.elapsed(TimeUnit.MILLISECONDS);
+              final long dutyRunMillis = dutyRunTime.millisElapsed();
               params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_RUN_TIME, rowKey, dutyRunMillis);
             }
           }
@@ -811,7 +826,8 @@ public class DruidCoordinator
         }
 
         // Emit the runtime of the full DutiesRunnable
-        final long runMillis = groupRunTime.stop().elapsed(TimeUnit.MILLISECONDS);
+        groupRunTime.stop();
+        final long runMillis = groupRunTime.millisElapsed();
         emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
         log.info("Finished coordinator run for group [%s] in [%d] ms.%n", dutyGroupName, runMillis);
       }
