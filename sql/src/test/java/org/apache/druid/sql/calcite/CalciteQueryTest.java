@@ -708,33 +708,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEarliestVectorAggregators()
-  {
-    notMsqCompatible();
-    testQuery(
-        "SELECT "
-        + "EARLIEST(dim1, 10) "
-        + "FROM druid.numfoo",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE3)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(
-                      aggregators(
-                          new StringFirstAggregatorFactory("a0", "dim1", "__time", 10)
-                      )
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{""}
-        )
-    );
-  }
-
-  @Test
   public void testLatestAggregators()
   {
     notMsqCompatible();

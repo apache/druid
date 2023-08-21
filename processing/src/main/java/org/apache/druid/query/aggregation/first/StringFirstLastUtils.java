@@ -120,9 +120,6 @@ public class StringFirstLastUtils
       time = pair.lhs;
       string = pair.rhs;
     } else if (object != null) {
-      if (timeSelector.isNull()) {
-        return null;
-      }
       time = timeSelector.getLong();
       string = DimensionHandlerUtils.convertObjectToString(object);
     } else {
