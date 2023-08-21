@@ -267,6 +267,16 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
   }
 
+  public static boolean isReindexTask(MSQControllerTask task)
+  {
+    return task.getQuerySpec()
+               .getQuery()
+               .getDataSource()
+               .getTableNames()
+               .stream()
+               .anyMatch(datasouce -> task.getDataSource().equals(datasouce));
+  }
+
   public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DurableStorageMSQDestination;

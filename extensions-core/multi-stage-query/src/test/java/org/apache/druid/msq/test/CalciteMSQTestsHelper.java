@@ -161,7 +161,7 @@ public class CalciteMSQTestsHelper
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
-                .toInstance((dataSegment, channelCounters) -> getSupplierForSegment(dataSegment));
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
           binder.bind(GroupByStrategySelector.class)

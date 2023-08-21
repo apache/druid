@@ -616,6 +616,12 @@ public class ControllerImpl implements Controller
         );
       }
     }
+
+    taskContextOverridesBuilder.put(
+        MultiStageQueryContext.CTX_IS_REINDEX,
+        MSQControllerTask.isReindexTask(task)
+    );
+
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),

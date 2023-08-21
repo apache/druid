@@ -179,7 +179,7 @@ public class TaskDataSegmentProviderTest
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
       final ListenableFuture<Supplier<ResourceHolder<Segment>>> f =
-          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters()));
+          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters(), false));
 
       testFutures.add(
           FutureUtils.transform(
