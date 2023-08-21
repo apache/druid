@@ -156,6 +156,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * Only the compaction task can have a special base name.
    */
   private final String baseSubtaskSpecName;
+
   private final InputSource baseInputSource;
 
   /**
@@ -514,6 +515,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     );
 
     try {
+
       initializeSubTaskCleaner();
 
       if (isParallelMode()) {
@@ -521,6 +523,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
+
         if (isGuaranteedRollup(
             getIngestionMode(),
             ingestionSchema.getTuningConfig()
@@ -1167,16 +1170,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
         );
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments,
-                                     Collections.emptySet(),
-                                     newSegments, annotateFunction,
-                                     null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());

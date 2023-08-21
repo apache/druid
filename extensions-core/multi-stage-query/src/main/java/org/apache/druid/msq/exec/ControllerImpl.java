@@ -1106,7 +1106,7 @@ public class ControllerImpl implements Controller
   {
     return (dataSource, intervals) -> {
       final Collection<DataSegment> dataSegments =
-          context.coordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(dataSource, intervals);
+          FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
       if (dataSegments.isEmpty()) {
         return Optional.empty();
@@ -1306,7 +1306,7 @@ public class ControllerImpl implements Controller
       } else {
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
+            SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {

@@ -31,13 +31,14 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -378,7 +379,7 @@ public class BalanceSegmentsTest
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
   {
-    params = new BalanceSegments().run(params);
+    params = new BalanceSegments(Duration.standardMinutes(1)).run(params);
     if (params == null) {
       Assert.fail("BalanceSegments duty returned null params");
       return new CoordinatorRunStats();
@@ -423,7 +424,7 @@ public class BalanceSegmentsTest
 
     return new ServerHolder(
         server.toImmutableDruidServer(),
-        new LoadQueuePeonTester(),
+        new TestLoadQueuePeon(),
         isDecommissioning,
         maxSegmentsInLoadQueue,
         10

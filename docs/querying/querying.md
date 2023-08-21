@@ -23,10 +23,12 @@ title: "Native queries"
   -->
 
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the
-> native query language. For information about how Druid SQL chooses which native query types to use when
-> it runs a SQL query, refer to the [SQL documentation](sql-translation.md#query-types).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the
+ native query language. For information about how Druid SQL chooses which native query types to use when
+ it runs a SQL query, refer to the [SQL documentation](sql-translation.md#query-types).
+:::
 
 Native queries in Druid are JSON objects and are typically issued to the Broker or Router processes. Queries can be
 posted like this:
@@ -35,7 +37,9 @@ posted like this:
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
 ```
 
-> Replace `<queryable_host>:<port>` with the appropriate address and port for your system. For example, if running the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888. 
+:::info
+ Replace `<queryable_host>:<port>` with the appropriate address and port for your system. For example, if running the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888.
+:::
 
 You can also enter them directly in the web console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
 
@@ -50,14 +54,16 @@ The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
 ```
 
-> If the Accept header is not provided, it defaults to the value of 'Content-Type' header.
+:::info
+ If the Accept header is not provided, it defaults to the value of 'Content-Type' header.
+:::
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build
 more complex visualizations, multiple Druid queries may be required.
 
 Even though queries are typically made to Brokers or Routers, they can also be accepted by
-[Historical](../design/historical.md) processes and by [Peons (task JVMs)](../design/peons.md)) that are running
+[Historical](../design/historical.md) processes and by [Peons (task JVMs)](../design/peons.md) that are running
 stream ingestion tasks. This may be valuable if you want to query results for specific segments that are served by
 specific processes.
 

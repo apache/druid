@@ -22,8 +22,8 @@ import axios from 'axios';
 
 import { Api } from '../singletons';
 
+import type { RowColumn } from './general';
 import { assemble } from './general';
-import type { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -109,20 +109,28 @@ export function getDruidErrorMessage(e: any): string {
 }
 
 export class DruidError extends Error {
-  static extractPosition(context: Record<string, any> | undefined): RowColumn | undefined {
+  static extractStartRowColumn(
+    context: Record<string, any> | undefined,
+    offsetLines = 0,
+  ): RowColumn | undefined {
     if (context?.sourceType !== 'sql' || !context.line || !context.column) return;
 
-    const rowColumn: RowColumn = {
-      row: Number(context.line) - 1,
+    return {
+      row: Number(context.line) - 1 + offsetLines,
       column: Number(context.column) - 1,
     };
+  }
 
-    if (context.endLine && context.endColumn) {
-      rowColumn.endRow = Number(context.endLine) - 1;
-      rowColumn.endColumn = Number(context.endColumn) - 1;
-    }
+  static extractEndRowColumn(
+    context: Record<string, any> | undefined,
+    offsetLines = 0,
+  ): RowColumn | undefined {
+    if (context?.sourceType !== 'sql' || !context.endLine || !context.endColumn) return;
 
-    return rowColumn;
+    return {
+      row: Number(context.endLine) - 1 + offsetLines,
+      column: Number(context.endColumn) - 1,
+    };
   }
 
   static positionToIndex(str: string, line: number, column: number): number {
@@ -256,15 +264,16 @@ export class DruidError extends Error {
   public errorMessage?: string;
   public errorMessageWithoutExpectation?: string;
   public expectation?: string;
-  public position?: RowColumn;
+  public startRowColumn?: RowColumn;
+  public endRowColumn?: RowColumn;
   public suggestion?: QuerySuggestion;
 
-  // Depricated
+  // Deprecated
   public error?: string;
   public errorClass?: string;
   public host?: string;
 
-  constructor(e: any, skipLines = 0) {
+  constructor(e: any, offsetLines = 0) {
     super(axios.isCancel(e) ? CANCELED_MESSAGE : getDruidErrorMessage(e));
     if (axios.isCancel(e)) {
       this.canceled = true;
@@ -286,14 +295,15 @@ export class DruidError extends Error {
       Object.assign(this, druidErrorResponse);
 
       if (this.errorMessage) {
-        if (skipLines) {
+        if (offsetLines) {
           this.errorMessage = this.errorMessage.replace(
             /line \[(\d+)],/g,
-            (_, c) => `line [${Number(c) - skipLines}],`,
+            (_, c) => `line [${Number(c) + offsetLines}],`,
           );
         }
 
-        this.position = DruidError.extractPosition(this.context);
+        this.startRowColumn = DruidError.extractStartRowColumn(this.context, offsetLines);
+        this.endRowColumn = DruidError.extractEndRowColumn(this.context, offsetLines);
         this.suggestion = DruidError.getSuggestion(this.errorMessage);
 
         const expectationIndex = this.errorMessage.indexOf('Was expecting one of');

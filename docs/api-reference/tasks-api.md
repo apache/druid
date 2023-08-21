@@ -3,8 +3,12 @@ id: tasks-api
 title: Tasks API
 sidebar_label: Tasks
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -23,22 +27,23 @@ sidebar_label: Tasks
   ~ under the License.
   -->
 
-This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion, querying, and compaction.  
+This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion, querying, and compaction.
 
-In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for the Router service address and port. For example, on the quickstart configuration, use `http://localhost:8888`.
 
-## Task information and retrieval 
+## Task information and retrieval
 
 ### Get an array of tasks
 
-#### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/tasks`
-
 Retrieves an array of all tasks in the Druid cluster. Each task object includes information on its ID, status, associated datasource, and other metadata. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/tasks</code>
 
 #### Query parameters
 
-The endpoint supports a set of optional query parameters to filter results. 
+The endpoint supports a set of optional query parameters to filter results.
 
 |Parameter|Type|Description|
 |---|---|---|
@@ -50,18 +55,33 @@ The endpoint supports a set of optional query parameters to filter results.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved list of tasks* 
-<!--400 BAD REQUEST-->
+
+*Successfully retrieved list of tasks*
+
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
+
+
 <br/>
-*Invalid `state` query parameter value* 
-<!--500 SERVER ERROR-->
+
+*Invalid `state` query parameter value*
+
+</TabItem>
+<TabItem value="3" label="500 SERVER ERROR">
+
+
 <br/>
-*Invalid query parameter* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid query parameter*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -71,28 +91,35 @@ The following example shows how to retrieve a list of tasks filtered with the fo
 * State: `complete`
 * Datasource: `wikipedia_api`
 * Time interval: between `2015-09-12` and `2015-09-13`
-* Max entries returned: `10` 
+* Max entries returned: `10`
 * Task type: `query_worker`
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="4" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="5" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -156,14 +183,15 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get an array of complete tasks
 
-#### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/completeTasks`
-
 Retrieves an array of completed tasks in the Druid cluster. This is functionally equivalent to `/druid/indexer/v1/tasks?state=complete`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/completeTasks</code>
 
 #### Query parameters
 
-The endpoint supports a set of optional query parameters to filter results. 
+The endpoint supports a set of optional query parameters to filter results.
 
 |Parameter|Type|Description|
 |---|---|---|
@@ -174,38 +202,56 @@ The endpoint supports a set of optional query parameters to filter results.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="6" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved list of complete tasks* 
-<!--404 NOT FOUND-->
+
+*Successfully retrieved list of complete tasks*
+
+</TabItem>
+<TabItem value="7" label="404 NOT FOUND">
+
+
 <br/>
-*Request sent to incorrect service* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Request sent to incorrect service*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="8" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/completeTasks"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/completeTasks"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="9" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/completeTasks HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -251,14 +297,15 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get an array of running tasks
 
-#### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/runningTasks`
-
 Retrieves an array of running task objects in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=running`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/runningTasks</code>
 
 #### Query parameters
 
-The endpoint supports a set of optional query parameters to filter results. 
+The endpoint supports a set of optional query parameters to filter results.
 
 |Parameter|Type|Description|
 |---|---|---|
@@ -269,37 +316,49 @@ The endpoint supports a set of optional query parameters to filter results.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="10" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved list of running tasks* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved list of running tasks*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="11" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/runningTasks"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/runningTasks"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="12" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/runningTasks HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -327,14 +386,15 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get an array of waiting tasks
 
-#### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/waitingTasks`
-
 Retrieves an array of waiting tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=waiting`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/waitingTasks</code>
 
 #### Query parameters
 
-The endpoint supports a set of optional query parameters to filter results. 
+The endpoint supports a set of optional query parameters to filter results.
 
 |Parameter|Type|Description|
 |---|---|---|
@@ -345,36 +405,48 @@ The endpoint supports a set of optional query parameters to filter results.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="13" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved list of waiting tasks* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved list of waiting tasks*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="14" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/waitingTasks"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/waitingTasks"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="15" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/waitingTasks HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -438,15 +510,15 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get an array of pending tasks
 
+Retrieves an array of pending tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
+
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/pendingTasks`
-
-Retrieves an array of pending tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/pendingTasks</code>
 
 #### Query parameters
 
-The endpoint supports a set of optional query parameters to filter results. 
+The endpoint supports a set of optional query parameters to filter results.
 
 |Parameter|Type|Description|
 |---|---|---|
@@ -457,35 +529,48 @@ The endpoint supports a set of optional query parameters to filter results.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="16" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved list of pending tasks* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Successfully retrieved list of pending tasks*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="17" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/pendingTasks"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/pendingTasks"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="18" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/pendingTasks HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -531,22 +616,33 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get task payload
 
-#### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}`
-
 Retrieves the payload of a task given the task ID. It returns a JSON object with the task ID and payload that includes task configuration details and relevant specifications associated with the execution of the task.
 
-#### Responses 
-<!--DOCUSAURUS_CODE_TABS-->
+#### URL
 
-<!--200 SUCCESS-->
-<br/>
-*Successfully retrieved payload of task* 
-<!--404 NOT FOUND-->
-<br/>
-*Cannot find task with ID* 
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId</code>
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+#### Responses
+
+<Tabs>
+
+<TabItem value="19" label="200 SUCCESS">
+
+
+<br/>
+
+*Successfully retrieved payload of task*
+
+</TabItem>
+<TabItem value="20" label="404 NOT FOUND">
+
+
+<br/>
+
+*Cannot find task with ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -554,25 +650,33 @@ Retrieves the payload of a task given the task ID. It returns a JSON object with
 
 The following examples shows how to retrieve the task payload of a task with the specified ID `index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="21" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="22" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   {
     "task": "index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z",
@@ -727,21 +831,33 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get task status
 
-#### URL
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/status`
-
 Retrieves the status of a task given the task ID. It returns a JSON object with the task's status code, runner status, task type, datasource, and other relevant metadata.
 
-#### Responses 
-<!--DOCUSAURUS_CODE_TABS-->
+#### URL
 
-<!--200 SUCCESS-->
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/status</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="23" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved task status* 
-<!--404 NOT FOUND-->
+
+*Successfully retrieved task status*
+
+</TabItem>
+<TabItem value="24" label="404 NOT FOUND">
+
+
 <br/>
-*Cannot find task with ID* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Cannot find task with ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -749,21 +865,30 @@ Retrieves the status of a task given the task ID. It returns a JSON object with 
 
 The following examples shows how to retrieve the status of a task with the specified ID `query-223549f8-b993-4483-b028-1b0d54713cad`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="25" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="26" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
 
@@ -791,23 +916,31 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get task segments
 
-#### URL
-
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/segments`
-
-> This API is deprecated and will be removed in future releases.
+:::info
+ This API is deprecated and will be removed in future releases.
+:::
 
 Retrieves information about segments generated by the task given the task ID. To hit this endpoint, make sure to enable the audit log config on the Overlord with `druid.indexer.auditLog.enabled = true`.
 
 In addition to enabling audit logs, configure a cleanup strategy to prevent overloading the metadata store with old audit logs which may cause performance issues. To enable automated cleanup of audit logs on the Coordinator, set `druid.coordinator.kill.audit.on`. You may also manually export the audit logs to external storage. For more information, see [Audit records](../operations/clean-metadata-store.md#audit-records).
 
-#### Responses
-<!--DOCUSAURUS_CODE_TABS-->
+#### URL
 
-<!--200 SUCCESS-->
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/segments</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="27" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved task segments* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Successfully retrieved task segments*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -815,18 +948,26 @@ In addition to enabling audit logs, configure a cleanup strategy to prevent over
 
 The following examples shows how to retrieve the task segment of the task with the specified ID `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="28" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="29" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -834,27 +975,37 @@ A successful request returns a `200 OK` response and an array of the task segmen
 
 ### Get task log
 
-#### URL
-
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/log`
-
-Retrieves the event log associated with a task. It returns a list of logged events during the lifecycle of the task. The endpoint is useful for providing information about the execution of the task, including any errors or warnings raised. 
+Retrieves the event log associated with a task. It returns a list of logged events during the lifecycle of the task. The endpoint is useful for providing information about the execution of the task, including any errors or warnings raised.
 
 Task logs are automatically retrieved from the Middle Manager/Indexer or in long-term storage. For reference, see [Task logs](../ingestion/tasks.md#task-logs).
 
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
+
 #### Query parameters
+
 * `offset` (optional)
     * Type: Int
     * Exclude the first passed in number of entries from the response.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="30" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved task log* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Successfully retrieved task log*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -862,24 +1013,32 @@ Task logs are automatically retrieved from the Middle Manager/Indexer or in long
 
 The following examples shows how to retrieve the task log of a task with the specified ID `index_kafka_social_media_0e905aa31037879_nommnaeg`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="31" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="32" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
     2023-07-03T22:11:17,891 INFO [qtp1251996697-122] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Sequence[index_kafka_social_media_0e905aa31037879_0] end offsets updated from [{0=9223372036854775807}] to [{0=230985}].
     2023-07-03T22:11:17,900 INFO [qtp1251996697-122] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Saved sequence metadata to disk: [SequenceMetadata{sequenceId=0, sequenceName='index_kafka_social_media_0e905aa31037879_0', assignments=[0], startOffsets={0=230985}, exclusiveStartPartitions=[], endOffsets={0=230985}, sentinel=false, checkpointed=true}]
@@ -889,11 +1048,11 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
     2023-07-03T22:11:17,902 INFO [task-runner-0-priority-0] org.apache.kafka.clients.consumer.internals.ConsumerCoordinator - [Consumer clientId=consumer-kafka-supervisor-dcanhmig-1, groupId=kafka-supervisor-dcanhmig] Request joining group due to: consumer pro-actively leaving the group
     2023-07-03T22:11:17,902 INFO [task-runner-0-priority-0] org.apache.kafka.clients.consumer.KafkaConsumer - [Consumer clientId=consumer-kafka-supervisor-dcanhmig-1, groupId=kafka-supervisor-dcanhmig] Unsubscribed all topics or patterns and assigned partitions
     2023-07-03T22:11:17,912 INFO [task-runner-0-priority-0] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Persisted rows[0] and (estimated) bytes[0]
-    2023-07-03T22:11:17,916 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-persist] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Flushed in-memory data with commit metadata [AppenderatorDriverMetadata{segments={}, lastSegmentIds={}, callerMetadata={nextPartitions=SeekableStreamEndSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}}}}] for segments: 
+    2023-07-03T22:11:17,916 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-persist] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Flushed in-memory data with commit metadata [AppenderatorDriverMetadata{segments={}, lastSegmentIds={}, callerMetadata={nextPartitions=SeekableStreamEndSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}}}}] for segments:
     2023-07-03T22:11:17,917 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-persist] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Persisted stats: processed rows: [0], persisted rows[0], sinks: [0], total fireHydrants (across sinks): [0], persisted fireHydrants (across sinks): [0]
     2023-07-03T22:11:17,919 INFO [task-runner-0-priority-0] org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver - Pushing [0] segments in background
     2023-07-03T22:11:17,921 INFO [task-runner-0-priority-0] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Persisted rows[0] and (estimated) bytes[0]
-    2023-07-03T22:11:17,924 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-persist] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Flushed in-memory data with commit metadata [AppenderatorDriverMetadata{segments={}, lastSegmentIds={}, callerMetadata={nextPartitions=SeekableStreamStartSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}, exclusivePartitions=[]}, publishPartitions=SeekableStreamEndSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}}}}] for segments: 
+    2023-07-03T22:11:17,924 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-persist] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Flushed in-memory data with commit metadata [AppenderatorDriverMetadata{segments={}, lastSegmentIds={}, callerMetadata={nextPartitions=SeekableStreamStartSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}, exclusivePartitions=[]}, publishPartitions=SeekableStreamEndSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}}}}] for segments:
     2023-07-03T22:11:17,924 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-persist] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Persisted stats: processed rows: [0], persisted rows[0], sinks: [0], total fireHydrants (across sinks): [0], persisted fireHydrants (across sinks): [0]
     2023-07-03T22:11:17,925 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-merge] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Preparing to push (stats): processed rows: [0], sinks: [0], fireHydrants (across sinks): [0]
     2023-07-03T22:11:17,925 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-appenderator-merge] org.apache.druid.segment.realtime.appenderator.StreamAppenderator - Push complete...
@@ -901,7 +1060,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
     2023-07-03T22:11:17,930 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-publish] org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver - Published [0] segments with commit metadata [{nextPartitions=SeekableStreamStartSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}, exclusivePartitions=[]}, publishPartitions=SeekableStreamEndSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}}}]
     2023-07-03T22:11:17,930 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-publish] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Published 0 segments for sequence [index_kafka_social_media_0e905aa31037879_0] with metadata [AppenderatorDriverMetadata{segments={}, lastSegmentIds={}, callerMetadata={nextPartitions=SeekableStreamStartSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}, exclusivePartitions=[]}, publishPartitions=SeekableStreamEndSequenceNumbers{stream='social_media', partitionSequenceNumberMap={0=230985}}}}].
     2023-07-03T22:11:17,931 INFO [[index_kafka_social_media_0e905aa31037879_nommnaeg]-publish] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Saved sequence metadata to disk: []
-    2023-07-03T22:11:17,932 INFO [task-runner-0-priority-0] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Handoff complete for segments: 
+    2023-07-03T22:11:17,932 INFO [task-runner-0-priority-0] org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner - Handoff complete for segments:
     2023-07-03T22:11:17,932 INFO [task-runner-0-priority-0] org.apache.kafka.clients.consumer.internals.ConsumerCoordinator - [Consumer clientId=consumer-kafka-supervisor-dcanhmig-1, groupId=kafka-supervisor-dcanhmig] Resetting generation and member id due to: consumer pro-actively leaving the group
     2023-07-03T22:11:17,932 INFO [task-runner-0-priority-0] org.apache.kafka.clients.consumer.internals.ConsumerCoordinator - [Consumer clientId=consumer-kafka-supervisor-dcanhmig-1, groupId=kafka-supervisor-dcanhmig] Request joining group due to: consumer pro-actively leaving the group
     2023-07-03T22:11:17,933 INFO [task-runner-0-priority-0] org.apache.kafka.common.metrics.Metrics - Metrics scheduler closed
@@ -946,20 +1105,25 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get task completion report
 
+Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a task. It returns a JSON object with information about the number of rows ingested, and any parse exceptions that Druid raised.
+
 #### URL
 
-<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/reports`
-
-Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a task. It returns a JSON object with information about the number of rows ingested, and any parse exceptions that Druid raised.
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/reports</code>
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="33" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved task report* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Successfully retrieved task report*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -967,23 +1131,32 @@ Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a t
 
 The following examples shows how to retrieve the completion report of a task with the specified ID `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="34" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="35" label="HTTP">
+
+
 ```HTTP
 GET /druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   {
     "ingestionStatsAndErrors": {
@@ -1022,30 +1195,51 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Submit a task
 
-#### URL
-
-<code class="postAPI">POST</code> `/druid/indexer/v1/task`
-
 Submits a JSON-based ingestion spec or supervisor spec to the Overlord. It returns the task ID of the submitted task. For information on creating an ingestion spec, refer to the [ingestion spec reference](../ingestion/ingestion-spec.md).
 
 Note that for most batch ingestion use cases, you should use the [SQL-ingestion API](./sql-ingestion-api.md) instead of JSON-based batch ingestion.
 
-#### Responses
-<!--DOCUSAURUS_CODE_TABS-->
+#### URL
 
-<!--200 SUCCESS-->
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/task</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="36" label="200 SUCCESS">
+
+
 <br/>
-*Successfully submitted task* 
-<!--400 BAD REQUEST-->
+
+*Successfully submitted task*
+
+</TabItem>
+<TabItem value="37" label="400 BAD REQUEST">
+
+
 <br/>
-*Missing information in query* 
-<!--415 UNSUPPORTED MEDIA TYPE-->
+
+*Missing information in query*
+
+</TabItem>
+<TabItem value="38" label="415 UNSUPPORTED MEDIA TYPE">
+
+
 <br/>
-*Incorrect request body media type* 
-<!--500 Server Error-->
+
+*Incorrect request body media type*
+
+</TabItem>
+<TabItem value="39" label="500 Server Error">
+
+
 <br/>
-*Unexpected token or characters in request body* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Unexpected token or characters in request body*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1053,57 +1247,63 @@ Note that for most batch ingestion use cases, you should use the [SQL-ingestion 
 
 The following request is an example of submitting a task to create a datasource named `"wikipedia auto"`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="40" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task" \
---header "Content-Type: application/json" \
---data "{
-  \"type\" : \"index_parallel\",
-  \"spec\" : {
-    \"dataSchema\" : {
-      \"dataSource\" : \"wikipedia_auto\",
-      \"timestampSpec\": {
-        \"column\": \"time\",
-        \"format\": \"iso\"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task" \
+--header 'Content-Type: application/json' \
+--data '{
+  "type" : "index_parallel",
+  "spec" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia_auto",
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
       },
-      \"dimensionsSpec\" : {
-        \"useSchemaDiscovery\": true
+      "dimensionsSpec" : {
+        "useSchemaDiscovery": true
       },
-      \"metricsSpec\" : [],
-      \"granularitySpec\" : {
-        \"type\" : \"uniform\",
-        \"segmentGranularity\" : \"day\",
-        \"queryGranularity\" : \"none\",
-        \"intervals\" : [\"2015-09-12/2015-09-13\"],
-        \"rollup\" : false
+      "metricsSpec" : [],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "day",
+        "queryGranularity" : "none",
+        "intervals" : ["2015-09-12/2015-09-13"],
+        "rollup" : false
       }
     },
-    \"ioConfig\" : {
-      \"type\" : \"index_parallel\",
-      \"inputSource\" : {
-        \"type\" : \"local\",
-        \"baseDir\" : \"quickstart/tutorial/\",
-        \"filter\" : \"wikiticker-2015-09-12-sampled.json.gz\"
+    "ioConfig" : {
+      "type" : "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "quickstart/tutorial/",
+        "filter" : "wikiticker-2015-09-12-sampled.json.gz"
       },
-      \"inputFormat\" : {
-        \"type\" : \"json\"
+      "inputFormat" : {
+        "type" : "json"
       },
-      \"appendToExisting\" : false
+      "appendToExisting" : false
     },
-    \"tuningConfig\" : {
-      \"type\" : \"index_parallel\",
-      \"maxRowsPerSegment\" : 5000000,
-      \"maxRowsInMemory\" : 25000
+    "tuningConfig" : {
+      "type" : "index_parallel",
+      "maxRowsPerSegment" : 5000000,
+      "maxRowsInMemory" : 25000
     }
   }
-}"
+}'
+
 ```
-<!--HTTP-->
+</TabItem>
+<TabItem value="41" label="HTTP">
+
+
 ```HTTP
 POST /druid/indexer/v1/task HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 952
 
@@ -1148,9 +1348,12 @@ Content-Length: 952
   }
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
 
@@ -1164,21 +1367,33 @@ Content-Length: 952
 
 ### Shut down a task
 
-#### URL
-<code class="postAPI">POST</code> `/druid/indexer/v1/task/{taskId}/shutdown`
-
 Shuts down a task if it not already complete. Returns a JSON object with the ID of the task that was shut down successfully.
 
-#### Responses
-<!--DOCUSAURUS_CODE_TABS-->
+#### URL
 
-<!--200 SUCCESS-->
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/task/:taskId/shutdown</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="42" label="200 SUCCESS">
+
+
 <br/>
-*Successfully shut down task* 
-<!--404 NOT FOUND-->
+
+*Successfully shut down task*
+
+</TabItem>
+<TabItem value="43" label="404 NOT FOUND">
+
+
 <br/>
-*Cannot find task with ID or task is no longer running* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Cannot find task with ID or task is no longer running*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1186,21 +1401,29 @@ Shuts down a task if it not already complete. Returns a JSON object with the ID 
 
 The following request shows how to shut down a task with the ID `query-52as 8aafe-7265-4427-89fe-dc51275cc470`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="44" label="cURL">
+
+
 ```shell
-curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown"
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="45" label="HTTP">
+
+
 ```HTTP
 POST /druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
 
@@ -1214,22 +1437,33 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Shut down all tasks for a datasource
 
-#### URL
-<code class="postAPI">POST</code> `/druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
-
 Shuts down all tasks for a specified datasource. If successful, it returns a JSON object with the name of the datasource whose tasks are shut down.
+
+#### URL
+
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/datasources/:datasource/shutdownAllTasks</code>
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="46" label="200 SUCCESS">
+
+
 <br/>
-*Successfully shut down tasks* 
-<!--404 NOT FOUND-->
+
+*Successfully shut down tasks*
+
+</TabItem>
+<TabItem value="47" label="404 NOT FOUND">
+
+
 <br/>
-*Error or datasource does not have a running task* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Error or datasource does not have a running task*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1237,24 +1471,32 @@ Shuts down all tasks for a specified datasource. If successful, it returns a JSO
 
 The following request is an example of shutting down all tasks for datasource `wikipedia_auto`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="48" label="cURL">
+
+
 ```shell
-curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks"
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="49" label="HTTP">
+
+
 ```HTTP
 POST /druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   {
     "dataSource": "wikipedia_api"
@@ -1267,22 +1509,33 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Retrieve status objects for tasks
 
-#### URL
-<code class="postAPI">POST</code> `/druid/indexer/v1/taskStatus`
-
 Retrieves list of task status objects for list of task ID strings in request body. It returns a set of JSON objects with the status, duration, location of each task, and any error messages.
+
+#### URL
+
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/taskStatus</code>
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="50" label="200 SUCCESS">
+
+
 <br/>
-*Successfully retrieved status objects* 
-<!--415 UNSUPPORTED MEDIA TYPE-->
+
+*Successfully retrieved status objects*
+
+</TabItem>
+<TabItem value="51" label="415 UNSUPPORTED MEDIA TYPE">
+
+
 <br/>
-*Missing request body or incorrect request body type* 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Missing request body or incorrect request body type*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1290,30 +1543,39 @@ Retrieves list of task status objects for list of task ID strings in request bod
 
 The following request is an example of retrieving status objects for task ID `index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z` and `index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z` .
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="52" label="cURL">
+
+
 ```shell
-curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/taskStatus" \
---header "Content-Type: application/json" \
---data "[\"index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z\", \"index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z\"]"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/taskStatus" \
+--header 'Content-Type: application/json' \
+--data '["index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z","index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z"]'
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="53" label="HTTP">
+
+
 ```HTTP
 POST /druid/indexer/v1/taskStatus HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
 Content-Length: 134
 
 ["index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z", "index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z"]
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   {
     "index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z": {
@@ -1345,23 +1607,28 @@ Content-Length: 134
 
 ### Clean up pending segments for a datasource
 
-#### URL
-
-<code class="deleteAPI">DELETE</code> `/druid/indexer/v1/pendingSegments/{dataSource}`
-
 Manually clean up pending segments table in metadata storage for `datasource`. It returns a JSON object response with
 `numDeleted` for the number of rows deleted from the pending segments table. This API is used by the
 `druid.coordinator.kill.pendingSegments.on` [Coordinator setting](../configuration/index.md#coordinator-operation)
 which automates this operation to perform periodically.
 
+#### URL
+
+<code class="deleteAPI">DELETE</code> <code>/druid/indexer/v1/pendingSegments/:datasource</code>
+
 #### Responses
-<!--DOCUSAURUS_CODE_TABS-->
 
-<!--200 SUCCESS-->
+<Tabs>
+
+<TabItem value="54" label="200 SUCCESS">
+
+
 <br/>
-*Successfully deleted pending segments* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully deleted pending segments*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1369,24 +1636,32 @@ which automates this operation to perform periodically.
 
 The following request is an example of cleaning up pending segments for the `wikipedia_api` datasource.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="55" label="cURL">
+
+
 ```shell
-curl --request DELETE "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/pendingSegments/wikipedia_api"
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/pendingSegments/wikipedia_api"
 ```
-<!--HTTP-->
+
+</TabItem>
+<TabItem value="56" label="HTTP">
+
+
 ```HTTP
 DELETE /druid/indexer/v1/pendingSegments/wikipedia_api HTTP/1.1
-Host: http://<ROUTER_IP>:<ROUTER_PORT>
+Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
+
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   {
     "numDeleted": 2

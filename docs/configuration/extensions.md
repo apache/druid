@@ -67,7 +67,9 @@ Core extensions are maintained by Druid committers.
 
 ## Community extensions
 
-> Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. They may not have been as extensively tested as the core extensions.
+:::info
+ Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. They may not have been as extensively tested as the core extensions.
+:::
 
 A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball.
 If you'd like to take on maintenance for a community extension, please post on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org) to let us know!
@@ -123,12 +125,16 @@ druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage"]
 
 These extensions are located in the `extensions` directory of the distribution.
 
-> Druid bundles two sets of configurations: one for the [quickstart](../tutorials/index.md) and
-> one for a [clustered configuration](../tutorials/cluster.md). Make sure you are updating the correct
-> `common.runtime.properties` for your setup.
+:::info
+ Druid bundles two sets of configurations: one for the [quickstart](../tutorials/index.md) and
+ one for a [clustered configuration](../tutorials/cluster.md). Make sure you are updating the correct
+ `common.runtime.properties` for your setup.
+:::
 
-> Because of licensing, the mysql-metadata-storage extension does not include the required MySQL JDBC driver. For instructions
-> on how to install this library, see the [MySQL extension page](../development/extensions-core/mysql.md).
+:::info
+ Because of licensing, the mysql-metadata-storage extension does not include the required MySQL JDBC driver. For instructions
+ on how to install this library, see the [MySQL extension page](../development/extensions-core/mysql.md).
+:::
 
 ### Loading community extensions
 
@@ -151,10 +157,14 @@ java \
 You only have to install the extension once. Then, add `"druid-example-extension"` to
 `druid.extensions.loadList` in common.runtime.properties to instruct Druid to load the extension.
 
-> Please make sure all the Extensions related configuration properties listed [here](../configuration/index.md#extensions) are set correctly.
+:::info
+ Please make sure all the Extensions related configuration properties listed [here](../configuration/index.md#extensions) are set correctly.
+:::
 
-> The Maven `groupId` for almost every [community extension](../configuration/extensions.md#community-extensions) is `org.apache.druid.extensions.contrib`. The `artifactId` is the name
-> of the extension, and the version is the latest Druid stable version.
+:::info
+ The Maven `groupId` for almost every [community extension](../configuration/extensions.md#community-extensions) is `org.apache.druid.extensions.contrib`. The `artifactId` is the name
+ of the extension, and the version is the latest Druid stable version.
+:::
 
 ### Loading extensions from the classpath
 

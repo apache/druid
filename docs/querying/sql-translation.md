@@ -23,8 +23,10 @@ sidebar_label: "SQL query translation"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the Druid SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the Druid SQL language.
+:::
 
 Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
 Druid translates SQL statements into its [native JSON-based query language](querying.md).
@@ -782,7 +784,9 @@ Refer to the [Query execution](query-execution.md#join) page for information abo
 Subqueries in SQL are generally translated to native query datasources. Refer to the
 [Query execution](query-execution.md#query) page for information about how subqueries are executed.
 
-> Note: Subqueries in the WHERE clause, like `WHERE col1 IN (SELECT foo FROM ...)` are translated to inner joins.
+:::info
+ Note: Subqueries in the WHERE clause, like `WHERE col1 IN (SELECT foo FROM ...)` are translated to inner joins.
+:::
 
 ## Approximations
 

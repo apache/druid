@@ -52,6 +52,7 @@ public class GroupByRules
    *
    * @return translated aggregation, or null if translation failed.
    */
+  @Nullable
   public static Aggregation translateAggregateCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -64,6 +65,10 @@ public class GroupByRules
       final boolean finalizeAggregations
   )
   {
+    if (!call.getCollation().getFieldCollations().isEmpty()) {
+      return null;
+    }
+
     final DimFilter filter;
 
     if (call.filterArg >= 0) {
@@ -73,7 +78,7 @@ public class GroupByRules
         return null;
       }
 
-      final RexNode expression = project.getChildExps().get(call.filterArg);
+      final RexNode expression = project.getProjects().get(call.filterArg);
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
           rowSignature,

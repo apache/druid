@@ -30,6 +30,8 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
@@ -48,6 +50,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   // for an objectively faster and more accurate solution instead of finding the best match with the following parameters
   private static final int MAX_COUNT_MAX_ITERATIONS = 500;
   private static final double MAX_COUNT_ITERATION_GROWTH_FACTOR = 1.05;
+  private final Logger log = new Logger(ClusterByStatisticsCollectorImpl.class);
 
   private final ClusterBy clusterBy;
   private final RowKeyReader keyReader;
@@ -127,6 +130,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
     totalRetainedBytes += bucketHolder.updateRetainedBytes();
     if (totalRetainedBytes > maxRetainedBytes) {
+      log.debug("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
       downSample();
     }
 
@@ -148,6 +152,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
         totalRetainedBytes += bucketHolder.updateRetainedBytes();
         if (totalRetainedBytes > maxRetainedBytes) {
+          log.debug("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
           downSample();
         }
       }
@@ -179,6 +184,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
       totalRetainedBytes += bucketHolder.updateRetainedBytes();
       if (totalRetainedBytes > maxRetainedBytes) {
+        log.debug("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
         downSample();
       }
     }
@@ -227,6 +233,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   @Override
   public ClusterByPartitions generatePartitionsWithTargetWeight(final long targetWeight)
   {
+    logSketches();
+
     if (targetWeight < 1) {
       throw new IAE("Target weight must be positive");
     }
@@ -270,6 +278,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   @Override
   public ClusterByPartitions generatePartitionsWithMaxCount(final int maxNumPartitions)
   {
+    logSketches();
+
     if (maxNumPartitions < 1) {
       throw new IAE("Must have at least one partition");
     } else if (buckets.isEmpty()) {
@@ -309,6 +319,28 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     } while (ranges.size() > maxNumPartitions);
 
     return ranges;
+  }
+
+  private void logSketches()
+  {
+    if (log.isDebugEnabled()) {
+      // Log all sketches
+      List<KeyCollector<?>> keyCollectors = buckets.values()
+                                                   .stream()
+                                                   .map(bucketHolder -> bucketHolder.keyCollector)
+                                                   .sorted(Comparator.comparingInt(KeyCollector::sketchAccuracyFactor))
+                                                   .collect(Collectors.toList());
+      log.debug("KeyCollectors at partition generation: [%s]", keyCollectors);
+    } else {
+      // Log the 5 least accurate sketches
+      List<KeyCollector<?>> limitedKeyCollectors = buckets.values()
+                                                          .stream()
+                                                          .map(bucketHolder -> bucketHolder.keyCollector)
+                                                          .sorted(Comparator.comparingInt(KeyCollector::sketchAccuracyFactor))
+                                                          .limit(5)
+                                                          .collect(Collectors.toList());
+      log.info("Most downsampled keyCollectors: [%s]", limitedKeyCollectors);
+    }
   }
 
   @Override
@@ -380,32 +412,37 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     long newTotalRetainedBytes = totalRetainedBytes;
     final long targetTotalRetainedBytes = totalRetainedBytes / 2;
 
-    final List<BucketHolder> sortedHolders = new ArrayList<>(buckets.size());
+    final List<Pair<Long, BucketHolder>> sortedHolders = new ArrayList<>(buckets.size());
+    final RowKeyReader trimmedRowReader = keyReader.trimmedKeyReader(clusterBy.getBucketByCount());
 
     // Only consider holders with more than one retained key. Holders with a single retained key cannot be downsampled.
-    for (final BucketHolder holder : buckets.values()) {
-      if (holder.keyCollector.estimatedRetainedKeys() > 1) {
-        sortedHolders.add(holder);
+    for (final Map.Entry<RowKey, BucketHolder> entry : buckets.entrySet()) {
+      BucketHolder bucketHolder = entry.getValue();
+      if (bucketHolder != null && bucketHolder.keyCollector.estimatedRetainedKeys() > 1) {
+        Long timeChunk = clusterBy.getBucketByCount() == 0 ? null : (Long) trimmedRowReader.read(entry.getKey(), 0);
+        sortedHolders.add(Pair.of(timeChunk, bucketHolder));
       }
     }
 
     // Downsample least-dense buckets first. (They're less likely to need high resolution.)
     sortedHolders.sort(
-        Comparator.comparing((BucketHolder holder) ->
-                                 (double) holder.keyCollector.estimatedTotalWeight()
-                                 / holder.keyCollector.estimatedRetainedKeys())
+        Comparator.comparing((Pair<Long, BucketHolder> pair) ->
+                                 (double) pair.rhs.keyCollector.estimatedTotalWeight()
+                                 / pair.rhs.keyCollector.estimatedRetainedKeys())
     );
 
     int i = 0;
     while (i < sortedHolders.size() && newTotalRetainedBytes > targetTotalRetainedBytes) {
-      final BucketHolder bucketHolder = sortedHolders.get(i);
+      final Long timeChunk = sortedHolders.get(i).lhs;
+      final BucketHolder bucketHolder = sortedHolders.get(i).rhs;
 
       // Ignore false return, because we wrap all collectors in DelegateOrMinKeyCollector and can be assured that
       // it will downsample all the way to one if needed. Can't do better than that.
+      log.debug("Downsampling sketch for timeChunk [%s]: [%s]", timeChunk, bucketHolder.keyCollector);
       bucketHolder.keyCollector.downSample();
       newTotalRetainedBytes += bucketHolder.updateRetainedBytes();
 
-      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).retainedBytes > bucketHolder.retainedBytes || bucketHolder.keyCollector.estimatedRetainedKeys() <= 1) {
+      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).rhs.retainedBytes > bucketHolder.retainedBytes || bucketHolder.keyCollector.estimatedRetainedKeys() <= 1) {
         i++;
       }
     }

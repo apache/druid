@@ -88,9 +88,28 @@ The following table outlines the configuration options for `autoScalerStrategy`:
 |`scaleInStep`|The number of tasks to reduce at once when scaling down.|No|1|
 |`scaleOutStep`|The number of tasks to add at once when scaling out.|No|2|
 
+### Ingesting from multiple topics
+
+To ingest data from multiple topics, you have to set `topicPattern` in the supervisor I/O configuration and not set `topic`.
+You can pass multiple topics as a regex pattern as the value for `topicPattern` in the I/O configuration. For example, to
+ingest data from clicks and impressions, set `topicPattern` to `clicks|impressions` in the I/O configuration.
+Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want to ingest from all the topics that
+start with `metrics-`. If new topics are added to the cluster that match the regex, Druid automatically starts
+ingesting from those new topics. A topic name that only matches partially such as `my-metrics-12` will not be
+included for ingestion. If you enable multi-topic ingestion for a datasource, downgrading to a version older than
+28.0.0 will cause the ingestion for that datasource to fail.
+
+When ingesting data from multiple topics, partitions are assigned based on the hashcode of the topic name and the
+id of the partition within that topic. The partition assignment might not be uniform across all the tasks. It's also
+assumed that partitions across individual topics have similar load. It is recommended that you have a higher number of
+partitions for a high load topic and a lower number of partitions for a low load topic. Assuming that you want to
+ingest from both high and low load topic in the same supervisor.
+
 ## Idle supervisor configuration
 
-> Note that idle state transitioning is currently designated as experimental.
+:::info
+ Note that idle state transitioning is currently designated as experimental.
+:::
 
 |Property|Description|Required|
 |--------|-----------|--------|
@@ -230,7 +249,7 @@ The `tuningConfig` object is optional. If you don't specify the `tuningConfig` o
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
 
-#### IndexSpec
+### IndexSpec
 
 The following table outlines the configuration options for `indexSpec`:
 

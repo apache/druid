@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -99,7 +100,7 @@ public class WorkerTaskManagerTest
     this.restoreTasksOnRestart = restoreTasksOnRestart;
   }
 
-  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}")
   public static Collection<Object[]> getParameters()
   {
     Object[][] parameters = new Object[][]{{false}, {true}};
@@ -160,7 +161,7 @@ public class WorkerTaskManagerTest
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
                 overlordClient,
-                null,
+                new NoopCoordinatorClient(),
                 null,
                 null,
                 null,
@@ -200,6 +201,8 @@ public class WorkerTaskManagerTest
   @Test(timeout = 60_000L)
   public void testTaskRun() throws Exception
   {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
     Task task1 = createNoopTask("task1-assigned-via-assign-dir");
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
@@ -450,6 +453,9 @@ public class WorkerTaskManagerTest
    */
   private Task setUpCompletedTasksCleanupTest() throws Exception
   {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
     final Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
 
     // Scheduled scheduleCompletedTasksCleanup will not run, because initialDelay is 1 minute, which is longer than
@@ -468,6 +474,7 @@ public class WorkerTaskManagerTest
     Assert.assertNotNull(announcement);
     Assert.assertEquals(TaskState.SUCCESS, announcement.getStatus());
 
+    EasyMock.reset(overlordClient);
     return task;
   }
 }

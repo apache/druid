@@ -25,6 +25,8 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.FluentQueryRunner;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -134,11 +136,13 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
         .build();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(
-        factory,
-        factory.createRunner(incrementalIndexSegment),
-        query
-    );
+    Iterable<ResultRow> results = FluentQueryRunner
+        .create(factory.createRunner(incrementalIndexSegment), factory.getToolchest())
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration()
+        .run(QueryPlus.wrap(query))
+        .toList();
 
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
