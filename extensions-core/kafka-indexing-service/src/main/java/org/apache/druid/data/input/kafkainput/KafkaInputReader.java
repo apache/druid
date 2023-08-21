@@ -131,8 +131,7 @@ public class KafkaInputReader implements InputEntityReader
     // the header list
     mergedHeaderMap.putIfAbsent(timestampColumnName, record.getRecord().timestamp());
 
-    // Add kafka record topic to the mergelist, we will skip record topic if the same key exists already in
-    // the header list
+    // Add kafka record topic to the mergelist, only if the key doesn't already exist
     mergedHeaderMap.putIfAbsent(topicColumnName, record.getRecord().topic());
 
     return mergedHeaderMap;

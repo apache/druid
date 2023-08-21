@@ -59,7 +59,7 @@ public class KafkaInputFormatTest
 {
   private KafkaRecordEntity inputEntity;
   private final long timestamp = DateTimes.of("2021-06-24").getMillis();
-  private final String TOPIC = "sample";
+  private static final String TOPIC = "sample";
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(
       new Header()
       {
