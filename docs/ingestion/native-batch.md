@@ -23,7 +23,9 @@ sidebar_label: JSON-based batch
   ~ under the License.
   -->
 
-> This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) extension, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+:::info
+ This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) extension, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+:::
 
 Apache Druid supports the following types of native batch indexing tasks:
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
@@ -344,7 +346,9 @@ In hash partitioning, the partition function is used to compute hash of partitio
 
 #### Single-dimension range partitioning
 
-> Single dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+:::info
+ Single dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+:::
 
 Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
 performance.
@@ -388,13 +392,17 @@ the time chunk and the value of `partitionDimension`; each worker task reads the
 falling in the same partition of the same range from multiple MiddleManager/Indexer processes and merges
 them to create the final segments. Finally, they push the final segments to the deep storage.
 
-> Because the task with single-dimension range partitioning makes two passes over the input
-> in `partial dimension distribution` and `partial segment generation` phases,
-> the task may fail if the input changes in between the two passes.
+:::info
+ Because the task with single-dimension range partitioning makes two passes over the input
+ in `partial dimension distribution` and `partial segment generation` phases,
+ the task may fail if the input changes in between the two passes.
+:::
 
 #### Multi-dimension range partitioning
 
-> Multi-dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+:::info
+ Multi-dimension range partitioning is not supported in the sequential mode of the `index_parallel` task type.
+:::
 
 Range partitioning has [several benefits](#benefits-of-range-partitioning) related to storage footprint and query
 performance. Multi-dimension range partitioning improves over single-dimension range partitioning by allowing

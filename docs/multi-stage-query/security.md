@@ -23,9 +23,11 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
 extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
@@ -46,7 +48,9 @@ users with access to the Overlord API can perform some actions even if they didn
 retrieving status or canceling a query. For more information about the Overlord API and the task API, see [APIs for
 SQL-based ingestion](../api-reference/sql-ingestion-api.md). 
 
-> Keep in mind that any user with access to Overlord APIs can submit `query_controller` tasks with only the WRITE DATASOURCE permission.
+:::info
+ Keep in mind that any user with access to Overlord APIs can submit `query_controller` tasks with only the WRITE DATASOURCE permission.
+:::
 
 Depending on what a user is trying to do, they might also need the following permissions:
 

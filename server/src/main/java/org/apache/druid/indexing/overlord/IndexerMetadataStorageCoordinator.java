@@ -352,4 +352,14 @@ public interface IndexerMetadataStorageCoordinator
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);
+
+  /**
+   * Retrieve the segment for a given id from the metadata store. Return null if no such used segment exists
+   *
+   * @param id The segment id
+   *
+   * @return DataSegment corresponding to given id
+   */
+  DataSegment retrieveUsedSegmentForId(String id);
+
 }

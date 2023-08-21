@@ -3,6 +3,10 @@ id: datasource
 title: "Datasources"
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -34,12 +38,15 @@ responses.
 
 ### `table`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="1" label="SQL">
+
 ```sql
 SELECT column1, column2 FROM "druid"."dataSourceName"
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="2" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -48,7 +55,8 @@ SELECT column1, column2 FROM "druid"."dataSourceName"
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 The table datasource is the most common type. This is the kind of datasource you get when you perform
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
@@ -72,12 +80,15 @@ To see a list of all table datasources, use the SQL query
 
 ### `lookup`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="3" label="SQL">
+
 ```sql
 SELECT k, v FROM lookup.countries
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="4" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -89,7 +100,8 @@ SELECT k, v FROM lookup.countries
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
 they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
@@ -101,19 +113,22 @@ both are always strings.
 To see a list of all lookup datasources, use the SQL query
 `SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'lookup'`.
 
-> Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
-> SQL [`LOOKUP` function](sql-scalar.md#string-functions).
-> However, the join operator must evaluate the condition on each row, whereas the
-> `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
-> usually faster than joining to a lookup datasource.
+:::info
+ Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
+ SQL [`LOOKUP` function](sql-scalar.md#string-functions).
+ However, the join operator must evaluate the condition on each row, whereas the
+ `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
+ usually faster than joining to a lookup datasource.
+:::
 
 Refer to the [Query execution](query-execution.md#table) page for more details on how queries are executed when you
 use table datasources.
 
 ### `union`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="5" label="SQL">
+
 ```sql
 SELECT column1, column2
 FROM (
@@ -124,7 +139,9 @@ FROM (
   SELECT column1, column2 FROM table3
 )
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="6" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -136,7 +153,8 @@ FROM (
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
 applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
@@ -158,8 +176,9 @@ use union datasources.
 
 ### `inline`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--Native-->
+<Tabs>
+<TabItem value="7" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -175,7 +194,8 @@ use union datasources.
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Inline datasources allow you to query a small amount of data that is embedded in the query itself. They are useful when
 you want to write a query on a small amount of data without loading it first. They are also useful as inputs into a
@@ -193,8 +213,9 @@ use inline datasources.
 
 ### `query`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="8" label="SQL">
+
 ```sql
 -- Uses a subquery to count hits per page, then takes the average.
 SELECT
@@ -202,7 +223,9 @@ SELECT
 FROM
   (SELECT page, COUNT(*) AS hits FROM site_traffic GROUP BY page)
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="9" label="Native">
+
 ```json
 {
   "queryType": "timeseries",
@@ -230,7 +253,8 @@ FROM
   ]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Query datasources allow you to issue subqueries. In native queries, they can appear anywhere that accepts a
 `dataSource` (except underneath a `union`). In SQL, they can appear in the following places, always surrounded by parentheses:
@@ -239,15 +263,18 @@ Query datasources allow you to issue subqueries. In native queries, they can app
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.
 - In the WHERE clause: `WHERE <column> { IN | NOT IN } (<subquery>)`. These are translated to joins by the SQL planner.
 
-> Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
-> processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
-> bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
-> page for more details on how subqueries are executed and what limits will apply.
+:::info
+ Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
+ processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
+ bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
+ page for more details on how subqueries are executed and what limits will apply.
+:::
 
 ### `join`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="10" label="SQL">
+
 ```sql
 -- Joins "sales" with "countries" (using "store" as the join key) to get sales by country.
 SELECT
@@ -259,7 +286,9 @@ FROM
 GROUP BY
   countries.v
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="11" label="Native">
+
 ```json
 {
   "queryType": "groupBy",
@@ -284,7 +313,8 @@ GROUP BY
   ]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Join datasources allow you to do a SQL-style join of two datasources. Stacking joins on top of each other allows
 you to join arbitrarily many datasources.
@@ -352,9 +382,9 @@ perform best if `d.field` is a string.
 4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
-5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into 
-Join's children). Druid only supports pushing predicates into the join if they originated from 
-above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
+5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into
+Join's children). Druid only supports pushing predicates into the join if they originated from
+above the join. Hence, the location of predicates and filters in your Druid SQL is very important.
 Also, as a result of this, comma joins should be avoided.
 
 #### Future work for joins
@@ -371,21 +401,23 @@ future versions:
 
 ### `unnest`
 
-> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
+:::info
+ The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
+ to change in future releases. It is not recommended to use this feature in production at this time.
+:::
 
 Use the `unnest` datasource to unnest a column with multiple values in an array.
 For example, you have a source column that looks like this:
 
-| Nested | 
-| -- | 
+| Nested |
+| -- |
 | [a, b] |
 | [c, d] |
 | [e, [f,g]] |
 
 When you use the `unnest` datasource, the unnested column looks like this:
 
-| Unnested | 
+| Unnested |
 | -- |
 | a |
 | b |

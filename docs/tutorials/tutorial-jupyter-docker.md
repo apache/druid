@@ -140,7 +140,9 @@ At startup, Docker creates and mounts a volume to persist data from the containe
 This way you can save your work completed within the Docker container.
 
 1. Navigate to the notebooks at http://localhost:8889.
-   > If you set `JUPYTER_PORT` to another port number, replace `8889` with the value of the Jupyter port.
+:::info
+ If you set `JUPYTER_PORT` to another port number, replace `8889` with the value of the Jupyter port.
+:::
 
 2. Select a tutorial. If you don't plan to save your changes, you can use the notebook directly as is. Otherwise, continue to the next step.
 

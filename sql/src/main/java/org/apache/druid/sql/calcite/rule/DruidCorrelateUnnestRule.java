@@ -27,6 +27,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
@@ -40,7 +41,6 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidCorrelateUnnestRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.rel.DruidRels;
 import org.apache.druid.sql.calcite.rel.DruidUnnestRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
@@ -59,7 +59,7 @@ import java.util.List;
  *     76:LogicalProject(subset=[rel#77:Subset#2.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor0.dim3)])
  *       7:LogicalValues(subset=[rel#75:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
  * </pre>
- *
+ * <p>
  * {@link DruidUnnestRule} takes care of the Uncollect(last 3 lines) to generate a {@link DruidUnnestRel}
  * thereby reducing the logical plan to:
  * <pre>
@@ -100,61 +100,82 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     final Correlate correlate = call.rel(0);
     final DruidRel<?> left = call.rel(1);
     final DruidUnnestRel right = call.rel(2);
+    final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
+    final DruidRel<?> newLeft;
+    final List<RexNode> pulledUpProjects = new ArrayList<>();
+    final Filter leftFilter;
+    final CorrelationId newCorrelationId;
+    final RexNode newUnnestRexNode;
+    final ImmutableBitSet requiredCols;
 
-    if (DruidRels.isScanOrProject(left, true)
-        && left.getPartialDruidQuery().getSelectProject() != null
-        && RelOptUtil.InputFinder.bits(right.getInputRexNode()).isEmpty()) {
-      // Pull left-side Project above the Correlate, so we can eliminate a subquery.
+    // the partial query should in a SELECT_PROJECT stage
+    // the right no expressions and just a reference (ask G/C)
+    if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
+      //&& RelOptUtil.InputFinder.bits(right.getInputRexNode()).isEmpty()
+    ) {
+      // Swap the left-side projection above the Correlate, so the left side is a simple scan or mapping. This helps us
+      // avoid subqueries.
       final RelNode leftScan = left.getPartialDruidQuery().getScan();
       final Project leftProject = left.getPartialDruidQuery().getSelectProject();
+      pulledUpProjects.addAll(leftProject.getProjects());
+      leftFilter = left.getPartialDruidQuery().getWhereFilter();
+      newLeft = left.withPartialQuery(PartialDruidQuery.create(leftScan).withWhereFilter(leftFilter));
 
-      // Rewrite right-side expression on top of leftScan rather than leftProject.
-      final CorrelationId newCorrelationId = correlate.getCluster().createCorrel();
+      // push the correlation past the project
+      newCorrelationId = correlate.getCluster().createCorrel();
       final PushCorrelatedFieldAccessPastProject correlatedFieldRewriteShuttle =
           new PushCorrelatedFieldAccessPastProject(correlate.getCorrelationId(), newCorrelationId, leftProject);
-      final RexNode newUnnestRexNode = correlatedFieldRewriteShuttle.apply(right.getInputRexNode());
-
-      // Build the new Correlate rel and a DruidCorrelateUnnestRel wrapper.
-      final DruidCorrelateUnnestRel druidCorrelateUnnest = DruidCorrelateUnnestRel.create(
-          correlate.copy(
-              correlate.getTraitSet(),
-
-              // Left side: remove Project.
-              left.withPartialQuery(PartialDruidQuery.create(leftScan)),
-
-              // Right side: use rewritten newUnnestRexNode, pushed past the left Project.
-              right.withUnnestRexNode(newUnnestRexNode),
-              newCorrelationId,
-              ImmutableBitSet.of(correlatedFieldRewriteShuttle.getRequiredColumns()),
-              correlate.getJoinType()
-          ),
-          plannerContext
-      );
-
-      // Add right-side input refs to the Project, so it matches the full original Correlate.
-      final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
-      final List<RexNode> pulledUpProjects = new ArrayList<>(leftProject.getProjects());
-      for (int i = 0; i < right.getRowType().getFieldCount(); i++) {
-        pulledUpProjects.add(rexBuilder.makeInputRef(druidCorrelateUnnest, i + leftScan.getRowType().getFieldCount()));
-      }
-
-      // Now push the Project back on top of the Correlate.
-      final RelBuilder relBuilder =
-          call.builder()
-              .push(druidCorrelateUnnest)
-              .project(
-                  RexUtil.fixUp(
-                      rexBuilder,
-                      pulledUpProjects,
-                      RelOptUtil.getFieldTypeList(druidCorrelateUnnest.getRowType())
-                  )
-              );
-
-      final RelNode build = relBuilder.build();
-      call.transformTo(build);
+      newUnnestRexNode = correlatedFieldRewriteShuttle.apply(right.getInputRexNode());
+      requiredCols = ImmutableBitSet.of(correlatedFieldRewriteShuttle.getRequiredColumns());
     } else {
-      call.transformTo(DruidCorrelateUnnestRel.create(correlate, plannerContext));
+      for (int i = 0; i < left.getRowType().getFieldCount(); i++) {
+        pulledUpProjects.add(rexBuilder.makeInputRef(correlate.getRowType().getFieldList().get(i).getType(), i));
+      }
+      newLeft = left;
+      newUnnestRexNode = right.getInputRexNode();
+      requiredCols = correlate.getRequiredColumns();
+      newCorrelationId = correlate.getCorrelationId();
     }
+
+    // process right
+    // Leave as-is. Write input refs that do nothing.
+    for (int i = 0; i < right.getRowType().getFieldCount(); i++) {
+      pulledUpProjects.add(
+          rexBuilder.makeInputRef(
+              correlate.getRowType().getFieldList().get(left.getRowType().getFieldCount() + i).getType(),
+              newLeft.getRowType().getFieldCount() + i
+          )
+      );
+    }
+
+    // Build the new Correlate rel and a DruidCorrelateUnnestRel wrapper.
+    final DruidCorrelateUnnestRel druidCorrelateUnnest = DruidCorrelateUnnestRel.create(
+        correlate.copy(
+            correlate.getTraitSet(),
+            newLeft,
+            // Right side: use rewritten newUnnestRexNode, pushed past the left Project.
+            right.withUnnestRexNode(newUnnestRexNode),
+            newCorrelationId,
+            requiredCols,
+            correlate.getJoinType()
+        ),
+        plannerContext
+    );
+
+    // Now push the Project back on top of the Correlate.
+    final RelBuilder relBuilder =
+        call.builder()
+            .push(druidCorrelateUnnest)
+            .project(
+                RexUtil.fixUp(
+                    rexBuilder,
+                    pulledUpProjects,
+                    RelOptUtil.getFieldTypeList(druidCorrelateUnnest.getRowType())
+                )
+            );
+
+    final RelNode build = relBuilder.build();
+    call.transformTo(build);
   }
 
   /**

@@ -673,7 +673,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
     }
 
-    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation);
+    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation, root.hints);
   }
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
