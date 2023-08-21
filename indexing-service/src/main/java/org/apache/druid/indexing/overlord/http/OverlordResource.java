@@ -947,7 +947,7 @@ public class OverlordResource
                           "http",
                           "host",
                           "8100",
-                          taskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
+                          taskRunner.getTotalTaskSlotCount().getOrDefault("_k8s_worker_category", 0L).intValue(),
                           "version"
                       ),
                       0,
