@@ -63,6 +63,12 @@ public class MemcachedCacheConfig
   @JsonProperty
   private String locator = "consistent";
 
+  @JsonProperty
+  private boolean sslconnection = false;
+
+  @JsonProperty
+  private boolean autodiscovery = false;
+
   public int getExpiration()
   {
     return expiration;
@@ -111,5 +117,13 @@ public class MemcachedCacheConfig
   public String getLocator()
   {
     return locator;
+  }
+
+  public boolean usesslconnection() {
+    return sslconnection;
+  }
+
+  public boolean autoDiscovery() {
+    return autodiscovery;
   }
 }

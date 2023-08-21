@@ -29,6 +29,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import net.spy.memcached.*;
+
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -52,10 +58,13 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -339,7 +348,7 @@ public class MemcachedCache implements Cache
         }
       };
 
-      final ConnectionFactory connectionFactory = new MemcachedCustomConnectionFactoryBuilder()
+      ConnectionFactoryBuilder connectionFactoryBuilder =  new MemcachedCustomConnectionFactoryBuilder()
           // 1000 repetitions gives us good distribution with murmur3_128
           // (approx < 5% difference in counts across nodes, with 5 cache nodes)
           .setKetamaNodeRepetitions(1000)
@@ -355,9 +364,23 @@ public class MemcachedCache implements Cache
           .setReadBufferSize(config.getReadBufferSize())
           .setOpQueueFactory(opQueueFactory)
           .setMetricCollector(metricCollector)
-          .setEnableMetrics(MetricType.DEBUG) // Not as scary as it sounds
-          .build();
-
+          .setEnableMetrics(MetricType.DEBUG); // Not as scary as it sounds
+      if(config.usesslconnection()) {
+        // Build SSLContext
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init((KeyStore) null);
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tmf.getTrustManagers(), null);
+        // Create the client in TLS mode
+        connectionFactoryBuilder.setSSLContext(sslContext);
+      }
+      if(config.autoDiscovery()) {
+        connectionFactoryBuilder.setClientMode(ClientMode.Dynamic);
+      }
+      else {
+        connectionFactoryBuilder.setClientMode(ClientMode.Static);
+      }
+      final ConnectionFactory connectionFactory = connectionFactoryBuilder.build();
       final List<InetSocketAddress> hosts = AddrUtil.getAddresses(config.getHosts());
 
 
@@ -389,7 +412,11 @@ public class MemcachedCache implements Cache
 
       return new MemcachedCache(clientSupplier, config, monitor);
     }
-    catch (IOException e) {
+    catch (IOException | NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    } catch (KeyStoreException e) {
+      throw new RuntimeException(e);
+    } catch (KeyManagementException e) {
       throw new RuntimeException(e);
     }
   }

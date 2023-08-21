@@ -2103,16 +2103,18 @@ In addition to the normal cache metrics, the caffeine cache implementation also 
 
 Uses memcached as cache backend. This allows all processes to share the same cache.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
-|`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
-|`druid.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
-|`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MiB)|
-|`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
-|`druid.cache.numConnections`|Number of memcached connections to use.|1|
-|`druid.cache.protocol`|Memcached communication protocol. Can be binary or text.|binary|
-|`druid.cache.locator`|Memcached locator. Can be consistent or array_mod.|consistent|
+| Property                      | Description                                                                                          | Default           |
+|-------------------------------|------------------------------------------------------------------------------------------------------|-------------------|
+| `druid.cache.expiration`      | Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol). | 2592000 (30 days) |
+| `druid.cache.timeout`         | Maximum time in milliseconds to wait for a response from Memcached.                                  | 500               |
+| `druid.cache.hosts`           | Comma separated list of Memcached hosts `<host:port>`.                                               | none              |
+| `druid.cache.maxObjectSize`   | Maximum object size in bytes for a Memcached object.                                                 | 52428800 (50 MiB) |
+| `druid.cache.memcachedPrefix` | Key prefix for all keys in Memcached.                                                                | druid             |
+| `druid.cache.numConnections`  | Number of memcached connections to use.                                                              | 1                 |
+| `druid.cache.protocol`        | Memcached communication protocol. Can be binary or text.                                             | binary            |
+| `druid.cache.locator`         | Memcached locator. Can be consistent or array_mod.                                                   | consistent        |
+| `druid.cache.sslconnection`   | Use TLS based ssl connection for Memcached client.  Boolean                                          | false             |
+| `druid.cache.autodiscovery`   | Use AutoDiscovery feature of AWS Elasticache Memcached. Boolean                                      | false             |
 
 #### Hybrid
 

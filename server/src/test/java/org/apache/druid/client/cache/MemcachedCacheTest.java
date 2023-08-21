@@ -29,14 +29,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import net.spy.memcached.BroadcastOpFactory;
-import net.spy.memcached.CASResponse;
-import net.spy.memcached.CASValue;
-import net.spy.memcached.CachedData;
-import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.MemcachedClientIF;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.NodeLocator;
+import net.spy.memcached.*;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.internal.BulkGetCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
@@ -222,6 +215,26 @@ public class MemcachedCacheTest
     for (Event event : events) {
       log.debug("Found event `%s`", mapper.writeValueAsString(event.toMap()));
     }
+  }
+
+  @Test
+  public void testSslConnection()
+  {
+    final MemcachedCacheConfig config = new MemcachedCacheConfig()
+    {
+      @Override
+      public boolean usesslconnection()
+      {
+        return true;
+      }
+
+      @Override
+      public String getHosts()
+      {
+        return "localhost:9999";
+      }
+    };
+    MemcachedCache cache = MemcachedCache.create(config);
   }
 
   @Test
