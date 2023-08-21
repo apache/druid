@@ -48,10 +48,8 @@ public abstract class DruidCoordinatorConfig
   public abstract Boolean getAutoKillEnabled();
 
   @Config("druid.coordinator.kill.period")
-  public Duration getCoordinatorKillPeriod()
-  {
-    return getCoordinatorIndexingPeriod();
-  }
+  @Default("P1D")
+  public abstract Duration getCoordinatorKillPeriod();
 
   @Config("druid.coordinator.kill.durationToRetain")
   @Default("P90D")
