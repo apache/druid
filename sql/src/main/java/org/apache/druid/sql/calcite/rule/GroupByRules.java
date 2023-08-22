@@ -42,8 +42,6 @@ import java.util.stream.Collectors;
 
 public class GroupByRules
 {
-  private static Object object;
-
   private GroupByRules()
   {
     // No instantiation.
