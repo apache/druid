@@ -24,6 +24,8 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
@@ -45,6 +47,7 @@ import org.apache.druid.utils.CompressionUtils;
 
 import javax.tools.FileObject;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,6 +55,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
+import java.util.UUID;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -64,11 +68,23 @@ public class S3DataSegmentPuller implements URIDataPuller
   protected static final String KEY = "key";
 
   protected final ServerSideEncryptingAmazonS3 s3Client;
+  protected final TransferManager transferManager;
+  protected final File tempDir;
 
   @Inject
   public S3DataSegmentPuller(ServerSideEncryptingAmazonS3 s3Client)
   {
     this.s3Client = s3Client;
+    if (s3Client.getUnderlyingServerSideEncryption() instanceof NoopServerSideEncryption) {
+      log.info("Using transfer manager for communication");
+      this.transferManager = TransferManagerBuilder.standard()
+                                                   .withS3Client(s3Client.getUnderlyingS3Client())
+                                                   .build();
+      tempDir = FileUtils.createTempDir("s3DataSegmentPuller");
+    } else {
+      transferManager = null;
+      tempDir = null;
+    }
   }
 
   FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation s3Coords, final File outDir)
@@ -85,6 +101,11 @@ public class S3DataSegmentPuller implements URIDataPuller
       FileUtils.mkdirp(outDir);
 
       final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
+
+      // Download stuff from transfer manager here (if we want to do that)
+      // Unzip if we want to do that
+
+
       final ByteSource byteSource = new ByteSource()
       {
         @Override
@@ -180,15 +201,24 @@ public class S3DataSegmentPuller implements URIDataPuller
       public InputStream openInputStream() throws IOException
       {
         try {
-          if (s3Object == null) {
-            // lazily promote to full GET
-            s3Object = s3Client.getObject(coords.getBucket(), coords.getPath());
-          }
-
-          final InputStream in = s3Object.getObjectContent();
+          final InputStream in;
           final Closer closer = Closer.create();
-          closer.register(in);
-          closer.register(s3Object);
+
+          if (!isUseTransferManager()) {
+            if (s3Object == null) {
+              // lazily promote to full GET
+              s3Object = s3Client.getObject(coords.getBucket(), coords.getPath());
+            }
+            in = s3Object.getObjectContent();
+            closer.register(in);
+            closer.register(s3Object);
+          } else {
+            File file = new File(tempDir.getAbsolutePath(), UUID.randomUUID().toString());
+            transferManager.download(coords.getBucket(), coords.getPath(), file);
+            in = new FileInputStream(file);
+            closer.register(file::delete);
+            closer.register(in);
+          }
 
           return new FilterInputStream(in)
           {
@@ -293,5 +323,10 @@ public class S3DataSegmentPuller implements URIDataPuller
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private boolean isUseTransferManager()
+  {
+    return transferManager != null;
   }
 }

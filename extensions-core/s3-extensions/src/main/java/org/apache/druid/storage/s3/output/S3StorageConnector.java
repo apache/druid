@@ -96,7 +96,6 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
         config,
         serverSideEncryptingAmazonS3,
         config.getChunkSize(),
-        config.getChunkSize() / DOWNLOAD_PARALLELISM,
         !(config.isTestingTransferManager()
           && serverSideEncryptingAmazonS3.getUnderlyingServerSideEncryption() instanceof NoopServerSideEncryption)
     );
@@ -105,7 +104,6 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   private S3StorageConnector(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3,
-      long downloadChunkSize,
       long uploadChunkSize,
       boolean cacheLocally
   )
@@ -365,6 +363,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
                                             UUID.randomUUID().toString()
                                         );
                                         DateTime startTime = DateTimes.nowUtc();
+                                        FileOutputStream fos = new FileOutputStream(outFile);
                                         IOUtils.copy(
                                             s3Client.getObject(
                                                 new GetObjectRequest(
@@ -372,8 +371,9 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
                                                     getObjectRequest.getKey()
                                                 ).withRange(division.lhs, division.rhs)
                                             ).getObjectContent(),
-                                            new FileOutputStream(outFile)
+                                            fos
                                         );
+                                        fos.close();
                                         DateTime endTime = DateTimes.nowUtc();
                                         log.info(
                                             "Download path [%s], chunk [%d], started from [%s], ended at [%s], total time [%d]",
