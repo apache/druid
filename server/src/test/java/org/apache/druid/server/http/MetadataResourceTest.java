@@ -143,7 +143,7 @@ public class MetadataResourceTest
     );
     Assert.assertEquals(
         segments[5],
-        metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), "includeUnused").getEntity()
+        metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), true).getEntity()
     );
   }
 

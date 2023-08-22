@@ -267,7 +267,11 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
   }
 
-  public static boolean isReindexTask(MSQControllerTask task)
+  /**
+   * Returns true if the task reads from the same table as the destionation. In this case, we would prefer to fail
+   * instead of reading any unused segments to ensure that old data is not read.
+   */
+  public static boolean isReplaceInputDataSourceTask(MSQControllerTask task)
   {
     return task.getQuerySpec()
                .getQuery()

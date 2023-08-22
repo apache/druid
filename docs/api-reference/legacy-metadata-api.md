@@ -153,7 +153,7 @@ Returns a list of all segments for a datasource with the full segment metadata a
 Returns full segment metadata for a specific segment as stored in the metadata store, if the segment is used. If the
 segment is unused, or is unknown, a 404 response is returned.
 
-`GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}?includeUnused`
+`GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}?includeUnused=true`
 
 Returns full segment metadata for a specific segment as stored in the metadata store. If the is unknown, a 404 response 
 is returned.

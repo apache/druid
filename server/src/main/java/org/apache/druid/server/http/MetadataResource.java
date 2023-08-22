@@ -282,7 +282,7 @@ public class MetadataResource
   public Response getSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId,
-      @QueryParam("includeUnused") @Nullable String includeUnused
+      @QueryParam("includeUnused") @Nullable Boolean includeUnused
   )
   {
     ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
@@ -297,7 +297,7 @@ public class MetadataResource
       }
     }
     // fallback to db
-    DataSegment segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId, includeUnused != null);
+    DataSegment segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId, Boolean.TRUE.equals(includeUnused));
     if (segment != null) {
       return Response.status(Response.Status.OK).entity(segment).build();
     }

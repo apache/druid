@@ -105,7 +105,7 @@ public class CoordinatorClientImplTest
                    .build();
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def"),
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=false"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segment)
@@ -130,7 +130,7 @@ public class CoordinatorClientImplTest
                    .build();
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused"),
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=true"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segment)
