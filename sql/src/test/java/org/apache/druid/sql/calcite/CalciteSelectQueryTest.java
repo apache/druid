@@ -1926,7 +1926,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderThenLimitThenFilter1()
+  public void testAggregateFilterInTheAbsenceOfProjection()
   {
     cannotVectorize();
     testQuery(
