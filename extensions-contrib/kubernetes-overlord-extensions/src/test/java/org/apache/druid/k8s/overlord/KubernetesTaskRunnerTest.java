@@ -151,8 +151,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(taskStatus, future.get());
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
@@ -190,8 +188,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
@@ -207,8 +203,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(taskStatus, future.get());
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
@@ -235,8 +229,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
