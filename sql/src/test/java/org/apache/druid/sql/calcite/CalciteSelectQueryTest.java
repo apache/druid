@@ -2003,4 +2003,44 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
               )
       );
   }
+  @Test
+  public void testOrderThenLimitThenFilter33()
+  {
+    skipVectorize();
+      testQuery(
+              "   \n" +
+                      "    select dim2 || 'x' as g2, count(1) " +
+                       "  filter (where dim2 || 'x2' = 'ax')\n" +
+                      "   \n" +
+                      "    from druid.foo\n" +
+                      " where dim1 = 'b'  \n" +
+                      " group by dim2",
+              ImmutableList.of(
+                      newScanQueryBuilder()
+                              .dataSource(
+                                      new QueryDataSource(
+                                              newScanQueryBuilder()
+                                                      .dataSource(CalciteTests.DATASOURCE1)
+                                                      .intervals(querySegmentSpec(Filtration.eternity()))
+                                                      .columns(ImmutableList.of("__time", "dim1"))
+                                                      .limit(4)
+                                                      .order(ScanQuery.Order.DESCENDING)
+                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                      .context(QUERY_CONTEXT_DEFAULT)
+                                                      .build()
+                                      )
+                              )
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .columns(ImmutableList.of("dim1"))
+                              .filters(in("dim1", Arrays.asList("abc", "def"), null))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .context(QUERY_CONTEXT_DEFAULT)
+                              .build()
+              ),
+              ImmutableList.of(
+                      new Object[]{"abc"},
+                      new Object[]{"def"}
+              )
+      );
+  }
 }
