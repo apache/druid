@@ -42,6 +42,11 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.nio.charset.StandardCharsets;
 
 public class BrokerClientTest extends BaseJettyTest
@@ -65,7 +70,7 @@ public class BrokerClientTest extends BaseJettyTest
               );
               binder.bind(Integer.class).annotatedWith(Names.named("port")).toInstance(node.getPlaintextPort());
               binder.bind(JettyServerInitializer.class).to(DruidLeaderClientTest.TestJettyServerInitializer.class).in(LazySingleton.class);
-              Jerseys.addResource(binder, DruidLeaderClientTest.SimpleResource.class);
+              Jerseys.addResource(binder, SimpleResource.class);
               LifecycleModule.register(binder, Server.class);
             }
         )
@@ -93,5 +98,57 @@ public class BrokerClientTest extends BaseJettyTest
     Request request = brokerClient.makeRequest(HttpMethod.POST, "/simple/direct");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", brokerClient.sendQuery(request));
+  }
+
+  @Test
+  public void testError() throws Exception
+  {
+    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode)).anyTimes();
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER)).andReturn(druidNodeDiscovery);
+
+    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+
+    BrokerClient brokerClient = new BrokerClient(
+        httpClient,
+        druidNodeDiscoveryProvider
+    );
+
+    Request request = brokerClient.makeRequest(HttpMethod.POST, "/simple/flakey");
+    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
+    Assert.assertEquals("hello", brokerClient.sendQuery(request));
+  }
+
+  @Path("/simple")
+  public static class SimpleResource
+  {
+    private static int attempt = 0;
+
+    @POST
+    @Path("/direct")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response direct(String input)
+    {
+      if ("hello".equals(input)) {
+        return Response.ok("hello").build();
+      } else {
+        return Response.serverError().build();
+      }
+    }
+
+    @POST
+    @Path("/flakey")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response redirecting()
+    {
+      if (attempt > 2) {
+        return Response.ok("hello").build();
+      } else {
+        attempt += 1;
+        return Response.status(504).build();
+      }
+    }
   }
 }
