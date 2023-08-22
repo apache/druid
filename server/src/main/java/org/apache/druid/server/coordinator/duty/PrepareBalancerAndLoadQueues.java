@@ -81,9 +81,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     List<ImmutableDruidServer> currentServers = prepareCurrentServers();
-
-    taskMaster.startPeonsForNewServers(currentServers);
-    taskMaster.stopPeonsForDisappearedServers(currentServers);
+    taskMaster.resetPeonsForNewServers(currentServers);
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final SegmentLoadingConfig segmentLoadingConfig = params.getSegmentLoadingConfig();

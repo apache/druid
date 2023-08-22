@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Provider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
@@ -30,12 +31,13 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Provides LoadQueuePeons
@@ -53,7 +55,11 @@ public class LoadQueueTaskMaster
   private final ZkPathsConfig zkPaths;
   private final boolean httpLoading;
 
-  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
+  @GuardedBy("this")
+  private final AtomicBoolean isLeader = new AtomicBoolean(false);
+
+  @GuardedBy("this")
+  private final Map<String, LoadQueuePeon> loadManagementPeons = new HashMap<>();
 
   public LoadQueueTaskMaster(
       Provider<CuratorFramework> curatorFrameworkProvider,
@@ -91,17 +97,21 @@ public class LoadQueueTaskMaster
     }
   }
 
-  public Map<String, LoadQueuePeon> getAllPeons()
+  public synchronized Map<String, LoadQueuePeon> getAllPeons()
   {
     return loadManagementPeons;
   }
 
-  public LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
+  public synchronized LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
   {
     return loadManagementPeons.get(server.getName());
   }
 
-  public void startPeonsForNewServers(List<ImmutableDruidServer> currentServers)
+  /**
+   * Creates a peon for each of the given servers, if it doesn't already exist and
+   * removes peons for servers not present in the cluster anymore.
+   */
+  public synchronized void resetPeonsForNewServers(List<ImmutableDruidServer> currentServers)
   {
     for (ImmutableDruidServer server : currentServers) {
       loadManagementPeons.computeIfAbsent(server.getName(), serverName -> {
@@ -111,12 +121,9 @@ public class LoadQueueTaskMaster
         return loadQueuePeon;
       });
     }
-  }
 
-  public void stopPeonsForDisappearedServers(List<ImmutableDruidServer> servers)
-  {
     final Set<String> disappearedServers = Sets.newHashSet(loadManagementPeons.keySet());
-    for (ImmutableDruidServer server : servers) {
+    for (ImmutableDruidServer server : currentServers) {
       disappearedServers.remove(server.getName());
     }
     for (String name : disappearedServers) {
@@ -126,12 +133,16 @@ public class LoadQueueTaskMaster
     }
   }
 
-  public void stopAndRemoveAllPeons()
+  public synchronized void onLeaderStart()
   {
-    for (String server : loadManagementPeons.keySet()) {
-      LoadQueuePeon peon = loadManagementPeons.remove(server);
-      peon.stop();
-    }
+    isLeader.set(true);
+  }
+
+  public synchronized void onLeaderStop()
+  {
+    isLeader.set(false);
+
+    loadManagementPeons.values().forEach(LoadQueuePeon::stop);
     loadManagementPeons.clear();
   }
 

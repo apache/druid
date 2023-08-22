@@ -415,6 +415,7 @@ public class DruidCoordinator
           config.getCoordinatorStartDelay()
       );
 
+      taskMaster.onLeaderStart();
       segmentsMetadataManager.startPollingDatabasePeriodically();
       segmentsMetadataManager.populateUsedFlagLastUpdatedAsync();
       metadataRuleManager.start();
@@ -499,7 +500,7 @@ public class DruidCoordinator
 
       log.info("I am no longer the leader...");
 
-      taskMaster.stopAndRemoveAllPeons();
+      taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
