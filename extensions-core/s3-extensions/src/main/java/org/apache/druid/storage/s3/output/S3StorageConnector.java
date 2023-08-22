@@ -409,13 +409,13 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
                   fileInputStreamClosed.set(true);
                   super.close();
                   if (!pair.rhs.delete()) {
-                    throw new RE("Cannot delete temp file [%s]", outFile);
+                    throw new RE("Cannot delete temp file [%s]", pair.rhs);
                   }
                 }
               };
             }
             catch (FileNotFoundException e) {
-              e.printStackTrace();
+              throw new RE(e);
             }
           }).collect(Collectors.toList()))
       );
