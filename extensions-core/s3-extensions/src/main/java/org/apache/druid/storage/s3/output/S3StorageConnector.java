@@ -197,6 +197,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
 
           DateTime start = DateTimes.nowUtc();
           InputStream is = implementParallelDownload(object, 4, DOWNLOAD_SIZE_BYTES);
+
           log.info(
               "Download path [%s], size [%d] took [%d] ms",
               path,
@@ -363,6 +364,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
                                             config.getTempDir().getAbsolutePath(),
                                             UUID.randomUUID().toString()
                                         );
+                                        DateTime startTime = DateTimes.nowUtc();
                                         IOUtils.copy(
                                             s3Client.getObject(
                                                 new GetObjectRequest(
@@ -371,6 +373,15 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
                                                 ).withRange(division.lhs, division.rhs)
                                             ).getObjectContent(),
                                             new FileOutputStream(outFile)
+                                        );
+                                        DateTime endTime = DateTimes.nowUtc();
+                                        log.info(
+                                            "Download path [%s], chunk [%d], started from [%s], ended at [%s], total time [%d]",
+                                            getObjectRequest.getKey(),
+                                            division.lhs,
+                                            startTime.toString(),
+                                            endTime,
+                                            new Interval(startTime, endTime).toDurationMillis()
                                         );
 
 
