@@ -192,14 +192,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    * Publish all segments.
    *
    * @param segmentsToBeOverwritten segments which can be overwritten by new segments published by the given publisher
-   * @param segmentsToBeDropped     segments which will be dropped and marked unused
    * @param publisher               segment publisher
    *
    * @return a {@link ListenableFuture} for the publish task
    */
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
-      @Nullable final Set<DataSegment> segmentsToBeDropped,
       @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
       final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
@@ -212,7 +210,6 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 
     return publishInBackground(
         segmentsToBeOverwritten,
-        segmentsToBeDropped,
         tombstones == null ? Collections.emptySet() : tombstones,
         new SegmentsAndCommitMetadata(
             snapshot

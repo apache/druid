@@ -140,8 +140,8 @@ public interface SegmentsMetadataManager
 
   /**
    * Returns top N unused segment intervals with the end time no later than the specified maxEndTime and
-   * used_flag_last_updated time no later than maxLastUsedTime when ordered by segment start time, end time. Any segment having no
-   * used_flag_last_updated time due to upgrade from legacy Druid means maxUsedFlagLastUpdatedTime is ignored for that segment.
+   * used_status_last_updated time no later than maxLastUsedTime when ordered by segment start time, end time. Any segment having no
+   * used_status_last_updated time due to upgrade from legacy Druid means maxUsedFlagLastUpdatedTime is ignored for that segment.
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,
@@ -154,7 +154,7 @@ public interface SegmentsMetadataManager
   void poll();
 
   /**
-   * Populates used_flag_last_updated column in the segments table iteratively until there are no segments with a NULL
+   * Populates used_status_last_updated column in the segments table iteratively until there are no segments with a NULL
    * value for that column.
    */
   void populateUsedFlagLastUpdatedAsync();

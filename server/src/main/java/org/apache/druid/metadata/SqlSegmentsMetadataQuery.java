@@ -149,7 +149,7 @@ public class SqlSegmentsMetadataQuery
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET used = ?, used_flag_last_updated = ? WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET used = ?, used_status_last_updated = ? WHERE datasource = ? AND id = ?",
                 dbTables.getSegmentsTable()
             )
         );
@@ -176,13 +176,13 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used, used_flag_last_updated = :used_flag_last_updated WHERE dataSource = :dataSource",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource",
                   dbTables.getSegmentsTable()
               )
           )
           .bind("dataSource", dataSource)
           .bind("used", false)
-          .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
           .execute();
     } else if (Intervals.canCompareEndpointsAsStrings(interval)
                && interval.getStart().getYear() == interval.getEnd().getYear()) {
@@ -192,7 +192,7 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used, used_flag_last_updated = :used_flag_last_updated WHERE dataSource = :dataSource AND %s",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource AND %s",
                   dbTables.getSegmentsTable(),
                   IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
               )
@@ -201,7 +201,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
-          .bind("used_flag_last_updated", DateTimes.nowUtc().toString())
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
           .execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.
