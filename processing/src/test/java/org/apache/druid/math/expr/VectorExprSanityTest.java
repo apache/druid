@@ -26,9 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -63,18 +61,6 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
       .put("boolString1", ExpressionType.STRING)
       .put("boolString2", ExpressionType.STRING)
       .build();
-
-  @BeforeClass
-  public static void setupTests()
-  {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
-  }
-
-  @AfterClass
-  public static void teardownTests()
-  {
-    ExpressionProcessing.initializeForTests();
-  }
 
   @Test
   public void testUnaryOperators()

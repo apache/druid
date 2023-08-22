@@ -1199,7 +1199,7 @@ public class ControllerImpl implements Controller
             settableFuture.setException(t);
           }
         }
-      });
+      }, MoreExecutors.directExecutor());
 
       taskFutures.add(settableFuture);
     }
@@ -1306,7 +1306,7 @@ public class ControllerImpl implements Controller
       } else {
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
+            SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {

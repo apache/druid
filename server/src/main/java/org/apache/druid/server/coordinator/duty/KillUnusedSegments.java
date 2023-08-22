@@ -68,6 +68,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final boolean ignoreRetainDuration;
   private final int maxSegmentsToKill;
   private long lastKillTime = 0;
+  private final long bufferPeriod;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
@@ -94,14 +95,16 @@ public class KillUnusedSegments implements CoordinatorDuty
           this.retainDuration
       );
     }
+    this.bufferPeriod = config.getCoordinatorKillBufferPeriod().getMillis();
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
 
     log.info(
-        "Kill Task scheduling enabled with period [%s], retainDuration [%s], maxSegmentsToKill [%s]",
+        "Kill Task scheduling enabled with period [%s], retainDuration [%s], bufferPeriod [%s], maxSegmentsToKill [%s]",
         this.period,
         this.ignoreRetainDuration ? "IGNORING" : this.retainDuration,
+        this.bufferPeriod,
         this.maxSegmentsToKill
     );
 
@@ -230,7 +233,7 @@ public class KillUnusedSegments implements CoordinatorDuty
                                 : DateTimes.nowUtc().minus(retainDuration);
 
     List<Interval> unusedSegmentIntervals = segmentsMetadataManager
-        .getUnusedSegmentIntervals(dataSource, maxEndTime, maxSegmentsToKill);
+        .getUnusedSegmentIntervals(dataSource, maxEndTime, maxSegmentsToKill, DateTimes.nowUtc().minus(bufferPeriod));
 
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;

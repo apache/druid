@@ -122,7 +122,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Before
   public void setup()
   {
-    ExpressionProcessing.initializeForStrictBooleansTests(false);
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
   }
 
   @After

@@ -28,6 +28,8 @@ export interface CoordinatorDynamicConfig {
   balancerComputeThreads?: number;
   killAllDataSources?: boolean;
   killDataSourceWhitelist?: string[];
+  killTaskSlotRatio?: number;
+  maxKillTaskSlots?: number;
   killPendingSegmentsSkipList?: string[];
   maxSegmentsInNodeLoadingQueue?: number;
   mergeBytesLimit?: number;
@@ -228,6 +230,32 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         comma-separated dataSources or a JSON array.
       </>
     ),
+  },
+  {
+    name: 'killTaskSlotRatio',
+    type: 'ratio',
+    defaultValue: 1,
+    info: (
+      <>
+        Ratio of total available task slots, including autoscaling if applicable that will be
+        allowed for kill tasks. This limit only applies for kill tasks that are spawned
+        automatically by the Coordinator&apos;s auto kill duty, which is enabled when
+        <Code>druid.coordinator.kill.on</Code> is true.
+      </>
+    ),
+  },
+  {
+    name: 'maxKillTaskSlots',
+    type: 'number',
+    defaultValue: 2147483647,
+    info: (
+      <>
+        Maximum number of tasks that will be allowed for kill tasks. This limit only applies for
+        kill tasks that are spawned automatically by the Coordinator&apos;s auto kill duty, which is
+        enabled when <Code>druid.coordinator.kill.on</Code> is true.
+      </>
+    ),
+    min: 1,
   },
   {
     name: 'balancerComputeThreads',
