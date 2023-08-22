@@ -62,8 +62,8 @@ public class SegmentLoadWaiter
   private static final long SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long TIMEOUT_DURATION_MILLIS = TimeUnit.MINUTES.toMillis(10);
   private static final String LOAD_QUERY = "SELECT COUNT(*) AS usedSegments,\n"
-                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor > 0) AS hotSegments,\n"
-                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor = 0) AS coldSegments,\n"
+                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor > 0) AS precachedSegments,\n"
+                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor = 0) AS asyncOnlySegments,\n"
                                            + "COUNT(*) FILTER (WHERE is_available = 0 AND is_published = 1 AND replication_factor != 0) AS pendingSegments,\n"
                                            + "COUNT(*) FILTER (WHERE replication_factor = -1) AS unknownSegments\n"
                                            + "FROM sys.segments\n"
@@ -172,11 +172,11 @@ public class SegmentLoadWaiter
    */
   private void updateStatus(State state, DateTime startTime)
   {
-    int pendingSegmentCount = 0, usedSegmentsCount = 0, hotSegmentCount = 0, coldSegmentCount = 0, unknownSegmentCount = 0;
+    int pendingSegmentCount = 0, usedSegmentsCount = 0, precachedSegmentCount = 0, asyncOnlySegmentCount = 0, unknownSegmentCount = 0;
     for (Map.Entry<String, VersionLoadStatus> entry : versionToLoadStatusMap.entrySet()) {
       usedSegmentsCount += entry.getValue().getUsedSegments();
-      hotSegmentCount += entry.getValue().getHotSegments();
-      coldSegmentCount += entry.getValue().getColdSegments();
+      precachedSegmentCount += entry.getValue().getPrecachedSegments();
+      asyncOnlySegmentCount += entry.getValue().getAsyncOnlySegments();
       unknownSegmentCount += entry.getValue().getUnknownSegments();
       pendingSegmentCount += entry.getValue().getPendingSegments();
     }
@@ -189,8 +189,8 @@ public class SegmentLoadWaiter
             runningMillis,
             totalSegmentsGenerated,
             usedSegmentsCount,
-            hotSegmentCount,
-            coldSegmentCount,
+            precachedSegmentCount,
+            asyncOnlySegmentCount,
             pendingSegmentCount,
             unknownSegmentCount
         )
@@ -234,8 +234,8 @@ public class SegmentLoadWaiter
     private final long duration;
     private final int totalSegments;
     private final int usedSegments;
-    private final int hotSegments;
-    private final int coldSegments;
+    private final int precachedSegments;
+    private final int asyncOnlySegments;
     private final int pendingSegments;
     private final int unknownSegments;
 
@@ -246,8 +246,8 @@ public class SegmentLoadWaiter
         @JsonProperty("duration") long duration,
         @JsonProperty("totalSegments") int totalSegments,
         @JsonProperty("usedSegments") int usedSegments,
-        @JsonProperty("hotSegments") int hotSegments,
-        @JsonProperty("coldSegments") int coldSegments,
+        @JsonProperty("precachedSegments") int precachedSegments,
+        @JsonProperty("asyncOnlySegments") int asyncOnlySegments,
         @JsonProperty("pendingSegments") int pendingSegments,
         @JsonProperty("unknownSegments") int unknownSegments
     )
@@ -257,8 +257,8 @@ public class SegmentLoadWaiter
       this.duration = duration;
       this.totalSegments = totalSegments;
       this.usedSegments = usedSegments;
-      this.hotSegments = hotSegments;
-      this.coldSegments = coldSegments;
+      this.precachedSegments = precachedSegments;
+      this.asyncOnlySegments = asyncOnlySegments;
       this.pendingSegments = pendingSegments;
       this.unknownSegments = unknownSegments;
     }
@@ -296,15 +296,15 @@ public class SegmentLoadWaiter
     }
 
     @JsonProperty
-    public int getHotSegments()
+    public int getPrecachedSegments()
     {
-      return hotSegments;
+      return precachedSegments;
     }
 
     @JsonProperty
-    public int getColdSegments()
+    public int getAsyncOnlySegments()
     {
-      return coldSegments;
+      return asyncOnlySegments;
     }
 
     @JsonProperty
@@ -332,23 +332,23 @@ public class SegmentLoadWaiter
   public static class VersionLoadStatus
   {
     private final int usedSegments;
-    private final int hotSegments;
-    private final int coldSegments;
+    private final int precachedSegments;
+    private final int asyncOnlySegments;
     private final int pendingSegments;
     private final int unknownSegments;
 
     @JsonCreator
     public VersionLoadStatus(
         @JsonProperty("usedSegments") int usedSegments,
-        @JsonProperty("hotSegments") int hotSegments,
-        @JsonProperty("coldSegments") int coldSegments,
+        @JsonProperty("precachedSegments") int precachedSegments,
+        @JsonProperty("asyncOnlySegments") int asyncOnlySegments,
         @JsonProperty("pendingSegments") int pendingSegments,
         @JsonProperty("unknownSegments") int unknownSegments
     )
     {
       this.usedSegments = usedSegments;
-      this.hotSegments = hotSegments;
-      this.coldSegments = coldSegments;
+      this.precachedSegments = precachedSegments;
+      this.asyncOnlySegments = asyncOnlySegments;
       this.pendingSegments = pendingSegments;
       this.unknownSegments = unknownSegments;
     }
@@ -360,15 +360,15 @@ public class SegmentLoadWaiter
     }
 
     @JsonProperty
-    public int getHotSegments()
+    public int getPrecachedSegments()
     {
-      return hotSegments;
+      return precachedSegments;
     }
 
     @JsonProperty
-    public int getColdSegments()
+    public int getAsyncOnlySegments()
     {
-      return coldSegments;
+      return asyncOnlySegments;
     }
 
     @JsonProperty
@@ -386,7 +386,7 @@ public class SegmentLoadWaiter
     @JsonIgnore
     public boolean isLoadingComplete()
     {
-      return pendingSegments == 0 && (usedSegments == hotSegments + coldSegments);
+      return pendingSegments == 0 && (usedSegments == precachedSegments + asyncOnlySegments);
     }
   }
 }
