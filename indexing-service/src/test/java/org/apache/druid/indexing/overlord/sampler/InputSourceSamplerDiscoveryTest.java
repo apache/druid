@@ -58,71 +58,11 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
   private InputSourceSampler inputSourceSampler = new InputSourceSampler(OBJECT_MAPPER);
 
   @Test
-  public void testDiscoveredTypes()
+  public void testDiscoveredTypesNonStrictBooleans()
   {
-    final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-    final SamplerResponse response = inputSourceSampler.sample(
-        inputSource,
-        new JsonInputFormat(null, null, null, null, null),
-        new DataSchema(
-            "test",
-            new TimestampSpec("t", null, null),
-            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-            null,
-            null,
-            null
-        ),
-        null
-    );
 
-    Assert.assertEquals(6, response.getNumRowsRead());
-    Assert.assertEquals(5, response.getNumRowsIndexed());
-    Assert.assertEquals(6, response.getData().size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new StringDimensionSchema("string"),
-            new LongDimensionSchema("long"),
-            new DoubleDimensionSchema("double"),
-            new StringDimensionSchema("bool"),
-            new StringDimensionSchema("variant"),
-            new AutoTypeColumnSchema("array"),
-            new AutoTypeColumnSchema("nested")
-        ),
-        response.getLogicalDimensions()
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            new AutoTypeColumnSchema("string"),
-            new AutoTypeColumnSchema("long"),
-            new AutoTypeColumnSchema("double"),
-            new AutoTypeColumnSchema("bool"),
-            new AutoTypeColumnSchema("variant"),
-            new AutoTypeColumnSchema("array"),
-            new AutoTypeColumnSchema("nested")
-        ),
-        response.getPhysicalDimensions()
-    );
-    Assert.assertEquals(
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .add("string", ColumnType.STRING)
-                    .add("long", ColumnType.LONG)
-                    .add("double", ColumnType.DOUBLE)
-                    .add("bool", ColumnType.STRING)
-                    .add("variant", ColumnType.STRING)
-                    .add("array", ColumnType.LONG_ARRAY)
-                    .add("nested", ColumnType.NESTED_DATA)
-                    .build(),
-        response.getLogicalSegmentSchema()
-    );
-  }
-
-  @Test
-  public void testDiscoveredTypesStrictBooleans()
-  {
     try {
-      ExpressionProcessing.initializeForStrictBooleansTests(true);
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
       final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
       final SamplerResponse response = inputSourceSampler.sample(
           inputSource,
@@ -146,7 +86,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
               new StringDimensionSchema("string"),
               new LongDimensionSchema("long"),
               new DoubleDimensionSchema("double"),
-              new LongDimensionSchema("bool"),
+              new StringDimensionSchema("bool"),
               new StringDimensionSchema("variant"),
               new AutoTypeColumnSchema("array"),
               new AutoTypeColumnSchema("nested")
@@ -172,7 +112,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                       .add("string", ColumnType.STRING)
                       .add("long", ColumnType.LONG)
                       .add("double", ColumnType.DOUBLE)
-                      .add("bool", ColumnType.LONG)
+                      .add("bool", ColumnType.STRING)
                       .add("variant", ColumnType.STRING)
                       .add("array", ColumnType.LONG_ARRAY)
                       .add("nested", ColumnType.NESTED_DATA)
@@ -183,6 +123,67 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
     finally {
       ExpressionProcessing.initializeForTests();
     }
+  }
+
+  @Test
+  public void testDiscoveredTypesStrictBooleans()
+  {
+    final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
+    final SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        new JsonInputFormat(null, null, null, null, null),
+        new DataSchema(
+            "test",
+            new TimestampSpec("t", null, null),
+            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+            null,
+            null,
+            null
+        ),
+        null
+    );
+
+    Assert.assertEquals(6, response.getNumRowsRead());
+    Assert.assertEquals(5, response.getNumRowsIndexed());
+    Assert.assertEquals(6, response.getData().size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            new StringDimensionSchema("string"),
+            new LongDimensionSchema("long"),
+            new DoubleDimensionSchema("double"),
+            new LongDimensionSchema("bool"),
+            new StringDimensionSchema("variant"),
+            new AutoTypeColumnSchema("array"),
+            new AutoTypeColumnSchema("nested")
+        ),
+        response.getLogicalDimensions()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            new AutoTypeColumnSchema("string"),
+            new AutoTypeColumnSchema("long"),
+            new AutoTypeColumnSchema("double"),
+            new AutoTypeColumnSchema("bool"),
+            new AutoTypeColumnSchema("variant"),
+            new AutoTypeColumnSchema("array"),
+            new AutoTypeColumnSchema("nested")
+        ),
+        response.getPhysicalDimensions()
+    );
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("string", ColumnType.STRING)
+                    .add("long", ColumnType.LONG)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("bool", ColumnType.LONG)
+                    .add("variant", ColumnType.STRING)
+                    .add("array", ColumnType.LONG_ARRAY)
+                    .add("nested", ColumnType.NESTED_DATA)
+                    .build(),
+        response.getLogicalSegmentSchema()
+    );
   }
 
   @Test

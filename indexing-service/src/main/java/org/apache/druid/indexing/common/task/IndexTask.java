@@ -912,9 +912,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient()
-               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish));
+               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish));
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -996,7 +996,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final SegmentsAndCommitMetadata published =
           awaitPublish(driver.publishAll(
               inputSegments,
-              null,
               tombStones,
               publisher,
               annotateFunction

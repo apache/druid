@@ -156,7 +156,7 @@ public class MSQTestControllerContext implements ControllerContext
           log.error(t, "error running worker task %s", task.getId());
           statusMap.put(task.getId(), TaskStatus.failure(task.getId(), t.getMessage()));
         }
-      });
+      }, MoreExecutors.directExecutor());
 
       return task.getId();
     }
