@@ -72,6 +72,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 {
@@ -163,6 +164,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
+            null,
             new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
             null,
             null,
@@ -179,7 +181,59 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            false,
+            null
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, 5_000, null, null),
+        new InputSourceSampler(OBJECT_MAPPER),
+        OBJECT_MAPPER
+    );
+
+    runSamplerAndCompareResponse(samplerSpec, true);
+  }
+
+  @Test
+  public void testSampleWithTopicPattern()
+  {
+    insertData(generateRecords(TOPIC));
+
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
+        DATA_SCHEMA,
+        null,
+        new KafkaSupervisorIOConfig(
+            null,
+            Pattern.quote(TOPIC),
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+            null,
+            null,
+            null,
+            kafkaServer.consumerProperties(),
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null
         ),
         null,
@@ -216,10 +270,12 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
+            null,
             new KafkaInputFormat(
                 null,
                 null,
                 new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+                null,
                 null,
                 null,
                 null
@@ -240,7 +296,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            false,
             null
         ),
         null,
@@ -331,6 +386,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             kafkaServer.consumerProperties(),
             null,
             null,
@@ -343,7 +399,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            false,
             null
         ),
         null,
@@ -508,6 +563,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
+            null,
             new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
             null,
             null,
@@ -527,7 +583,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            false,
             null
         ),
         null,
@@ -564,6 +619,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         new KafkaSupervisorIOConfig(
             TOPIC,
+            null,
             new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
             null,
             null,
@@ -583,7 +639,6 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            false,
             null
         ),
         null,

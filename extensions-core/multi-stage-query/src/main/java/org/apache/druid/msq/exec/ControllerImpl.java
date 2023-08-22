@@ -1312,7 +1312,7 @@ public class ControllerImpl implements Controller
       } else {
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
+            SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {

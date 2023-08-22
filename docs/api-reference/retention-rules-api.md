@@ -3,8 +3,12 @@ id: retention-rules-api
 title: Retention rules API
 sidebar_label: Retention rules
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -48,7 +52,7 @@ Note that this endpoint returns an HTTP `200 OK` even if the datasource does not
 
 ### Header parameters
 
-The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history. 
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history.
 
 * `X-Druid-Author` (optional)
   * Type: String
@@ -59,13 +63,15 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully updated retention rules for specified datasource* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully updated retention rules for specified datasource*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -73,9 +79,10 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 The following example sets a set of broadcast, load, and drop retention rules for the `kttm1` datasource.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="2" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/kttm1" \
@@ -100,7 +107,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/kttm1" \
 ]'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="3" label="HTTP">
+
 
 ```HTTP
 POST /druid/coordinator/v1/rules/kttm1 HTTP/1.1
@@ -128,7 +137,8 @@ Content-Length: 273
 ]
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ### Sample response
 
@@ -150,7 +160,7 @@ This request overwrites any existing rules for all datasources. To remove defaul
 
 ### Header parameters
 
-The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history.  
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the `auditInfo` property for audit history.
 
 * `X-Druid-Author` (optional)
   * Type: String
@@ -161,17 +171,21 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="4" label="200 SUCCESS">
 
-*Successfully updated default retention rules* 
 
-<!--500 SERVER ERROR-->
+*Successfully updated default retention rules*
 
-*Error with request body* 
+</TabItem>
+<TabItem value="5" label="500 SERVER ERROR">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Error with request body*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -179,9 +193,10 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 The following example updates the default retention rule for all datasources with a `loadByInterval` rule.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="6" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
@@ -196,7 +211,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/_default" \
 ]'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="7" label="HTTP">
+
 
 ```HTTP
 POST /druid/coordinator/v1/rules/_default HTTP/1.1
@@ -214,7 +231,8 @@ Content-Length: 205
 ]
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ### Sample response
 
@@ -230,34 +248,40 @@ Retrieves all current retention rules in the cluster including the default reten
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="8" label="200 SUCCESS">
 
-*Successfully retrieved retention rules* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved retention rules*
+
+</TabItem>
+</Tabs>
 
 ---
 
 ### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="9" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="10" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/rules HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ### Sample response
 
@@ -302,13 +326,15 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="11" label="200 SUCCESS">
 
-*Successfully retrieved retention rules* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved retention rules*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -316,22 +342,26 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 
 The following example retrieves the custom retention rules and default retention rules for datasource with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="12" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/social_media?full=null"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="13" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/rules/social_media?full=null HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ### Sample response
 
@@ -383,21 +413,27 @@ Note that the following query parameters cannot be chained.
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="14" label="200 SUCCESS">
 
-*Successfully retrieved audit history* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved audit history*
 
-*Request in the incorrect format* 
+</TabItem>
+<TabItem value="15" label="400 BAD REQUEST">
 
-<!--404 NOT FOUND-->
 
-*`count` query parameter too large* 
+*Request in the incorrect format*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="16" label="404 NOT FOUND">
+
+
+*`count` query parameter too large*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -405,22 +441,26 @@ Note that the following query parameters cannot be chained.
 
 The following example retrieves the audit history for all datasources from `2023-07-13` to `2023-07-19`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="17" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/rules/history?interval=2023-07-13%2F2023-07-19"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="18" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/rules/history?interval=2023-07-13/2023-07-19 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
- 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+</TabItem>
+</Tabs>
 
 ### Sample response
 

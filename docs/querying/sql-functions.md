@@ -23,8 +23,10 @@ sidebar_label: "All functions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 This page provides a reference of all Druid SQL functions in alphabetical order.
@@ -183,7 +185,7 @@ Returns the array element at the 0-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.
+Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode)..
 
 ## ARRAY_ORDINAL
 
@@ -198,7 +200,7 @@ Returns the array element at the 1-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.|
+Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode)..|
 
 ## ARRAY_OVERLAP
 

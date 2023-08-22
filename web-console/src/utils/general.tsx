@@ -156,7 +156,7 @@ function identity<T>(x: T): T {
 
 export function lookupBy<T, Q = T>(
   array: readonly T[],
-  keyFn: (x: T, index: number) => string = String,
+  keyFn: (x: T, index: number) => string | number = String,
   valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
   if (!valueFn) valueFn = identity as any;
@@ -521,17 +521,19 @@ export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
 
-export function offsetToRowColumn(
-  str: string,
-  offset: number,
-): { row: number; column: number } | undefined {
+export interface RowColumn {
+  row: number;
+  column: number;
+}
+
+export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
   // Ensure offset is within the string length
   if (offset < 0 || offset > str.length) return;
 
   const lines = str.split('\n');
   for (let row = 0; row < lines.length; row++) {
     const line = lines[row];
-    if (offset < line.length) {
+    if (offset <= line.length) {
       return {
         row,
         column: offset,

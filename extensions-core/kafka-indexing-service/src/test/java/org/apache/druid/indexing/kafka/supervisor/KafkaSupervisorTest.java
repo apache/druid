@@ -80,6 +80,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -89,7 +90,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Action;
@@ -293,6 +293,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
             topic,
+            null,
             INPUT_FORMAT,
             replicas,
             1,
@@ -309,7 +310,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             new IdleConfig(true, 1000L),
-            false,
             1
     );
 
@@ -4501,6 +4501,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -4517,7 +4518,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         idleConfig,
-        false,
         null
     );
 
@@ -4614,6 +4614,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -4630,7 +4631,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
         null
     );
 
@@ -4731,6 +4731,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
+        null,
         INPUT_FORMAT,
         replicas,
         taskCount,
@@ -4747,7 +4748,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        false,
         null
     );
 

@@ -42,6 +42,7 @@ export interface InputFormat {
 
   // type: kafka
   readonly timestampColumnName?: string;
+  readonly topicColumnName?: string;
   readonly headerFormat?: { type: 'string'; encoding?: string };
   readonly headerColumnPrefix?: string;
   readonly keyFormat?: InputFormat;
@@ -253,7 +254,15 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: 'kafka.timestamp',
     defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-    info: `Name of the column for the kafka record's timestamp.`,
+    info: `Name of the column for the Kafka record's timestamp.`,
+  },
+  {
+    name: 'topicColumnName',
+    label: 'Kafka topic column name',
+    type: 'string',
+    defaultValue: 'kafka.topic',
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
+    info: `Name of the column for the topic from which the Kafka record came.`,
   },
 
   // -----------------------------------------------------

@@ -26,9 +26,16 @@ import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
 
 public interface ColumnConfig
 {
-  ColumnConfig DEFAULT = new ColumnConfig()
-  {
-  };
+  /**
+   * this value was chosen testing bound filters on double columns with a variety of ranges at which this ratio
+   * of number of bitmaps compared to total number of rows appeared to be around the threshold where indexes stopped
+   * performing consistently faster than a full scan + value matcher
+   */
+  double DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE = 0.08;
+
+  double DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE = 0.08;
+
+  ColumnConfig DEFAULT = new ColumnConfig() {};
 
   ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
   {
@@ -73,10 +80,7 @@ public interface ColumnConfig
    */
   default double skipValueRangeIndexScale()
   {
-    // this value was chosen testing bound filters on double columns with a variety of ranges at which this ratio
-    // of number of bitmaps compared to total number of rows appeared to be around the threshold where indexes stopped
-    // performing consistently faster than a full scan + value matcher
-    return 0.08;
+    return DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE;
   }
 
   /**
@@ -109,6 +113,6 @@ public interface ColumnConfig
    */
   default double skipValuePredicateIndexScale()
   {
-    return 0.08;
+    return DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE;
   }
 }
