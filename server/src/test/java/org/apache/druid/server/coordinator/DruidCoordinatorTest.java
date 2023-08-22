@@ -78,7 +78,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -172,10 +171,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     leaderUnannouncerLatch = new CountDownLatch(1);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        configManager,
-        segmentsMetadataManager,
+        createMetadataManager(configManager),
         serverInventoryView,
-        metadataRuleManager,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -183,12 +180,23 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        new HashSet<>(),
         null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
+        null
+    );
+  }
+
+  private MetadataManager createMetadataManager(JacksonConfigManager configManager)
+  {
+    return new MetadataManager(
+        null,
+        new CoordinatorConfigManager(configManager, null, null),
+        segmentsMetadataManager,
+        null,
+        metadataRuleManager,
         null
     );
   }
@@ -591,15 +599,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     DruidCoordinator c = new DruidCoordinator(
         druidCoordinatorConfig,
-        EasyMock.createNiceMock(JacksonConfigManager.class),
-        null,
-        null,
+        createMetadataManager(EasyMock.createNiceMock(JacksonConfigManager.class)),
         null,
         null,
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        null,
         null,
         null,
         null,
@@ -643,10 +648,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        null,
-        segmentsMetadataManager,
+        createMetadataManager(null),
         serverInventoryView,
-        metadataRuleManager,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -654,7 +657,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        new HashSet<>(),
         ImmutableSet.of(),
         emptyCustomDutyGroups,
         new CostBalancerStrategyFactory(),
@@ -686,10 +688,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group));
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        null,
-        segmentsMetadataManager,
+        createMetadataManager(null),
         serverInventoryView,
-        metadataRuleManager,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -697,7 +697,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        new HashSet<>(),
         ImmutableSet.of(),
         customDutyGroups,
         new CostBalancerStrategyFactory(),
@@ -729,10 +728,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        null,
-        segmentsMetadataManager,
+        createMetadataManager(null),
         serverInventoryView,
-        metadataRuleManager,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -740,7 +737,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        new HashSet<>(),
         ImmutableSet.of(),
         customDutyGroups,
         new CostBalancerStrategyFactory(),
@@ -837,10 +833,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        configManager,
-        segmentsMetadataManager,
+        createMetadataManager(configManager),
         serverInventoryView,
-        metadataRuleManager,
         serviceEmitter,
         scheduledExecutorFactory,
         null,
@@ -848,7 +842,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        new HashSet<>(),
         null,
         groups,
         new CostBalancerStrategyFactory(),

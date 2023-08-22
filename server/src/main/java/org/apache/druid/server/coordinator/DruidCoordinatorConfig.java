@@ -63,6 +63,10 @@ public abstract class DruidCoordinatorConfig
   @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
 
+  @Config("druid.coordinator.kill.supervisor.on")
+  @Default("true")
+  public abstract boolean isSupervisorKillEnabled();
+
   @Config("druid.coordinator.kill.supervisor.period")
   @Default("P1D")
   public abstract Duration getCoordinatorSupervisorKillPeriod();
@@ -70,6 +74,10 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.supervisor.durationToRetain")
   @Default("P90D")
   public abstract Duration getCoordinatorSupervisorKillDurationToRetain();
+
+  @Config("druid.coordinator.kill.audit.on")
+  @Default("true")
+  public abstract boolean isAuditKillEnabled();
 
   @Config("druid.coordinator.kill.audit.period")
   @Default("P1D")
@@ -79,9 +87,17 @@ public abstract class DruidCoordinatorConfig
   @Default("P90D")
   public abstract Duration getCoordinatorAuditKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.compaction.on")
+  @Default("false")
+  public abstract boolean isCompactionKillEnabled();
+
   @Config("druid.coordinator.kill.compaction.period")
   @Default("P1D")
   public abstract Duration getCoordinatorCompactionKillPeriod();
+
+  @Config("druid.coordinator.kill.rule.on")
+  @Default("true")
+  public abstract boolean isRuleKillEnabled();
 
   @Config("druid.coordinator.kill.rule.period")
   @Default("P1D")
@@ -90,6 +106,10 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.rule.durationToRetain")
   @Default("P90D")
   public abstract Duration getCoordinatorRuleKillDurationToRetain();
+
+  @Config("druid.coordinator.kill.datasource.on")
+  @Default("true")
+  public abstract boolean isDatasourceKillEnabled();
 
   @Config("druid.coordinator.kill.datasource.period")
   @Default("P1D")

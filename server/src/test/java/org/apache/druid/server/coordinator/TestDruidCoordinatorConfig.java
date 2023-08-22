@@ -144,9 +144,21 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isSupervisorKillEnabled()
+  {
+    return true;
+  }
+
+  @Override
   public Duration getCoordinatorSupervisorKillDurationToRetain()
   {
     return coordinatorSupervisorKillDurationToRetain;
+  }
+
+  @Override
+  public boolean isAuditKillEnabled()
+  {
+    return true;
   }
 
   @Override
@@ -162,9 +174,21 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isCompactionKillEnabled()
+  {
+    return true;
+  }
+
+  @Override
   public Duration getCoordinatorCompactionKillPeriod()
   {
     return coordinatorCompactionKillPeriod;
+  }
+
+  @Override
+  public boolean isRuleKillEnabled()
+  {
+    return true;
   }
 
   @Override
@@ -177,6 +201,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorRuleKillDurationToRetain()
   {
     return coordinatorRuleKillDurationToRetain;
+  }
+
+  @Override
+  public boolean isDatasourceKillEnabled()
+  {
+    return true;
   }
 
   @Override

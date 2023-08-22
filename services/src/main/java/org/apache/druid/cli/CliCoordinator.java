@@ -51,7 +51,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
-import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -76,9 +75,11 @@ import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.server.audit.AuditManagerProvider;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
+import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
@@ -87,11 +88,6 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
-import org.apache.druid.server.coordinator.duty.KillAuditLog;
-import org.apache.druid.server.coordinator.duty.KillCompactionConfig;
-import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
-import org.apache.druid.server.coordinator.duty.KillRules;
-import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
@@ -222,6 +218,8 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class);
+            binder.bind(CoordinatorConfigManager.class);
+            binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
 
             LifecycleModule.register(binder, CoordinatorServerView.class);
@@ -275,43 +273,6 @@ public class CliCoordinator extends ServerRunnable
                 "true",
                 Predicates.equalTo("true"),
                 KillStalePendingSegments.class
-            );
-
-            // Binding for Set of metadata store management coordinator Ddty
-            final ConditionalMultibind<CoordinatorDuty> conditionalMetadataStoreManagementDutyMultibind = ConditionalMultibind.create(
-                properties,
-                binder,
-                CoordinatorDuty.class,
-                CoordinatorMetadataStoreManagementDuty.class
-            );
-            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
-                "druid.coordinator.kill.supervisor.on",
-                "true",
-                Predicates.equalTo("true"),
-                KillSupervisors.class
-            );
-            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
-                "druid.coordinator.kill.audit.on",
-                "true",
-                Predicates.equalTo("true"),
-                KillAuditLog.class
-            );
-            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
-                "druid.coordinator.kill.rule.on",
-                "true",
-                Predicates.equalTo("true"),
-                KillRules.class
-            );
-            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
-                "druid.coordinator.kill.datasource.on",
-                "true",
-                Predicates.equalTo("true"),
-                KillDatasourceMetadata.class
-            );
-            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
-                "druid.coordinator.kill.compaction.on",
-                Predicates.equalTo("true"),
-                KillCompactionConfig.class
             );
 
             //TODO: make this configurable when there are multiple search policies
