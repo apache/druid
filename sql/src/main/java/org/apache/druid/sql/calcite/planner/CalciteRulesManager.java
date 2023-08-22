@@ -133,7 +133,21 @@ public class CalciteRulesManager
           CoreRules.FILTER_VALUES_MERGE,
           CoreRules.PROJECT_FILTER_VALUES_MERGE,
           CoreRules.PROJECT_VALUES_MERGE,
-          CoreRules.AGGREGATE_VALUES
+          CoreRules.AGGREGATE_VALUES,
+          PruneEmptyRules.PROJECT_INSTANCE,
+//          PruneEmptyRules.UNION_INSTANCE,
+//          PruneEmptyRules.INTERSECT_INSTANCE,
+//          PruneEmptyRules.MINUS_INSTANCE,
+//          PruneEmptyRules.PROJECT_INSTANCE,
+//          PruneEmptyRules.FILTER_INSTANCE,
+//          PruneEmptyRules.SORT_INSTANCE,
+//          PruneEmptyRules.AGGREGATE_INSTANCE,
+//          PruneEmptyRules.JOIN_LEFT_INSTANCE,
+//          PruneEmptyRules.JOIN_RIGHT_INSTANCE,
+//          PruneEmptyRules.SORT_FETCH_ZERO_INSTANCE,
+          PruneEmptyRules.EMPTY_TABLE_INSTANCE
+//          CoreRules.FILTER_VALUES_MERGE,
+//          CoreRules.PROJECT_VALUES_MERGE
       );
 
   /**
@@ -233,7 +247,11 @@ public class CalciteRulesManager
 
     boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
+        Programs.sequence(
+            preProgram,
+//            Programs.ofRules(logicalConventionRuleSet(plannerContext)),
+            Programs.ofRules(druidConventionRuleSet(plannerContext))
+            ),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
             // currently, adding logging program after every stage for easier debugging

@@ -49,16 +49,15 @@ public class DruidLogicalRules
   {
     return new ArrayList<>(
         ImmutableList.of(
+            new DruidValuesRule(
+                LogicalValues.class,
+                Convention.NONE,
+                DruidLogicalConvention.instance(),
+                DruidValuesRule.class.getSimpleName()
+            ),
             new DruidTableScanRule(
                 RelOptRule.operand(LogicalTableScan.class, null, RelOptRule.any()),
                 StringUtils.format("%s", DruidTableScanRule.class.getSimpleName())
-            ),
-            new DruidAggregateRule(
-                LogicalAggregate.class,
-                Convention.NONE,
-                DruidLogicalConvention.instance(),
-                DruidAggregateRule.class.getSimpleName(),
-                plannerContext
             ),
             new DruidSortRule(
                 LogicalSort.class,
@@ -72,17 +71,18 @@ public class DruidLogicalRules
                 DruidLogicalConvention.instance(),
                 DruidProjectRule.class.getSimpleName()
             ),
+            new DruidAggregateRule(
+                LogicalAggregate.class,
+                Convention.NONE,
+                DruidLogicalConvention.instance(),
+                DruidAggregateRule.class.getSimpleName(),
+                plannerContext
+            ),
             new DruidFilterRule(
                 LogicalFilter.class,
                 Convention.NONE,
                 DruidLogicalConvention.instance(),
                 DruidFilterRule.class.getSimpleName()
-            ),
-            new DruidValuesRule(
-                LogicalValues.class,
-                Convention.NONE,
-                DruidLogicalConvention.instance(),
-                DruidValuesRule.class.getSimpleName()
             )
         )
     );
