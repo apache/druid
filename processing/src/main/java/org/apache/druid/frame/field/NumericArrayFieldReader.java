@@ -3,17 +3,19 @@ package org.apache.druid.frame.field;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 
-public class NumericArrayFieldReader implements FieldReader
+public class NumericArrayFieldReader<T extends Number> implements FieldReader
 {
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(
+  public ColumnValueSelector<T[]> makeColumnValueSelector(
       Memory memory,
       ReadableFieldPointer fieldPointer
   )
@@ -28,7 +30,8 @@ public class NumericArrayFieldReader implements FieldReader
       @Nullable ExtractionFn extractionFn
   )
   {
-    throw DruidException.defensive("Cannot call makeDimensionSelector on field of type [%s]", array);
+    // TODO: Should I throw an exception here
+    return DimensionSelector.nilSelector();
   }
 
   @Override
@@ -44,8 +47,34 @@ public class NumericArrayFieldReader implements FieldReader
     return true;
   }
 
-  private static class Selector implements BaseObjectColumnValueSelector
+  private  class Selector extends ObjectColumnSelector<T[]>
   {
+    private final Memory dataRegion;
+    private final ReadableFieldPointer fieldPointer;
 
+    private Selector(final Memory dataRegion, final ReadableFieldPointer fieldPointer)
+    {
+      this.dataRegion = dataRegion;
+      this.fieldPointer = fieldPointer;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
+    }
+
+    @Nullable
+    @Override
+    public T[] getObject()
+    {
+      return null;
+    }
+
+    @Override
+    public Class<? extends T[]> classOfObject()
+    {
+      return null;
+    }
   }
 }
