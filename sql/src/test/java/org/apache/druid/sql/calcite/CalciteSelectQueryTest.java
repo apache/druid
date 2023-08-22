@@ -32,6 +32,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1923,124 +1924,26 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   public void testOrderThenLimitThenFilter1()
   {
-    skipVectorize();
-      testQuery(
-              "   \n" +
-                      "    select count(1) " +
-                       "  filter (where __time > date '2023-01-01')\n" +
-                      "   \n" +
-                      "    from druid.foo\n" +
-                      "    where 'a' = 'b'  \n" +
-                      "",
-              ImmutableList.of(
-                      newScanQueryBuilder()
-                              .dataSource(
-                                      new QueryDataSource(
-                                              newScanQueryBuilder()
-                                                      .dataSource(CalciteTests.DATASOURCE1)
-                                                      .intervals(querySegmentSpec(Filtration.eternity()))
-                                                      .columns(ImmutableList.of("__time", "dim1"))
-                                                      .limit(4)
-                                                      .order(ScanQuery.Order.DESCENDING)
-                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                      .context(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                                      )
-                              )
-                              .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns(ImmutableList.of("dim1"))
-                              .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .context(QUERY_CONTEXT_DEFAULT)
-                              .build()
-              ),
-              ImmutableList.of(
-                      new Object[]{"abc"},
-                      new Object[]{"def"}
-              )
-      );
-  }
-  @Test
-  public void testOrderThenLimitThenFilter2()
-  {
-    skipVectorize();
-      testQuery(
-              "   \n" +
-                      "    select count(1) " +
-                       "  filter (where dim2 = 'a')\n" +
-                      "   \n" +
-                      "    from druid.foo\n" +
-                      " where dim2 = 'b'  \n" +
-                      "",
-              ImmutableList.of(
-                      newScanQueryBuilder()
-                              .dataSource(
-                                      new QueryDataSource(
-                                              newScanQueryBuilder()
-                                                      .dataSource(CalciteTests.DATASOURCE1)
-                                                      .intervals(querySegmentSpec(Filtration.eternity()))
-                                                      .columns(ImmutableList.of("__time", "dim1"))
-                                                      .limit(4)
-                                                      .order(ScanQuery.Order.DESCENDING)
-                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                      .context(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                                      )
-                              )
-                              .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns(ImmutableList.of("dim1"))
-                              .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .context(QUERY_CONTEXT_DEFAULT)
-                              .build()
-              ),
-              ImmutableList.of(
-                      new Object[]{"abc"},
-                      new Object[]{"def"}
-              )
-      );
-  }
-  @Test
-  public void testOrderThenLimitThenFilter33()
-  {
-    skipVectorize();
-      testQuery(
-              "   \n" +
-                      "    select dim2 || 'x' as g2, count(1) " +
-                       "  filter (where dim2 || 'x2' = 'ax')\n" +
-                      "   \n" +
-                      "    from druid.foo\n" +
-                      " where dim1 = 'b'  \n" +
-                      " group by dim2",
-              ImmutableList.of(
-                      newScanQueryBuilder()
-                              .dataSource(
-                                      new QueryDataSource(
-                                              newScanQueryBuilder()
-                                                      .dataSource(CalciteTests.DATASOURCE1)
-                                                      .intervals(querySegmentSpec(Filtration.eternity()))
-                                                      .columns(ImmutableList.of("__time", "dim1"))
-                                                      .limit(4)
-                                                      .order(ScanQuery.Order.DESCENDING)
-                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                      .context(QUERY_CONTEXT_DEFAULT)
-                                                      .build()
-                                      )
-                              )
-                              .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns(ImmutableList.of("dim1"))
-                              .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .context(QUERY_CONTEXT_DEFAULT)
-                              .build()
-              ),
-              ImmutableList.of(
-                      new Object[]{"abc"},
-                      new Object[]{"def"}
-              )
-      );
+    cannotVectorize();
+    testQuery(
+        "select count(1) filter (where __time > date '2023-01-01') " +
+            " from druid.foo where 'a' = 'b'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(new Object[] {0L}));
   }
 }
