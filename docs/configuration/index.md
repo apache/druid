@@ -798,7 +798,7 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 
 |Property|Description|Default|
 |---|---|---|
-|`druid.generic.useDefaultValueForNull`|When set to `true`, `null` values will be stored as `''` for string columns and `0` for numeric columns. Set to `false` to store and query data in SQL compatible mode.|`true`|
+|`druid.generic.useDefaultValueForNull`|Set to `false` to store and query data in SQL compatible mode. When set to `true` (legacy mode), `null` values will be stored as `''` for string columns and `0` for numeric columns.|`false`|
 |`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#handling-null-values) for more details.
 
@@ -1196,7 +1196,7 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.supervisor.idleConfig.enabled`|If `true`, supervisor can become idle if there is no data on input stream/topic for some time.|false|
 |`druid.supervisor.idleConfig.inactiveAfterMillis`|Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|`600_000`|
 
-The `druid.supervisor.idleConfig.*` specified in the runtime properties of the overlord defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kafka-supervisor-reference.md#kafkasupervisorioconfig) to override it for an individual supervisor.
+The `druid.supervisor.idleConfig.*` specified in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kafka-supervisor-reference.md#supervisor-io-configuration) to override it for an individual supervisor.
 
 #### Overlord dynamic configuration
 
@@ -2288,8 +2288,8 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values will be either a `1` or `0`. See [expression documentation](../querying/math-expr.md#logical-operator-modes)|false|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|false|
+|`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values are either `1` or `0`. See [expression documentation](../querying/math-expr.md#logical-operator-modes) for more information.|true|
+|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|true|
 ### Router
 
 #### Router Process Configs

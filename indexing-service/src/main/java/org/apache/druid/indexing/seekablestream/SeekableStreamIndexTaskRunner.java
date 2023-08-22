@@ -35,6 +35,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
@@ -137,6 +138,7 @@ import java.util.stream.Collectors;
  * @param <PartitionIdType>    Partition Number Type
  * @param <SequenceOffsetType> Sequence Number Type
  */
+@SuppressWarnings("CheckReturnValue")
 public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> implements ChatHandler
 {
   public enum Status
@@ -697,7 +699,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                         log.error("Persist failed, dying");
                         backgroundThreadException = t;
                       }
-                    }
+                    },
+                    MoreExecutors.directExecutor()
                 );
               }
 
@@ -970,7 +973,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           } else {
             return publishedSegmentsAndMetadata;
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
     publishWaitList.add(publishFuture);
 
@@ -1026,7 +1030,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     handoffFuture.set(handoffSegmentsAndCommitMetadata);
                     return null;
                   }
-                }
+                },
+                MoreExecutors.directExecutor()
             );
             // emit segment count metric:
             int segmentCount = 0;
@@ -1047,7 +1052,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             log.error(t, "Error while publishing segments for sequenceNumber[%s]", sequenceMetadata);
             handoffFuture.setException(t);
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
