@@ -76,7 +76,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
@@ -118,7 +117,6 @@ public class SqlStatementResource
   public static final String RESULT_FORMAT = "__resultFormat";
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
-  private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
@@ -127,14 +125,12 @@ public class SqlStatementResource
   @Inject
   public SqlStatementResource(
       final @MSQ SqlStatementFactory msqSqlStatementFactory,
-      final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnector storageConnector
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
-    this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnector;
