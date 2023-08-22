@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from druidapi.consts import OVERLORD_BASE
+import requests
 
 REQ_TASKS = OVERLORD_BASE + '/tasks'
 REQ_POST_TASK = OVERLORD_BASE + '/task'
@@ -112,7 +113,7 @@ class TaskClient:
         '''
         return self.client.get_json(REQ_TASK_STATUS, args=[task_id])
 
-    def task_reports(self, task_id) -> dict:
+    def task_reports(self, task_id, require_ok = True) -> dict:
         '''
         Retrieves the completion report for a completed task.
 
@@ -129,7 +130,19 @@ class TaskClient:
         ---------
         `GET /druid/indexer/v1/task/{taskId}/reports`
         '''
-        return self.client.get_json(REQ_TASK_REPORTS, args=[task_id])
+        if require_ok:
+            return self.client.get_json(REQ_TASK_REPORTS, args=[task_id])
+        else:
+            resp = self.client.get(REQ_TASK_REPORTS, args=[task_id], require_ok=require_ok)
+            if resp.status_code == requests.codes.ok:
+                try:
+                    result = resp.json()
+                except Exception as ex:
+                    result = {"message":"Payload could not be converted to json.", "payload":f"{resp.content}", "exception":f"{ex}"}
+                return result
+            else:
+                return {"message":f"Request return code:{resp.status_code}"}
+
 
     def submit_task(self, payload):
         '''

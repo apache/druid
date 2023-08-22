@@ -20,12 +20,12 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
@@ -46,6 +46,7 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -61,10 +62,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CollectSegmentAndServerStats;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
@@ -99,7 +100,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -141,7 +141,8 @@ public class DruidCoordinator
 
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
-  private final ScheduledExecutorService exec;
+  private final ScheduledExecutorFactory executorFactory;
+  private final Map<String, ScheduledExecutorService> dutyGroupExecutors = new HashMap<>();
   private final LoadQueueTaskMaster taskMaster;
   private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
   private final SegmentLoadQueueManager loadQueueManager;
@@ -216,7 +217,7 @@ public class DruidCoordinator
     this.metadataStoreManagementDuties = metadataStoreManagementDuties;
     this.customDutyGroups = customDutyGroups;
 
-    this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
+    this.executorFactory = scheduledExecutorFactory;
 
     this.balancerStrategyFactory = balancerStrategyFactory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
@@ -395,7 +396,7 @@ public class DruidCoordinator
 
       started = false;
 
-      exec.shutdownNow();
+      stopAllDutyGroupExecutors();
 
       if (balancerExec != null) {
         balancerExec.shutdownNow();
@@ -440,6 +441,7 @@ public class DruidCoordinator
       );
 
       segmentsMetadataManager.startPollingDatabasePeriodically();
+      segmentsMetadataManager.populateUsedFlagLastUpdatedAsync();
       metadataRuleManager.start();
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
@@ -491,12 +493,10 @@ public class DruidCoordinator
       }
 
       for (final DutiesRunnable dutiesRunnable : dutiesRunnables) {
-        // CompactSegmentsDuty can takes a non trival amount of time to complete.
-        // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
-        // config.getCoordinatorIndexingPeriod() period. Note that cautious should be taken
-        // if setting config.getCoordinatorIndexingPeriod() lower than the default value.
+        // Several coordinator duties can take a non trival amount of time to complete.
+        // Hence, we schedule each duty group on a dedicated executor
         ScheduledExecutors.scheduleAtFixedRate(
-            exec,
+            getOrCreateDutyGroupExecutor(dutiesRunnable.dutyGroupName),
             config.getCoordinatorStartDelay(),
             dutiesRunnable.getPeriod(),
             () -> {
@@ -534,6 +534,7 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       segmentsMetadataManager.stopPollingDatabasePeriodically();
+      segmentsMetadataManager.stopAsyncUsedFlagLastUpdatedUpdate();
 
       if (balancerExec != null) {
         balancerExec.shutdownNow();
@@ -542,26 +543,53 @@ public class DruidCoordinator
     }
   }
 
-  @VisibleForTesting
-  protected void initBalancerExecutor()
+  @GuardedBy("lock")
+  private ScheduledExecutorService getOrCreateDutyGroupExecutor(String dutyGroup)
   {
-    final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
+    return dutyGroupExecutors.computeIfAbsent(
+        dutyGroup,
+        group -> executorFactory.create(1, "Coordinator-Exec-" + dutyGroup + "-%d")
+    );
+  }
 
+  @GuardedBy("lock")
+  private void stopAllDutyGroupExecutors()
+  {
+    dutyGroupExecutors.values().forEach(ScheduledExecutorService::shutdownNow);
+    dutyGroupExecutors.clear();
+  }
+
+  /**
+   * Resets the balancerExec if required and creates a new BalancerStrategy for
+   * the current coordinator run.
+   */
+  @VisibleForTesting
+  BalancerStrategy createBalancerStrategy(int balancerComputeThreads)
+  {
+    // Reset balancerExecutor if required
     if (balancerExec == null) {
-      balancerExec = createNewBalancerExecutor(currentNumber);
-    } else if (cachedBalancerThreadNumber != currentNumber) {
+      balancerExec = createNewBalancerExecutor(balancerComputeThreads);
+    } else if (cachedBalancerThreadNumber != balancerComputeThreads) {
       log.info(
-          "balancerComputeThreads has changed from [%d] to [%d], recreating the thread pool.",
-          cachedBalancerThreadNumber,
-          currentNumber
+          "'balancerComputeThreads' has changed from [%d] to [%d]",
+          cachedBalancerThreadNumber, balancerComputeThreads
       );
       balancerExec.shutdownNow();
-      balancerExec = createNewBalancerExecutor(currentNumber);
+      balancerExec = createNewBalancerExecutor(balancerComputeThreads);
     }
+
+    // Create BalancerStrategy
+    final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
+    log.info(
+        "Using balancer strategy[%s] with [%d] threads.",
+        balancerStrategy.getClass().getSimpleName(), balancerComputeThreads
+    );
+    return balancerStrategy;
   }
 
   private ListeningExecutorService createNewBalancerExecutor(int numThreads)
   {
+    log.info("Creating new balancer executor with [%d] threads.", numThreads);
     cachedBalancerThreadNumber = numThreads;
     return MoreExecutors.listeningDecorator(
         Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")
@@ -576,7 +604,7 @@ public class DruidCoordinator
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused),
-        new BalanceSegments(),
+        new BalanceSegments(config.getCoordinatorPeriod()),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
   }
@@ -612,7 +640,7 @@ public class DruidCoordinator
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(config, compactionSegmentSearchPolicy, overlordClient);
+      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(
@@ -720,7 +748,7 @@ public class DruidCoordinator
               && coordLeaderSelector.isLeader()
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
-            dutyRunTime.reset().start();
+            dutyRunTime.restart();
             params = duty.run(params);
             dutyRunTime.stop();
 
@@ -730,7 +758,7 @@ public class DruidCoordinator
               return;
             } else {
               final RowKey rowKey = RowKey.of(Dimension.DUTY, dutyName);
-              final long dutyRunMillis = dutyRunTime.elapsed(TimeUnit.MILLISECONDS);
+              final long dutyRunMillis = dutyRunTime.millisElapsed();
               params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_RUN_TIME, rowKey, dutyRunMillis);
             }
           }
@@ -750,15 +778,16 @@ public class DruidCoordinator
           );
 
           log.info(
-              "Emitted [%d] stats for group [%s]. All collected stats:%s\n",
+              "Emitted [%d] stats for group [%s]. All collected stats:%s",
               emittedCount.get(), dutyGroupName, allStats.buildStatsTable()
           );
         }
 
         // Emit the runtime of the full DutiesRunnable
-        final long runMillis = groupRunTime.stop().elapsed(TimeUnit.MILLISECONDS);
+        groupRunTime.stop();
+        final long runMillis = groupRunTime.millisElapsed();
         emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
-        log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
+        log.info("Finished coordinator run for group [%s] in [%d] ms.%n", dutyGroupName, runMillis);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
@@ -818,15 +847,8 @@ public class DruidCoordinator
       final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
       cancelLoadsOnDecommissioningServers(cluster);
 
-      initBalancerExecutor();
-      final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
-      log.info(
-          "Using balancer strategy [%s] with round-robin assignment [%s] and debug dimensions [%s].",
-          balancerStrategy.getClass().getSimpleName(),
-          segmentLoadingConfig.isUseRoundRobinSegmentAssignment(),
-          dynamicConfig.getDebugDimensions()
-      );
-
+      final BalancerStrategy balancerStrategy
+          = createBalancerStrategy(segmentLoadingConfig.getBalancerComputeThreads());
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withBalancerStrategy(balancerStrategy)

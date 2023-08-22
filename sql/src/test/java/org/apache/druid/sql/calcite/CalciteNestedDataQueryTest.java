@@ -1373,6 +1373,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       return;
     }
     cannotVectorize();
+    skipVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -1389,8 +1390,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setGranularity(Granularities.ALL)
                             .setDimFilter(
                                 or(
-                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY),
-                                    isNull("arrayLongNulls")
+                                    isNull("arrayLongNulls"),
+                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY)
                                 )
                             )
                             .setDimensions(

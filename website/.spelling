@@ -53,6 +53,7 @@ Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
+CLI
 DDL
 DML
 DNS
@@ -218,6 +219,7 @@ SslContextFactory
 StatsD
 SYSTEM_TABLE
 TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -328,6 +330,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -814,7 +817,6 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
 ambari-metrics
@@ -1036,7 +1038,6 @@ PT17S
 GCS
 StaticGoogleBlobStoreFirehose
 gcs-connector
-hadoop2
 hdfs
 Aotearoa
 Czechia
@@ -1099,6 +1100,7 @@ numProcessors
 q.size
 repartitionTransitionDuration
 replicastaskCounttaskCount
+resetOffsets
 resetuseEarliestSequenceNumberPOST
 resumePOST
 statusrecentErrorsdruid.supervisor.maxStoredExceptionEventsstatedetailedStatestatedetailedStatestatestatePENDINGRUNNINGSUSPENDEDSTOPPINGUNHEALTHY_SUPERVISORUNHEALTHY_TASKSdetailedStatestatedruid.supervisor.unhealthinessThresholddruid.supervisor.taskUnhealthinessThresholdtaskDurationtaskCountreplicasdetailedStatedetailedStateRUNNINGPOST
@@ -2312,3 +2314,6 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+taskslots
+loadstatus
+sqlQueryId
