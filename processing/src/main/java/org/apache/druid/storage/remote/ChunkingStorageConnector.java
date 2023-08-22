@@ -60,7 +60,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
    * total frame size, while also preventing a large number of calls to the remote storage. While fetching a single
    * file, 100MBs would be required in the disk space.
    */
-  private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 104857600;
+  private static final long DOWNLOAD_MAX_CHUNK_SIZE_BYTES = 4 * 8 * 1024 * 1024;
 
   /**
    * Default fetch buffer size while copying from the remote location to the download file. Set to default sizing given
@@ -177,6 +177,8 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                   );
                 }
 
+                DateTime start = DateTimes.nowUtc();
+
                 FileUtils.copyLarge(
                     () -> new RetryingInputStream<>(
                         params.getObjectSupplier().getObject(currentReadStartPosition.get(), currentReadEndPosition),
@@ -194,6 +196,13 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                         outFile.getAbsolutePath()
                     )
                 );
+                log.info(
+                    "Download path [%s], size [%d] took [%d] ms",
+                    params.getCloudStoragePath(),
+                    params.getEnd() - params.getStart(),
+                    new Interval(start, DateTimes.nowUtc()).toDurationMillis()
+                );
+
               }
               catch (IOException e) {
                 throw new RE(
@@ -229,12 +238,25 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
             }
 
             try {
-              return new RetryingInputStream<>(
+              AtomicBoolean inputStreamClosed = new AtomicBoolean(false);
+              return new RetryingInputStream<T>(
                   params.getObjectSupplier().getObject(currentReadStartPosition.get(), currentReadEndPosition),
                   params.getObjectOpenFunction(),
                   params.getRetryCondition(),
                   params.getMaxRetry()
-              );
+              )
+              {
+                @Override
+                public void close() throws IOException
+                {
+                  if (inputStreamClosed.get()) {
+                    return;
+                  }
+                  inputStreamClosed.set(true);
+                  super.close();
+                  currentReadStartPosition.set(currentReadEndPosition);
+                }
+              };
             }
             catch (IOException e) {
               throw new RE(e);
