@@ -561,9 +561,6 @@ public abstract class ExprEval<T>
           return ofDouble((Number) value);
         }
         if (value instanceof Boolean) {
-          if (ExpressionProcessing.useStrictBooleans()) {
-            return ofLongBoolean((Boolean) value);
-          }
           return ofDouble(Evals.asDouble((Boolean) value));
         }
         if (value instanceof String) {

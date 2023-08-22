@@ -26,13 +26,10 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.VectorExprSanityTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Map;
@@ -61,18 +58,6 @@ public class VectorExpressionsSanityTest extends InitializedNullHandlingTest
                                                         .put("boolString1", ExpressionType.STRING)
                                                         .put("boolString2", ExpressionType.STRING)
                                                         .build();
-
-  @BeforeClass
-  public static void setupTests()
-  {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
-  }
-
-  @AfterClass
-  public static void teardownTests()
-  {
-    ExpressionProcessing.initializeForTests();
-  }
 
   static void testExpression(String expr, Expr parsed, Map<String, ExpressionType> types)
   {
