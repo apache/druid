@@ -65,11 +65,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -365,7 +361,7 @@ public class MemcachedCache implements Cache
           .setOpQueueFactory(opQueueFactory)
           .setMetricCollector(metricCollector)
           .setEnableMetrics(MetricType.DEBUG); // Not as scary as it sounds
-      if(config.usesslconnection()) {
+      if(config.enableTls()) {
         // Build SSLContext
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init((KeyStore) null);
@@ -374,7 +370,7 @@ public class MemcachedCache implements Cache
         // Create the client in TLS mode
         connectionFactoryBuilder.setSSLContext(sslContext);
       }
-      if(config.autoDiscovery()) {
+      if(Objects.equals(config.getClientMode(), "dynamic")) {
         connectionFactoryBuilder.setClientMode(ClientMode.Dynamic);
       }
       else {

@@ -223,7 +223,7 @@ public class MemcachedCacheTest
     final MemcachedCacheConfig config = new MemcachedCacheConfig()
     {
       @Override
-      public boolean usesslconnection()
+      public boolean enableTls()
       {
         return true;
       }
@@ -234,7 +234,7 @@ public class MemcachedCacheTest
         return "localhost:9999";
       }
     };
-    MemcachedCache cache = MemcachedCache.create(config);
+    MemcachedCache.create(config);
   }
 
   @Test

@@ -64,10 +64,10 @@ public class MemcachedCacheConfig
   private String locator = "consistent";
 
   @JsonProperty
-  private boolean sslconnection = false;
+  private boolean enableTls = false;
 
   @JsonProperty
-  private boolean autodiscovery = false;
+  private String clientMode = "static";
 
   public int getExpiration()
   {
@@ -119,11 +119,11 @@ public class MemcachedCacheConfig
     return locator;
   }
 
-  public boolean usesslconnection() {
-    return sslconnection;
+  public boolean enableTls() {
+    return enableTls;
   }
 
-  public boolean autoDiscovery() {
-    return autodiscovery;
+  public String getClientMode() {
+    return clientMode;
   }
 }
