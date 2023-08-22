@@ -19,12 +19,15 @@
 
 package org.apache.druid.discovery;
 
+import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.Request;
 
 import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Utils class for shared client methods
@@ -35,8 +38,9 @@ public class ClientUtils
   public static String pickOneHost(DruidNodeDiscovery druidNodeDiscovery)
   {
     Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
-    if (iter.hasNext()) {
-      DiscoveryDruidNode node = iter.next();
+    List<DiscoveryDruidNode> discoveryDruidNodeList = Lists.newArrayList(iter);
+    if (!discoveryDruidNodeList.isEmpty()) {
+      DiscoveryDruidNode node = discoveryDruidNodeList.get(new Random().nextInt(discoveryDruidNodeList.size()));
       return StringUtils.format(
           "%s://%s",
           node.getDruidNode().getServiceScheme(),

@@ -52,14 +52,14 @@ public class SegmentLoadWaiterTest
     brokerClient = mock(BrokerClient.class);
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer()
+    doAnswer(new Answer<String>()
     {
       int timesInvoked = 0;
       @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable
+      public String answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
-        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, 5 - timesInvoked);
+        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, 0,5 - timesInvoked, 0);
         return new ObjectMapper().writeValueAsString(loadStatus);
       }
     }).when(brokerClient).sendQuery(any());
@@ -75,14 +75,14 @@ public class SegmentLoadWaiterTest
     brokerClient = mock(BrokerClient.class);
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    doAnswer(new Answer()
+    doAnswer(new Answer<String>()
     {
       int timesInvoked = 0;
       @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable
+      public String answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
-        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, 5 - timesInvoked);
+        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, 0,5 - timesInvoked, 0);
         return new ObjectMapper().writeValueAsString(loadStatus);
       }
     }).when(brokerClient).sendQuery(any());

@@ -96,8 +96,11 @@ public class MSQTaskReportTest
         SegmentLoadWaiter.State.WAITING,
         DateTimes.nowUtc(),
         200L,
+        100,
+        80,
         50,
-        10
+        10,
+        0
     );
 
     final MSQTaskReport report = new MSQTaskReport(
@@ -156,8 +159,11 @@ public class MSQTaskReportTest
         SegmentLoadWaiter.State.FAILED,
         DateTimes.nowUtc(),
         200L,
+        100,
+        80,
         50,
-        10
+        10,
+        0
     );
 
     final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, HOST, 0, new TooManyColumnsFault(10, 5));
@@ -201,7 +207,10 @@ public class MSQTaskReportTest
         SegmentLoadWaiter.State.SUCCESS,
         DateTimes.nowUtc(),
         200L,
+        100,
+        80,
         50,
+        10,
         0
     );
 

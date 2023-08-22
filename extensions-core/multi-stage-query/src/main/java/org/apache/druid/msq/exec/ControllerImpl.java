@@ -1337,7 +1337,7 @@ public class ControllerImpl implements Controller
           context.jsonMapper(),
           task.getDataSource(),
           versionsToAwait,
-          segmentsWithTombstones.size(),
+          segments.size(),
           true
       );
       // Append mode.
