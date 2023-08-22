@@ -36,19 +36,19 @@ Once you've downloaded the Avatica client jar, add it to your classpath.
 Example connection string:
 
 ```
-jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnect=true
+jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true
 ```
 
 Or, to use the protobuf protocol instead of JSON:
 
 ```
-jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnect=true;serialization=protobuf
+jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnection=true;serialization=protobuf
 ```
 
 The `url` is the `/druid/v2/sql/avatica/` endpoint on the Router, which routes JDBC connections to a consistent Broker.
 For more information, see [Connection stickiness](#connection-stickiness).
 
-Set `transparent_reconnect` to `true` so your connection is not interrupted if the pool of Brokers changes membership,
+Set `transparent_reconnection` to `true` so your connection is not interrupted if the pool of Brokers changes membership,
 or if a Broker is restarted.
 
 Set `serialization` to `protobuf` if using the protobuf endpoint.
@@ -61,7 +61,7 @@ Example Java code:
 
 ```java
 // Connect to /druid/v2/sql/avatica/ on your Broker.
-String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnect=true";
+String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
 
 // Set any connection context parameters you need here.
 // Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
@@ -85,7 +85,7 @@ For a runnable example that includes a query that you might run, see [Examples](
 It is also possible to use a protocol buffers JDBC connection with Druid, this offer reduced bloat and potential performance
 improvements for larger result sets. To use it apply the following connection URL instead, everything else remains the same
 ```
-String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnect=true;serialization=protobuf";
+String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnection=true;serialization=protobuf";
 ```
 
 :::info
@@ -155,7 +155,7 @@ public class JdbcListColumns {
     {
         // Connect to /druid/v2/sql/avatica/ on your Router. 
         // You can connect to a Broker but must configure connection stickiness if you do. 
-        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnect=true";
+        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
 
         String query = "SELECT COLUMN_NAME,* FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'wikipedia' and TABLE_SCHEMA='druid'";
 
@@ -195,7 +195,7 @@ public class JdbcCountryAndTime {
     {
         // Connect to /druid/v2/sql/avatica/ on your Router. 
         // You can connect to a Broker but must configure connection stickiness if you do. 
-        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnect=true";
+        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
 
         //The query you want to run.
         String query = "SELECT __time, isRobot, countryName, comment FROM wikipedia WHERE countryName='Japan'";
