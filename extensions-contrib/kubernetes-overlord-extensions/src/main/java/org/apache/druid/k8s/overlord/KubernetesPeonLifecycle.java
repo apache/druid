@@ -221,6 +221,11 @@ public class KubernetesPeonLifecycle
    */
   protected TaskLocation getTaskLocation()
   {
+    if (State.PENDING.equals(state.get()) || State.NOT_STARTED.equals(state.get())) {
+      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
+      return TaskLocation.unknown();
+    }
+
     /* It's okay to cache this because podIP only changes on pod restart, and we have to set restartPolicy to Never
     since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
     if we decide we need to change this later.
