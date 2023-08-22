@@ -47,6 +47,8 @@ import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
@@ -56,6 +58,8 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;
@@ -78,6 +82,7 @@ public class S3InputSource extends CloudObjectInputSource
   private final AWSClientConfig awsClientConfig;
   private final AWSEndpointConfig awsEndpointConfig;
   private int maxRetries;
+  private final File tempDir;
 
   /**
    * Constructor for S3InputSource
@@ -122,6 +127,13 @@ public class S3InputSource extends CloudObjectInputSource
     this.awsProxyConfig = awsProxyConfig;
     this.awsClientConfig = awsClientConfig;
     this.awsEndpointConfig = awsEndpointConfig;
+    this.tempDir = FileUtils.createTempDir("s3InputSource");
+    try {
+      FileUtils.mkdirp(tempDir);
+    }
+    catch (IOException e) {
+      throw new RE(e);
+    }
 
     this.s3ClientSupplier = Suppliers.memoize(
         () -> {
@@ -319,7 +331,7 @@ public class S3InputSource extends CloudObjectInputSource
   @Override
   protected InputEntity createEntity(CloudObjectLocation location)
   {
-    return new S3Entity(s3ClientSupplier.get(), location, maxRetries);
+    return new S3Entity(s3ClientSupplier.get(), location, maxRetries, tempDir);
   }
 
   @Override

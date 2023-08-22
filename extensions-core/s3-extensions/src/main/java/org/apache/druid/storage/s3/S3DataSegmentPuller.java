@@ -21,11 +21,15 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
@@ -204,17 +208,31 @@ public class S3DataSegmentPuller implements URIDataPuller
           final InputStream in;
           final Closer closer = Closer.create();
 
+          GetObjectRequest getObjectRequest = new GetObjectRequest(coords.getBucket(), coords.getPath());
+
           if (!isUseTransferManager()) {
             if (s3Object == null) {
               // lazily promote to full GET
-              s3Object = s3Client.getObject(coords.getBucket(), coords.getPath());
+              s3Object = s3Client.getObject(getObjectRequest);
             }
             in = s3Object.getObjectContent();
             closer.register(in);
             closer.register(s3Object);
           } else {
             File file = new File(tempDir.getAbsolutePath(), UUID.randomUUID().toString());
-            transferManager.download(coords.getBucket(), coords.getPath(), file);
+            boolean parallelizable = TransferManagerUtils.isDownloadParallelizable(
+                s3Client.getUnderlyingS3Client(),
+                getObjectRequest,
+                ServiceUtils.getPartCount(getObjectRequest, s3Client.getUnderlyingS3Client())
+            );
+            log.info("[%s] : [%s] download parallelizable ? [%s]", coords.getBucket(), coords.getPath(), parallelizable);
+            Download download = transferManager.download(coords.getBucket(), coords.getPath(), file);
+            try {
+              download.waitForCompletion();
+            }
+            catch (InterruptedException e) {
+              throw new RE(e);
+            }
             in = new FileInputStream(file);
             closer.register(file::delete);
             closer.register(in);

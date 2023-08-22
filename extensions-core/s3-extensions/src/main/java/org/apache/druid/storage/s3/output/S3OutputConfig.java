@@ -65,7 +65,7 @@ public class S3OutputConfig
       Integer maxRetry
   )
   {
-    this(bucket, prefix, tempDir, chunkSize, maxRetry, false, true);
+    this(bucket, prefix, tempDir, chunkSize, maxRetry, false, false);
   }
 
   @JsonCreator
@@ -78,7 +78,7 @@ public class S3OutputConfig
       @JsonProperty("testingTransferManager") Boolean testingTransferManager
   )
   {
-    this(bucket, prefix, tempDir, chunkSize, maxRetry, testingTransferManager, true);
+    this(bucket, prefix, tempDir, chunkSize, maxRetry, testingTransferManager, false);
   }
 
   @VisibleForTesting

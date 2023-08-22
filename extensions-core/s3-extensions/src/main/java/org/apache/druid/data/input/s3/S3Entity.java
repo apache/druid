@@ -19,44 +19,68 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class S3Entity extends RetryingInputEntity
 {
+  private static final Logger log = new Logger(S3Entity.class);
+
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final CloudObjectLocation object;
   private final int maxRetries;
+  private final File tempDir;
+  private final TransferManager transferManager;
 
-  S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords)
+
+  S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords, File tempDir)
   {
-    this.s3Client = s3Client;
-    this.object = coords;
-    this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
+    this(s3Client, coords, RetryUtils.DEFAULT_MAX_TRIES, tempDir);
   }
 
   // this was added for testing but it might be useful in other cases (you can
   // configure maxRetries...
-  S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords, int maxRetries)
+  S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords, int maxRetries, File tempDir)
   {
     Preconditions.checkArgument(maxRetries >= 0);
     this.s3Client = s3Client;
+    if (s3Client.getUnderlyingServerSideEncryption() instanceof NoopServerSideEncryption) {
+      log.info("Using transfer manager in S3Entity");
+      this.transferManager = TransferManagerBuilder.standard()
+                                                   .withS3Client(s3Client.getUnderlyingS3Client())
+                                                   .build();
+    } else {
+      transferManager = null;
+    }
     this.object = coords;
     this.maxRetries = maxRetries;
+    this.tempDir = tempDir;
   }
 
   @Override
@@ -75,18 +99,53 @@ public class S3Entity extends RetryingInputEntity
   protected InputStream readFrom(long offset) throws IOException
   {
     final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
-    request.setRange(offset);
+    if (offset != 0) {
+      request.setRange(offset);
+    }
     try {
-      final S3Object s3Object = s3Client.getObject(request);
-      if (s3Object == null) {
-        throw new ISE(
-            "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
-            object.getBucket(),
-            object.getPath(),
-            offset
-        );
+      if (!isUseTransferManager()) {
+        final S3Object s3Object = s3Client.getObject(request);
+        if (s3Object == null) {
+          throw new ISE(
+              "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
+              object.getBucket(),
+              object.getPath(),
+              offset
+          );
+        }
+        return s3Object.getObjectContent();
+
       }
-      return s3Object.getObjectContent();
+      File tempFile = new File(tempDir.getAbsolutePath(), UUID.randomUUID().toString());
+      boolean parallelizable = TransferManagerUtils.isDownloadParallelizable(
+          s3Client.getUnderlyingS3Client(),
+          request,
+          ServiceUtils.getPartCount(request, s3Client.getUnderlyingS3Client())
+      );
+      log.info("[%s] : [%s] download parallelizable ? [%s]", object.getBucket(), object.getPath(), parallelizable);
+      Download download = transferManager.download(request, tempFile);
+      try {
+        download.waitForCompletion();
+      }
+      catch (InterruptedException e) {
+        throw new RE(e);
+      }
+
+      return new FileInputStream(tempFile)
+      {
+        final AtomicBoolean fisClosed = new AtomicBoolean(false);
+
+        @Override
+        public void close() throws IOException
+        {
+          if (fisClosed.get()) {
+            return;
+          }
+          super.close();
+          tempFile.delete();
+          fisClosed.set(true);
+        }
+      };
     }
     catch (AmazonS3Exception e) {
       throw new IOException(e);
@@ -103,5 +162,10 @@ public class S3Entity extends RetryingInputEntity
   public Predicate<Throwable> getRetryCondition()
   {
     return S3Utils.S3RETRY;
+  }
+
+  private boolean isUseTransferManager()
+  {
+    return transferManager != null;
   }
 }
