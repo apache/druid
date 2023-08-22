@@ -94,7 +94,7 @@ public class AppendTask extends AbstractTask
   )
   {
     super(
-        id == null ? StringUtils.format("replace_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
+        id == null ? StringUtils.format("append_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
         dataSource == null ? "none" : dataSource,
         null,
         IngestionMode.APPEND
