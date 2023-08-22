@@ -360,8 +360,8 @@
     <cve>CVE-2022-45855</cve>
     <cve>CVE-2022-42009</cve>
     <!-- Suppress hadoop CVEs that not applicable to hadoop-annotations -->
-    <cve>CVE-2022-25168</cve>
-    <cve>CVE-2021-33036</cve>
+    <cve>CVE-2022-25168</cve> <!-- Affected FileUtil.unTar(File, File) API isn't present in hadoop-annotations -->
+    <cve>CVE-2021-33036</cve> <!-- Only applicable to hadoop-yarn-server -->
   </suppress>
   <suppress>
     <!--
