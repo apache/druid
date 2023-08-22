@@ -785,18 +785,4 @@
     <packageUrl regex="true">^pkg:maven/.*/.*@.*$</packageUrl>
     <cve>CVE-2021-4277</cve>
   </suppress>
-
-  <suppress>
-    <notes><![CDATA[
-      file name: guava-16.0.1.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.google\.guava/guava@16.0.1$</packageUrl>
-    <!--
-      ~ We don't either use AtomicDoubleArray (when serialized with Java serialization) or
-      ~ CompoundOrdering (when serialized with GWT serialization) nor do we use Java or GWT serialization. https://nvd.nist.gov/vuln/detail/cve-2018-10237
-    -->
-    <cve>CVE-2018-10237</cve>
-    <cve>CVE-2020-8908</cve> <!-- We do not use com.google.common.io.Files.createTempDir() https://nvd.nist.gov/vuln/detail/CVE-2020-8908 -->
-    <cve>CVE-2023-2976</cve> <!-- We do not use com.google.common.io.FileBackedOutputStream https://nvd.nist.gov/vuln/detail/CVE-2023-2976 -->
-  </suppress>
 </suppressions>
