@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
@@ -183,11 +184,11 @@ public class AuthorizationUtils
   public static void setRequestAuthorizationAttributeIfNeeded(final HttpServletRequest request)
   {
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
-      // do nothing
+      // do nothing since request allows unsecured paths to proceed. Generally, this is used for custom urls.
       return;
     }
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
-      throw new ISE("Request already had authorization check.");
+      throw DruidException.defensive("Request already had authorization check.");
     }
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
   }
