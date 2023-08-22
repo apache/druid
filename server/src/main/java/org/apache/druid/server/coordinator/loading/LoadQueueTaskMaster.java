@@ -99,7 +99,7 @@ public class LoadQueueTaskMaster
 
   public synchronized Map<String, LoadQueuePeon> getAllPeons()
   {
-    return loadManagementPeons;
+    return new HashMap<>(loadManagementPeons);
   }
 
   public synchronized LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
@@ -113,6 +113,13 @@ public class LoadQueueTaskMaster
    */
   public synchronized void resetPeonsForNewServers(List<ImmutableDruidServer> currentServers)
   {
+    if (!isLeader.get()) {
+      return;
+    }
+
+    final Set<String> oldServers = Sets.newHashSet(loadManagementPeons.keySet());
+
+    // Start peons for new servers
     for (ImmutableDruidServer server : currentServers) {
       loadManagementPeons.computeIfAbsent(server.getName(), serverName -> {
         LoadQueuePeon loadQueuePeon = createPeon(server);
@@ -122,11 +129,11 @@ public class LoadQueueTaskMaster
       });
     }
 
-    final Set<String> disappearedServers = Sets.newHashSet(loadManagementPeons.keySet());
+    // Remove peons for disappeared servers
     for (ImmutableDruidServer server : currentServers) {
-      disappearedServers.remove(server.getName());
+      oldServers.remove(server.getName());
     }
-    for (String name : disappearedServers) {
+    for (String name : oldServers) {
       log.debug("Removing LoadQueuePeon for disappeared server[%s].", name);
       LoadQueuePeon peon = loadManagementPeons.remove(name);
       peon.stop();
@@ -138,6 +145,9 @@ public class LoadQueueTaskMaster
     isLeader.set(true);
   }
 
+  /**
+   * Stops and removes all peons.
+   */
   public synchronized void onLeaderStop()
   {
     isLeader.set(false);
