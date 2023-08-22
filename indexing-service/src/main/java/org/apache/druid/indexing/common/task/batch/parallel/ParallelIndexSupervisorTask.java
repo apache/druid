@@ -1171,14 +1171,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) -> {
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
       final TaskLockType lockType = TaskLockType.valueOf(
           getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name())
       );
       switch (lockType) {
         case REPLACE:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToPublish)
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(
@@ -1186,16 +1186,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           );
         default:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+              SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
           );
       }
     };
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments,
-                                     Collections.emptySet(),
-                                     newSegments, annotateFunction,
-                                     null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());

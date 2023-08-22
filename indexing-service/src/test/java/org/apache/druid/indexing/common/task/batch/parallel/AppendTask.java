@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -72,7 +71,6 @@ public class AppendTask extends AbstractTask
   private final Granularity segmentGranularity;
   private final TaskLockType lockType;
   private final int priority;
-  private final int numPartitions;
   private final CountDownLatch readyLatch = new CountDownLatch(1);
   private final CountDownLatch runLatch = new CountDownLatch(1);
   private final CountDownLatch segmentAllocationComplete = new CountDownLatch(1);
@@ -89,8 +87,7 @@ public class AppendTask extends AbstractTask
       String dataSource,
       Interval interval,
       Granularity segmentGranularity,
-      Integer priority,
-      Integer numPartitions
+      Integer priority
   )
   {
     super(
@@ -103,7 +100,6 @@ public class AppendTask extends AbstractTask
     this.segmentGranularity = segmentGranularity;
     this.lockType = TaskLockType.APPEND;
     this.priority = priority == null ? 50 : priority;
-    this.numPartitions = numPartitions == null ? 1 : numPartitions;
   }
 
   @Override
@@ -209,40 +205,6 @@ public class AppendTask extends AbstractTask
 
   }
 
-  private Set<SegmentIdWithShardSpec> allocatePendingSegments(TaskToolbox toolbox) throws IOException
-  {
-    final Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>();
-
-    int sequenceId = 0;
-    for (int i = 0; i < numPartitions; i++) {
-      DateTime timestamp = interval.getStart();
-      while (true) {
-        SegmentAllocateAction allocateAction = new SegmentAllocateAction(
-            getDataSource(),
-            timestamp,
-            Granularities.NONE,
-            new DurationGranularity(interval.getEndMillis() - timestamp.getMillis(), null),
-            getId() + "_" + sequenceId++,
-            null,
-            false,
-            NumberedPartialShardSpec.instance(),
-            LockGranularity.TIME_CHUNK,
-            lockType
-        );
-        final SegmentIdWithShardSpec id = toolbox.getTaskActionClient().submit(allocateAction);
-        pendingSegments.add(
-            id
-        );
-        timestamp = id.getInterval().getEnd();
-        if (timestamp.equals(interval.getEnd())) {
-          break;
-        }
-      }
-
-    }
-    return pendingSegments;
-  }
-
   private Set<DataSegment> convertPendingSegments(Set<SegmentIdWithShardSpec> pendingSegments)
   {
     final Set<DataSegment> segments = new HashSet<>();
@@ -267,12 +229,11 @@ public class AppendTask extends AbstractTask
   private boolean publishSegments(TaskToolbox toolbox, Set<DataSegment> newSegments)
       throws Exception
   {
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
             SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
         );
     return publisher.publishSegments(
-        Collections.emptySet(),
         Collections.emptySet(),
         newSegments,
         Function.identity(),

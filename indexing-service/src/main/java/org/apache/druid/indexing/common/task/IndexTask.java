@@ -915,12 +915,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) -> {
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
       TaskLockType lockType = TaskLockType.valueOf(getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name()));
       switch (lockType) {
         case REPLACE:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToPublish)
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(
@@ -928,7 +928,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           );
         default:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+              SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
           );
       }
     };
@@ -1012,7 +1012,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final SegmentsAndCommitMetadata published =
           awaitPublish(driver.publishAll(
               inputSegments,
-              null,
               tombStones,
               publisher,
               annotateFunction

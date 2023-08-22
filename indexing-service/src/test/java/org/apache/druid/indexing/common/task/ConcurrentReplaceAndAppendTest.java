@@ -113,7 +113,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        null,
         null
     );
 
@@ -190,7 +189,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -235,7 +233,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -281,7 +278,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -329,7 +325,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -374,7 +369,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -421,7 +415,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -467,7 +460,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -512,7 +504,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -558,7 +549,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -606,7 +596,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -651,7 +640,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -698,7 +686,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -744,7 +731,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        null,
         null
     );
 
@@ -789,7 +775,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        null,
         null
     );
 
@@ -835,7 +820,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        null,
         null
     );
 
@@ -883,7 +867,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        null,
         null
     );
 
@@ -928,7 +911,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        null,
         null
     );
 
@@ -975,7 +957,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
-        null,
         null
     );
 
@@ -1019,7 +1000,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        null,
         null
     );
 
@@ -1028,7 +1008,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023/2024"),
         Granularities.YEAR,
-        null,
         null
     );
 
@@ -1081,7 +1060,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
-        null,
         null
     );
 
@@ -1090,7 +1068,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-07-01/2024-01-01"),
         Granularities.QUARTER,
-        null,
         null
     );
 
@@ -1099,7 +1076,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         "DS",
         Intervals.of("2023-12-01/2024-01-01"),
         Granularities.MONTH,
-        null,
         null
     );
 

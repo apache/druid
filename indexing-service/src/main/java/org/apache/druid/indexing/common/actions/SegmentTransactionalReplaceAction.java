@@ -54,31 +54,22 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
    * Set of segments to be inserted into metadata storage
    */
   private final Set<DataSegment> segments;
-  /**
-   * Set of segments to be dropped (mark unused) when new segments, {@link SegmentTransactionalReplaceAction#segments},
-   * are inserted into metadata storage.
-   */
-  @Nullable
-  private final Set<DataSegment> segmentsToBeDropped;
 
   public static SegmentTransactionalReplaceAction create(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      @Nullable Set<DataSegment> segmentsToBeDropped,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish);
+    return new SegmentTransactionalReplaceAction(segmentsToBeOverwritten, segmentsToPublish);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
       @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      @JsonProperty("segmentsToBeDropped") @Nullable Set<DataSegment> segmentsToBeDropped,
       @JsonProperty("segments") Set<DataSegment> segments
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
-    this.segmentsToBeDropped = segmentsToBeDropped;
     this.segments = ImmutableSet.copyOf(segments);
   }
 
@@ -87,13 +78,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   public Set<DataSegment> getSegmentsToBeOverwritten()
   {
     return segmentsToBeOverwritten;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Set<DataSegment> getSegmentsToBeDropped()
-  {
-    return segmentsToBeDropped;
   }
 
   @JsonProperty
@@ -129,7 +113,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitReplaceSegments(
                       segments,
-                      segmentsToBeDropped,
                       new HashSet<>(segmentToReplaceLock.values())
                   )
               )
@@ -178,7 +161,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     return "SegmentTransactionalReplaceAction{" +
            "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
-           ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +
            '}';
   }
 }

@@ -48,7 +48,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -211,13 +210,12 @@ public class ReplaceTask extends AbstractTask
   private boolean publishSegments(TaskToolbox toolbox, Set<DataSegment> oldSegments, Set<DataSegment> newSegments)
       throws Exception
   {
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+            SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToPublish)
         );
     return publisher.publishSegments(
         oldSegments,
-        Collections.emptySet(),
         newSegments,
         Function.identity(),
         null

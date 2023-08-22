@@ -277,6 +277,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
                 new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
                 null,
                 null,
+                null,
                 null
             ),
 

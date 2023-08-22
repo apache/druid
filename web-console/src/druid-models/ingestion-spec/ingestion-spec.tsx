@@ -911,7 +911,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
               >
                 consumerProperties
               </ExternalLink>
@@ -961,7 +961,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
               >
                 consumerProperties
               </ExternalLink>

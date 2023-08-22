@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.compact;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
@@ -29,25 +28,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This policy searches segments for compaction from the newest one to oldest one.
+ * Segment searching policy used by {@link CompactSegments}.
  */
-public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
+public interface CompactionSegmentSearchPolicy
 {
-  private final ObjectMapper objectMapper;
-
-  @Inject
-  public NewestSegmentFirstPolicy(ObjectMapper objectMapper)
-  {
-    this.objectMapper = objectMapper;
-  }
-
-  @Override
-  public CompactionSegmentIterator reset(
+  /**
+   * Reset the current states of this policy. This method should be called whenever iterating starts.
+   */
+  CompactionSegmentIterator reset(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> dataSources,
       Map<String, List<Interval>> skipIntervals
-  )
-  {
-    return new NewestSegmentFirstIterator(objectMapper, compactionConfigs, dataSources, skipIntervals);
-  }
+  );
 }

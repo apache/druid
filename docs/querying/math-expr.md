@@ -161,7 +161,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |remainder|remainder(x, y) returns the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) returns value that is closest in value to x and is equal to a mathematical integer|
 |round|round(x, y) returns the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x returns 0. If x is infinity, x will be converted to the nearest finite double. |
-|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns 0 or `null` if `druid.generic.useDefaultValueForNull=false` |
+|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns `null` or 0 if `druid.generic.useDefaultValueForNull=true` (legacy mode) |
 |scalb|scalb(d, sf) returns d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
 |signum|signum(x) returns the signum function of the argument x|
 |sin|sin(x) returns the trigonometric sine of an angle x|
@@ -183,8 +183,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
-| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
-| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
+| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode) if no matching elements exist in the array. |
+| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode) if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 | array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |

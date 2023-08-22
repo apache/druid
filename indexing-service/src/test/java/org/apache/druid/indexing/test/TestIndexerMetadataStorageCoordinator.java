@@ -160,8 +160,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
-      @Nullable Set<TaskLockInfo> taskLockInfos
+      Set<TaskLockInfo> taskLockInfos
   )
   {
     // Don't actually compare metadata, just do it!
@@ -183,7 +182,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
   )
