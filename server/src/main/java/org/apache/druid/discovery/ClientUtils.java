@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Utils class for shared client methods
@@ -40,7 +40,7 @@ public class ClientUtils
     Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
     List<DiscoveryDruidNode> discoveryDruidNodeList = Lists.newArrayList(iter);
     if (!discoveryDruidNodeList.isEmpty()) {
-      DiscoveryDruidNode node = discoveryDruidNodeList.get(new Random().nextInt(discoveryDruidNodeList.size()));
+      DiscoveryDruidNode node = discoveryDruidNodeList.get(ThreadLocalRandom.current().nextInt(discoveryDruidNodeList.size()));
       return StringUtils.format(
           "%s://%s",
           node.getDruidNode().getServiceScheme(),

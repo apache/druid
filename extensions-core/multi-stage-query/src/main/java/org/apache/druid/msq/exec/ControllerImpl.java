@@ -470,8 +470,8 @@ public class ControllerImpl implements Controller
         }
       }
     }
-    catch (Exception ignored) {
-      // Ignore and just write the task report.
+    catch (Exception e) {
+      log.warn(e, "Exception thrown during cleanup. Ignoring it and writing task report.");
     }
 
     try {

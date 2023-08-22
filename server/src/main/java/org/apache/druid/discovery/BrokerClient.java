@@ -19,14 +19,12 @@
 
 package org.apache.druid.discovery;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
@@ -47,7 +45,6 @@ import java.util.concurrent.ExecutionException;
  */
 public class BrokerClient
 {
-  private final Logger log = new Logger(BrokerClient.class);
   private static final int MAX_RETRIES = 5;
 
   private final HttpClient brokerHttpClient;
@@ -78,50 +75,30 @@ public class BrokerClient
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", host, urlPath)));
   }
 
-  public String sendQuery(Request request) throws Exception
+  public String sendQuery(final Request request) throws Exception
   {
-    StringFullResponseHandler responseHandler = new StringFullResponseHandler(StandardCharsets.UTF_8);
+    return RetryUtils.retry(
+        () -> {
+          Request newRequestUrl = getNewRequestUrl(request);
+          final StringFullResponseHolder fullResponseHolder = brokerHttpClient.go(newRequestUrl, new StringFullResponseHandler(StandardCharsets.UTF_8)).get();
 
-    for (int counter = 0; counter < MAX_RETRIES; counter++) {
-      final StringFullResponseHolder fullResponseHolder;
-
-      try {
-        try {
-          fullResponseHolder = brokerHttpClient.go(request, responseHandler).get();
-        }
-        catch (ExecutionException e) {
-          // Unwrap IOExceptions and ChannelExceptions, re-throw others
-          Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
-          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
-          throw new RE(e, "HTTP request to [%s] failed", request.getUrl());
-        }
-      }
-      catch (IOException | ChannelException ex) {
-        // can happen if the node is stopped.
-        log.warn(ex, "Request [%s] failed.", request.getUrl());
-        request = getNewRequestUrl(request);
-        continue;
-      }
-
-      HttpResponseStatus responseStatus = fullResponseHolder.getResponse().getStatus();
-      if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
-          || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
-        log.warn(
-            "Request [%s] received a [%s] response. Attempt [%s]/[%s]",
-            request.getUrl(),
-            responseStatus,
-            counter + 1,
-            MAX_RETRIES
-        );
-        request = getNewRequestUrl(request);
-      } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
-        log.warn("Request [%s] failed with error code [%s]", request.getUrl(), responseStatus.getCode());
-      } else {
-        return fullResponseHolder.getContent();
-      }
-    }
-
-    throw new IOE("Retries exhausted, couldn't fulfill request to [%s].", request.getUrl());
+          HttpResponseStatus responseStatus = fullResponseHolder.getResponse().getStatus();
+          if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
+              || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
+            throw new IOE(StringUtils.format("Request to broker failed due to failed response status: [%s]", responseStatus));
+          } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
+            throw new IOE(StringUtils.format("Request to broker failed due to failed response code: [%s]", responseStatus.getCode()));
+          }
+          return fullResponseHolder.getContent();
+        },
+        (throwable) -> {
+          if (throwable instanceof ExecutionException) {
+            return throwable.getCause() instanceof IOException || throwable.getCause() instanceof ChannelException;
+          }
+          return throwable instanceof IOE;
+        },
+        MAX_RETRIES
+    );
   }
 
   private Request getNewRequestUrl(Request oldRequest)
