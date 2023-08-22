@@ -73,8 +73,8 @@ public class StringLastVectorAggregator implements VectorAggregator
       if (objectsWhichMightBeStrings[i] == null) {
         continue;
       }
-      if (times[i] < lastTime) {
-        break;
+      if (times[i] <= lastTime) {
+        continue;
       }
       index = i;
       final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
