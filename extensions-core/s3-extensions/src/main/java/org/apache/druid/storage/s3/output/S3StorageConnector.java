@@ -108,7 +108,10 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       boolean cacheLocally
   )
   {
-    super(DOWNLOAD_PARALLELISM * DOWNLOAD_SIZE_BYTES, cacheLocally);
+    super(
+        cacheLocally ? config.getChunkSize() : DOWNLOAD_PARALLELISM * DOWNLOAD_SIZE_BYTES,
+        cacheLocally
+    );
     this.uploadChunkSize = uploadChunkSize;
     this.cacheLocally = cacheLocally;
     this.config = config;
