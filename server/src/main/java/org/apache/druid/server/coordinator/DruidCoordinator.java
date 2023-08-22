@@ -622,7 +622,7 @@ public class DruidCoordinator
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.addAll(makeCompactSegmentsDuty());
     }
-    if (null != killUnusedSegments) {
+    if (null != killUnusedSegments && getKillUnusedSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.addAll(makeKillUnusedSegmentsDuty());
     }
     log.debug(
