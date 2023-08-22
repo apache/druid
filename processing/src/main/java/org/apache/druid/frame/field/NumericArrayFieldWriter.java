@@ -16,6 +16,9 @@ public class NumericArrayFieldWriter implements FieldWriter
   public static final byte NULL_ROW = 0x00;
   public static final byte NON_NULL_ROW = 0x01;
 
+  // Different from NULL_ROW and NON_NULL_ROW bytes
+  public static final byte ARRAY_TERMINATOR = 0x02;
+
   private final ColumnValueSelector selector;
   private final NumericFieldWriterFactory writerFactory;
 
@@ -45,7 +48,7 @@ public class NumericArrayFieldWriter implements FieldWriter
   {
     if (selector.isNull()) {
       int requiredSize = Byte.BYTES;
-      if (requiredSize < maxSize) {
+      if (requiredSize > maxSize) {
         return -1;
       }
       memory.putByte(position, NULL_ROW);
@@ -55,7 +58,7 @@ public class NumericArrayFieldWriter implements FieldWriter
 
       if (list == null) {
         int requiredSize = Byte.BYTES;
-        if (requiredSize < maxSize) {
+        if (requiredSize > maxSize) {
           return -1;
         }
         memory.putByte(position, NULL_ROW);
@@ -117,23 +120,26 @@ public class NumericArrayFieldWriter implements FieldWriter
 
       NumericFieldWriter writer = writerFactory.get(columnValueSelector);
 
-
-      int requiredSize = Byte.BYTES + (writer.getNumericSize() + Byte.BYTES) * list.size();
+      int requiredSize = Byte.BYTES + (writer.getNumericSize() + Byte.BYTES) * list.size() + Byte.BYTES;
 
       if (requiredSize > maxSize) {
         return -1;
       }
 
-      memory.putByte(position, NON_NULL_ROW);
+      long offset = 0;
+      memory.putByte(position + offset, NON_NULL_ROW);
+      offset += Byte.BYTES;
 
       for (; index.get() < list.size(); index.incrementAndGet()) {
-        long offset = Byte.BYTES + (long) index.get() * (writer.getNumericSize() + Byte.BYTES);
         writer.writeTo(
             memory,
             position + offset,
             maxSize - offset
         );
+        offset += Byte.BYTES + writer.getNumericSize();
       }
+
+      memory.putByte(position + offset, ARRAY_TERMINATOR);
 
       return requiredSize;
 

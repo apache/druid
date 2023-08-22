@@ -24,7 +24,7 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 /**
  * Wraps a {@link BaseFloatColumnValueSelector} and writes field values.
- *
+ * <p>
  * See {@link FloatFieldReader} for format details.
  */
 public class FloatFieldWriter extends NumericFieldWriter
@@ -61,7 +61,8 @@ public class FloatFieldWriter extends NumericFieldWriter
     writeToMemory(memory, position, 0);
   }
 
-  private void writeToMemory(WritableMemory memory, long position, float value) {
+  private void writeToMemory(WritableMemory memory, long position, float value)
+  {
     memory.putInt(position, TransformUtils.transformFromFloat(value));
   }
 

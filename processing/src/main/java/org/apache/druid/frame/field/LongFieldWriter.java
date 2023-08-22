@@ -54,13 +54,13 @@ public class LongFieldWriter extends NumericFieldWriter
   @Override
   public void writeNullToMemory(WritableMemory memory, long position)
   {
-    memory.putLong(position + Byte.BYTES, 0);
+    writeToMemory(memory, position, 0);
 
   }
 
   private void writeToMemory(WritableMemory memory, long position, long value)
   {
-    memory.putLong(position + Byte.BYTES, TransformUtils.transformFromLong(value));
+    memory.putLong(position, TransformUtils.transformFromLong(value));
   }
 
 }

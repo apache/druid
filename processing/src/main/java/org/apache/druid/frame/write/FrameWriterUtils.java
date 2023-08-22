@@ -33,6 +33,8 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableIntArray;
+import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -177,7 +179,36 @@ public class FrameWriterUtils
       @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
   )
   {
-    return new ArrayList<>();
+    Object row = selector.getObject();
+    if(row == null) {
+      return null;
+    } else if (row instanceof Number) {
+      return Collections.singletonList((Number) row);
+    }
+
+    final List<Number> retVal = new ArrayList<>();
+
+    if (row instanceof List) {
+      for (int i = 0; i < ((List<?>) row).size(); i++) {
+        retVal.add((Number) ((List<?>) row).get(i));
+      }
+    } else if (row instanceof Object[]) {
+      for (Object value : (Object[]) row) {
+        retVal.add((Number) value);
+      }
+    } else if (row instanceof ComparableList) {
+      for (Object value : ((ComparableList) row).getDelegate()) {
+        retVal.add((Number) value);
+      }
+    } else if (row instanceof ComparableIntArray) {
+      for (int value : ((ComparableIntArray) row).getDelegate()) {
+        retVal.add(value);
+      }
+    } else {
+      throw new ISE("Unexpected type %s found", row.getClass().getName());
+    }
+
+    return retVal;
   }
 
   /**
