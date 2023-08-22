@@ -60,12 +60,14 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
     final boolean[] nullTimeVector = timeSelector.getNullVector();
     final boolean[] nullValueVector = valueSelector.getNullVector();
     firstTime = buf.getLong(position);
-    // check if nullVector is found or not
-    // the nullVector is null if no null values are found
-    // set the nullAbsent flag accordingly
 
-    // the time vector is already sorted so the first element would be the earliest
-    // traverse accordingly
+    // the time vector is already sorted
+    // if earliest is on the default time dimension
+    // but if earliest uses earliest_by it might use a secondary timestamp
+    // which is not sorted. For correctness, we need to go over all elements.
+    // A possible optimization here is to have 2 paths one for earliest where
+    // we can take advantage of the sorted nature of time
+    // and the earliest_by where we have to go over all elements.
     int index;
 
     for (int i = startRow; i < endRow; i++) {

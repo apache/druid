@@ -134,7 +134,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
   {
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && Types.isNumeric(capabilities)) {
+    if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
       VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new FloatFirstVectorAggregator(timeSelector, valueSelector);
