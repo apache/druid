@@ -31,10 +31,10 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -58,8 +58,7 @@ public class LoadQueueTaskMaster
   @GuardedBy("this")
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
 
-  @GuardedBy("this")
-  private final Map<String, LoadQueuePeon> loadManagementPeons = new HashMap<>();
+  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
 
   public LoadQueueTaskMaster(
       Provider<CuratorFramework> curatorFrameworkProvider,
@@ -97,12 +96,12 @@ public class LoadQueueTaskMaster
     }
   }
 
-  public synchronized Map<String, LoadQueuePeon> getAllPeons()
+  public Map<String, LoadQueuePeon> getAllPeons()
   {
-    return new HashMap<>(loadManagementPeons);
+    return loadManagementPeons;
   }
 
-  public synchronized LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
+  public LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
   {
     return loadManagementPeons.get(server.getName());
   }
@@ -110,6 +109,10 @@ public class LoadQueueTaskMaster
   /**
    * Creates a peon for each of the given servers, if it doesn't already exist and
    * removes peons for servers not present in the cluster anymore.
+   * <p>
+   * This method must not run concurrently with {@link #onLeaderStart()} and
+   * {@link #onLeaderStop()} so that there are no stray peons if the Coordinator
+   * is not leader anymore.
    */
   public synchronized void resetPeonsForNewServers(List<ImmutableDruidServer> currentServers)
   {
