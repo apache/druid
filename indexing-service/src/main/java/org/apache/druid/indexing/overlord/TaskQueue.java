@@ -655,6 +655,7 @@ public class TaskQueue
     }
 
     final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
+
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {

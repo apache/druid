@@ -265,13 +265,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_shutdown_withoutExistingTask()
-  {
-    runner.shutdown(task.getId(), "");
-  }
-
-  @Test
-  public void test_shutdown_withExistingTask()
+  public void test_shutdown_withExistingTask_removesTask_fromMap()
   {
     KubernetesWorkItem workItem = new KubernetesWorkItem(task, null) {
       @Override
@@ -281,7 +275,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
 
     runner.tasks.put(task.getId(), workItem);
+    runner.shutdown(task.getId(), "");
+    Assert.assertTrue(runner.tasks.isEmpty());
+  }
 
+  @Test
+  public void test_shutdown_withoutExistingTask()
+  {
     runner.shutdown(task.getId(), "");
   }
 
