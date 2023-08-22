@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -453,13 +454,24 @@ public class ControllerImpl implements Controller
       }
     }
 
-    cleanUpDurableStorageIfNeeded();
 
-    if (queryKernel != null && queryKernel.isSuccess()) {
-      if (segmentLoadWaiter != null) {
-        // If successful and there are segments created, segmentLoadWaiter should wait for them to become available.
-        segmentLoadWaiter.waitForSegmentsToLoad();
+    try {
+      final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
+      for (final TaskLock lock : locks) {
+        context.taskActionClient().submit(new LockReleaseAction(lock.getInterval()));
       }
+
+      cleanUpDurableStorageIfNeeded();
+
+      if (queryKernel != null && queryKernel.isSuccess()) {
+        if (segmentLoadWaiter != null) {
+          // If successful and there are segments created, segmentLoadWaiter should wait for them to become available.
+          segmentLoadWaiter.waitForSegmentsToLoad();
+        }
+      }
+    }
+    catch (Exception ignored) {
+      // Ignore and just write the task report.
     }
 
     try {

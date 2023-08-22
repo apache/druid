@@ -83,7 +83,6 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.exec.SegmentLoadWaiter;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -486,8 +485,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
-    SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(1, 0, 0, 0); // TODO?
-    doReturn(StringUtils.fromUtf8(objectMapper.writeValueAsBytes(loadStatus))).when(brokerClient).sendQuery(any());
 
     testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
     indexingServiceClient = new MSQTestOverlordServiceClient(

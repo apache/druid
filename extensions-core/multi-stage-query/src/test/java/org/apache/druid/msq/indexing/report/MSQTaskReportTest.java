@@ -98,6 +98,7 @@ public class MSQTaskReportTest
         200L,
         100,
         80,
+        30,
         50,
         10,
         0
@@ -161,6 +162,7 @@ public class MSQTaskReportTest
         200L,
         100,
         80,
+        30,
         50,
         10,
         0
@@ -209,6 +211,7 @@ public class MSQTaskReportTest
         200L,
         100,
         80,
+        30,
         50,
         10,
         0

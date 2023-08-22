@@ -59,7 +59,7 @@ public class SegmentLoadWaiterTest
       public String answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
-        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, 0,5 - timesInvoked, 0);
+        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, timesInvoked, 0, 5 - timesInvoked, 0);
         return new ObjectMapper().writeValueAsString(loadStatus);
       }
     }).when(brokerClient).sendQuery(any());
@@ -82,7 +82,7 @@ public class SegmentLoadWaiterTest
       public String answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
-        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, 0,5 - timesInvoked, 0);
+        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, timesInvoked, 0, 5 - timesInvoked, 0);
         return new ObjectMapper().writeValueAsString(loadStatus);
       }
     }).when(brokerClient).sendQuery(any());

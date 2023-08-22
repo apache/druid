@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Class that periodically checks with the broker if all the segments generated are loaded by querying the sys table
@@ -58,10 +59,10 @@ import java.util.concurrent.TimeUnit;
 public class SegmentLoadWaiter
 {
   private static final Logger log = new Logger(SegmentLoadWaiter.class);
-  private static final long INITIAL_SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long TIMEOUT_DURATION_MILLIS = TimeUnit.MINUTES.toMillis(10);
   private static final String LOAD_QUERY = "SELECT COUNT(*) AS usedSegments,\n"
+                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor > 0) AS hotSegments,\n"
                                            + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor = 0) AS coldSegments,\n"
                                            + "COUNT(*) FILTER (WHERE is_available = 0 AND is_published = 1 AND replication_factor != 0) AS pendingSegments,\n"
                                            + "COUNT(*) FILTER (WHERE replication_factor = -1) AS unknownSegments\n"
@@ -76,7 +77,7 @@ public class SegmentLoadWaiter
   private final Set<String> versionsToAwait;
   private final int totalSegmentsGenerated;
   private final boolean doWait;
-  private volatile SegmentLoadWaiterStatus status;
+  private final AtomicReference<SegmentLoadWaiterStatus> status;
 
   public SegmentLoadWaiter(
       BrokerClient brokerClient,
@@ -93,7 +94,7 @@ public class SegmentLoadWaiter
     this.versionsToAwait = new TreeSet<>(versionsToAwait);
     this.versionToLoadStatusMap = new HashMap<>();
     this.totalSegmentsGenerated = totalSegmentsGenerated;
-    this.status = new SegmentLoadWaiterStatus(State.INIT, null, 0, totalSegmentsGenerated, 0, 0, 0, totalSegmentsGenerated);
+    this.status = new AtomicReference<>(new SegmentLoadWaiterStatus(State.INIT, null, 0, totalSegmentsGenerated, 0, 0, 0, 0, totalSegmentsGenerated));
     this.doWait = doWait;
   }
 
@@ -109,13 +110,9 @@ public class SegmentLoadWaiter
   public void waitForSegmentsToLoad()
   {
     DateTime startTime = DateTimes.nowUtc();
+    boolean hasAnySegmentBeenLoaded = false;
 
     try {
-      // Sleep for a short duration to allow the segments that were just created to reflect in broker queries.
-      // This avoids a race condition where the broker returns an empty response as it is not yet aware of the new segments
-      // yet. This cannot be differentiated from the case where the segments have been dropped due to load rules already.
-      waitIfNeeded(INITIAL_SLEEP_DURATION_MILLIS);
-
       while (!versionsToAwait.isEmpty()) {
         // Check the timeout and exit if exceeded.
         long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
@@ -135,8 +132,10 @@ public class SegmentLoadWaiter
           VersionLoadStatus loadStatus = fetchLoadStatusForVersion(version);
           versionToLoadStatusMap.put(version, loadStatus);
 
+          hasAnySegmentBeenLoaded = hasAnySegmentBeenLoaded || loadStatus.getUsedSegments() > 0;
+
           // If loading is done for this stage, remove it from future loops.
-          if (loadStatus.isLoadingComplete()) {
+          if (hasAnySegmentBeenLoaded && loadStatus.isLoadingComplete()) {
             iterator.remove();
           }
         }
@@ -173,16 +172,29 @@ public class SegmentLoadWaiter
    */
   private void updateStatus(State state, DateTime startTime)
   {
-    int pendingSegmentCount = 0, usedSegmentsCount = 0, coldSegmentCount = 0, unknownSegmentCount = 0;
+    int pendingSegmentCount = 0, usedSegmentsCount = 0, hotSegmentCount = 0, coldSegmentCount = 0, unknownSegmentCount = 0;
     for (Map.Entry<String, VersionLoadStatus> entry : versionToLoadStatusMap.entrySet()) {
       usedSegmentsCount += entry.getValue().getUsedSegments();
+      hotSegmentCount += entry.getValue().getHotSegments();
       coldSegmentCount += entry.getValue().getColdSegments();
       unknownSegmentCount += entry.getValue().getUnknownSegments();
       pendingSegmentCount += entry.getValue().getPendingSegments();
     }
 
     long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
-    status = new SegmentLoadWaiterStatus(state, startTime, runningMillis, totalSegmentsGenerated, usedSegmentsCount, coldSegmentCount, pendingSegmentCount, unknownSegmentCount);
+    status.set(
+        new SegmentLoadWaiterStatus(
+            state,
+            startTime,
+            runningMillis,
+            totalSegmentsGenerated,
+            usedSegmentsCount,
+            hotSegmentCount,
+            coldSegmentCount,
+            pendingSegmentCount,
+            unknownSegmentCount
+        )
+    );
   }
 
   /**
@@ -201,7 +213,7 @@ public class SegmentLoadWaiter
 
     if (response.trim().isEmpty()) {
       // If no segments are returned for a version, all segments have been dropped by a drop rule.
-      return new VersionLoadStatus(0, 0, 0, 0);
+      return new VersionLoadStatus(0, 0, 0, 0, 0);
     } else {
       return objectMapper.readValue(response, VersionLoadStatus.class);
     }
@@ -212,7 +224,7 @@ public class SegmentLoadWaiter
    */
   public SegmentLoadWaiterStatus status()
   {
-    return status;
+    return status.get();
   }
 
   public static class SegmentLoadWaiterStatus
@@ -222,6 +234,7 @@ public class SegmentLoadWaiter
     private final long duration;
     private final int totalSegments;
     private final int usedSegments;
+    private final int hotSegments;
     private final int coldSegments;
     private final int pendingSegments;
     private final int unknownSegments;
@@ -233,6 +246,7 @@ public class SegmentLoadWaiter
         @JsonProperty("duration") long duration,
         @JsonProperty("totalSegments") int totalSegments,
         @JsonProperty("usedSegments") int usedSegments,
+        @JsonProperty("hotSegments") int hotSegments,
         @JsonProperty("coldSegments") int coldSegments,
         @JsonProperty("pendingSegments") int pendingSegments,
         @JsonProperty("unknownSegments") int unknownSegments
@@ -243,6 +257,7 @@ public class SegmentLoadWaiter
       this.duration = duration;
       this.totalSegments = totalSegments;
       this.usedSegments = usedSegments;
+      this.hotSegments = hotSegments;
       this.coldSegments = coldSegments;
       this.pendingSegments = pendingSegments;
       this.unknownSegments = unknownSegments;
@@ -281,6 +296,12 @@ public class SegmentLoadWaiter
     }
 
     @JsonProperty
+    public int getHotSegments()
+    {
+      return hotSegments;
+    }
+
+    @JsonProperty
     public int getColdSegments()
     {
       return coldSegments;
@@ -311,6 +332,7 @@ public class SegmentLoadWaiter
   public static class VersionLoadStatus
   {
     private final int usedSegments;
+    private final int hotSegments;
     private final int coldSegments;
     private final int pendingSegments;
     private final int unknownSegments;
@@ -318,12 +340,14 @@ public class SegmentLoadWaiter
     @JsonCreator
     public VersionLoadStatus(
         @JsonProperty("usedSegments") int usedSegments,
+        @JsonProperty("hotSegments") int hotSegments,
         @JsonProperty("coldSegments") int coldSegments,
         @JsonProperty("pendingSegments") int pendingSegments,
         @JsonProperty("unknownSegments") int unknownSegments
     )
     {
       this.usedSegments = usedSegments;
+      this.hotSegments = hotSegments;
       this.coldSegments = coldSegments;
       this.pendingSegments = pendingSegments;
       this.unknownSegments = unknownSegments;
@@ -333,6 +357,12 @@ public class SegmentLoadWaiter
     public int getUsedSegments()
     {
       return usedSegments;
+    }
+
+    @JsonProperty
+    public int getHotSegments()
+    {
+      return hotSegments;
     }
 
     @JsonProperty
@@ -356,7 +386,7 @@ public class SegmentLoadWaiter
     @JsonIgnore
     public boolean isLoadingComplete()
     {
-      return pendingSegments == 0;
-    } // TODO: change?
+      return pendingSegments == 0 && (usedSegments == hotSegments + coldSegments);
+    }
   }
 }
