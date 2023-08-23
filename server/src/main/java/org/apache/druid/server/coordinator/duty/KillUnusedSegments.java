@@ -19,9 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -41,7 +38,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -60,7 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
-public class KillUnusedSegments implements CoordinatorCustomDuty
+public class KillUnusedSegments implements CoordinatorDuty
 {
   public static final String KILL_TASK_TYPE = "kill";
   public static final String TASK_ID_PREFIX = "coordinator-issued";
@@ -86,18 +82,16 @@ public class KillUnusedSegments implements CoordinatorCustomDuty
   private final OverlordClient overlordClient;
 
   @Inject
-  @JsonCreator
   public KillUnusedSegments(
-      @JacksonInject SegmentsMetadataManager segmentsMetadataManager,
-      @JacksonInject OverlordClient overlordClient,
-      @JacksonInject DruidCoordinatorConfig config,
-      @JsonProperty("dutyPeriod") Duration dutyPeriod
+      SegmentsMetadataManager segmentsMetadataManager,
+      OverlordClient overlordClient,
+      DruidCoordinatorConfig config
   )
   {
     this.period = config.getCoordinatorKillPeriod().getMillis();
     Preconditions.checkArgument(
-         this.period >= dutyPeriod.getMillis(),
-        StringUtils.format("coordinator kill period must be greater than the duty period [%s]", dutyPeriod)
+        this.period > config.getCoordinatorIndexingPeriod().getMillis(),
+        "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
     );
 
     this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();

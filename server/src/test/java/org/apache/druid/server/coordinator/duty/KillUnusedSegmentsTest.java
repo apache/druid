@@ -156,8 +156,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
-        config,
-        config.getCoordinatorIndexingPeriod()
+        config
     );
   }
 
@@ -186,8 +185,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
-        config,
-        config.getCoordinatorIndexingPeriod()
+        config
     );
 
     // No unused segment is older than the retention period
@@ -220,8 +218,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
-        config,
-        config.getCoordinatorIndexingPeriod()
+        config
     );
 
     // Segments upto 1 day in the future are killed
@@ -243,8 +240,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
-        config,
-        config.getCoordinatorIndexingPeriod()
+        config
     );
 
     // All future and past unused segments are killed
@@ -266,8 +262,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
-        config,
-        config.getCoordinatorIndexingPeriod()
+        config
     );
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
@@ -287,8 +282,7 @@ public class KillUnusedSegmentsTest
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
-        config,
-        config.getCoordinatorIndexingPeriod()
+        config
     );
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);

@@ -46,7 +46,6 @@ import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -70,7 +69,6 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
-import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
@@ -157,7 +155,6 @@ public class DruidCoordinator
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
-  private final KillUnusedSegments killUnusedSegments;
 
   private volatile boolean started = false;
 
@@ -226,7 +223,6 @@ public class DruidCoordinator
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
-    this.killUnusedSegments = initializeKillUnusedSegmentsDuty();
     this.loadQueueManager = loadQueueManager;
   }
 
@@ -622,9 +618,6 @@ public class DruidCoordinator
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.addAll(makeCompactSegmentsDuty());
     }
-    if (null != killUnusedSegments && getKillUnusedSegmentsDutyFromCustomGroups().isEmpty()) {
-      duties.addAll(makeKillUnusedSegmentsDuty());
-    }
     log.debug(
         "Initialized indexing service duties [%s].",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
@@ -659,24 +652,6 @@ public class DruidCoordinator
     }
   }
 
-  @Nullable
-  @VisibleForTesting
-  KillUnusedSegments initializeKillUnusedSegmentsDuty()
-  {
-    if (!config.getAutoKillEnabled()) {
-      return null;
-    }
-    List<KillUnusedSegments> killUnusedSegmentsDutyFromCustomGroups = getKillUnusedSegmentsDutyFromCustomGroups();
-    if (killUnusedSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new KillUnusedSegments(segmentsMetadataManager, overlordClient, config, config.getCoordinatorIndexingPeriod());
-    } else {
-      if (killUnusedSegmentsDutyFromCustomGroups.size() > 1) {
-        throw new IAE("More than one KillUnusedSegments duty is configured in the Coordinator Custom Duty Group.");
-      }
-      return killUnusedSegmentsDutyFromCustomGroups.get(0);
-    }
-  }
-
   @VisibleForTesting
   List<CompactSegments> getCompactSegmentsDutyFromCustomGroups()
   {
@@ -689,26 +664,9 @@ public class DruidCoordinator
                            .collect(Collectors.toList());
   }
 
-  @VisibleForTesting
-  List<KillUnusedSegments> getKillUnusedSegmentsDutyFromCustomGroups()
-  {
-    return customDutyGroups.getCoordinatorCustomDutyGroups()
-        .stream()
-        .flatMap(coordinatorCustomDutyGroup ->
-            coordinatorCustomDutyGroup.getCustomDutyList().stream())
-        .filter(duty -> duty instanceof KillUnusedSegments)
-        .map(duty -> (KillUnusedSegments) duty)
-        .collect(Collectors.toList());
-  }
-
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
     return ImmutableList.of(compactSegments);
-  }
-
-  private List<CoordinatorDuty> makeKillUnusedSegmentsDuty()
-  {
-    return ImmutableList.of(killUnusedSegments);
   }
 
   private class DutiesRunnable implements Runnable

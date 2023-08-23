@@ -43,10 +43,6 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1H")
   public abstract Duration getCoordinatorMetadataStoreManagementPeriod();
 
-  @Config("druid.coordinator.kill.on")
-  @Default("false")
-  public abstract Boolean getAutoKillEnabled();
-
   @Config("druid.coordinator.kill.period")
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();

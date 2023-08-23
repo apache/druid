@@ -28,7 +28,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorIndexingPeriod;
   private final Duration metadataStoreManagementPeriod;
   private final Duration loadTimeoutDelay;
-  private final Boolean autoKillEnabled;
   private final Duration coordinatorKillPeriod;
   private final Duration coordinatorKillDurationToRetain;
   private final Duration coordinatorSupervisorKillPeriod;
@@ -55,7 +54,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorIndexingPeriod,
       Duration metadataStoreManagementPeriod,
       Duration loadTimeoutDelay,
-      Boolean autoKillEnabled,
       Duration coordinatorKillPeriod,
       Duration coordinatorKillDurationToRetain,
       Duration coordinatorSupervisorKillPeriod,
@@ -82,7 +80,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorIndexingPeriod = coordinatorIndexingPeriod;
     this.metadataStoreManagementPeriod = metadataStoreManagementPeriod;
     this.loadTimeoutDelay = loadTimeoutDelay;
-    this.autoKillEnabled = autoKillEnabled;
     this.coordinatorKillPeriod = coordinatorKillPeriod;
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
     this.coordinatorSupervisorKillPeriod = coordinatorSupervisorKillPeriod;
@@ -126,12 +123,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorMetadataStoreManagementPeriod()
   {
     return metadataStoreManagementPeriod;
-  }
-
-  @Override
-  public Boolean getAutoKillEnabled()
-  {
-    return autoKillEnabled;
   }
 
   @Override
@@ -260,7 +251,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final Duration DEFAULT_COORDINATOR_PERIOD = new Duration("PT60s");
     private static final Duration DEFAULT_COORDINATOR_INDEXING_PERIOD = new Duration("PT1800s");
     private static final Duration DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD = new Duration("PT3600s");
-    private static final Boolean DEFAULT_AUTO_KILL_ENABLED = false;
     private static final Duration DEFAULT_COORDINATOR_KILL_PERIOD = new Duration("PT86400s");
     private static final Duration DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAION = new Duration("PT7776000s");
     private static final boolean DEFAULT_COORDINATOR_KILL_IGNORE_DURATION_TO_RETAIN = false;
@@ -287,7 +277,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Duration coordinatorPeriod;
     private Duration coordinatorIndexingPeriod;
     private Duration metadataStoreManagementPeriod;
-    private Boolean autoKillEnabled;
     private Duration coordinatorKillPeriod;
     private Duration coordinatorKillDurationToRetain;
     private Boolean coordinatorKillIgnoreDurationToRetain;
@@ -334,12 +323,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     public Builder withMetadataStoreManagementPeriod(Duration metadataStoreManagementPeriod)
     {
       this.metadataStoreManagementPeriod = metadataStoreManagementPeriod;
-      return this;
-    }
-
-    public Builder withAutoKillEnabled(Boolean autoKillEnabled)
-    {
-      this.autoKillEnabled = autoKillEnabled;
       return this;
     }
 
@@ -471,7 +454,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           coordinatorIndexingPeriod == null ? DEFAULT_COORDINATOR_INDEXING_PERIOD : coordinatorIndexingPeriod,
           metadataStoreManagementPeriod == null ? DEFAULT_METADATA_STORE_MANAGEMENT_PERIOD : metadataStoreManagementPeriod,
           loadTimeoutDelay == null ? DEFAULT_LOAD_TIMEOUT_DELAY : loadTimeoutDelay,
-          autoKillEnabled == null ? DEFAULT_AUTO_KILL_ENABLED : autoKillEnabled,
           coordinatorKillPeriod == null ? DEFAULT_COORDINATOR_KILL_PERIOD : coordinatorKillPeriod,
           coordinatorKillDurationToRetain == null ? DEFAULT_COORDINATOR_KILL_DURATION_TO_RETAION : coordinatorKillDurationToRetain,
           coordinatorSupervisorKillPeriod == null ? DEFAULT_COORDINATOR_SUPERVISOR_KILL_PERIOD : coordinatorSupervisorKillPeriod,
