@@ -120,7 +120,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   public void setUpIngestionTestBase() throws IOException
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    baseDir = temporaryFolder.newFolder("baseWorkDir");
+    temporaryFolder.create();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
