@@ -56,7 +56,7 @@ topics and use a simple set of Python wrappers around the underlying REST API. T
 wrappers reside in the `druidapi` package within the notebooks directory. While the package
 can be used in any Python program, the key purpose, at present, is to support these
 notebooks. See
-[Introduction to the Druid Python API](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/Python_API_Tutorial.ipynb)
+[Introduction to the Druid Python API](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/notebooks/01-introduction/01-druidapi-package-intro.ipynb)
 for an overview of the Python API.
 
 The `druidapi` package is already installed in the custom Jupyter Docker container for Druid tutorials.

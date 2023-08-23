@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -51,7 +50,6 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
@@ -588,55 +586,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.verify(metadataRuleManager);
   }
 
-  @Test
-  public void testBalancerThreadNumber()
-  {
-    ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
-    EasyMock.replay(scheduledExecutorFactory);
-
-    DruidCoordinator c = new DruidCoordinator(
-        druidCoordinatorConfig,
-        createMetadataManager(EasyMock.createNiceMock(JacksonConfigManager.class)),
-        null,
-        null,
-        scheduledExecutorFactory,
-        null,
-        loadQueueTaskMaster,
-        null,
-        null,
-        null,
-        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        new RandomBalancerStrategyFactory(),
-        null,
-        null,
-        null
-    );
-
-    // before initialization
-    Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
-    Assert.assertNull(c.getBalancerExec());
-
-    // first initialization
-    c.createBalancerStrategy(5);
-    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService firstExec = c.getBalancerExec();
-    Assert.assertNotNull(firstExec);
-
-    // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
-    c.createBalancerStrategy(5);
-    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService secondExec = c.getBalancerExec();
-    Assert.assertNotNull(secondExec);
-    Assert.assertSame(firstExec, secondExec);
-
-    // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
-    c.createBalancerStrategy(10);
-    Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService thirdExec = c.getBalancerExec();
-    Assert.assertNotNull(thirdExec);
-    Assert.assertNotSame(secondExec, thirdExec);
-    Assert.assertNotSame(firstExec, thirdExec);
-  }
 
   @Test
   public void testCompactSegmentsDutyWhenCustomDutyGroupEmpty()
@@ -756,6 +705,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testCoordinatorCustomDutyGroupsRunAsExpected() throws Exception
   {
     // Some nessesary setup to start the Coordinator
+    setupPeons(Collections.emptyMap());
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
@@ -794,10 +744,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedSegments())
             .andReturn(Collections.singletonList(dataSegment)).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
-    EasyMock.replay(serverInventoryView);
+    EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
 
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
@@ -927,7 +876,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
   private void setupPeons(Map<String, LoadQueuePeon> peonMap)
   {
-    EasyMock.expect(loadQueueTaskMaster.giveMePeon(EasyMock.anyObject())).andAnswer(
+    loadQueueTaskMaster.resetPeonsForNewServers(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    loadQueueTaskMaster.onLeaderStart();
+    EasyMock.expectLastCall().anyTimes();
+    loadQueueTaskMaster.onLeaderStop();
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.expect(loadQueueTaskMaster.getAllPeons()).andReturn(peonMap).anyTimes();
+
+    EasyMock.expect(loadQueueTaskMaster.getPeonForServer(EasyMock.anyObject())).andAnswer(
         () -> peonMap.get(((ImmutableDruidServer) EasyMock.getCurrentArgument(0)).getName())
     ).anyTimes();
   }

@@ -1356,7 +1356,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     groupId,
                     taskId,
                     currentStats
-                )
+                ),
+                MoreExecutors.directExecutor()
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1374,7 +1375,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       groupId,
                       taskId,
                       currentStats
-                  )
+                  ),
+                  MoreExecutors.directExecutor()
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1428,7 +1430,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     groupId,
                     taskId,
                     taskErrors
-                )
+                ),
+                MoreExecutors.directExecutor()
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1446,7 +1449,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       groupId,
                       taskId,
                       taskErrors
-                  )
+                  ),
+                  MoreExecutors.directExecutor()
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -2488,7 +2492,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             return null;
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -3207,7 +3212,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   {
                     return null;
                   }
-                }
+                },
+                MoreExecutors.directExecutor()
             );
           }
 
@@ -3425,7 +3431,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             log.warn("All tasks in group [%d] failed to publish, killing all tasks for these partitions", groupId);
           } else {
             log.makeAlert(
-                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]!",
+                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]! "
+                + "Check metrics and logs to see if the creation, publish or handoff"
+                + " of any segment is taking longer than usual.",
                 group.taskIds(),
                 groupId,
                 ioConfig.getCompletionTimeout()
@@ -3944,7 +3952,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               return null;
-            }
+            },
+            MoreExecutors.directExecutor()
         )
     ).collect(Collectors.toList());
 

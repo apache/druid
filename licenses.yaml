@@ -364,9 +364,29 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 16.0.1
+version: 31.1-jre
 libraries:
   - com.google.guava: guava
+
+---
+
+name: Failureaccess
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - com.google.guava: failureaccess
+
+---
+
+name: j2objc
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 

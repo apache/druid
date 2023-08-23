@@ -353,18 +353,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       }
 
       @Override
-      protected DataStoreMetadataUpdateResult dropSegmentsWithHandle(
-          final Handle handle,
-          final Collection<DataSegment> segmentsToDrop,
-          final String dataSource
-      )
-      {
-        // Count number of times this method is called.
-        segmentTableDropUpdateCounter.getAndIncrement();
-        return super.dropSegmentsWithHandle(handle, segmentsToDrop, dataSource);
-      }
-
-      @Override
       public int getSqlMetadataMaxRetry()
       {
         return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
@@ -560,7 +548,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert first segment.
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -579,7 +566,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert second segment.
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
-        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -636,7 +622,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert first segment.
     final SegmentPublishResult result1 = failOnceCoordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -658,7 +643,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     // Insert second segment.
     final SegmentPublishResult result2 = failOnceCoordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
-        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -689,7 +673,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -703,115 +686,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testTransactionalAnnounceFailSegmentDropFailWithoutRetry() throws IOException
-  {
-    insertUsedSegments(ImmutableSet.of(existingSegment1, existingSegment2));
-
-    Assert.assertEquals(
-        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
-    );
-
-    DataSegment dataSegmentBar = DataSegment.builder()
-                                            .dataSource("bar")
-                                            .interval(Intervals.of("2001/P1D"))
-                                            .shardSpec(new LinearShardSpec(1))
-                                            .version("b")
-                                            .size(0)
-                                            .build();
-    Set<DataSegment> dropSegments = ImmutableSet.of(existingSegment1, existingSegment2, dataSegmentBar);
-
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
-        SEGMENTS,
-        dropSegments,
-        null,
-        null
-    );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Not dropping segments, " +
-        "as not all segments belong to the datasource[fooDataSource]."), result1);
-
-    // Should only be tried once. Since dropSegmentsWithHandle will return FAILURE (not TRY_AGAIN) as set of
-    // segments to drop contains more than one datasource.
-    Assert.assertEquals(1, segmentTableDropUpdateCounter.get());
-
-    Assert.assertEquals(
-        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
-    );
-  }
-
-  @Test
-  public void testTransactionalAnnounceSucceedWithSegmentDrop() throws IOException
-  {
-    insertUsedSegments(ImmutableSet.of(existingSegment1, existingSegment2));
-
-    Assert.assertEquals(
-        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
-    );
-
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
-        SEGMENTS,
-        ImmutableSet.of(existingSegment1, existingSegment2),
-        null,
-        null
-    );
-
-    Assert.assertEquals(SegmentPublishResult.ok(SEGMENTS), result1);
-
-    for (DataSegment segment : SEGMENTS) {
-      Assert.assertArrayEquals(
-          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
-          derbyConnector.lookup(
-              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-              "id",
-              "payload",
-              segment.getId().toString()
-          )
-      );
-    }
-
-    Assert.assertEquals(
-        ImmutableList.of(defaultSegment.getId().toString(), defaultSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
-    );
-  }
-
-  @Test
-  public void testTransactionalAnnounceFailSegmentDropFailWithRetry() throws IOException
-  {
-    insertUsedSegments(ImmutableSet.of(existingSegment1, existingSegment2));
-
-    Assert.assertEquals(
-        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
-    );
-
-    Set<DataSegment> dropSegments = ImmutableSet.of(existingSegment1, defaultSegment4);
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
-        SEGMENTS,
-        dropSegments,
-        null,
-        null
-    );
-    Assert.assertEquals(SegmentPublishResult.fail(
-        "org.apache.druid.metadata.RetryTransactionException: Failed to drop some segments. " +
-            "Only 1 could be dropped out of 2. Trying again"), result1);
-
-    Assert.assertEquals(MAX_SQL_MEATADATA_RETRY_FOR_TEST, segmentTableDropUpdateCounter.get());
-
-    Assert.assertEquals(
-        ImmutableList.of(existingSegment1.getId().toString(), existingSegment2.getId().toString()),
-        retrieveUsedSegmentIds()
-    );
-  }
-
-  @Test
   public void testTransactionalAnnounceFailDbNotNullWantNull() throws IOException
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -819,7 +697,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -837,7 +714,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -845,7 +721,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
-        ImmutableSet.of(),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
@@ -1393,7 +1268,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -2305,51 +2179,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testDropSegmentsWithHandleForSegmentThatExist()
-  {
-    try (Handle handle = derbyConnector.getDBI().open()) {
-      Assert.assertTrue(insertUsedSegments(ImmutableSet.of(defaultSegment)));
-      List<String> usedSegments = retrieveUsedSegmentIds();
-      Assert.assertEquals(1, usedSegments.size());
-      Assert.assertEquals(defaultSegment.getId().toString(), usedSegments.get(0));
-
-      // Try drop segment
-      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(
-          handle,
-          ImmutableSet.of(defaultSegment),
-          defaultSegment.getDataSource()
-      );
-
-      Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.SUCCESS, result);
-      usedSegments = retrieveUsedSegmentIds();
-      Assert.assertEquals(0, usedSegments.size());
-    }
-  }
-
-  @Test
-  public void testDropSegmentsWithHandleForSegmentThatDoesNotExist()
-  {
-    try (Handle handle = derbyConnector.getDBI().open()) {
-      // Try drop segment
-      IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult result = coordinator.dropSegmentsWithHandle(
-          handle,
-          ImmutableSet.of(defaultSegment),
-          defaultSegment.getDataSource()
-      );
-      Assert.assertEquals(new IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult(
-          true,
-          true,
-          "Failed to drop some segments. Only 0 could be dropped out of 1. Trying again"),
-          result);
-    }
-  }
-
-  @Test
   public void testRemoveDataSourceMetadataOlderThanDatasourceActiveShouldNotBeDeleted() throws Exception
   {
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -2378,7 +2211,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
@@ -2404,7 +2236,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
-        ImmutableSet.of(),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
     );
