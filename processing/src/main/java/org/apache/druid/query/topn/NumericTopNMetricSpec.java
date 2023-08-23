@@ -24,13 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
-import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 
@@ -135,12 +133,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] metricBytes = StringUtils.toUtf8(metric);
-
-    return ByteBuffer.allocate(1 + metricBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(metricBytes)
-                     .array();
+    return new byte[] {CACHE_TYPE_ID};
   }
 
   @Override
