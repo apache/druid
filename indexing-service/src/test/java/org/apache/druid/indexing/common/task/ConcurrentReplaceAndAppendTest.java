@@ -52,7 +52,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -1234,12 +1233,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     @Override
     public TaskToolbox build(TaskConfig config, Task task)
     {
-      try {
-        return createTaskToolbox(config, task);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+      return createTaskToolbox(config, task);
     }
   }
 }
