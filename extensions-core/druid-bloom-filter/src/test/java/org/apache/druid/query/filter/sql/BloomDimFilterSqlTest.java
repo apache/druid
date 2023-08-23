@@ -93,6 +93,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     }
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     String base64 = StringUtils.encodeBase64String(bytes);
+    skipVectorize();
 
     // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(

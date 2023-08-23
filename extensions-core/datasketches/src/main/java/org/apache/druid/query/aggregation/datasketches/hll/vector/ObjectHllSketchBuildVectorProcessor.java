@@ -59,7 +59,8 @@ public class ObjectHllSketchBuildVectorProcessor implements HllSketchBuildVector
         HllSketchBuildUtil.updateSketch(
             sketch,
             stringEncoding,
-            vector[i]
+            vector[i],
+            false
         );
       }
     }
@@ -79,7 +80,8 @@ public class ObjectHllSketchBuildVectorProcessor implements HllSketchBuildVector
         HllSketchBuildUtil.updateSketch(
             sketch,
             stringEncoding,
-            vector[idx]
+            vector[idx],
+            false
         );
       }
     }

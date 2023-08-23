@@ -20,46 +20,37 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 
-/**
- * Handles "unknown" columns by examining what comes out of the selector
- */
-class ObjectBloomFilterAggregator extends BaseBloomFilterAggregator<BaseObjectColumnValueSelector<Object>>
+public class ByteBloomFilterAggregator extends BaseBloomFilterAggregator<BaseObjectColumnValueSelector<Object>>
 {
-  ObjectBloomFilterAggregator(
-      BaseObjectColumnValueSelector<Object> selector,
+  private final ExpressionType columnType;
+
+  ByteBloomFilterAggregator(
+      BaseObjectColumnValueSelector<Object> baseObjectColumnValueSelector,
+      TypeSignature<ValueType> columnType,
       int maxNumEntries,
       boolean onHeap
   )
   {
-    super(selector, maxNumEntries, onHeap);
+    super(baseObjectColumnValueSelector, maxNumEntries, onHeap);
+    this.columnType = ExpressionType.fromColumnTypeStrict(columnType);
   }
 
   @Override
   void bufferAdd(ByteBuffer buf)
   {
-    final Object object = selector.getObject();
-    if (object instanceof ByteBuffer) {
-      final ByteBuffer other = (ByteBuffer) object;
-      BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
+    final Object val = selector.getObject();
+    if (val == null) {
+      BloomKFilter.addBytes(buf, null, 0, 0);
     } else {
-      if (object instanceof Long) {
-        BloomKFilter.addLong(buf, (long) object);
-      } else if (object instanceof Double) {
-        BloomKFilter.addDouble(buf, (double) object);
-      } else if (object instanceof Float) {
-        BloomKFilter.addFloat(buf, (float) object);
-      } else if (object instanceof String) {
-        BloomKFilter.addString(buf, (String) object);
-      } else if (object instanceof Object[]) {
-        BloomKFilter.addBytes(buf, ExprEval.toBytesBestEffort(object));
-      } else {
-        BloomKFilter.addBytes(buf, null, 0, 0);
-      }
+      BloomKFilter.addBytes(buf, ExprEval.toBytes(columnType, val));
     }
   }
 }

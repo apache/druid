@@ -24,6 +24,7 @@ import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
@@ -35,14 +36,16 @@ public class SketchAggregator implements Aggregator
 
   private final BaseObjectColumnValueSelector selector;
   private final int size;
+  private final boolean processAsArray;
 
   @Nullable
   private Union union;
 
-  public SketchAggregator(BaseObjectColumnValueSelector selector, int size)
+  public SketchAggregator(BaseObjectColumnValueSelector selector, int size, boolean processAsArray)
   {
     this.selector = selector;
     this.size = size;
+    this.processAsArray = processAsArray;
   }
 
   private void initUnion()
@@ -61,7 +64,7 @@ public class SketchAggregator implements Aggregator
       if (union == null) {
         initUnion();
       }
-      updateUnion(union, update);
+      updateUnion(union, update, processAsArray);
     }
   }
 
@@ -85,7 +88,7 @@ public class SketchAggregator implements Aggregator
         initialSketchSize = union.getCurrentBytes();
       }
 
-      updateUnion(union, update);
+      updateUnion(union, update, processAsArray);
 
       long sketchSizeDelta = union.getCurrentBytes() - initialSketchSize;
       return sketchSizeDelta + unionSizeDelta;
@@ -132,7 +135,7 @@ public class SketchAggregator implements Aggregator
     union = null;
   }
 
-  static void updateUnion(Union union, Object update)
+  static void updateUnion(Union union, Object update, boolean processAsArrays)
   {
     if (update instanceof SketchHolder) {
       ((SketchHolder) update).updateUnion(union);
@@ -148,12 +151,21 @@ public class SketchAggregator implements Aggregator
       union.update((int[]) update);
     } else if (update instanceof long[]) {
       union.update((long[]) update);
+    } else if (update instanceof Object[] && processAsArrays) {
+      final byte[] arrayBytes = ExprEval.toBytesBestEffort(update);
+      union.update(arrayBytes);
     } else if (update instanceof List) {
-      for (Object entry : (List) update) {
-        if (entry != null) {
-          final String asString = entry.toString();
-          if (!NullHandling.isNullOrEquivalent(asString)) {
-            union.update(asString);
+      if (processAsArrays) {
+        final ExprEval eval = ExprEval.bestEffortArray((List) update);
+        final byte[] arrayBytes = ExprEval.toBytes(eval);
+        union.update(arrayBytes);
+      } else {
+        for (Object entry : (List) update) {
+          if (entry != null) {
+            final String asString = entry.toString();
+            if (!NullHandling.isNullOrEquivalent(asString)) {
+              union.update(asString);
+            }
           }
         }
       }

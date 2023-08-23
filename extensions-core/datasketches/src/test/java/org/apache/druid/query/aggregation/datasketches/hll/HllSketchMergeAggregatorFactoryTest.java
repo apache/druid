@@ -93,7 +93,8 @@ public class HllSketchMergeAggregatorFactoryTest
         TGT_HLL_TYPE,
         STRING_ENCODING,
         SHOULD_FINALIZE,
-        ROUND
+        ROUND,
+        false
     );
     targetRound.getMergingFactory(other);
   }

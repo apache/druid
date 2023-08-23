@@ -50,6 +50,7 @@ public class HllSketchBuildAggregatorFactoryTest
         TgtHllType.HLL_8.name(),
         StringEncoding.UTF8,
         false,
+        true,
         true
     );
 
@@ -57,7 +58,7 @@ public class HllSketchBuildAggregatorFactoryTest
 
     Assert.assertEquals(
         "{\"type\":\"HLLSketchBuild\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\","
-        + "\"stringEncoding\":\"utf8\",\"shouldFinalize\":false,\"round\":true}",
+        + "\"stringEncoding\":\"utf8\",\"shouldFinalize\":false,\"round\":true,\"processAsArray\":true}",
         serializedString
     );
 
@@ -79,6 +80,7 @@ public class HllSketchBuildAggregatorFactoryTest
         null,
         null,
         null,
+        false,
         false
     );
 

@@ -33,6 +33,8 @@ import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.TimeDimExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractionFn;
@@ -201,22 +203,32 @@ public class BloomDimFilterTest extends BaseFilterTest
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatchesSkipArrays(
           new BloomDimFilter("dim2", bloomKFilter(1000, (String) null), null),
-          ImmutableList.of("1", "2", "5")
+          isAutoSchema() ? ImmutableList.of("5") : ImmutableList.of("1", "2", "5")
       );
     } else {
       assertFilterMatchesSkipArrays(
           new BloomDimFilter("dim2", bloomKFilter(1000, (String) null), null),
-          ImmutableList.of("1", "5")
+          isAutoSchema() ? ImmutableList.of("5") : ImmutableList.of("1", "5")
       );
-      assertFilterMatchesSkipArrays(
+      assertFilterMatches(
           new BloomDimFilter("dim2", bloomKFilter(1000, ""), null),
-          ImmutableList.of("2")
+          isAutoSchema() ? ImmutableList.of() : ImmutableList.of("2")
       );
+      if (isAutoSchema()) {
+        assertFilterMatches(
+            new BloomDimFilter(
+                "dim2",
+                bloomKFilter(1000, ExprEval.toBytes(ExpressionType.STRING_ARRAY, ImmutableList.of("a", "b"))),
+                null
+            ),
+            ImmutableList.of("0")
+        );
+      }
     }
-    assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "a"), null), ImmutableList.of("0", "3"));
-    assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "b"), null), ImmutableList.of("0"));
-    assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "c"), null), ImmutableList.of("4"));
-    assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "d"), null), ImmutableList.of());
+    assertFilterMatches(new BloomDimFilter("dim2", bloomKFilter(1000, "a"), null), isAutoSchema() ? ImmutableList.of() : ImmutableList.of("0", "3"));
+    assertFilterMatches(new BloomDimFilter("dim2", bloomKFilter(1000, "b"), null), isAutoSchema() ? ImmutableList.of() : ImmutableList.of("0"));
+    assertFilterMatches(new BloomDimFilter("dim2", bloomKFilter(1000, "c"), null), isAutoSchema() ? ImmutableList.of() : ImmutableList.of("4"));
+    assertFilterMatches(new BloomDimFilter("dim2", bloomKFilter(1000, "d"), null), ImmutableList.of());
   }
 
   @Test
