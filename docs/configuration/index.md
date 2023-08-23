@@ -2288,8 +2288,8 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values will be either a `1` or `0`. See [expression documentation](../querying/math-expr.md#logical-operator-modes)|false|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|false|
+|`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values are either `1` or `0`. See [expression documentation](../querying/math-expr.md#logical-operator-modes) for more information.|true|
+|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|true|
 ### Router
 
 #### Router Process Configs

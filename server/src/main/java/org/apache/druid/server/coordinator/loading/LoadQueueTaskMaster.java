@@ -20,22 +20,32 @@
 package org.apache.druid.server.coordinator.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Provider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Provides LoadQueuePeons
  */
 public class LoadQueueTaskMaster
 {
+  private static final Logger log = new Logger(LoadQueueTaskMaster.class);
+
   private final Provider<CuratorFramework> curatorFrameworkProvider;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService peonExec;
@@ -44,6 +54,11 @@ public class LoadQueueTaskMaster
   private final HttpClient httpClient;
   private final ZkPathsConfig zkPaths;
   private final boolean httpLoading;
+
+  @GuardedBy("this")
+  private final AtomicBoolean isLeader = new AtomicBoolean(false);
+
+  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
 
   public LoadQueueTaskMaster(
       Provider<CuratorFramework> curatorFrameworkProvider,
@@ -65,7 +80,7 @@ public class LoadQueueTaskMaster
     this.httpLoading = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
   }
 
-  public LoadQueuePeon giveMePeon(ImmutableDruidServer server)
+  private LoadQueuePeon createPeon(ImmutableDruidServer server)
   {
     if (httpLoading) {
       return new HttpLoadQueuePeon(server.getURL(), jsonMapper, httpClient, config, peonExec, callbackExec);
@@ -79,6 +94,69 @@ public class LoadQueueTaskMaster
           config
       );
     }
+  }
+
+  public Map<String, LoadQueuePeon> getAllPeons()
+  {
+    return loadManagementPeons;
+  }
+
+  public LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
+  {
+    return loadManagementPeons.get(server.getName());
+  }
+
+  /**
+   * Creates a peon for each of the given servers, if it doesn't already exist and
+   * removes peons for servers not present in the cluster anymore.
+   * <p>
+   * This method must not run concurrently with {@link #onLeaderStart()} and
+   * {@link #onLeaderStop()} so that there are no stray peons if the Coordinator
+   * is not leader anymore.
+   */
+  public synchronized void resetPeonsForNewServers(List<ImmutableDruidServer> currentServers)
+  {
+    if (!isLeader.get()) {
+      return;
+    }
+
+    final Set<String> oldServers = Sets.newHashSet(loadManagementPeons.keySet());
+
+    // Start peons for new servers
+    for (ImmutableDruidServer server : currentServers) {
+      loadManagementPeons.computeIfAbsent(server.getName(), serverName -> {
+        LoadQueuePeon loadQueuePeon = createPeon(server);
+        loadQueuePeon.start();
+        log.debug("Created LoadQueuePeon for server[%s].", server.getName());
+        return loadQueuePeon;
+      });
+    }
+
+    // Remove peons for disappeared servers
+    for (ImmutableDruidServer server : currentServers) {
+      oldServers.remove(server.getName());
+    }
+    for (String name : oldServers) {
+      log.debug("Removing LoadQueuePeon for disappeared server[%s].", name);
+      LoadQueuePeon peon = loadManagementPeons.remove(name);
+      peon.stop();
+    }
+  }
+
+  public synchronized void onLeaderStart()
+  {
+    isLeader.set(true);
+  }
+
+  /**
+   * Stops and removes all peons.
+   */
+  public synchronized void onLeaderStop()
+  {
+    isLeader.set(false);
+
+    loadManagementPeons.values().forEach(LoadQueuePeon::stop);
+    loadManagementPeons.clear();
   }
 
   public boolean isHttpLoading()
