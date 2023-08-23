@@ -180,7 +180,7 @@ public class FrameWriterUtils
   )
   {
     Object row = selector.getObject();
-    if(row == null) {
+    if (row == null) {
       return null;
     } else if (row instanceof Number) {
       return Collections.singletonList((Number) row);

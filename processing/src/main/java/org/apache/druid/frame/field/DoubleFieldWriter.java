@@ -38,9 +38,9 @@ public class DoubleFieldWriter extends NumericFieldWriter
 
   private final BaseDoubleColumnValueSelector selector;
 
-  public DoubleFieldWriter(final BaseDoubleColumnValueSelector selector)
+  public DoubleFieldWriter(final BaseDoubleColumnValueSelector selector, final boolean forArray)
   {
-    super(selector);
+    super(selector, forArray);
     this.selector = selector;
   }
 

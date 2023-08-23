@@ -33,9 +33,9 @@ public class LongFieldWriter extends NumericFieldWriter
 
   // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
   // nulls to come before non-nulls.
-  public LongFieldWriter(final BaseLongColumnValueSelector selector)
+  public LongFieldWriter(final BaseLongColumnValueSelector selector, final boolean forArray)
   {
-    super(selector);
+    super(selector, forArray);
     this.selector = selector;
   }
 

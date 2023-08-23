@@ -34,8 +34,9 @@ import org.apache.druid.segment.column.ValueType;
  */
 public class FloatFieldReader extends NumericFieldReader<Float>
 {
-  FloatFieldReader()
+  FloatFieldReader(final boolean forArray)
   {
+    super(forArray);
   }
 
   @Override

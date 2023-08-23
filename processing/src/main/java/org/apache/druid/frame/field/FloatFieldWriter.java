@@ -31,9 +31,9 @@ public class FloatFieldWriter extends NumericFieldWriter
 {
   private final BaseFloatColumnValueSelector selector;
 
-  public FloatFieldWriter(final BaseFloatColumnValueSelector selector)
+  public FloatFieldWriter(final BaseFloatColumnValueSelector selector, final boolean forArray)
   {
-    super(selector);
+    super(selector, forArray);
     this.selector = selector;
   }
 
@@ -65,5 +65,4 @@ public class FloatFieldWriter extends NumericFieldWriter
   {
     memory.putInt(position, TransformUtils.transformFromFloat(value));
   }
-
 }

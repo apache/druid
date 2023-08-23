@@ -20,40 +20,32 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnValueSelector;
 
-/**
- * Reads values written by {@link DoubleFieldWriter}.
- *
- * Values are sortable as bytes without decoding.
- *
- * Format:
- *
- * - 1 byte: {@link DoubleFieldWriter#NULL_BYTE} or {@link DoubleFieldWriter#NOT_NULL_BYTE}
- * - 8 bytes: encoded double, using {@link TransformUtils#transformFromDouble(double)}
- */
-public class DoubleFieldReader extends NumericFieldReader<Double>
+public class FloatArrayFieldReader extends NumericArrayFieldReader
 {
-  DoubleFieldReader(final boolean forArray)
-  {
-    super(forArray);
-  }
-
   @Override
-  public ValueType getValueType()
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      Memory memory,
+      ReadableFieldPointer fieldPointer
+  )
   {
-    return ValueType.DOUBLE;
-  }
+    return new Selector<Float>(memory, fieldPointer)
+    {
 
-  @Override
-  public Class<? extends Double> getClassOfObject()
-  {
-    return Double.class;
-  }
+      @Override
+      public Float getIndividualValueAtMemory(Memory memory, long position)
+      {
+        return new FloatFieldReader(true)
+            .makeColumnValueSelector(memory, new ConstantFieldPointer(position))
+            .getFloat();
+      }
 
-  @Override
-  public Double getValueFromMemory(Memory memory, long position)
-  {
-    return TransformUtils.detransformToDouble(memory.getLong(position));
+      @Override
+      public int getIndividualFieldSize()
+      {
+        return Byte.BYTES + Float.BYTES;
+      }
+    };
   }
 }

@@ -34,8 +34,9 @@ import org.apache.druid.segment.column.ValueType;
  */
 public class LongFieldReader extends NumericFieldReader<Long>
 {
-  LongFieldReader()
+  LongFieldReader(final boolean forArray)
   {
+    super(forArray);
   }
 
   @Override

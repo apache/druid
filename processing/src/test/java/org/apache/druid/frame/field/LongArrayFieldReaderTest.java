@@ -1,12 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -74,7 +90,7 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final ColumnValueSelector<?> readSelector =
-        new LongFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -89,7 +105,7 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5L);
 
     final ColumnValueSelector<?> readSelector =
-        new LongFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(5L, readSelector.getObject());
   }
@@ -100,7 +116,7 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final DimensionSelector readSelector =
-        new LongFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new LongFieldReader(false).makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -134,7 +150,7 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5L);
 
     final DimensionSelector readSelector =
-        new LongFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new LongFieldReader(false).makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -161,7 +177,7 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(25L);
 
     final DimensionSelector readSelector =
-        new LongFieldReader().makeDimensionSelector(
+        new LongFieldReader(false).makeDimensionSelector(
             memory,
             new ConstantFieldPointer(MEMORY_POSITION),
             new SubstringDimExtractionFn(1, null)

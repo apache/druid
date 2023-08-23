@@ -92,7 +92,7 @@ public class FieldWriters
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new LongFieldWriter(selector);
+    return new LongFieldWriter(selector, false);
   }
 
   private static FieldWriter makeFloatWriter(
@@ -101,7 +101,7 @@ public class FieldWriters
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new FloatFieldWriter(selector);
+    return new FloatFieldWriter(selector, false);
   }
 
   private static FieldWriter makeDoubleWriter(
@@ -110,7 +110,7 @@ public class FieldWriters
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new DoubleFieldWriter(selector);
+    return new DoubleFieldWriter(selector, false);
   }
 
   private static FieldWriter makeStringWriter(

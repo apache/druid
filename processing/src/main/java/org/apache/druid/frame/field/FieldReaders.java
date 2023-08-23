@@ -46,13 +46,13 @@ public class FieldReaders
   {
     switch (Preconditions.checkNotNull(columnType, "columnType").getType()) {
       case LONG:
-        return new LongFieldReader();
+        return new LongFieldReader(false);
 
       case FLOAT:
-        return new FloatFieldReader();
+        return new FloatFieldReader(false);
 
       case DOUBLE:
-        return new DoubleFieldReader();
+        return new DoubleFieldReader(false);
 
       case STRING:
         return new StringFieldReader(false);
