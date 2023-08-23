@@ -37,6 +37,7 @@ public class TransformUtilsTest
   @Test
   public void doubleTestWithoutNaN()
   {
+    //CHECKSTYLE.OFF: Regexp
     List<Double> values =
         ImmutableList.of(
             Double.MAX_VALUE,
@@ -52,6 +53,7 @@ public class TransformUtilsTest
             1111.0,
             23.0
         );
+    //CHECKSTYLE.ON: Regexp
 
     for (double value : values) {
       Assert.assertEquals(
@@ -124,6 +126,7 @@ public class TransformUtilsTest
   @Test
   public void floatTestWithoutNaN()
   {
+    //CHECKSTYLE.OFF: Regexp
     List<Float> values =
         ImmutableList.of(
             Float.MIN_VALUE,
@@ -139,6 +142,7 @@ public class TransformUtilsTest
             1111.0f,
             23.0f
         );
+    //CHECKSTYLE.ON: Regexp
 
     for (float value : values) {
       Assert.assertEquals(

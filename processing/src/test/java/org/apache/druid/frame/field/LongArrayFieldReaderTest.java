@@ -19,14 +19,11 @@
 
 package org.apache.druid.frame.field;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -39,7 +36,8 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
 {
@@ -79,9 +77,6 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   {
     writeToMemory(new Object[]{5});
     Assert.assertFalse(new LongArrayFieldReader().isNull(memory, MEMORY_POSITION));
-    Object o = new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION))
-                                         .getObject();
-    int x = 5;
   }
 
   @Test
@@ -102,104 +97,12 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeColumnValueSelector_aValue()
   {
-    writeToMemory(5L);
+    writeToMemory(new Object[]{5, 6, 7});
 
     final ColumnValueSelector<?> readSelector =
-        new LongFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
-    Assert.assertEquals(5L, readSelector.getObject());
-  }
-
-  @Test
-  public void test_makeDimensionSelector_defaultOrNull()
-  {
-    writeToMemory(NullHandling.defaultLongValue());
-
-    final DimensionSelector readSelector =
-        new LongFieldReader(false).makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
-
-    // Data retrieval tests.
-    final IndexedInts row = readSelector.getRow();
-    Assert.assertEquals(1, row.size());
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? "0" : null, readSelector.lookupName(0));
-
-    // Informational method tests.
-    Assert.assertFalse(readSelector.supportsLookupNameUtf8());
-    Assert.assertFalse(readSelector.nameLookupPossibleInAdvance());
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
-    Assert.assertEquals(String.class, readSelector.classOfObject());
-    Assert.assertNull(readSelector.idLookup());
-
-    // Value matcher tests.
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(readSelector.makeValueMatcher("0").matches());
-      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher("0"::equals).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
-    } else {
-      Assert.assertFalse(readSelector.makeValueMatcher("0").matches());
-      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher("0"::equals).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
-    }
-  }
-
-  @Test
-  public void test_makeDimensionSelector_aValue()
-  {
-    writeToMemory(5L);
-
-    final DimensionSelector readSelector =
-        new LongFieldReader(false).makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
-
-    // Data retrieval tests.
-    final IndexedInts row = readSelector.getRow();
-    Assert.assertEquals(1, row.size());
-    Assert.assertEquals("5", readSelector.lookupName(0));
-
-    // Informational method tests.
-    Assert.assertFalse(readSelector.supportsLookupNameUtf8());
-    Assert.assertFalse(readSelector.nameLookupPossibleInAdvance());
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
-    Assert.assertEquals(String.class, readSelector.classOfObject());
-    Assert.assertNull(readSelector.idLookup());
-
-    // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
-  }
-
-  @Test
-  public void test_makeDimensionSelector_aValue_extractionFn()
-  {
-    writeToMemory(25L);
-
-    final DimensionSelector readSelector =
-        new LongFieldReader(false).makeDimensionSelector(
-            memory,
-            new ConstantFieldPointer(MEMORY_POSITION),
-            new SubstringDimExtractionFn(1, null)
-        );
-
-    // Data retrieval tests.
-    final IndexedInts row = readSelector.getRow();
-    Assert.assertEquals(1, row.size());
-    Assert.assertEquals("5", readSelector.lookupName(0));
-
-    // Informational method tests.
-    Assert.assertFalse(readSelector.supportsLookupNameUtf8());
-    Assert.assertFalse(readSelector.nameLookupPossibleInAdvance());
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, readSelector.getValueCardinality());
-    Assert.assertEquals(String.class, readSelector.classOfObject());
-    Assert.assertNull(readSelector.idLookup());
-
-    // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    assertResults(ImmutableList.of(5L, 6L, 7L), readSelector.getObject());
   }
 
   private void writeToMemory(final Object value)
@@ -213,5 +116,19 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     if (fieldWriter.writeTo(memory, MEMORY_POSITION, memory.getCapacity() - MEMORY_POSITION) < 0) {
       throw new ISE("Could not write");
     }
+  }
+
+  private void assertResults(List<Long> expected, Object actual)
+  {
+    if (expected == null) {
+      Assert.assertNull(actual);
+    }
+    Assert.assertTrue(actual instanceof Object[]);
+    List<Long> actualList = new ArrayList<>();
+    for (Object val : (Object[]) actual) {
+      actualList.add((Long) val);
+    }
+
+    Assert.assertEquals(expected, actualList);
   }
 }
