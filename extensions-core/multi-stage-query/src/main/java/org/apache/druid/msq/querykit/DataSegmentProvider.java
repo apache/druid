@@ -37,6 +37,7 @@ public interface DataSegmentProvider
    */
   Supplier<ResourceHolder<Segment>> fetchSegment(
       SegmentId segmentId,
-      ChannelCounters channelCounters
+      ChannelCounters channelCounters,
+      boolean isReindex
   );
 }

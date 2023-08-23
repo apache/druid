@@ -1100,7 +1100,12 @@ public class WorkerImpl implements Worker
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
                       .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
                       .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                      .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext.dataSegmentProvider()))
+                      .put(SegmentsInputSlice.class,
+                           new SegmentsInputSliceReader(
+                               frameContext.dataSegmentProvider(),
+                               MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
+                           )
+                      )
                       .build()
       );
     }
