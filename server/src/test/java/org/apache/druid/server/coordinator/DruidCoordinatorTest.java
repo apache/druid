@@ -146,8 +146,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
         .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
     pathChildrenCache = new PathChildrenCache(
         curator,
@@ -180,7 +178,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -608,7 +605,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
-        null,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new RandomBalancerStrategyFactory(),
         null,
@@ -657,7 +653,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        ImmutableSet.of(),
         emptyCustomDutyGroups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -697,7 +692,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        ImmutableSet.of(),
         customDutyGroups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -737,7 +731,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        ImmutableSet.of(),
         customDutyGroups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
@@ -842,7 +835,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
-        null,
         groups,
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),

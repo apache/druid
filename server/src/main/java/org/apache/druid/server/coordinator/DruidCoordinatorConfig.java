@@ -43,6 +43,10 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1H")
   public abstract Duration getCoordinatorMetadataStoreManagementPeriod();
 
+  @Config("druid.coordinator.kill.on")
+  @Default("false")
+  public abstract boolean isKillUnusedSegmentsEnabled();
+
   @Config("druid.coordinator.kill.period")
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();
@@ -62,6 +66,10 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.maxSegments")
   @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
+
+  @Config("druid.coordinator.kill.pendingSegments.on")
+  @Default("true")
+  public abstract boolean isKillPendingSegmentsEnabled();
 
   @Config("druid.coordinator.kill.supervisor.on")
   @Default("true")

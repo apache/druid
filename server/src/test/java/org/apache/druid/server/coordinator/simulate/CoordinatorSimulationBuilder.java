@@ -204,7 +204,6 @@ public class CoordinatorSimulationBuilder
         env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
         null,
-        null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
         createBalancerStrategy(env),
         env.lookupCoordinatorManager,

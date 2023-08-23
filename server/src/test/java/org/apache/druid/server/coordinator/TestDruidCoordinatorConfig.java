@@ -126,6 +126,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isKillUnusedSegmentsEnabled()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isKillPendingSegmentsEnabled()
+  {
+    return true;
+  }
+
+  @Override
   public Duration getCoordinatorKillPeriod()
   {
     return coordinatorKillPeriod;

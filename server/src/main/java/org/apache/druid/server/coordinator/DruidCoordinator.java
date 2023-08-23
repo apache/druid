@@ -41,7 +41,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
@@ -71,6 +70,7 @@ import org.apache.druid.server.coordinator.duty.KillCompactionConfig;
 import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
+import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
@@ -148,7 +148,6 @@ public class DruidCoordinator
   private final SegmentLoadQueueManager loadQueueManager;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
-  private final Set<CoordinatorDuty> indexingServiceDuties;
   private final CoordinatorCustomDutyGroups customDutyGroups;
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
@@ -190,7 +189,6 @@ public class DruidCoordinator
       SegmentLoadQueueManager loadQueueManager,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
-      @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
       CoordinatorCustomDutyGroups customDutyGroups,
       BalancerStrategyFactory balancerStrategyFactory,
       LookupCoordinatorManager lookupCoordinatorManager,
@@ -206,7 +204,6 @@ public class DruidCoordinator
     this.taskMaster = taskMaster;
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
-    this.indexingServiceDuties = indexingServiceDuties;
     this.customDutyGroups = customDutyGroups;
 
     this.executorFactory = scheduledExecutorFactory;
@@ -390,7 +387,7 @@ public class DruidCoordinator
   {
     final int startingLeaderCounter = coordLeaderSelector.localTerm();
     DutiesRunnable compactSegmentsDuty = new DutiesRunnable(
-        makeCompactSegmentsDuty(),
+        ImmutableList.of(compactSegments),
         startingLeaderCounter,
         COMPACT_SEGMENTS_DUTIES_DUTY_GROUP,
         null
@@ -590,11 +587,18 @@ public class DruidCoordinator
   @VisibleForTesting
   List<CoordinatorDuty> makeIndexingServiceDuties()
   {
-    final List<CoordinatorDuty> duties = new ArrayList<>(indexingServiceDuties);
+    final List<CoordinatorDuty> duties = new ArrayList<>();
+    if (config.isKillUnusedSegmentsEnabled()) {
+      duties.add(new KillUnusedSegments(metadataManager.segments(), overlordClient, config));
+    }
+    if (config.isKillPendingSegmentsEnabled()) {
+      duties.add(new KillStalePendingSegments(overlordClient));
+    }
+
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
     // We do not have to add compactSegments if it is already enabled in the custom duty group
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
-      duties.addAll(makeCompactSegmentsDuty());
+      duties.add(compactSegments);
     }
     log.debug(
         "Initialized indexing service duties [%s].",
@@ -641,11 +645,6 @@ public class DruidCoordinator
                            .filter(duty -> duty instanceof CompactSegments)
                            .map(duty -> (CompactSegments) duty)
                            .collect(Collectors.toList());
-  }
-
-  private List<CoordinatorDuty> makeCompactSegmentsDuty()
-  {
-    return ImmutableList.of(compactSegments);
   }
 
   private class DutiesRunnable implements Runnable
