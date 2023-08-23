@@ -372,7 +372,7 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|None|
 |`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|None|
 |`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|None|
 |`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|None|

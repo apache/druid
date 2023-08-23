@@ -2027,7 +2027,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 :::info
  Note: Even if cache is enabled, for [groupBy](../querying/groupbyquery.md) queries, segment level cache does not work on Brokers.
- See [query caching](../querying/caching.md) for more information.
+ See [Query caching](../querying/caching.md) for more information.
 :::
 
 #### Segment Discovery
