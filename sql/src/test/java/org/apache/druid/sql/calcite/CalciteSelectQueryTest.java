@@ -1888,112 +1888,39 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     );
   }
 
-    @Test
-    public void testOrderThenLimitThenFilter()
-    {
-        testQuery(
-                "SELECT dim1 FROM "
-                        + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
-                        + "WHERE dim1 IN ('abc', 'def')",
-                ImmutableList.of(
+  @Test
+  public void testOrderThenLimitThenFilter()
+  {
+    testQuery(
+        "SELECT dim1 FROM "
+            + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
+            + "WHERE dim1 IN ('abc', 'def')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    new QueryDataSource(
                         newScanQueryBuilder()
-                                .dataSource(
-                                        new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                        .dataSource(CalciteTests.DATASOURCE1)
-                                                        .intervals(querySegmentSpec(Filtration.eternity()))
-                                                        .columns(ImmutableList.of("__time", "dim1"))
-                                                        .limit(4)
-                                                        .order(ScanQuery.Order.DESCENDING)
-                                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                        .context(QUERY_CONTEXT_DEFAULT)
-                                                        .build()
-                                        )
-                                )
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .columns(ImmutableList.of("dim1"))
-                                .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
-                                .build()
-                ),
-                ImmutableList.of(
-                        new Object[]{"abc"},
-                        new Object[]{"def"}
+                            .dataSource(CalciteTests.DATASOURCE1)
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .columns(ImmutableList.of("__time", "dim1"))
+                            .limit(4)
+                            .order(ScanQuery.Order.DESCENDING)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .context(QUERY_CONTEXT_DEFAULT)
+                            .build()
+                    )
                 )
-        );
-    }
-    @Test
-    public void testOrderThenLimitThenFilter2()
-    {
-        testQuery(
-                "SELECT dim1 FROM "
-                        + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
-                        + "WHERE dim1 IN ('abc', 'def')",
-                ImmutableList.of(
-                        newScanQueryBuilder()
-                                .dataSource(
-                                        new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                        .dataSource(CalciteTests.DATASOURCE1)
-                                                        .intervals(querySegmentSpec(Filtration.eternity()))
-                                                        .columns(ImmutableList.of("__time", "dim1"))
-                                                        .limit(4)
-                                                        .order(ScanQuery.Order.DESCENDING)
-                                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                        .context(QUERY_CONTEXT_DEFAULT)
-                                                        .build()
-                                        )
-                                )
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .columns(ImmutableList.of("dim1"))
-                                .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
-                                .build()
-                ),
-                ImmutableList.of(
-                        new Object[]{"abc"},
-                        new Object[]{"def"}
-                )
-        );
-    }
-    @Test
-    public void testOrderThenLimitThenFilter1()
-    {
-        testQuery(
-                "   \n" +
-                        "    select count(1)\n" +
-                        "   \n" +
-                        "    from druid.foo\n" +
-                        "    where 'a' = 'b'  \n",
-                ImmutableList.of(
-                        newScanQueryBuilder()
-                                .dataSource(
-                                        new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                        .dataSource(CalciteTests.DATASOURCE1)
-                                                        .intervals(querySegmentSpec(Filtration.eternity()))
-                                                        .columns(ImmutableList.of("__time", "dim1"))
-                                                        .limit(4)
-                                                        .order(ScanQuery.Order.DESCENDING)
-                                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                        .context(QUERY_CONTEXT_DEFAULT)
-                                                        .build()
-                                        )
-                                )
-                                .intervals(querySegmentSpec(Filtration.eternity()))
-                                .columns(ImmutableList.of("dim1"))
-                                .filters(in("dim1", Arrays.asList("abc", "def"), null))
-                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
-                                .build()
-                ),
-                ImmutableList.of(
-                        new Object[]{"abc"},
-                        new Object[]{"def"}
-                )
-        );
-    }
-
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("dim1"))
+                .filters(in("dim1", Arrays.asList("abc", "def"), null))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc"},
+            new Object[]{"def"}
+        )
+    );
+  }
 }
