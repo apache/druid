@@ -46,7 +46,10 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.model.UploadResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 
@@ -65,6 +68,8 @@ public class ServerSideEncryptingAmazonS3
   {
     return new Builder();
   }
+
+  private static final Logger log = new Logger(ServerSideEncryptingAmazonS3.class);
 
   private final AmazonS3 amazonS3;
   private final ServerSideEncryption serverSideEncryption;
@@ -135,9 +140,16 @@ public class ServerSideEncryptingAmazonS3
     return amazonS3.putObject(serverSideEncryption.decorate(request));
   }
 
-  public void putObject2(PutObjectRequest request) {
-
-    transferManager.upload(serverSideEncryption.decorate(request));
+  public void putObject2(PutObjectRequest request)
+  {
+    Upload upload = transferManager.upload(serverSideEncryption.decorate(request));
+    try {
+      UploadResult result = upload.waitForUploadResult();
+      log.info("Upload complete [%s], [%s]", result.getBucketName(), result.getKey());
+    }
+    catch (InterruptedException e) {
+      throw new RE(e);
+    }
   }
 
   public CopyObjectResult copyObject(CopyObjectRequest request)
