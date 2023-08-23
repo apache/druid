@@ -212,7 +212,7 @@ public class ReplaceTask extends AbstractTask
   {
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToPublish)
+            SegmentTransactionalReplaceAction.create(segmentsToPublish)
         );
     return publisher.publishSegments(
         oldSegments,

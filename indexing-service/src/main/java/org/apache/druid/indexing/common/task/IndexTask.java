@@ -920,7 +920,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       switch (lockType) {
         case REPLACE:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToPublish)
+              SegmentTransactionalReplaceAction.create(segmentsToPublish)
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(

@@ -1221,7 +1221,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
       }
 
-      for (Interval interval : intervalToSegments.keySet()) {
+      for (Map.Entry<Interval, Set<DataSegment>> entry : intervalToSegments.entrySet()) {
+        final Interval interval = entry.getKey();
         // For each interval, fetch the pending segments
         Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>(
             getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval)
@@ -1242,7 +1243,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             committedMaxId = SegmentIdWithShardSpec.fromDataSegment(committedSegment);
           }
         }
-        for (DataSegment segment : intervalToSegments.get(interval)) {
+        for (DataSegment segment : entry.getValue()) {
           SegmentCreateRequest request = new SegmentCreateRequest(
               segment.getId() + version,
               null,

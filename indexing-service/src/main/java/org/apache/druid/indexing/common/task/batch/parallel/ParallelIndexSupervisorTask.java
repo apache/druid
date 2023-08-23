@@ -1178,7 +1178,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       switch (lockType) {
         case REPLACE:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.create(segmentsToBeOverwritten, segmentsToPublish)
+              SegmentTransactionalReplaceAction.create(segmentsToPublish)
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(

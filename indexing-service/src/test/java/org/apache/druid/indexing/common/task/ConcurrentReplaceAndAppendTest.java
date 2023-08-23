@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -43,6 +44,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
@@ -53,12 +55,18 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 {
+  private static final Map<String, Object> REPLACE_CONTEXT = ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "REPLACE");
+  private static final Map<String, Object> APPEND_CONTEXT = ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "APPEND");
+
   private TaskQueue taskQueue;
   private TaskActionClient taskActionClient;
 
@@ -93,6 +101,144 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         new NoopServiceEmitter()
     );
     taskQueue.start();
+  }
+
+  @Test
+  public void testCommandExecutingTask() throws Exception
+  {
+
+    CommandExecutingTask replaceTask0 = new CommandExecutingTask(
+        "replace0",
+        "DS",
+        Intervals.of("2023/2024"),
+        Granularities.YEAR,
+        REPLACE_CONTEXT,
+        AbstractTask.IngestionMode.REPLACE
+    );
+    Runnable runReplaceTask0 = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          final Set<DataSegment> segments = replaceTask0.createCorePartitions(1);
+          replaceTask0.replaceSegments(segments);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+
+    CommandExecutingTask appendTask0 = new CommandExecutingTask(
+        "append0",
+        "DS",
+        Intervals.of("2023/2024"),
+        Granularities.YEAR,
+        APPEND_CONTEXT,
+        AbstractTask.IngestionMode.APPEND
+    );
+    Runnable runAppendTask0 = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          final Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>();
+          pendingSegments.add(
+              appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01")
+          );
+          final Set<DataSegment> segments = appendTask0.convertPendingSegments(pendingSegments);
+          appendTask0.appendSegments(segments);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+
+    CommandExecutingTask replaceTask1 = new CommandExecutingTask(
+        "replace1",
+        "DS",
+        Intervals.of("2023/2024"),
+        Granularities.YEAR,
+        REPLACE_CONTEXT,
+        AbstractTask.IngestionMode.REPLACE
+    );
+    Runnable runReplaceTask1 = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          final Set<DataSegment> segments = replaceTask1.createCorePartitions(1);
+          replaceTask1.replaceSegments(segments);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+
+    CommandExecutingTask replaceTask2 = new CommandExecutingTask(
+        "replace2",
+        "DS",
+        Intervals.of("2023/2024"),
+        Granularities.YEAR,
+        REPLACE_CONTEXT,
+        AbstractTask.IngestionMode.REPLACE
+    );
+    Runnable runReplaceTask2 = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          final Set<DataSegment> segments = replaceTask2.createCorePartitions(1);
+          replaceTask2.replaceSegments(segments);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+
+
+    // Create a set of initial segments
+    taskQueue.add(replaceTask0);
+    replaceTask0.markReady();
+    replaceTask0.runCommand(runReplaceTask0);
+    replaceTask0.awaitRunComplete();
+    verifySegmentCount(1, 1);
+    verifyTaskSuccess(replaceTask0);
+
+    // Append task begins and allocates pending segments
+    taskQueue.add(appendTask0);
+    appendTask0.markReady();
+    appendTask0.awaitReadyComplete();
+    appendTask0.runCommand(runAppendTask0);
+
+    // New replace task starts and ends before the appending task finishes
+    taskQueue.add(replaceTask1);
+    replaceTask1.markReady();
+    replaceTask1.runCommand(runReplaceTask1);
+    replaceTask1.awaitRunComplete();
+    verifySegmentCount(2, 1);
+    verifyTaskSuccess(replaceTask1);
+
+    taskQueue.add(replaceTask2);
+    replaceTask2.markReady();
+    replaceTask2.awaitReadyComplete();
+
+    appendTask0.beginPublish();
+    appendTask0.awaitRunComplete();
+    verifySegmentCount(4, 2);
+    verifyTaskSuccess(appendTask0);
+
+    replaceTask2.runCommand(runReplaceTask2);
+    replaceTask2.awaitRunComplete();
+    verifySegmentCount(6, 2);
+    verifyTaskSuccess(replaceTask2);
   }
 
   @Test

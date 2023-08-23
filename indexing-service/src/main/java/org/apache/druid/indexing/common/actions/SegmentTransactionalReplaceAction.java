@@ -33,7 +33,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -46,38 +45,23 @@ import java.util.stream.Collectors;
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
   /**
-   * Set of segments that was fully overshadowed by new segments, {@link SegmentTransactionalReplaceAction#segments}
-   */
-  @Nullable
-  private final Set<DataSegment> segmentsToBeOverwritten;
-  /**
    * Set of segments to be inserted into metadata storage
    */
   private final Set<DataSegment> segments;
 
   public static SegmentTransactionalReplaceAction create(
-      @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToBeOverwritten, segmentsToPublish);
+    return new SegmentTransactionalReplaceAction(segmentsToPublish);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
-      @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @JsonProperty("segments") Set<DataSegment> segments
   )
   {
-    this.segmentsToBeOverwritten = segmentsToBeOverwritten;
     this.segments = ImmutableSet.copyOf(segments);
-  }
-
-  @JsonProperty
-  @Nullable
-  public Set<DataSegment> getSegmentsToBeOverwritten()
-  {
-    return segmentsToBeOverwritten;
   }
 
   @JsonProperty
@@ -159,8 +143,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   public String toString()
   {
     return "SegmentTransactionalReplaceAction{" +
-           "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
-           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            '}';
   }
 }
