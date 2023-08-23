@@ -36,10 +36,10 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -781,8 +781,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test(timeout = 60_000L)
-  public void testCheckpointForActiveTaskGroup()
-          throws InterruptedException, JsonProcessingException {
+  public void testCheckpointForActiveTaskGroup() throws InterruptedException, JsonProcessingException
+  {
     DateTime startTime = DateTimes.nowUtc();
     SeekableStreamSupervisorIOConfig ioConfig = new SeekableStreamSupervisorIOConfig(
             STREAM,
