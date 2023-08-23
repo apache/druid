@@ -487,8 +487,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
-    for (DataSegment segment : segmentToNewMetadataMap.keySet()) {
-      for (SegmentIdWithShardSpec newId : segmentToNewMetadataMap.get(segment)) {
+    for (Map.Entry<DataSegment, Set<SegmentIdWithShardSpec>> entry : segmentToNewMetadataMap.entrySet()) {
+      final DataSegment segment = entry.getKey();
+      for (SegmentIdWithShardSpec newId : entry.getValue()) {
         DataSegment newSegment = new DataSegment(
             newId.getDataSource(),
             newId.getInterval(),
@@ -1193,9 +1194,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Create a mapping from segment intervals to the set of lower version segments belonging to them
       Map<Interval, Set<DataSegment>> intervalToSegments = new HashMap<>();
       for (DataSegment segment : lowerVersionSegments) {
-        for (Interval interval : intervalToSegments.keySet()) {
+        for (final Map.Entry<Interval, Set<DataSegment>> entry : intervalToSegments.entrySet()) {
+          final Interval interval = entry.getKey();
+          final Set<DataSegment> segmentsForInterval = entry.getValue();
           if (interval.contains(segment.getInterval())) {
-            intervalToSegments.get(interval).add(segment);
+            segmentsForInterval.add(segment);
             break;
           }
         }

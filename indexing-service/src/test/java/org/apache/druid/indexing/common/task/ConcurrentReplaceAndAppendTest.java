@@ -66,7 +66,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private static final WorkerConfig WORKER_CONFIG = new WorkerConfig().setCapacity(10);
 
   @Before
-  public void setup() throws Exception
+  public void setup()
   {
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
     final TaskActionClientFactory taskActionClientFactory = createActionClientFactory();

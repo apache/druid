@@ -496,7 +496,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             final DataSegment segment = entry.getKey();
             final TaskLockInfo lock = entry.getValue();
             preparedBatch.add()
-                         .bind("id", segment.getId().toString() + ":" + lock.hashCode())
+                         .bind("id", segment.getId() + ":" + lock.hashCode())
                          .bind("dataSource", segment.getDataSource())
                          .bind("start", lock.getInterval().getStartMillis())
                          .bind("end", lock.getInterval().getEndMillis())

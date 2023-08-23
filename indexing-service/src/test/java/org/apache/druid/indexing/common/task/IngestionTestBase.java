@@ -226,7 +226,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
   }
 
-  public TaskToolbox createTaskToolbox(TaskConfig config, Task task) throws IOException
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
   {
     return new TaskToolbox.Builder()
         .config(config)

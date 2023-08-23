@@ -282,12 +282,12 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap
-  ) throws IOException;
+  );
 
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> segments,
       @Nullable Set<TaskLockInfo> taskLockInfos
-  ) throws IOException;
+  );
 
   /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
