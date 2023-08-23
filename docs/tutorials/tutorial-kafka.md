@@ -268,13 +268,13 @@ You can also use the Druid API to submit a supervisor spec.
 1. Run the following command to download the sample spec:
 
    ```bash
-   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-kafka-supervisor.json
+   curl -o kttm-kafka-supervisor.json https://raw.githubusercontent.com/apache/druid/master/docs/assets/files/kttm-kafka-supervisor.json
    ```
 
 2. Run the following command to submit the spec in the `kttm-kafka-supervisor.json` file:
 
     ```bash
-    curl -XPOST -H 'Content-Type: application/json' kttm-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
+    curl -X POST -H 'Content-Type: application/json' -d @kttm-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
     ```
 
     After Druid successfully creates the supervisor, you get a response containing the supervisor ID: `{"id":"kttm-kafka-supervisor-api"}`.

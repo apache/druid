@@ -616,6 +616,12 @@ public class ControllerImpl implements Controller
         );
       }
     }
+
+    taskContextOverridesBuilder.put(
+        MultiStageQueryContext.CTX_IS_REINDEX,
+        MSQControllerTask.isReplaceInputDataSourceTask(task)
+    );
+
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
@@ -1199,7 +1205,7 @@ public class ControllerImpl implements Controller
             settableFuture.setException(t);
           }
         }
-      });
+      }, MoreExecutors.directExecutor());
 
       taskFutures.add(settableFuture);
     }

@@ -72,7 +72,8 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   @Override
   public Supplier<ResourceHolder<Segment>> fetchSegment(
       final SegmentId segmentId,
-      final ChannelCounters channelCounters
+      final ChannelCounters channelCounters,
+      final boolean isReindex
   )
   {
     // Returns Supplier<ResourceHolder> instead of ResourceHolder, so the Coordinator calls and segment downloads happen
@@ -84,7 +85,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
         holder = holders.computeIfAbsent(
             segmentId,
             k -> new SegmentHolder(
-                () -> fetchSegmentInternal(segmentId, channelCounters),
+                () -> fetchSegmentInternal(segmentId, channelCounters, isReindex),
                 () -> holders.remove(segmentId)
             )
         ).get();
@@ -95,20 +96,22 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   }
 
   /**
-   * Helper used by {@link #fetchSegment(SegmentId, ChannelCounters)}. Does the actual fetching of a segment, once it
+   * Helper used by {@link #fetchSegment(SegmentId, ChannelCounters, boolean)}. Does the actual fetching of a segment, once it
    * is determined that we definitely need to go out and get one.
    */
   private ReferenceCountingResourceHolder<Segment> fetchSegmentInternal(
       final SegmentId segmentId,
-      final ChannelCounters channelCounters
+      final ChannelCounters channelCounters,
+      final boolean isReindex
   )
   {
     final DataSegment dataSegment;
     try {
       dataSegment = FutureUtils.get(
-          coordinatorClient.fetchUsedSegment(
+          coordinatorClient.fetchSegment(
               segmentId.getDataSource(),
-              segmentId.toString()
+              segmentId.toString(),
+              !isReindex
           ),
           true
       );

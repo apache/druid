@@ -19,17 +19,16 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.logger.Logger;
 
-public class DisabledCachingCostBalancerStrategyFactory implements BalancerStrategyFactory
+public class DisabledCachingCostBalancerStrategyFactory extends BalancerStrategyFactory
 {
   private static final Logger log = new Logger(BalancerStrategyFactory.class);
 
   @Override
-  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(int numBalancerThreads)
   {
     log.warn("Balancer strategy 'cachingCost' is disabled. Using 'cost' strategy instead.");
-    return new CostBalancerStrategy(exec);
+    return new CostBalancerStrategy(getOrCreateBalancerExecutor(numBalancerThreads));
   }
 }
