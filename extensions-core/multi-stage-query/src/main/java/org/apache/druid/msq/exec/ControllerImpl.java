@@ -422,7 +422,7 @@ public class ControllerImpl implements Controller
               task.getQuerySpec().getColumnMappings()
           )
           : null;
-      MSQErrorReport workerError = mapQueryColumnNameToOutputColumnName(workerErrorRef.get());
+      MSQErrorReport workerError = workerErrorRef.get();
 
       taskStateForReport = TaskState.FAILED;
       errorForReport = MSQTasks.makeErrorReport(id(), selfHost, controllerError, workerError);
@@ -750,7 +750,10 @@ public class ControllerImpl implements Controller
         !workerTaskLauncher.isTaskLatest(errorReport.getTaskId())) {
       log.info("Ignoring task %s", errorReport.getTaskId());
     } else {
-      workerErrorRef.compareAndSet(null, errorReport);
+      workerErrorRef.compareAndSet(
+          null,
+          mapQueryColumnNameToOutputColumnName(errorReport)
+      );
     }
   }
 
