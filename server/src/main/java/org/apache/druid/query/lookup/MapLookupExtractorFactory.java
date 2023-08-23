@@ -32,7 +32,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 @JsonTypeName("map")
 public class MapLookupExtractorFactory implements LookupExtractorFactory
@@ -89,13 +88,13 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
-  public void awaitToInitialise() throws InterruptedException, TimeoutException
+  public void awaitInitialization()
   {
 
   }
 
   @Override
-  public boolean isCacheLoaded()
+  public boolean isInitialized()
   {
     return true;
   }

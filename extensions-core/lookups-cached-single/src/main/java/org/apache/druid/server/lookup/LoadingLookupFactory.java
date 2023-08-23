@@ -30,7 +30,6 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @JsonTypeName("loadingLookup")
@@ -113,13 +112,13 @@ public class LoadingLookupFactory implements LookupExtractorFactory
   }
 
   @Override
-  public void awaitToInitialise() throws InterruptedException, TimeoutException
+  public void awaitInitialization()
   {
 
   }
 
   @Override
-  public boolean isCacheLoaded()
+  public boolean isInitialized()
   {
     return true;
   }

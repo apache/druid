@@ -84,10 +84,10 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
   /**
    * awaitToInitialise blocks and wait for the cache to initialize fully.
    */
-  void awaitToInitialise() throws InterruptedException, TimeoutException;
+  void awaitInitialization() throws InterruptedException, TimeoutException;
 
   /**
    * @return true if cache is loaded and lookup is queryable else returns false
    */
-  boolean isCacheLoaded();
+  boolean isInitialized();
 }

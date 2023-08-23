@@ -298,13 +298,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
-  public void awaitToInitialise() throws InterruptedException, TimeoutException
+  public void awaitInitialization()
   {
 
   }
 
   @Override
-  public boolean isCacheLoaded()
+  public boolean isInitialized()
   {
     return true;
   }

@@ -83,12 +83,12 @@ public class LookupSegmentTest
         }
 
         @Override
-        public void awaitToInitialise()
+        public void awaitInitialization()
         {
         }
 
         @Override
-        public boolean isCacheLoaded()
+        public boolean isInitialized()
         {
           return true;
         }

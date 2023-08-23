@@ -664,7 +664,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
           e -> true,
           startRetries
       );
-      if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isCacheLoaded()) {
+      if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isInitialized()) {
         old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
         LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
         manager.dropContainer(old, lookupName);
@@ -679,12 +679,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
          */
           RetryUtils.retry(
               () -> {
-                lookupExtractorFactoryContainer.getLookupExtractorFactory().awaitToInitialise();
+                lookupExtractorFactoryContainer.getLookupExtractorFactory().awaitInitialization();
                 return null;
               }, e -> true,
               startRetries
           );
-          if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isCacheLoaded()) {
+          if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isInitialized()) {
             // send load notice with cache loaded container
             manager.add(lookupName, lookupExtractorFactoryContainer);
           } else {
@@ -731,11 +731,11 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     @Override
     public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap, LookupReferencesManager manager)
     {
-      if (loadedContainer != null && !loadedContainer.getLookupExtractorFactory().isCacheLoaded()) {
+      if (loadedContainer != null && !loadedContainer.getLookupExtractorFactory().isInitialized()) {
         final LookupExtractorFactoryContainer containterToDrop = lookupMap.get(lookupName);
         manager.submitAsyncLookupTask(() -> {
           try {
-            loadedContainer.getLookupExtractorFactory().awaitToInitialise();
+            loadedContainer.getLookupExtractorFactory().awaitInitialization();
             manager.dropContainer(containterToDrop, lookupName);
           }
           catch (InterruptedException | TimeoutException e) {

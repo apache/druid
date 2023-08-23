@@ -171,7 +171,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
-  public void awaitToInitialise() throws InterruptedException, TimeoutException
+  public void awaitInitialization() throws InterruptedException, TimeoutException
   {
     long timeout = extractionNamespace.getLoadTimeout();
     if (entry.getCacheState() == CacheScheduler.NoCache.CACHE_NOT_INITIALIZED) {
@@ -181,7 +181,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
-  public boolean isCacheLoaded()
+  public boolean isInitialized()
   {
     return entry.getCacheState() instanceof CacheScheduler.VersionedCache;
   }

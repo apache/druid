@@ -283,12 +283,12 @@ public class RegisteredLookupExtractionFnTest
                   }
 
                   @Override
-                  public void awaitToInitialise() throws InterruptedException
+                  public void awaitInitialization()
                   {
                   }
 
                   @Override
-                  public boolean isCacheLoaded()
+                  public boolean isInitialized()
                   {
                     return true;
                   }
