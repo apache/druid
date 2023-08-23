@@ -21,20 +21,36 @@ package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Something that knows how to manage task json paylods.
+ */
+@ExtensionPoint
 public interface TaskPayloadManager
 {
+  /**
+   * Save payload so it can be retrieved later.
+   *
+   * @return inputStream for this taskPayload, if available
+   */
   default void pushTaskPayload(String taskid, File taskPayloadFile) throws IOException
   {
-    throw new NotImplementedException("Managing task payloads is not implemented for this druid.indexer.logs.type");
+    throw new NotImplementedException(StringUtils.format("this druid.indexer.logs.type [%s] does not support managing task payloads yet. You will have to switch to using environment variables", getClass()));
   }
 
+  /**
+   * Stream payload for a task.
+   *
+   * @return inputStream for this taskPayload, if available
+   */
   default Optional<InputStream> streamTaskPayload(String taskid) throws IOException
   {
-    throw new NotImplementedException("Managing task payloads is not implemented for this druid.indexer.task.logs");
+    throw new NotImplementedException(StringUtils.format("this druid.indexer.logs.type [%s] does not support managing task payloads yet. You will have to switch to using environment variables", getClass()));
   }
 }
