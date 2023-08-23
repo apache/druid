@@ -17,40 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
-public class NestedDataDimensionSchema extends DimensionSchema
+public class TestSeekableStreamDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, String>
 {
   @JsonCreator
-  public NestedDataDimensionSchema(
-      @JsonProperty("name") String name
+  public TestSeekableStreamDataSourceMetadata(
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> seekableStreamSequenceNumbers)
+  {
+    super(seekableStreamSequenceNumbers);
+  }
+
+  @Override
+  protected SeekableStreamDataSourceMetadata<String, String> createConcreteDataSourceMetaData(
+      SeekableStreamSequenceNumbers<String, String> seekableStreamSequenceNumbers
   )
   {
-    super(name, null, true);
+    return new TestSeekableStreamDataSourceMetadata(seekableStreamSequenceNumbers);
   }
 
   @Override
-  public String getTypeName()
+  public DataSourceMetadata asStartMetadata()
   {
-    return NestedDataComplexTypeSerde.TYPE_NAME;
-  }
-
-  @Override
-  public ColumnType getColumnType()
-  {
-    return ColumnType.NESTED_DATA;
-  }
-
-  @Override
-  public DimensionHandler getDimensionHandler()
-  {
-    return new NestedDataDimensionHandler(getName());
+    return null;
   }
 }
-

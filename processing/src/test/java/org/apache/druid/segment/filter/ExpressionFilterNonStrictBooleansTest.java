@@ -31,9 +31,9 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 
 @RunWith(Parameterized.class)
-public class ExpressionFilterStrictBooleansTest extends ExpressionFilterTest
+public class ExpressionFilterNonStrictBooleansTest extends ExpressionFilterTest
 {
-  public ExpressionFilterStrictBooleansTest(
+  public ExpressionFilterNonStrictBooleansTest(
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
@@ -48,6 +48,6 @@ public class ExpressionFilterStrictBooleansTest extends ExpressionFilterTest
   @Override
   public void setup()
   {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
+    ExpressionProcessing.initializeForStrictBooleansTests(false);
   }
 }
