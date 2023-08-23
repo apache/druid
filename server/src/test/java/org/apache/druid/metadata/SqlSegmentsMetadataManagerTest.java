@@ -283,7 +283,7 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
     Assert.assertEquals(
-        ImmutableList.of("wikipedia2", "wikipedia3", "wikipedia"),
+        ImmutableList.of("wikipedia3", "wikipedia", "wikipedia2"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
                            .map(ImmutableDruidDataSource::getName)
@@ -388,7 +388,7 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     sqlSegmentsMetadataManager.poll();
 
-    // We alter the segment table to allow nullable used_flag_last_updated in order to test compatibility during druid upgrade from version without used_flag_last_updated.
+    // We alter the segment table to allow nullable used_status_last_updated in order to test compatibility during druid upgrade from version without used_status_last_updated.
     derbyConnectorRule.allowUsedFlagLastUpdatedToBeNullable();
 
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
@@ -447,9 +447,9 @@ public class SqlSegmentsMetadataManagerTest
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
 
-    // One of the 3 segments in newDs has a null used_flag_last_updated which should mean getUnusedSegmentIntervals never returns it
-    // One of the 3 segments in newDs has a used_flag_last_updated older than 1 day which means it should also be returned
-    // The last of the 3 segemns in newDs has a used_flag_last_updated date less than one day and should not be returned
+    // One of the 3 segments in newDs has a null used_status_last_updated which should mean getUnusedSegmentIntervals never returns it
+    // One of the 3 segments in newDs has a used_status_last_updated older than 1 day which means it should also be returned
+    // The last of the 3 segemns in newDs has a used_status_last_updated date less than one day and should not be returned
     Assert.assertEquals(
         ImmutableList.of(newSegment2.getInterval()),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals(newDs, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
@@ -964,7 +964,7 @@ public class SqlSegmentsMetadataManagerTest
           {
             List<Map<String, Object>> lst = handle.select(
                 StringUtils.format(
-                    "SELECT * FROM %1$s WHERE USED_FLAG_LAST_UPDATED IS NULL",
+                    "SELECT * FROM %1$s WHERE USED_STATUS_LAST_UPDATED IS NULL",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()

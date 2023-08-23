@@ -73,12 +73,13 @@ public class GroupByRules
 
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)
-      if (project == null) {
-        // We need some kind of projection to support filtered aggregations.
-        return null;
-      }
 
-      final RexNode expression = project.getProjects().get(call.filterArg);
+      final RexNode expression = Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
+            rowSignature,
+            project,
+            call.filterArg);
+
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
           rowSignature,

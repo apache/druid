@@ -2313,5 +2313,6 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+taskslots
 loadstatus
 sqlQueryId

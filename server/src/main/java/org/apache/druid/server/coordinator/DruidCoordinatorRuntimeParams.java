@@ -332,7 +332,7 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withSnapshotOfDataSourcesWithAllUsedSegments(DataSourcesSnapshot snapshot)
+    public Builder withDataSourcesSnapshot(DataSourcesSnapshot snapshot)
     {
       this.usedSegments = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
       this.dataSourcesSnapshot = snapshot;
