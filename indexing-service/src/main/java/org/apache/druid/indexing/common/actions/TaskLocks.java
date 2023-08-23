@@ -139,7 +139,8 @@ public class TaskLocks
         ).add(segment)
     );
 
-    final Set<TaskLockInfo> replaceLocks = taskLockbox.getAllReplaceLocksForDatasource(datasource).stream()
+    final Set<TaskLockInfo> replaceLocks = taskLockbox.getAllReplaceLocksForDatasource(datasource)
+                                                      .stream()
                                                       .map(TaskLocks::toLockInfo)
                                                       .collect(Collectors.toSet());
 

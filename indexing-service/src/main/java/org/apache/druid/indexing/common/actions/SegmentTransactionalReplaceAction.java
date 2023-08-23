@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -33,8 +34,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -84,9 +83,14 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
-    String datasource = task.getDataSource();
-    final Map<DataSegment, TaskLockInfo> segmentToReplaceLock
-        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
+    // Find the active replace locks held only by this task
+    final Set<TaskLockInfo> replaceLocksForTask =
+        toolbox.getTaskLockbox()
+               .findLocksForTask(task)
+               .stream()
+               .filter(taskLock -> !taskLock.isRevoked() && TaskLockType.REPLACE.equals(taskLock.getType()))
+               .map(TaskLocks::toLockInfo)
+               .collect(Collectors.toSet());
 
     final SegmentPublishResult retVal;
     try {
@@ -97,7 +101,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitReplaceSegments(
                       segments,
-                      new HashSet<>(segmentToReplaceLock.values())
+                      replaceLocksForTask
                   )
               )
               .onInvalidLocks(
