@@ -136,14 +136,6 @@ public interface TaskRunner
 
   Map<String, Long> getBlacklistedTaskSlotCount();
 
-  /**
-   * Beacause the k8s task runner is an extension, we need to know the task runner type in the overlord resource
-   */
-  default boolean isK8sTaskRunner()
-  {
-    return false;
-  }
-
   default void updateStatus(Task task, TaskStatus status)
   {
     // do nothing
@@ -154,5 +146,14 @@ public interface TaskRunner
     // do nothing
   }
 
+  default int getTotalCapacity()
+  {
+    return -1;
+  }
+
+  default int getUsedCapacity()
+  {
+    return -1;
+  }
 
 }
