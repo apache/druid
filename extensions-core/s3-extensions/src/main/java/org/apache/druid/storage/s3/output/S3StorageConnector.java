@@ -96,8 +96,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
         config,
         serverSideEncryptingAmazonS3,
         config.getChunkSize(),
-        !(config.isTestingTransferManager()
-          && serverSideEncryptingAmazonS3.getUnderlyingServerSideEncryption() instanceof NoopServerSideEncryption)
+        !(config.isTestingTransferManager())
     );
   }
 
