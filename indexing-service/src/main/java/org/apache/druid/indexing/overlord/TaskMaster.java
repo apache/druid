@@ -242,7 +242,13 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
    */
   public boolean isLeader()
   {
-    return overlordLeaderSelector.isLeader() && initialized;
+    giant.lock();
+    try {
+      return overlordLeaderSelector.isLeader() && initialized;
+    }
+    finally {
+      giant.unlock();
+    }
   }
 
   public String getCurrentLeader()
