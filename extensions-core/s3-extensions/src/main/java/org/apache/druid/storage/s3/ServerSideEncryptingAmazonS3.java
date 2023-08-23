@@ -43,6 +43,9 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.Upload;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.File;
@@ -65,11 +68,15 @@ public class ServerSideEncryptingAmazonS3
 
   private final AmazonS3 amazonS3;
   private final ServerSideEncryption serverSideEncryption;
+  private final TransferManager transferManager;
 
   public ServerSideEncryptingAmazonS3(AmazonS3 amazonS3, ServerSideEncryption serverSideEncryption)
   {
     this.amazonS3 = amazonS3;
     this.serverSideEncryption = serverSideEncryption;
+    this.transferManager = TransferManagerBuilder.standard()
+                                                 .withS3Client(amazonS3)
+                                                 .build();
   }
 
   public boolean doesObjectExist(String bucket, String objectName)
@@ -126,6 +133,11 @@ public class ServerSideEncryptingAmazonS3
   public PutObjectResult putObject(PutObjectRequest request)
   {
     return amazonS3.putObject(serverSideEncryption.decorate(request));
+  }
+
+  public void putObject2(PutObjectRequest request) {
+
+    transferManager.upload(serverSideEncryption.decorate(request));
   }
 
   public CopyObjectResult copyObject(CopyObjectRequest request)

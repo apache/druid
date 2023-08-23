@@ -328,7 +328,7 @@ public class S3Utils
       putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
     }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.putObject(putObjectRequest);
+    service.putObject2(putObjectRequest);
   }
 
   @Nullable
