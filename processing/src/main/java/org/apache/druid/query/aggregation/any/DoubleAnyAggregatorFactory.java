@@ -54,6 +54,8 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
       NilColumnValueSelector.instance()
   )
   {
+
+
     @Override
     public void aggregate()
     {
