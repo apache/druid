@@ -812,7 +812,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       @Override
       public Duration getEmissionDuration()
       {
-        return new Period("PT1S").toStandardDuration();
+        return new Period("PT2S").toStandardDuration();
       }
     }).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("stream").anyTimes();
