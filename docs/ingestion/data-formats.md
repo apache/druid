@@ -555,16 +555,17 @@ It should only be used when ingesting from Apache Kafka.
 
 Configure the Kafka `inputFormat` as follows:
 
-| Field                 | Type | Description | Required |
-|-----------------------|------|-------------|----------|
-| `type`                | String | Set value to `kafka`. | yes |
-| `valueFormat`         | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `type` | String | Set value to `kafka`. | yes |
+| `valueFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
 | `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
-| `topicColumnName`     | String | Name of the column for the kafka record's topic. It is useful when ingesting data from multiple topics.| no (default = "kafka.topic") |
-| `headerColumnPrefix`  | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
-| `headerFormat`        | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
-| `keyFormat`           | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
-| `keyColumnName`       | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
+| `topicColumnName` | String |Name of the column for the kafka record's topic. It is useful when ingesting data from multiple topics.| no (default = "kafka.timestamp") |
+| `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
+| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
+| `keyFormat` | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
+| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
+
 
 The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
 
