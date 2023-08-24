@@ -18,9 +18,39 @@
 #
 
 #
-# Pull Request Labeler Github Action Configuration: https://github.com/marketplace/actions/labeler
+# Pull Request Labeler GitHub Action Configuration: https://github.com/marketplace/actions/labeler
 
-"Area - Documentation":
-  - "docs/**/*"
-  - "website/**"
-  - "examples/quickstart/jupyter-notebooks/**"
+'Area - Batch Ingestion':
+  - 'indexing-hadoop/**'
+  - 'extensions-core/multi-stage-query/**'
+
+'Area - Dependencies':
+  - '**/pom.xml'
+  - 'licenses.yaml'
+
+'Area - Documentation':
+  - 'docs/**/*'
+  - 'website/**'
+  - 'examples/quickstart/jupyter-notebooks/**'
+
+'Area - Lookups':
+  - 'extensions-core/lookups-cached-global/**'
+  - 'extensions-core/lookups-cached-single/**'
+  - 'extensions-core/kafka-extraction-namespace/**'
+
+'Area - Querying':
+  - 'sql/**'
+
+'Area - Streaming Ingestion':
+  - 'indexing-service/**'
+  - 'extensions-core/kafka-indexing-service/**'
+  - 'extensions-core/kinesis-indexing-service/**'
+
+'Area - Web Console':
+  - 'web-console/**'
+
+'Kubernetes':
+  - 'extensions-contrib/kubernetes-overlord-extensions/**'
+
+'MSQ':
+  - 'extensions-core/multi-stage-query/**'
