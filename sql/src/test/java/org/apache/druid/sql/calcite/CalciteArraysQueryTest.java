@@ -4160,7 +4160,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestVirtualWithColumns1()
+  public void testUnnestVirtualWithColumns3()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -4169,7 +4169,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT strings FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (strings) where (strings='a' or (m1=2 and strings='b'))",
+        "SELECT strings FROM druid.numfoo, UNNEST(ARRAY[dim4,dim5]) as unnested (strings) where (strings='a' or (m1=2 and strings='b'))",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -4183,21 +4183,16 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
                   .columns(ImmutableList.of("j0.unnest"))
+                  .filters(or(
+                      equality("j0.unnest", "a", ColumnType.STRING),
+                      and(equality("m1", 2.0, ColumnType.FLOAT), equality("j0.unnest", "b", ColumnType.STRING))
+                  ))
                   .build()
         ),
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{"aa"},
             new Object[]{"a"},
-            new Object[]{"ab"},
-            new Object[]{"a"},
-            new Object[]{"ba"},
-            new Object[]{"b"},
-            new Object[]{"ad"},
-            new Object[]{"b"},
-            new Object[]{"aa"},
-            new Object[]{"b"},
-            new Object[]{"ab"}
+            new Object[]{"a"}
         )
     );
   }

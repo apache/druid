@@ -2233,8 +2233,8 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"c"},
             new Object[]{"d"},
             new Object[]{""},
-            new Object[]{""},
-            new Object[]{""}
+            new Object[]{null},
+            new Object[]{null}
         ))
         .verifyResults();
   }
@@ -2244,6 +2244,10 @@ public class MSQSelectTest extends MSQTestBase
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    RowSignature resultSignature1 = RowSignature.builder()
+                                               .add("dim3", ColumnType.STRING)
                                                .build();
 
     RowSignature outputSignature = RowSignature.builder()
@@ -2257,7 +2261,7 @@ public class MSQSelectTest extends MSQTestBase
     );
 
     testSelectQuery()
-        .setSql("SELECT d3 FROM (select * from druid.foo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setSql("SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(newScanQueryBuilder()
@@ -2274,8 +2278,9 @@ public class MSQSelectTest extends MSQTestBase
                                           .columns("dim3")
                                           .context(defaultScanQueryContext(
                                               context,
-                                              resultSignature
+                                              resultSignature1
                                           ))
+                                          .limit(10)
                                           .build()
                                   ),
                                   expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),

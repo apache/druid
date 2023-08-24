@@ -44,6 +44,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
@@ -138,7 +139,11 @@ public class DataSourcePlan
     } else if (dataSource instanceof LookupDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forLookup((LookupDataSource) dataSource, broadcast);
+    } else if (dataSource instanceof FilteredDataSource) {
+      return forFilteredDataSource(queryKit, queryId, queryContext,
+                                   (FilteredDataSource) dataSource, querySegmentSpec, maxWorkerCount, minStageNumber, broadcast);
     } else if (dataSource instanceof UnnestDataSource) {
+      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forUnnest(
           queryKit, queryId, queryContext,
           (UnnestDataSource) dataSource, querySegmentSpec, maxWorkerCount, minStageNumber, broadcast
@@ -354,6 +359,43 @@ public class DataSourcePlan
     );
   }
 
+  private static DataSourcePlan forFilteredDataSource(
+      final QueryKit queryKit,
+      final String queryId,
+      final QueryContext queryContext,
+      final FilteredDataSource dataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      final int maxWorkerCount,
+      final int minStageNumber,
+      final boolean broadcast
+  )
+  {
+    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
+    final DataSourcePlan basePlan = forDataSource(
+        queryKit,
+        queryId,
+        queryContext,
+        dataSource.getBase(),
+        querySegmentSpec,
+        null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
+        maxWorkerCount,
+        Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+        broadcast
+    );
+
+    DataSource newDataSource = basePlan.getNewDataSource();
+    basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
+
+    final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
+
+    int shift = basePlan.getInputSpecs().size();
+    newDataSource = FilteredDataSource.create(shiftInputNumbers(newDataSource, shift), dataSource.getFilter());
+    return new DataSourcePlan(newDataSource,
+                              inputSpecs,
+                              broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+                              subQueryDefBuilder);
+
+  }
   /**
    * Build a plan for Unnest data source
    */
@@ -384,7 +426,6 @@ public class DataSourcePlan
     basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
-    basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
     int shift = basePlan.getInputSpecs().size();
     newDataSource = UnnestDataSource.create(shiftInputNumbers(newDataSource, shift ), dataSource.getVirtualColumn(), dataSource.getUnnestFilter());
