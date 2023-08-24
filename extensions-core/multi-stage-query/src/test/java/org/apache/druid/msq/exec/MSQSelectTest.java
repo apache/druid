@@ -140,7 +140,7 @@ public class MSQSelectTest extends MSQTestBase
     };*/
 
     Object[][] data = new Object[][]{
-        {DEFAULT, UNNEST_CONTEXT}
+        {DEFAULT, DEFAULT_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -2308,6 +2308,64 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"a"},
             new Object[]{"b"},
             new Object[]{""}
+        ))
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFoo6()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d3", ColumnType.STRING)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("j0.unnest", "d3")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("SELECT COUNT(*) FROM foo")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(UnnestDataSource.create(
+                                  new TableDataSource(CalciteTests.DATASOURCE1),
+                                  expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                  null
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .columns(ImmutableList.of("j0.unnest"))
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null}
         ))
         .verifyResults();
   }

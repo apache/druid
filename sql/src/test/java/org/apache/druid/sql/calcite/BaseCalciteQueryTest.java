@@ -203,7 +203,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .put(PlannerContext.CTX_ENABLE_UNNEST, true)
                   .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY =

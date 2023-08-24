@@ -140,16 +140,29 @@ public class DataSourcePlan
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forLookup((LookupDataSource) dataSource, broadcast);
     } else if (dataSource instanceof FilteredDataSource) {
-      return forFilteredDataSource(queryKit, queryId, queryContext,
-                                   (FilteredDataSource) dataSource, querySegmentSpec, maxWorkerCount, minStageNumber, broadcast);
+      return forFilteredDataSource(
+          queryKit,
+          queryId,
+          queryContext,
+          (FilteredDataSource) dataSource,
+          querySegmentSpec,
+          maxWorkerCount,
+          minStageNumber,
+          broadcast
+      );
     } else if (dataSource instanceof UnnestDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forUnnest(
-          queryKit, queryId, queryContext,
-          (UnnestDataSource) dataSource, querySegmentSpec, maxWorkerCount, minStageNumber, broadcast
+          queryKit,
+          queryId,
+          queryContext,
+          (UnnestDataSource) dataSource,
+          querySegmentSpec,
+          maxWorkerCount,
+          minStageNumber,
+          broadcast
       );
-    }
-    else if (dataSource instanceof QueryDataSource) {
+    } else if (dataSource instanceof QueryDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forQuery(
           queryKit,
@@ -390,12 +403,15 @@ public class DataSourcePlan
 
     int shift = basePlan.getInputSpecs().size();
     newDataSource = FilteredDataSource.create(shiftInputNumbers(newDataSource, shift), dataSource.getFilter());
-    return new DataSourcePlan(newDataSource,
-                              inputSpecs,
-                              broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
-                              subQueryDefBuilder);
+    return new DataSourcePlan(
+        newDataSource,
+        inputSpecs,
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        subQueryDefBuilder
+    );
 
   }
+
   /**
    * Build a plan for Unnest data source
    */
@@ -428,11 +444,17 @@ public class DataSourcePlan
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
 
     int shift = basePlan.getInputSpecs().size();
-    newDataSource = UnnestDataSource.create(shiftInputNumbers(newDataSource, shift ), dataSource.getVirtualColumn(), dataSource.getUnnestFilter());
-    return new DataSourcePlan(newDataSource,
-                              inputSpecs,
-                              broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
-                              subQueryDefBuilder);
+    newDataSource = UnnestDataSource.create(
+        shiftInputNumbers(newDataSource, shift),
+        dataSource.getVirtualColumn(),
+        dataSource.getUnnestFilter()
+    );
+    return new DataSourcePlan(
+        newDataSource,
+        inputSpecs,
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        subQueryDefBuilder
+    );
   }
 
   /**
