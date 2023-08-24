@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -524,8 +525,6 @@ public class CoordinatorDynamicConfig
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
     static final int REPLICATION_THROTTLE_LIMIT = 500;
-    static final int BALANCER_COMPUTE_THREADS = 1;
-    static final boolean EMIT_BALANCING_STATS = false;
     static final int MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
     static final int DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     static final boolean PAUSE_COORDINATION = false;
@@ -540,6 +539,12 @@ public class CoordinatorDynamicConfig
     // the capacity in the cluster would be nice
     static final double KILL_TASK_SLOT_RATIO = 1.0;
     static final int MAX_KILL_TASK_SLOTS = Integer.MAX_VALUE;
+
+    static int balancerComputeThreads()
+    {
+      // Use up to half of the available processors for balancing computations
+      return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+    }
   }
 
   public static class Builder
@@ -746,7 +751,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(maxSegmentsToMove, Defaults.MAX_SEGMENTS_TO_MOVE),
           valueOrDefault(replicantLifetime, Defaults.REPLICANT_LIFETIME),
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
-          valueOrDefault(balancerComputeThreads, Defaults.BALANCER_COMPUTE_THREADS),
+          valueOrDefault(balancerComputeThreads, Defaults.balancerComputeThreads()),
           specificDataSourcesToKillUnusedSegmentsIn,
           valueOrDefault(killTaskSlotRatio, Defaults.KILL_TASK_SLOT_RATIO),
           valueOrDefault(maxKillTaskSlots, Defaults.MAX_KILL_TASK_SLOTS),

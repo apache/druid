@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
@@ -36,17 +35,14 @@ public class SegmentLoadQueueManager
 
   private final LoadQueueTaskMaster taskMaster;
   private final ServerInventoryView serverInventoryView;
-  private final SegmentsMetadataManager segmentsMetadataManager;
 
   @Inject
   public SegmentLoadQueueManager(
       ServerInventoryView serverInventoryView,
-      SegmentsMetadataManager segmentsMetadataManager,
       LoadQueueTaskMaster taskMaster
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.segmentsMetadataManager = segmentsMetadataManager;
     this.taskMaster = taskMaster;
   }
 
@@ -146,14 +142,6 @@ public class SegmentLoadQueueManager
     }
 
     return true;
-  }
-
-  /**
-   * Marks the given segment as unused.
-   */
-  public boolean deleteSegment(DataSegment segment)
-  {
-    return segmentsMetadataManager.markSegmentAsUnused(segment.getId());
   }
 
 }
