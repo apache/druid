@@ -62,7 +62,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
-  private static final long DOWNLOAD_SIZE_BYTES = 32 * 1024 * 1024;
+  private static final long DOWNLOAD_SIZE_BYTES = 100 * 1024 * 1024;
 
   private static final long UPLOAD_CHUNK_SIZE = 8 * 1024 * 1024L;
 

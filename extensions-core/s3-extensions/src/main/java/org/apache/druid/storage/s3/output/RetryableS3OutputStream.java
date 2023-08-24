@@ -138,7 +138,7 @@ public class RetryableS3OutputStream extends OutputStream
     this.pushStopwatch = Stopwatch.createUnstarted();
     this.pushStopwatch.reset();
 
-    this.currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
+    this.currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)), chunkSize);
   }
 
   @Override
@@ -171,7 +171,7 @@ public class RetryableS3OutputStream extends OutputStream
 
         if (currentChunk.length() >= chunkSize) {
           pushCurrentChunk();
-          currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
+          currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)), chunkSize);
         }
 
         offsetToWrite += writtenBytes;
@@ -316,12 +316,12 @@ public class RetryableS3OutputStream extends OutputStream
     private final ByteArrayOutputStream baos;
     private boolean closed;
 
-    private Chunk(int id, File file) throws FileNotFoundException
+    private Chunk(int id, File file, long chunkSize) throws FileNotFoundException
     {
       this.id = id;
       // this.file = file;
       // this.outputStream = new CountingOutputStream(new FastBufferedOutputStream(new FileOutputStream(file)));
-      this.baos = new ByteArrayOutputStream();
+      this.baos = new ByteArrayOutputStream((int) chunkSize);
       this.outputStream = new CountingOutputStream(baos);
     }
 
