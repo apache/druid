@@ -64,4 +64,4 @@ This consistency applies to both log *and* exception messages.
 
 ## Documentation style
 
-For the majority of style considerations, the Apache Druid documentation follows the [Google Developer Documentation Style Guide](https://developers.google.com/style). For more detail see [Contribute to Druid docs](../docs/development/docs-contribute.md#style-guide).
+For the majority of style considerations, the Apache Druid documentation follows the [Google Developer Documentation Style Guide](https://developers.google.com/style). For more details, see [Contribute to Druid docs](../docs/development/docs-contribute.md#style-guide).
