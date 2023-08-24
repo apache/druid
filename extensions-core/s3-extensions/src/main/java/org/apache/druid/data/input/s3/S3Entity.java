@@ -31,14 +31,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -70,7 +72,7 @@ public class S3Entity extends RetryingInputEntity
   {
     Preconditions.checkArgument(maxRetries >= 0);
     this.s3Client = s3Client;
-    if (s3Client.getUnderlyingServerSideEncryption() instanceof NoopServerSideEncryption) {
+    if (true) {
       log.info("Using transfer manager in S3Entity");
       this.transferManager = TransferManagerBuilder.standard()
                                                    .withS3Client(s3Client.getUnderlyingS3Client())
@@ -123,6 +125,7 @@ public class S3Entity extends RetryingInputEntity
           ServiceUtils.getPartCount(request, s3Client.getUnderlyingS3Client())
       );
       log.info("[%s] : [%s] download parallelizable ? [%s]", object.getBucket(), object.getPath(), parallelizable);
+      DateTime start = DateTimes.nowUtc();
       Download download = transferManager.download(request, tempFile);
       try {
         download.waitForCompletion();
@@ -130,6 +133,13 @@ public class S3Entity extends RetryingInputEntity
       catch (InterruptedException e) {
         throw new RE(e);
       }
+
+      log.info(
+          "Loaded from [%s] to [%s] in [%d] ms",
+          object.getPath(),
+          tempFile.getPath(),
+          new Interval(start, DateTimes.nowUtc()).toDurationMillis()
+      );
 
       return new FileInputStream(tempFile)
       {
