@@ -390,7 +390,7 @@ public class DataSourcePlan
         queryContext,
         dataSource.getBase(),
         querySegmentSpec,
-        null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
+        null,
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
@@ -433,7 +433,7 @@ public class DataSourcePlan
         queryContext,
         dataSource.getBase(),
         querySegmentSpec,
-        null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
+        null,
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast

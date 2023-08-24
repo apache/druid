@@ -62,6 +62,7 @@ public class ViewSqlEngine implements SqlEngine
       case SCAN_ORDER_BY_NON_TIME:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
+        return true;
       // Views can't sit on top of INSERT or REPLACE.
       case CAN_INSERT:
       case CAN_REPLACE:

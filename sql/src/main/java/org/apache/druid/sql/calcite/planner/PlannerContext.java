@@ -523,12 +523,6 @@ public class PlannerContext
       return false;
     }
 
-    /*if (feature == EngineFeature.UNNEST &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
-      // Short-circuit: feature requires context flag.
-      return false;
-    }*/
-
     return engine.featureAvailable(feature, this);
   }
 

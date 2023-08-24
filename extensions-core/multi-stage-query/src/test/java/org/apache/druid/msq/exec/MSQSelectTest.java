@@ -129,7 +129,6 @@ public class MSQSelectTest extends MSQTestBase
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
-    /*
     Object[][] data = new Object[][]{
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
@@ -137,11 +136,8 @@ public class MSQSelectTest extends MSQTestBase
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
         {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
         {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
-    };*/
-
-    Object[][] data = new Object[][]{
-        {DEFAULT, DEFAULT_MSQ_CONTEXT}
     };
+
     return Arrays.asList(data);
   }
 
@@ -2126,7 +2122,7 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
-  public void testSelectOnFoo3()
+  public void testSelectUnnestOnInlineFoo()
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("EXPR$0", ColumnType.LONG)
@@ -2182,7 +2178,7 @@ public class MSQSelectTest extends MSQTestBase
 
 
   @Test
-  public void testSelectOnFoo4()
+  public void testSelectUnnestOnFoo()
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("j0.unnest", ColumnType.STRING)
@@ -2240,7 +2236,7 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
-  public void testSelectOnFoo5()
+  public void testSelectUnnestOnQueryFoo()
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("j0.unnest", ColumnType.STRING)
@@ -2308,64 +2304,6 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"a"},
             new Object[]{"b"},
             new Object[]{""}
-        ))
-        .verifyResults();
-  }
-
-  @Test
-  public void testSelectOnFoo6()
-  {
-    RowSignature resultSignature = RowSignature.builder()
-                                               .add("j0.unnest", ColumnType.STRING)
-                                               .build();
-
-    RowSignature outputSignature = RowSignature.builder()
-                                               .add("d3", ColumnType.STRING)
-                                               .build();
-
-    final ColumnMappings expectedColumnMappings = new ColumnMappings(
-        ImmutableList.of(
-            new ColumnMapping("j0.unnest", "d3")
-        )
-    );
-
-    testSelectQuery()
-        .setSql("SELECT COUNT(*) FROM foo")
-        .setExpectedMSQSpec(
-            MSQSpec.builder()
-                   .query(newScanQueryBuilder()
-                              .dataSource(UnnestDataSource.create(
-                                  new TableDataSource(CalciteTests.DATASOURCE1),
-                                  expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
-                                  null
-                              ))
-                              .intervals(querySegmentSpec(Filtration.eternity()))
-                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
-                              .context(defaultScanQueryContext(
-                                  context,
-                                  resultSignature
-                              ))
-                              .columns(ImmutableList.of("j0.unnest"))
-                              .build())
-                   .columnMappings(expectedColumnMappings)
-                   .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
-                   .build()
-        )
-        .setExpectedRowSignature(outputSignature)
-        .setQueryContext(context)
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""},
-            new Object[]{null},
-            new Object[]{null}
         ))
         .verifyResults();
   }
