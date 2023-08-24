@@ -61,7 +61,7 @@ public class SegmentLoadingConfig
           Integer.MAX_VALUE,
           60,
           true,
-          dynamicConfig.getBalancerComputeThreads()
+          CoordinatorDynamicConfig.getDefaultBalancerComputeThreads()
       );
     } else {
       // Use the configured values

@@ -517,6 +517,15 @@ public class CoordinatorDynamicConfig
     return new Builder();
   }
 
+  /**
+   * Returns a value of {@code (num processors / 2)} to ensure that balancing
+   * computations do not hog all Coordinator resources.
+   */
+  public static int getDefaultBalancerComputeThreads()
+  {
+    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
   private static class Defaults
   {
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
@@ -539,12 +548,6 @@ public class CoordinatorDynamicConfig
     // the capacity in the cluster would be nice
     static final double KILL_TASK_SLOT_RATIO = 1.0;
     static final int MAX_KILL_TASK_SLOTS = Integer.MAX_VALUE;
-
-    static int balancerComputeThreads()
-    {
-      // Use up to half of the available processors for balancing computations
-      return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
-    }
   }
 
   public static class Builder
@@ -751,7 +754,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(maxSegmentsToMove, Defaults.MAX_SEGMENTS_TO_MOVE),
           valueOrDefault(replicantLifetime, Defaults.REPLICANT_LIFETIME),
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
-          valueOrDefault(balancerComputeThreads, Defaults.balancerComputeThreads()),
+          valueOrDefault(balancerComputeThreads, getDefaultBalancerComputeThreads()),
           specificDataSourcesToKillUnusedSegmentsIn,
           valueOrDefault(killTaskSlotRatio, Defaults.KILL_TASK_SLOT_RATIO),
           valueOrDefault(maxKillTaskSlots, Defaults.MAX_KILL_TASK_SLOTS),
