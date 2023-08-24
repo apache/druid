@@ -23,6 +23,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -314,23 +315,22 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
-    for (Job job : client.getPeonJobs()) {
-      try {
-        Task task = adapter.toTask(job);
-        restoredTasks.add(Pair.of(task, joinAsync(task)));
-      }
-      catch (IOException e) {
-        log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
-      }
-    }
-    return restoredTasks;
+    return ImmutableList.of();
   }
 
   @Override
   @LifecycleStart
   public void start()
   {
+    for (Job job : client.getPeonJobs()) {
+      try {
+        joinAsync(adapter.toTask(job));
+      }
+      catch (IOException e) {
+        log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
+      }
+    }
+
     cleanupExecutor.scheduleAtFixedRate(
         () ->
             client.deleteCompletedPeonJobsOlderThan(
@@ -343,7 +343,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     );
     log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
   }
-
 
   @Override
   @LifecycleStop
