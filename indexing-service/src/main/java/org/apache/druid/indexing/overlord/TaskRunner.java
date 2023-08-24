@@ -146,11 +146,19 @@ public interface TaskRunner
     // do nothing
   }
 
+  /**
+   * The maximum number of tasks this TaskRunner can run concurrently.
+   * Can return -1 if this method is not implemented or capacity can't be found.
+   */
   default int getTotalCapacity()
   {
     return -1;
   }
 
+  /**
+   * The current number of tasks this TaskRunner is running.
+   * Can return -1 if this method is not implemented or the # of tasks can't be found.
+   */
   default int getUsedCapacity()
   {
     return -1;
