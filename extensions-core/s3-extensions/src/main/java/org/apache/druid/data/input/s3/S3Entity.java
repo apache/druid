@@ -98,6 +98,56 @@ public class S3Entity extends RetryingInputEntity
   }
 
   @Override
+  public CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
+  {
+
+    log.info("doing fetch on s3 file");
+    if (!isUseTransferManager()) {
+      return super.fetch(temporaryDirectory, fetchBuffer);
+    }
+
+    final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
+
+    File tempFile = new File(tempDir.getAbsolutePath(), UUID.randomUUID().toString());
+    boolean parallelizable = TransferManagerUtils.isDownloadParallelizable(
+        s3Client.getUnderlyingS3Client(),
+        request,
+        ServiceUtils.getPartCount(request, s3Client.getUnderlyingS3Client())
+    );
+    log.info("[%s] : [%s] download parallelizable ? [%s]", object.getBucket(), object.getPath(), parallelizable);
+    DateTime start = DateTimes.nowUtc();
+    Download download = transferManager.download(request, tempFile);
+    try {
+      download.waitForCompletion();
+    }
+    catch (InterruptedException e) {
+      throw new RE(e);
+    }
+
+    log.info(
+        "Loaded from [%s] to [%s] in [%d] ms",
+        object.getPath(),
+        tempFile.getPath(),
+        new Interval(start, DateTimes.nowUtc()).toDurationMillis()
+    );
+
+    return new CleanableFile()
+    {
+      @Override
+      public File file()
+      {
+        return tempFile;
+      }
+
+      @Override
+      public void close()
+      {
+        tempFile.delete();
+      }
+    };
+  }
+
+  @Override
   protected InputStream readFrom(long offset) throws IOException
   {
     final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
