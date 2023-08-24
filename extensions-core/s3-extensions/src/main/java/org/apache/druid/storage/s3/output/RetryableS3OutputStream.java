@@ -30,7 +30,6 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
-import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -38,10 +37,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -207,7 +207,7 @@ public class RetryableS3OutputStream extends OutputStream
     }
     finally {
       if (!chunk.delete()) {
-        LOG.warn("Failed to delete chunk [%s]", chunk.getAbsolutePath());
+        // LOG.warn("Failed to delete chunk [%s]", chunk.getAbsolutePath());
       }
     }
   }
@@ -242,7 +242,7 @@ public class RetryableS3OutputStream extends OutputStream
         .withUploadId(uploadId)
         .withBucketName(bucket)
         .withKey(key)
-        .withFile(chunk.file)
+        .withInputStream(new ByteArrayInputStream(chunk.baos.toByteArray()))
         .withPartNumber(chunk.id)
         .withPartSize(chunk.length());
 
@@ -311,15 +311,18 @@ public class RetryableS3OutputStream extends OutputStream
   private static class Chunk implements Closeable
   {
     private final int id;
-    private final File file;
+    // private final File file;
     private final CountingOutputStream outputStream;
+    private final ByteArrayOutputStream baos;
     private boolean closed;
 
     private Chunk(int id, File file) throws FileNotFoundException
     {
       this.id = id;
-      this.file = file;
-      this.outputStream = new CountingOutputStream(new FastBufferedOutputStream(new FileOutputStream(file)));
+      // this.file = file;
+      // this.outputStream = new CountingOutputStream(new FastBufferedOutputStream(new FileOutputStream(file)));
+      this.baos = new ByteArrayOutputStream();
+      this.outputStream = new CountingOutputStream(baos);
     }
 
     private long length()
@@ -327,15 +330,21 @@ public class RetryableS3OutputStream extends OutputStream
       return outputStream.getCount();
     }
 
-    private boolean delete()
+    private boolean delete() throws IOException
     {
-      return file.delete();
+      outputStream.close();
+      return true;
     }
 
-    private String getAbsolutePath()
+    private ByteArrayOutputStream getBaos()
     {
-      return file.getAbsolutePath();
+      return baos;
     }
+
+    // private String getAbsolutePath()
+    // {
+      // return file.getAbsolutePath();
+    // }
 
     @Override
     public boolean equals(Object o)
@@ -371,7 +380,6 @@ public class RetryableS3OutputStream extends OutputStream
     {
       return "Chunk{" +
              "id=" + id +
-             ", file=" + file.getAbsolutePath() +
              ", size=" + length() +
              '}';
     }

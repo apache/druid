@@ -29,12 +29,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,28 +39,14 @@ import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.SequenceInputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 /**
  * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
@@ -76,25 +59,22 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   private final S3OutputConfig config;
   private final ServerSideEncryptingAmazonS3 s3Client;
 
-  @Nullable
-  private final TransferManager transferManager;
-
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
   private static final long DOWNLOAD_SIZE_BYTES = 32 * 1024 * 1024;
 
-  private final long uploadChunkSize;
+  private static final long UPLOAD_CHUNK_SIZE = 8 * 1024 * 1024L;
 
   // cacheLocally is old behaviour
-  private final boolean cacheLocally;
+  // private final boolean cacheLocally;
 
   public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3)
   {
     this(
         config,
         serverSideEncryptingAmazonS3,
-        config.getChunkSize(),
+        // config.getChunkSize(),
         !(config.isTestingTransferManager())
     );
   }
@@ -102,7 +82,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   private S3StorageConnector(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3,
-      long uploadChunkSize,
+      // long uploadChunkSize,
       boolean cacheLocally
   )
   {
@@ -110,18 +90,14 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
         cacheLocally ? config.getChunkSize() : DOWNLOAD_PARALLELISM * DOWNLOAD_SIZE_BYTES,
         cacheLocally
     );
-    this.uploadChunkSize = uploadChunkSize;
-    this.cacheLocally = cacheLocally;
+    // this.uploadChunkSize = uploadChunkSize;
+    // this.cacheLocally = cacheLocally;
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
 
-    if (!cacheLocally) {
-      this.transferManager = TransferManagerBuilder.standard()
-                                                   .withS3Client(serverSideEncryptingAmazonS3.getUnderlyingS3Client())
-                                                   .build();
-    } else {
-      this.transferManager = null;
-    }
+    TransferManager transferManager = TransferManagerBuilder.standard()
+                                                            .withS3Client(serverSideEncryptingAmazonS3.getUnderlyingS3Client())
+                                                            .build();
 
     Preconditions.checkNotNull(config, "config is null");
     Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in s3 config");
@@ -187,24 +163,24 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       public InputStream open(GetObjectRequest object)
       {
         try {
-          if (cacheLocally) {
-            return S3Utils.retryS3Operation(
-                () -> s3Client.getObject(object).getObjectContent(),
-                config.getMaxRetry()
-            );
-          }
-
-          DateTime start = DateTimes.nowUtc();
-          InputStream is = implementParallelDownload(object, 4, DOWNLOAD_SIZE_BYTES);
-
-          log.info(
-              "Download path [%s], size [%d] took [%d] ms",
-              path,
-              size,
-              new Interval(start, DateTimes.nowUtc()).toDurationMillis()
+          // if (true) {
+          return S3Utils.retryS3Operation(
+              () -> s3Client.getObject(object).getObjectContent(),
+              config.getMaxRetry()
           );
+          // }
 
-          return is;
+          // DateTime start = DateTimes.nowUtc();
+          // InputStream is = implementParallelDownload(object, 4, DOWNLOAD_SIZE_BYTES);
+
+          // log.info(
+              // "Download path [%s], size [%d] took [%d] ms",
+              // path,
+              // size,
+              // new Interval(start, DateTimes.nowUtc()).toDurationMillis()
+          // );
+
+          // return is;
         }
         catch (Exception e) {
           throw new RuntimeException(e);
@@ -229,7 +205,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return new RetryableS3OutputStream(config, s3Client, objectPath(path), uploadChunkSize);
+    return new RetryableS3OutputStream(config, s3Client, objectPath(path), UPLOAD_CHUNK_SIZE);
   }
 
   @Override
@@ -342,7 +318,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   }
 
   // Add some buffering as well
-  InputStream implementParallelDownload(GetObjectRequest getObjectRequest, int parallelism, long rangeSize)
+  /*InputStream implementParallelDownload(GetObjectRequest getObjectRequest, int parallelism, long rangeSize)
   {
     ForkJoinPool fjp = new ForkJoinPool(parallelism);
     long start = getObjectRequest.getRange()[0];
@@ -438,5 +414,5 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     catch (ExecutionException e) {
       throw new RE(e);
     }
-  }
+  }*/
 }

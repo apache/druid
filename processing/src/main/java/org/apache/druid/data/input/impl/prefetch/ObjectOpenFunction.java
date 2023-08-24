@@ -19,6 +19,11 @@
 
 package org.apache.druid.data.input.impl.prefetch;
 
+import com.google.common.base.Predicates;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.java.util.common.FileUtils;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -29,5 +34,32 @@ public interface ObjectOpenFunction<T>
   default InputStream open(T object, long start) throws IOException
   {
     return open(object);
+  }
+
+  default InputEntity.CleanableFile fetchInternal(T object, File tempFile, byte[] fetchBuffer) throws IOException
+  {
+    FileUtils.copyLarge(
+        () -> this.open(object),
+        tempFile,
+        fetchBuffer,
+        Predicates.alwaysFalse(),
+        1,
+        ""
+    );
+
+    return new InputEntity.CleanableFile()
+    {
+      @Override
+      public File file()
+      {
+        return tempFile;
+      }
+
+      @Override
+      public void close()
+      {
+        tempFile.delete();
+      }
+    };
   }
 }

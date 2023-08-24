@@ -80,29 +80,26 @@ public interface InputEntity
    * - {@link InputFormat} requires expensive random access on remote storage.
    * - Holding a connection until you consume the entire InputStream is expensive.
    *
-   * @param temporaryDirectory to store temp data. This directory will be removed automatically once
-   *                           the task finishes.
    * @param fetchBuffer        is used to fetch remote entity into local storage.
    *
    * @see FileUtils#copyLarge
    */
-  default CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
+  default CleanableFile fetchInternal(File file, byte[] fetchBuffer) throws IOException
   {
-    final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
-    LOG.debug("Fetching entity into file[%s]", tempFile.getAbsolutePath());
+    LOG.debug("Fetching entity into file[%s]", file.getAbsolutePath());
 
     final URI uri = getUri();
     final String message;
 
     if (uri == null) {
-      message = StringUtils.format("Failed to fetch entity into local file [%s]", tempFile.getAbsolutePath());
+      message = StringUtils.format("Failed to fetch entity into local file [%s]", file.getAbsolutePath());
     } else {
-      message = StringUtils.format("Failed to fetch entity [%s] into local file [%s]", uri, tempFile.getAbsolutePath());
+      message = StringUtils.format("Failed to fetch entity [%s] into local file [%s]", uri, file.getAbsolutePath());
     }
 
     FileUtils.copyLarge(
         this::open,
-        tempFile,
+        file,
         fetchBuffer,
         getRetryCondition(),
         DEFAULT_MAX_NUM_FETCH_TRIES,
@@ -114,17 +111,23 @@ public interface InputEntity
       @Override
       public File file()
       {
-        return tempFile;
+        return file;
       }
 
       @Override
       public void close()
       {
-        if (!tempFile.delete()) {
-          LOG.warn("Failed to remove file[%s]", tempFile.getAbsolutePath());
+        if (!file.delete()) {
+          LOG.warn("Failed to remove file[%s]", file.getAbsolutePath());
         }
       }
     };
+  }
+
+  default CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
+  {
+    final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
+    return fetchInternal(tempFile, fetchBuffer);
   }
 
   /**

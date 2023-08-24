@@ -24,6 +24,7 @@ import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.utils.CompressionUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -88,6 +89,12 @@ public abstract class RetryingInputEntity implements InputEntity
     public InputStream open(RetryingInputEntity object, long start) throws IOException
     {
       return object.readFrom(start);
+    }
+
+    @Override
+    public CleanableFile fetchInternal(RetryingInputEntity object, File tempFile, byte[] fetchBuffer) throws IOException
+    {
+      return object.fetchInternal(tempFile, fetchBuffer);
     }
   }
 }

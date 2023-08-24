@@ -98,17 +98,16 @@ public class S3Entity extends RetryingInputEntity
   }
 
   @Override
-  public CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
+  public CleanableFile fetchInternal(File tempFile, byte[] fetchBuffer) throws IOException
   {
 
     log.info("doing fetch on s3 file");
     if (!isUseTransferManager()) {
-      return super.fetch(temporaryDirectory, fetchBuffer);
+      return super.fetchInternal(tempFile, fetchBuffer);
     }
 
     final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
 
-    File tempFile = new File(tempDir.getAbsolutePath(), UUID.randomUUID().toString());
     boolean parallelizable = TransferManagerUtils.isDownloadParallelizable(
         s3Client.getUnderlyingS3Client(),
         request,
