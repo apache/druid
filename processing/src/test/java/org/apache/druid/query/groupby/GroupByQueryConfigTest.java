@@ -34,10 +34,7 @@ public class GroupByQueryConfigTest
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()
       .put("singleThreaded", "true")
-      .put("defaultStrategy", "v2")
       .put("bufferGrouperInitialBuckets", "1")
-      .put("maxIntermediateRows", "2")
-      .put("maxResults", "3")
       .put("defaultOnDiskStorage", "1M")
       .put("maxOnDiskStorage", "4M")
       .put("maxSelectorDictionarySize", "5")
@@ -51,10 +48,7 @@ public class GroupByQueryConfigTest
     final GroupByQueryConfig config = MAPPER.convertValue(CONFIG_MAP, GroupByQueryConfig.class);
 
     Assert.assertEquals(true, config.isSingleThreaded());
-    Assert.assertEquals("v2", config.getDefaultStrategy());
     Assert.assertEquals(1, config.getBufferGrouperInitialBuckets());
-    Assert.assertEquals(2, config.getMaxIntermediateRows());
-    Assert.assertEquals(3, config.getMaxResults());
     Assert.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
     Assert.assertEquals(1_000_000, config.getDefaultOnDiskStorage().getBytes());
     Assert.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
@@ -76,10 +70,7 @@ public class GroupByQueryConfigTest
     );
 
     Assert.assertEquals(true, config2.isSingleThreaded());
-    Assert.assertEquals("v2", config2.getDefaultStrategy());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
-    Assert.assertEquals(2, config2.getMaxIntermediateRows());
-    Assert.assertEquals(3, config2.getMaxResults());
     Assert.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
     Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
@@ -98,7 +89,6 @@ public class GroupByQueryConfigTest
                     .setGranularity(Granularities.ALL)
                     .setContext(
                         ImmutableMap.<String, Object>builder()
-                                    .put("groupByStrategy", "v1")
                                     .put("maxOnDiskStorage", "3M")
                                     .put("maxResults", 2)
                                     .put("maxSelectorDictionarySize", 3)
@@ -110,10 +100,7 @@ public class GroupByQueryConfigTest
     );
 
     Assert.assertEquals(true, config2.isSingleThreaded());
-    Assert.assertEquals("v1", config2.getDefaultStrategy());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
-    Assert.assertEquals(2, config2.getMaxIntermediateRows());
-    Assert.assertEquals(2, config2.getMaxResults());
     Assert.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
     Assert.assertEquals(5 /* Can't override */, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000 /* Can't override */, config2.getConfiguredMaxMergingDictionarySize());

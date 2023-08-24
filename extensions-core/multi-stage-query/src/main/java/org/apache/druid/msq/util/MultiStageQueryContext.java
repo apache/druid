@@ -110,6 +110,8 @@ public class MultiStageQueryContext
   // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
   static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
+  public static final String CTX_IS_REINDEX = "isReindex";
+
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
    * CLUSTERED BY clause) but it can be overridden.
@@ -143,6 +145,14 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FAULT_TOLERANCE,
         DEFAULT_FAULT_TOLERANCE
+    );
+  }
+
+  public static boolean isReindex(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_IS_REINDEX,
+        true
     );
   }
 

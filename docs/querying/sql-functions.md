@@ -50,11 +50,7 @@ Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
-`ANY_VALUE(<NUMERIC>)`
-
-`ANY_VALUE(<BOOLEAN>)`
-
-`ANY_VALUE(<CHARACTER>, <NUMERIC>)`
+`ANY_VALUE(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -641,9 +637,7 @@ Returns a union of Tuple sketches which each contain an array of double values a
 
 ## EARLIEST
 
-`EARLIEST(expr)`
-
-`EARLIEST(expr, maxBytesPerString)`
+`EARLIEST(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -651,9 +645,7 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 ## EARLIEST_BY
 
-`EARLIEST_BY(expr, timestampExpr)`
-
-`EARLIEST_BY(expr, timestampExpr, maxBytesPerString)`
+`EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -837,9 +829,7 @@ Extracts a literal value from `expr` at the specified `path`. If you specify `RE
 
 ## LATEST
 
-`LATEST(expr)`
-
-`LATEST(expr, maxBytesPerString)`
+`LATEST(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -847,9 +837,7 @@ Returns the value of a numeric or string expression corresponding to the latest 
 
 ## LATEST_BY
 
-`LATEST_BY(expr, timestampExpr)`
-
-`LATEST_BY(expr, timestampExpr, maxBytesPerString)`
+`LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 

@@ -43,7 +43,10 @@ public class ParseExceptionUtils
   public static String generateReadableInputSourceNameFromMappedSegment(Segment segment)
   {
     if (segment instanceof ExternalSegment) {
-      return StringUtils.format("external input source: %s", ((ExternalSegment) segment).externalInputSource().toString());
+      return StringUtils.format(
+          "external input source: %s",
+          ((ExternalSegment) segment).externalInputSource().toString()
+      );
     } else if (segment instanceof LookupSegment) {
       return StringUtils.format("lookup input source: %s", segment.getId().getDataSource());
     } else if (segment instanceof QueryableIndexSegment) {

@@ -40,10 +40,12 @@ import java.util.function.Consumer;
 public class SegmentsInputSliceReader implements InputSliceReader
 {
   private final DataSegmentProvider dataSegmentProvider;
+  private final boolean isReindex;
 
-  public SegmentsInputSliceReader(final DataSegmentProvider dataSegmentProvider)
+  public SegmentsInputSliceReader(final DataSegmentProvider dataSegmentProvider, final boolean isReindex)
   {
     this.dataSegmentProvider = dataSegmentProvider;
+    this.isReindex = isReindex;
   }
 
   @Override
@@ -91,7 +93,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
           );
 
           return new SegmentWithDescriptor(
-              dataSegmentProvider.fetchSegment(segmentId, channelCounters),
+              dataSegmentProvider.fetchSegment(segmentId, channelCounters, isReindex),
               descriptor
           );
         }
