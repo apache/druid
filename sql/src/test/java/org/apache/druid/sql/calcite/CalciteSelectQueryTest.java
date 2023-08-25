@@ -1983,9 +1983,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     .setAggregatorSpecs(
                         ImmutableList.of(
                             new StringFirstAggregatorFactory("a0", "cityName", "v0", 125),
-                            new StringLastAggregatorFactory("a1", "cityName", "a0", 126),
+                            new StringLastAggregatorFactory("a1", "cityName", "v0", 126),
                             new StringFirstAggregatorFactory("a2", "cityName", "v1", 127),
-                            new StringLastAggregatorFactory("a3", "cityName", "a0", 128)
+                            new StringLastAggregatorFactory("a3", "cityName", "v1", 128)
                         )
                         )
                     .setContext(QUERY_CONTEXT_DEFAULT)
@@ -1994,5 +1994,4 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             new Object[]{"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"}))
         .run();
   }
-
 }
