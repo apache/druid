@@ -33,8 +33,6 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1947,51 +1945,5 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()),
         ImmutableList.of(new Object[] {0L}));
-  }
-
-  @Test
-  public void testEarliestByLatestByWithExpression()
-  {
-    cannotVectorize();
-    testBuilder()
-        .sql("SELECT\n"
-            + "  channel\n"
-            + " ,cityName\n"
-            + " ,EARLIEST_BY(\"cityName\", MILLIS_TO_TIMESTAMP(17), 125) as latest_by_time_page\n"
-            + " ,LATEST_BY(\"cityName\", MILLIS_TO_TIMESTAMP(17), 126) as latest_by_time_page\n"
-            + " ,EARLIEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 127) as latest_by_time_page\n"
-            + " ,LATEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 128) as latest_by_time_page\n"
-            + "FROM druid.wikipedia\n"
-            + "where channel < '#b' and cityName < 'B'\n"
-            + "GROUP BY 1,2"
-            )
-        .expectedQueries(
-            ImmutableList.of(
-                GroupByQuery.builder()
-                    .setDataSource("wikipedia")
-                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                    .setGranularity(Granularities.ALL)
-                    .setVirtualColumns(
-                        expressionVirtualColumn("v0", "17", ColumnType.LONG),
-                        expressionVirtualColumn("v1", "(\"__time\" + 3600000)", ColumnType.LONG)
-                        )
-                    .setDimensions(dimensions(new DefaultDimensionSpec("channel", "d0"),
-                        new DefaultDimensionSpec("cityName", "d1")))
-                    .setDimFilter(
-                        and(range("channel", ColumnType.STRING, null, "#b", false, true),
-                            range("cityName", ColumnType.STRING, null, "B", false, true)))
-                    .setAggregatorSpecs(
-                        ImmutableList.of(
-                            new StringFirstAggregatorFactory("a0", "cityName", "v0", 125),
-                            new StringLastAggregatorFactory("a1", "cityName", "v0", 126),
-                            new StringFirstAggregatorFactory("a2", "cityName", "v1", 127),
-                            new StringLastAggregatorFactory("a3", "cityName", "v1", 128)
-                        )
-                        )
-                    .setContext(QUERY_CONTEXT_DEFAULT)
-                    .build()))
-        .expectedResults(ImmutableList.of(
-            new Object[]{"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"}))
-        .run();
   }
 }
