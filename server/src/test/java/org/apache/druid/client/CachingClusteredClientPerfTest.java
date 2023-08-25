@@ -34,8 +34,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.TestSequence;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -49,7 +49,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerManagerTest;
 import org.apache.druid.server.coordination.ServerType;
@@ -136,10 +135,9 @@ public class CachingClusteredClientPerfTest
         Mockito.mock(CachePopulator.class),
         new CacheConfig(),
         Mockito.mock(DruidHttpClientConfig.class),
-        Mockito.mock(DruidProcessingConfig.class),
+        Mockito.mock(BrokerParallelMergeConfig.class),
         ForkJoinPool.commonPool(),
         queryScheduler,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
 

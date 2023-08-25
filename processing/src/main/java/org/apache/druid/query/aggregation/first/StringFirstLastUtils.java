@@ -120,6 +120,9 @@ public class StringFirstLastUtils
       time = pair.lhs;
       string = pair.rhs;
     } else if (object != null) {
+      if (timeSelector.isNull()) {
+        return null;
+      }
       time = timeSelector.getLong();
       string = DimensionHandlerUtils.convertObjectToString(object);
     } else {
@@ -158,6 +161,7 @@ public class StringFirstLastUtils
 
     Long timeValue = copyBuffer.getLong();
     int stringSizeBytes = copyBuffer.getInt();
+
 
     if (stringSizeBytes >= 0) {
       byte[] valueBytes = new byte[stringSizeBytes];

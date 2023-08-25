@@ -30,7 +30,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
-import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -91,7 +92,7 @@ public class BalanceSegmentsTest
     server4 = new DruidServer("server4", "server4", null, 100L, ServerType.HISTORICAL, "normal", 0);
 
     balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalanceSegmentsTest-%d"));
-    balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(balancerStrategyExecutor);
+    balancerStrategy = new CostBalancerStrategy(balancerStrategyExecutor);
 
     broadcastDatasources = Collections.singleton("datasourceBroadcast");
   }
@@ -378,7 +379,7 @@ public class BalanceSegmentsTest
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
   {
-    params = new BalanceSegments().run(params);
+    params = new BalanceSegments(Duration.standardMinutes(1)).run(params);
     if (params == null) {
       Assert.fail("BalanceSegments duty returned null params");
       return new CoordinatorRunStats();

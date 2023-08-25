@@ -34,6 +34,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1928,6 +1929,27 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testAggregateFilterInTheAbsenceOfProjection()
+  {
+    cannotVectorize();
+    testQuery(
+        "select count(1) filter (where __time > date '2023-01-01') " +
+            " from druid.foo where 'a' = 'b'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(new Object[] {0L}));
+  }
+
   public void testSumO1Matches()
   {
     cannotVectorize();
@@ -1968,4 +1990,5 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             new Object[] {0L}))
         .run();
   }
+
 }

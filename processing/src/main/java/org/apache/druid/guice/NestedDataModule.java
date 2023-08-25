@@ -26,7 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.NestedDataDimensionHandler;
+import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataJsonSerializer;
@@ -56,11 +56,10 @@ public class NestedDataModule implements DruidModule
   {
     if (ComplexMetrics.getSerdeForType(NestedDataComplexTypeSerde.TYPE_NAME) == null) {
       ComplexMetrics.registerSerde(NestedDataComplexTypeSerde.TYPE_NAME, NestedDataComplexTypeSerde.INSTANCE);
-
     }
     DimensionHandlerUtils.registerDimensionHandlerProvider(
         NestedDataComplexTypeSerde.TYPE_NAME,
-        NestedDataDimensionHandler::new
+        NestedCommonFormatColumnHandler::new
     );
   }
 
@@ -68,9 +67,7 @@ public class NestedDataModule implements DruidModule
   {
     return Collections.singletonList(
         new SimpleModule("NestedDataModule")
-            .registerSubtypes(
-                new NamedType(NestedFieldVirtualColumn.class, "nested-field")
-            )
+            .registerSubtypes(new NamedType(NestedFieldVirtualColumn.class, "nested-field"))
             .addSerializer(StructuredData.class, new StructuredDataJsonSerializer())
     );
   }

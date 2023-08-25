@@ -67,6 +67,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(EasyMockRunner.class)
+@SuppressWarnings("DoNotMock")
 public class KubernetesTaskRunnerTest extends EasyMockSupport
 {
   private static final String ID = "id";
@@ -367,7 +368,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     MatcherAssert.assertThat(slotCount, Matchers.allOf(
         Matchers.aMapWithSize(1),
         Matchers.hasEntry(
-            Matchers.equalTo("taskQueue"),
+            Matchers.equalTo(KubernetesTaskRunner.WORKER_CATEGORY),
             Matchers.equalTo(1L)
         )
     ));

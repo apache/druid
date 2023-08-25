@@ -23,10 +23,12 @@ sidebar_label: "Filters"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about aggregators available in SQL, refer to the
-> [SQL documentation](sql-scalar.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the native
+ language. For information about aggregators available in SQL, refer to the
+ [SQL documentation](sql-scalar.md).
+:::
 
 A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL.
 Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [Filtered aggregator](./aggregations.md#filtered-aggregator) and [Having filters](./having.md).
@@ -614,12 +616,16 @@ The JavaScript filter matches a dimension against the specified JavaScript funct
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
-
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ## Extraction filter
 
-> The extraction filter is now deprecated. Use the selector filter with an extraction function instead.
+:::info
+ The extraction filter is now deprecated. The selector filter with an extraction function specified
+ provides identical functionality and should be used instead.
+:::
 
 Extraction filter matches a dimension using a specific [extraction function](./dimensionspecs.md#extraction-functions).
 The following filter matches the values for which the extraction function has a transformation entry `input_key=output_value` where

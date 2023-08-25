@@ -294,7 +294,7 @@ public class SqlStatementTest
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
-              .expectMessageContains("Received an unexpected token [AS <EOF>]")
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
       );
     }
   }
@@ -383,7 +383,7 @@ public class SqlStatementTest
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
-              .expectMessageContains("Received an unexpected token [AS <EOF>]")
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
       );
     }
   }
@@ -476,7 +476,7 @@ public class SqlStatementTest
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
-              .expectMessageContains("Received an unexpected token [AS <EOF>]")
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
       );
     }
   }

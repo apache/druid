@@ -159,7 +159,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
       DataSourceMetadata oldCommitMetadata,
       DataSourceMetadata newCommitMetadata
   )
@@ -227,6 +226,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public void updateSegmentMetadata(Set<DataSegment> segments)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public DataSegment retrieveSegmentForId(final String id, boolean includeUnused)
+  {
+    return null;
   }
 
   public Set<DataSegment> getPublished()
