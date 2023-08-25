@@ -64,12 +64,16 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
     final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
     final int[] valueVector = valueDimensionVectorSelector.getRowVector();
     firstTime = buf.getLong(position);
     int index;
 
     long earliestTime;
     for (index = startRow; index < endRow; index++) {
+      if (nullTimeVector != null && nullTimeVector[index]) {
+        continue;
+      }
       earliestTime = timeVector[index];
       if (earliestTime < firstTime) {
         firstTime = earliestTime;
@@ -83,9 +87,13 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
   @Override
   public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
-    long[] timeVector = timeSelector.getLongVector();
-    int[] values = valueDimensionVectorSelector.getRowVector();
+    final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final int[] values = valueDimensionVectorSelector.getRowVector();
     for (int i = 0; i < numRows; i++) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
+      }
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long firstTime = buf.getLong(position);

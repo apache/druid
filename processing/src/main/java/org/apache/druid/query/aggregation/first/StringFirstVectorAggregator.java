@@ -64,12 +64,16 @@ public class StringFirstVectorAggregator implements VectorAggregator
     if (timeSelector == null) {
       return;
     }
-    long[] times = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] times = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
     long firstTime = buf.getLong(position);
     int index;
     for (int i = startRow; i < endRow; i++) {
       if (times[i] > firstTime) {
+        continue;
+      }
+      if (nullTimeVector != null && nullTimeVector[i]) {
         continue;
       }
       index = i;
@@ -111,8 +115,9 @@ public class StringFirstVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
-    long[] timeVector = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     // iterate once over the object vector to find first non null element and
     // determine if the type is Pair or not
@@ -127,6 +132,9 @@ public class StringFirstVectorAggregator implements VectorAggregator
     }
 
     for (int i = 0; i < numRows; i++) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
+      }
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long firstTime = buf.getLong(position);

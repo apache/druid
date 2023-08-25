@@ -13,8 +13,7 @@
                 }
             ],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -367,8 +366,7 @@
                 }
             ],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -403,8 +401,7 @@
             "metric": "rows",
             "threshold": 3,
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -997,8 +994,7 @@
             },
             "threshold": 3,
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1073,8 +1069,7 @@
             },
             "threshold": 3,
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1138,8 +1133,7 @@
             ],
             "dimensions": ["namespace"],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1354,8 +1348,7 @@
                 "value": "league_of_legends"
             },
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1383,8 +1376,7 @@
             "queryType": "timeBoundary",
             "dataSource": "wikipedia_editstream",
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1473,8 +1465,7 @@
             "metric": "rows",
             "threshold": 3,
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1534,8 +1525,7 @@
             "metric": "rows",
             "threshold": 3,
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1599,8 +1589,7 @@
             "metric": "rows",
             "threshold": 3,
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1689,8 +1678,7 @@
                 "limit": 3
             },
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1742,8 +1730,7 @@
                 }
             ],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1785,8 +1772,7 @@
                 }
             ],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1847,8 +1833,7 @@
                     "metric": "rows",
                     "threshold": 3,
                     "context": {
-                        "useCache": "true", 
-                "vectorize": "false",
+                        "useCache": "true",
                         "populateCache": "true",
                         "timeout": 360000
                     }
@@ -1868,8 +1853,7 @@
                 }
             ],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1906,8 +1890,7 @@
                     "metric": "rows",
                     "threshold": 3,
                     "context": {
-                        "useCache": "true", 
-                "vectorize": "false",
+                        "useCache": "true",
                         "populateCache": "true",
                         "timeout": 360000
                     }
@@ -1927,8 +1910,7 @@
                 }
             ],
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -2027,8 +2009,7 @@
                 "limit": 3
             },
             "context": {
-                "useCache": "true", 
-                "vectorize": "false",
+                "useCache": "true",
                 "populateCache": "true",
                 "timeout": 360000
             }
