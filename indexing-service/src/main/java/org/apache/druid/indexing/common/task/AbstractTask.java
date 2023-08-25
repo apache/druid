@@ -194,7 +194,8 @@ public abstract class AbstractTask implements Task
 
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
-  protected void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  @Override
+  public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
   {
     if (Thread.currentThread().isInterrupted()) {
       // clears the interrupted status so the subsequent cleanup work can continue without interruption
@@ -231,6 +232,7 @@ public abstract class AbstractTask implements Task
     }
   }
 
+  @Override
   public void waitForCleanupToFinish()
   {
     try {

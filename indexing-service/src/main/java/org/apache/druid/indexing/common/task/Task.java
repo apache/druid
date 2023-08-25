@@ -257,6 +257,12 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  default void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  {}
+
+  default void waitForCleanupToFinish()
+  {}
+
   default Map<String, Object> addToContext(String key, Object val)
   {
     getContext().put(key, val);
