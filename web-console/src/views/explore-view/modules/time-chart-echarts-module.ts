@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlExpression } from '@druid-toolkit/query';
+import { C, F, L, SqlCase, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
 import * as echarts from 'echarts';
 
 import { getInitQuery } from '../utils';
+
+const OTHERS_VALUE = 'Others';
 
 function transformData(data: any[], vs: string[]): Record<string, number>[] {
   const zeroDatum = Object.fromEntries(vs.map(v => [v, 0]));
@@ -71,6 +73,13 @@ export default typedVisualModule({
       control: {
         label: 'Max stacks',
         required: true,
+        visible: ({ params }) => Boolean(params.splitColumn),
+      },
+    },
+    showOthers: {
+      type: 'boolean',
+      default: false,
+      control: {
         visible: ({ params }) => Boolean(params.splitColumn),
       },
     },
@@ -137,7 +146,7 @@ export default typedVisualModule({
 
     return {
       async update({ table, where, parameterValues }) {
-        const { splitColumn, metric, numberToStack, timeGranularity } = parameterValues;
+        const { splitColumn, metric, numberToStack, showOthers, timeGranularity } = parameterValues;
 
         const vs = splitColumn
           ? (
@@ -154,21 +163,30 @@ export default typedVisualModule({
           await host.sqlQuery(
             getInitQuery(
               table,
-              splitColumn && vs ? where.and(splitColumn.expression.in(vs)) : where,
+              splitColumn && vs && !showOthers ? where.and(splitColumn.expression.in(vs)) : where,
             )
               .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as('time'), {
                 addToGroupBy: 'end',
                 addToOrderBy: 'end',
                 direction: 'ASC',
               })
-              .applyIf(splitColumn, q =>
-                q.addSelect(splitColumn!.expression.as('stack'), { addToGroupBy: 'end' }),
-              )
+              .applyIf(splitColumn, q => {
+                const splitEx = splitColumn!.expression;
+                return q.addSelect(
+                  (showOthers
+                    ? SqlCase.ifThenElse(splitEx.in(vs!), splitEx, L(OTHERS_VALUE))
+                    : splitEx
+                  ).as('stack'),
+                  { addToGroupBy: 'end' },
+                );
+              })
               .addSelect(metric.expression.as('met')),
           )
         ).toObjectArray();
 
-        const sourceData = vs ? transformData(dataset, vs) : dataset;
+        const effectiveVs = vs && showOthers ? vs.concat(OTHERS_VALUE) : vs;
+        const sourceData = effectiveVs ? transformData(dataset, effectiveVs) : dataset;
+
         const showSymbol = sourceData.length < 2;
         myChart.setOption(
           {
@@ -176,15 +194,15 @@ export default typedVisualModule({
               dimensions: ['time'].concat(vs || ['met']),
               source: sourceData,
             },
-            legend: vs
+            legend: effectiveVs
               ? {
-                  data: vs,
+                  data: effectiveVs,
                 }
               : undefined,
-            series: (vs || ['met']).map(v => {
+            series: (effectiveVs || ['met']).map(v => {
               return {
                 id: v,
-                name: vs ? v : metric.name,
+                name: effectiveVs ? v : metric.name,
                 type: 'line',
                 stack: 'Total',
                 showSymbol,
