@@ -22,18 +22,18 @@ import * as echarts from 'echarts';
 
 import { getInitQuery } from '../utils';
 
-function transformData(data: any[]): any[] {
+function transformData(data: any[], vs: string[]): any[] {
   let lastTime = -1;
   let lastDatum: any;
   const ret = [];
   for (const d of data) {
-    if (d.time.valueOf() === lastTime) {
-      lastDatum[d.stack] = d.met;
-    } else {
+    if (d.time.valueOf() !== lastTime) {
       if (lastDatum) ret.push(lastDatum);
       lastTime = d.time.valueOf();
-      lastDatum = { time: d.time, [d.stack]: d.met };
+      lastDatum = { time: d.time };
+      for (const v of vs) lastDatum[v] = 0;
     }
+    lastDatum[d.stack] = d.met;
   }
   if (lastDatum) ret.push(lastDatum);
   return ret;
@@ -167,7 +167,7 @@ export default typedVisualModule({
           )
         ).toObjectArray();
 
-        const sourceData = vs ? transformData(dataset) : dataset;
+        const sourceData = vs ? transformData(dataset, vs) : dataset;
         const showSymbol = sourceData.length < 2;
         myChart.setOption(
           {
@@ -183,7 +183,7 @@ export default typedVisualModule({
             series: (vs || ['met']).map(v => {
               return {
                 id: v,
-                name: v,
+                name: vs ? v : metric.name,
                 type: 'line',
                 stack: 'Total',
                 showSymbol,
