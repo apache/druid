@@ -2040,4 +2040,25 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[] {useDefault ? 1L : 0L}));
   }
 
+  @Test
+  public void testAggregateFilterInTheAbsenceOfProjection()
+  {
+    cannotVectorize();
+    testQuery(
+        "select count(1) filter (where __time > date '2023-01-01') " +
+            " from druid.foo where 'a' = 'b'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(new Object[] {0L}));
+  }
 }

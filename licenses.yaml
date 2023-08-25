@@ -364,9 +364,29 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 16.0.1
+version: 31.1-jre
 libraries:
   - com.google.guava: guava
+
+---
+
+name: Failureaccess
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - com.google.guava: failureaccess
+
+---
+
+name: j2objc
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -1579,7 +1599,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.4
+version: 2.12.5
 libraries:
   - joda-time: joda-time
 notices:
@@ -3792,7 +3812,7 @@ name: ANTLR 4 Runtime
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.5.1
+version: 4.5.3
 copyright: The ANTLR Project
 license_file_path: licenses/bin/antlr4-runtime.BSD3
 libraries:
@@ -3965,8 +3985,8 @@ libraries:
 name: ICU4J
 license_category: binary
 module: java-core
-license_name: ICU License
-version: 55.1
+license_name: Unicode/ICU License
+version: 73.2
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:

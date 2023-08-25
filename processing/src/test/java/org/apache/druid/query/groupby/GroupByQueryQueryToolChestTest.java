@@ -70,9 +70,6 @@ import org.apache.druid.query.groupby.having.NotHavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -1180,24 +1177,16 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
         queryConfigSupplier,
-        new GroupByStrategyV1(
-            queryConfigSupplier,
-            new GroupByQueryEngine(queryConfigSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            processingConfig,
-            queryConfigSupplier,
-            bufferPool,
-            mergeBufferPool,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergeBufferPool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(strategySelector);
+    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine);
     CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query);
     Assert.assertTrue(
         "result level cache on broker server for GroupByStrategyV2 should be enabled",
