@@ -159,6 +159,19 @@ public class TaskLocks
     return segmentToReplaceLock;
   }
 
+  /**
+   * Finds the active locks of type {@link TaskLockType#REPLACE} held by this task.
+   */
+  public static Set<TaskLockInfo> findReplaceLocksHeldByTask(Task task, TaskLockbox taskLockbox)
+  {
+    return taskLockbox
+        .findLocksForTask(task)
+        .stream()
+        .filter(taskLock -> !taskLock.isRevoked() && TaskLockType.REPLACE.equals(taskLock.getType()))
+        .map(TaskLocks::toLockInfo)
+        .collect(Collectors.toSet());
+  }
+
   public static TaskLockInfo toLockInfo(TaskLock taskLock)
   {
     return new TaskLockInfo(taskLock.getInterval(), taskLock.getVersion());

@@ -279,14 +279,12 @@ public interface IndexerMetadataStorageCoordinator
 
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> segments,
-      @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata,
-      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap
+      Map<DataSegment, TaskLockInfo> segmentToReplaceLock
   );
 
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> segments,
-      @Nullable Set<TaskLockInfo> taskLockInfos
+      Set<TaskLockInfo> taskLockInfos
   );
 
   /**

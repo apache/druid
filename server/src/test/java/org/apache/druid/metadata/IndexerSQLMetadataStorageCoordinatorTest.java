@@ -635,9 +635,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     segmentsToBeProcessed.addAll(month1);
     segmentsToBeProcessed.addAll(month2);
     final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewIds = derbyConnector.retryWithHandle(
-        handle -> {
-          return coordinator.allocateNewSegmentIds(handle, "foo", segmentsToBeProcessed);
-        }
+        handle -> coordinator.allocateExtraIdsForAppendSegments(handle, "foo", segmentsToBeProcessed)
     );
 
     for (DataSegment segment : day1) {
@@ -726,7 +724,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       allSegments.add(segment);
     }
 
-    coordinator.commitAppendSegments(allSegments, null, null, segmentLockMap);
+    coordinator.commitAppendSegments(allSegments, segmentLockMap);
 
     Assert.assertEquals(
         allSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet()),

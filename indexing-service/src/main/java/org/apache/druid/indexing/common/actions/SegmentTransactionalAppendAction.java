@@ -22,18 +22,15 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -46,50 +43,25 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
 {
   private final Set<DataSegment> segments;
 
-  @Nullable
-  private final DataSourceMetadata startMetadata;
-  @Nullable
-  private final DataSourceMetadata endMetadata;
-
   public static SegmentTransactionalAppendAction create(
-      Set<DataSegment> segments,
-      @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
+      Set<DataSegment> segments
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata);
+    return new SegmentTransactionalAppendAction(segments);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
-      @JsonProperty("segments") @Nullable Set<DataSegment> segments,
-      @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
+      @JsonProperty("segments") Set<DataSegment> segments
   )
   {
-    this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
-    this.startMetadata = startMetadata;
-    this.endMetadata = endMetadata;
+    this.segments = segments;
   }
 
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
     return segments;
-  }
-
-  @JsonProperty
-  @Nullable
-  public DataSourceMetadata getStartMetadata()
-  {
-    return startMetadata;
-  }
-
-  @JsonProperty
-  @Nullable
-  public DataSourceMetadata getEndMetadata()
-  {
-    return endMetadata;
   }
 
   @Override
@@ -119,8 +91,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
                       segments,
-                      startMetadata,
-                      endMetadata,
                       segmentToReplaceLock
                   )
               )
@@ -165,8 +135,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   {
     return "SegmentTransactionalAppendAction{" +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
-           ", startMetadata=" + startMetadata +
-           ", endMetadata=" + endMetadata +
            '}';
   }
 }

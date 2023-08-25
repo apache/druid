@@ -924,7 +924,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
+              SegmentTransactionalAppendAction.create(segmentsToPublish)
           );
         default:
           return toolbox.getTaskActionClient().submit(

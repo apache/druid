@@ -106,7 +106,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testCommandExecutingTask() throws Exception
   {
-
     CommandExecutingTask replaceTask0 = new CommandExecutingTask(
         "replace0",
         "DS",
@@ -115,18 +114,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         REPLACE_CONTEXT,
         AbstractTask.IngestionMode.REPLACE
     );
-    Runnable runReplaceTask0 = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          final Set<DataSegment> segments = replaceTask0.createCorePartitions(1);
-          replaceTask0.replaceSegments(segments);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+    Runnable runReplaceTask0 = () -> {
+      try {
+        final Set<DataSegment> segments = replaceTask0.createCorePartitions(1);
+        replaceTask0.replaceSegments(segments);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     };
 
@@ -138,22 +132,17 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         APPEND_CONTEXT,
         AbstractTask.IngestionMode.APPEND
     );
-    Runnable runAppendTask0 = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          final Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>();
-          pendingSegments.add(
-              appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01")
-          );
-          final Set<DataSegment> segments = appendTask0.convertPendingSegments(pendingSegments);
-          appendTask0.appendSegments(segments);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+    Runnable runAppendTask0 = () -> {
+      try {
+        final Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>();
+        pendingSegments.add(
+            appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01")
+        );
+        final Set<DataSegment> segments = appendTask0.convertPendingSegments(pendingSegments);
+        appendTask0.appendSegments(segments);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     };
 
@@ -165,18 +154,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         REPLACE_CONTEXT,
         AbstractTask.IngestionMode.REPLACE
     );
-    Runnable runReplaceTask1 = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          final Set<DataSegment> segments = replaceTask1.createCorePartitions(1);
-          replaceTask1.replaceSegments(segments);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+    Runnable runReplaceTask1 = () -> {
+      try {
+        final Set<DataSegment> segments = replaceTask1.createCorePartitions(1);
+        replaceTask1.replaceSegments(segments);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     };
 
@@ -188,18 +172,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         REPLACE_CONTEXT,
         AbstractTask.IngestionMode.REPLACE
     );
-    Runnable runReplaceTask2 = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          final Set<DataSegment> segments = replaceTask2.createCorePartitions(1);
-          replaceTask2.replaceSegments(segments);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+    Runnable runReplaceTask2 = () -> {
+      try {
+        final Set<DataSegment> segments = replaceTask2.createCorePartitions(1);
+        replaceTask2.replaceSegments(segments);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     };
 

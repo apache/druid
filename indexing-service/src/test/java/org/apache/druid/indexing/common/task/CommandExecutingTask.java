@@ -221,7 +221,7 @@ public class CommandExecutingTask extends AbstractTask
     }
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
+            SegmentTransactionalAppendAction.create(segmentsToPublish)
         );
     return publisher.publishSegments(
         Collections.emptySet(),

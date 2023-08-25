@@ -1182,7 +1182,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           );
         case APPEND:
           return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalAppendAction.create(segmentsToPublish, null, null)
+              SegmentTransactionalAppendAction.create(segmentsToPublish)
           );
         default:
           return toolbox.getTaskActionClient().submit(
