@@ -20,6 +20,8 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -45,6 +47,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -1922,5 +1925,41 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             new Object[]{"def"}
         )
     );
+  }
+
+  @Test
+  public void testSumO1Matches()
+  {
+    cannotVectorize();
+//    requireMergeBuffers(3);
+    testBuilder()
+        .plannerConfig(PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true,
+                "druid.processing.buffer.sizeBytes", "2GiB"
+                )))
+        .sql("SELECT\n"
+            + "  channel\n"
+            + " ,cityName\n"
+            + " ,LATEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 128) as latest_by_time_page\n"
+            + "FROM druid.wikipedia\n"
+            + "where channel < '#b' and cityName < 'D'\n"
+            + "GROUP BY 1,2"
+            )
+//        .expectedQueries(        ImmutableList.of(
+//            Druids.newTimeseriesQueryBuilder()
+//            .dataSource(InlineDataSource.fromIterable(
+//                ImmutableList.of(),
+//                RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+//            .intervals(querySegmentSpec(Filtration.eternity()))
+//            .granularity(Granularities.ALL)
+//            .aggregators(aggregators(
+//                new FilteredAggregatorFactory(
+//                    new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+//            .context(QUERY_CONTEXT_DEFAULT)
+//            .build()))
+        .expectedResults(ImmutableList.of(
+            new Object[] {0L}))
+        .run();
   }
 }
