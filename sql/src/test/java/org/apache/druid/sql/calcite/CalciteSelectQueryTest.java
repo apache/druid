@@ -2058,7 +2058,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             .build());
     cannotVectorize();
     testBuilder()
-//        .expectedQueries(expectedQueries)
+        .expectedQueries(expectedQueries)
         .sql(
             "select count(1) filter (where __time > date '2023-01-01') " +
                 " from druid.foo where 'a' = 'b'")
