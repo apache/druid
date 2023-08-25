@@ -260,10 +260,7 @@ public class CalciteRulesManager
 
     boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
-        Programs.sequence(preProgram,
-            new LoggingProgram("Start", true),
-            Programs.ofRules(druidConventionRuleSet(plannerContext)),
-            new LoggingProgram("End", true)),
+        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
             // currently, adding logging program after every stage for easier debugging
