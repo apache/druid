@@ -61,7 +61,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -325,6 +324,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
+    log.info("Loaded %,d tasks from previous run", tasks.size());
 
     cleanupExecutor.scheduleAtFixedRate(
         () ->
