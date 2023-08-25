@@ -33,7 +33,6 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -1958,17 +1957,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         .sql("SELECT\n"
             + "  channel\n"
             + " ,cityName\n"
-            +",count(1)"
-            + " ,EARLIEST_BY(delta, MILLIS_TO_TIMESTAMP(17), 125)\n"
-//            + " ,LATEST_BY(delta, MILLIS_TO_TIMESTAMP(17), 126)\n"
-//            + " ,EARLIEST_BY(delta, TIMESTAMPADD(HOUR, 1, \"__time\"), 127)\n"
-//            + " ,LATEST_BY(delta, TIMESTAMPADD(HOUR, 1, \"__time\"), 128)\n"
-//            + " ,EARLIEST_BY(\"cityName\", MILLIS_TO_TIMESTAMP(17), 125)\n"
-//            + " ,LATEST_BY(\"cityName\", MILLIS_TO_TIMESTAMP(17), 126)\n"
-//            + " ,EARLIEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 127)\n"
-//            + " ,LATEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 128) \n"
+            + " ,EARLIEST_BY(\"cityName\", MILLIS_TO_TIMESTAMP(17), 125) as latest_by_time_page\n"
+            + " ,LATEST_BY(\"cityName\", MILLIS_TO_TIMESTAMP(17), 126) as latest_by_time_page\n"
+            + " ,EARLIEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 127) as latest_by_time_page\n"
+            + " ,LATEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 128) as latest_by_time_page\n"
             + "FROM druid.wikipedia\n"
-            + "where channel like '#es%' and cityName like 'Mad%'\n"
+            + "where channel < '#b' and cityName < 'B'\n"
             + "GROUP BY 1,2"
             )
         .expectedQueries(
@@ -1978,8 +1972,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     .setInterval(querySegmentSpec(Filtration.eternity()))
                     .setGranularity(Granularities.ALL)
                     .setVirtualColumns(
-                        expressionVirtualColumn("v0", "(\"__time\" + 3600000)", ColumnType.LONG),
-                        expressionVirtualColumn("v1", "17", ColumnType.LONG))
+                        expressionVirtualColumn("v0", "17", ColumnType.LONG),
+                        expressionVirtualColumn("v1", "(\"__time\" + 3600000)", ColumnType.LONG)
+                        )
                     .setDimensions(dimensions(new DefaultDimensionSpec("channel", "d0"),
                         new DefaultDimensionSpec("cityName", "d1")))
                     .setDimFilter(
@@ -1987,17 +1982,16 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                             range("cityName", ColumnType.STRING, null, "B", false, true)))
                     .setAggregatorSpecs(
                         ImmutableList.of(
-                            new LongFirstAggregatorFactory("x","a0", "cityName"),
-                            new StringFirstAggregatorFactory("a0", "cityName", "a0", 125),
-                            new StringFirstAggregatorFactory("a1", "cityName", "a0", 126),
-                            new StringLastAggregatorFactory("a2", "cityName", "a0", 127),
+                            new StringFirstAggregatorFactory("a0", "cityName", "v0", 125),
+                            new StringLastAggregatorFactory("a1", "cityName", "a0", 126),
+                            new StringFirstAggregatorFactory("a2", "cityName", "v1", 127),
                             new StringLastAggregatorFactory("a3", "cityName", "a0", 128)
                         )
                         )
                     .setContext(QUERY_CONTEXT_DEFAULT)
                     .build()))
         .expectedResults(ImmutableList.of(
-            new Object[] {"#ar.wikipedia", "Amman", "Amman"}))
+            new Object[]{"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"}))
         .run();
   }
 
