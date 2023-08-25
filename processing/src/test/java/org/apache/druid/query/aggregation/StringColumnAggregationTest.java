@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
@@ -32,7 +31,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
@@ -177,7 +175,7 @@ public class StringColumnAggregationTest
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
     Assert.assertEquals(numRows, result.getMetric("count").longValue());
-
+    
     Assert.assertEquals(singleValueSum, result.getMetric("singleDoubleSum").doubleValue(), 0.0001d);
     Assert.assertEquals(multiValueSum, result.getMetric("multiDoubleSum").doubleValue(), 0.0001d);
     Assert.assertEquals(singleValueMax, result.getMetric("singleDoubleMax").doubleValue(), 0.0001d);
@@ -228,7 +226,7 @@ public class StringColumnAggregationTest
                                       new LongMaxAggregatorFactory("multiLongMax", multiValue),
                                       new LongMinAggregatorFactory("singleLongMin", singleValue),
                                       new LongMinAggregatorFactory("multiLongMin", multiValue),
-
+                                      
                                       new LongSumAggregatorFactory("count", "count")
                                   )
                                   .build();
@@ -259,31 +257,4 @@ public class StringColumnAggregationTest
     Assert.assertEquals((long) singleValueMin, result.getLongMetric("singleLongMin").longValue());
     Assert.assertEquals((long) multiValueMin, result.getLongMetric("multiLongMin").longValue());
   }
-
-  @Test
-  public void testGroupByEmpty()
-  {
-    GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource("test")
-        .setGranularity(Granularities.ALL)
-        .setInterval("1970/2050")
-        .setDimFilter(
-            DimFilters.dimEquals(singleValue, "-99.0d"))
-        .setAggregatorSpecs(
-            new DoubleSumAggregatorFactory("singleDoubleSum", singleValue),
-            new DoubleSumAggregatorFactory("multiDoubleSum", multiValue),
-
-            new CountAggregatorFactory("count"))
-        .build();
-
-    Sequence<ResultRow> seq = aggregationTestHelper.runQueryOnSegmentsObjs(segments, query);
-    Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
-
-    Assert.assertEquals(0, result.getMetric("count").longValue());
-
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0d : null, result.getMetric("singleDoubleSum"));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0d : null, result.getMetric("multiDoubleSum"));
-
-  }
-
 }

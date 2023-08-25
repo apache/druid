@@ -40,7 +40,7 @@ import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.aggregation.CountSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -332,8 +332,8 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedRows)
                      .setExpectedRollUp(true)
-                     .addExpectedAggregatorFactory(new CountSumAggregatorFactory("cnt", "cnt"))
-                     .addExpectedAggregatorFactory(new CountSumAggregatorFactory("cnt2", "cnt2"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt2", "cnt2"))
                      .verifyResults();
   }
 
@@ -736,7 +736,7 @@ public class MSQInsertTest extends MSQTestBase
                                                                                 .putAll(ROLLUP_CONTEXT_PARAMS)
                                                                                 .build())
                      .setExpectedRollUp(true)
-                     .addExpectedAggregatorFactory(new CountSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedRows)
@@ -793,7 +793,7 @@ public class MSQInsertTest extends MSQTestBase
                          ROLLUP_CONTEXT_PARAMS).build())
                      .setExpectedRollUp(true)
                      .setExpectedQueryGranularity(Granularities.DAY)
-                     .addExpectedAggregatorFactory(new CountSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedRows)
@@ -923,7 +923,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .addExpectedAggregatorFactory(new CountSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of(
                          "foo1",
                          Intervals.of("2016-06-27/P1D"),
@@ -991,7 +991,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .addExpectedAggregatorFactory(new CountSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of(
                          "foo1",
                          Intervals.of("2016-06-27/P1D"),
