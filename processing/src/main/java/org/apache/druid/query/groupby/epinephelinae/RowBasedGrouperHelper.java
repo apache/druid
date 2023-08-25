@@ -252,9 +252,9 @@ public class RowBasedGrouperHelper
         limitSpec
     );
 
-    final Grouper<RowBasedKey> grouper;
+    final Grouper<RowBasedKey> grouper1;
     if (concurrencyHint == -1) {
-      grouper = new SpillingGrouper<>(
+      grouper1 = new SpillingGrouper<>(
           bufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
@@ -280,7 +280,7 @@ public class RowBasedGrouperHelper
           limitSpec
       );
 
-      grouper = new ConcurrentGrouper<>(
+      grouper1 = new ConcurrentGrouper<>(
           querySpecificConfig,
           bufferSupplier,
           combineBufferHolder,
@@ -298,6 +298,16 @@ public class RowBasedGrouperHelper
           hasQueryTimeout,
           queryTimeoutAt
       );
+    }
+    final Grouper<RowBasedKey> grouper;
+    if (keySerdeFactory.factorize().isEmpty()) {
+      grouper = new SummaryRowSupplierGrouper(grouper1,
+          keySerdeFactory,
+          columnSelectorFactory,
+          aggregatorFactories
+);
+    }else {
+      grouper = grouper1;
     }
 
     final int keySize = includeTimestamp ? query.getDimensions().size() + 1 : query.getDimensions().size();
