@@ -30,7 +30,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -1929,6 +1928,28 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testAggregateFilterInTheAbsenceOfProjection()
+  {
+    cannotVectorize();
+    testQuery(
+        "select count(1) filter (where __time > date '2023-01-01') " +
+            " from druid.foo where 'a' = 'b'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(new Object[] {0L}));
+  }
+
+  @Test
   public void testCountDistinctNonApproximateEmptySet()
   {
     cannotVectorize();
@@ -2039,30 +2060,5 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ),
         // returning 1 is incorrect result; but with nulls as default that should be expected
         ImmutableList.of(new Object[] {useDefault ? 1L : 0L}));
-  }
-
-  @Test
-  public void testAggregateFilterInTheAbsenceOfProjection()
-  {
-    ImmutableList<Query<?>> expectedQueries = ImmutableList.of(
-        Druids.newTimeseriesQueryBuilder()
-            .dataSource(InlineDataSource.fromIterable(
-                ImmutableList.of(),
-                RowSignature.builder().add("$f1", ColumnType.LONG).build()))
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .granularity(Granularities.ALL)
-            .aggregators(aggregators(
-                new FilteredAggregatorFactory(
-                    new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
-            .context(QUERY_CONTEXT_DEFAULT)
-            .build());
-    cannotVectorize();
-    testBuilder()
-        .expectedQueries(expectedQueries)
-        .sql(
-            "select count(1) filter (where __time > date '2023-01-01') " +
-                " from druid.foo where 'a' = 'b'")
-        .expectedResults(
-            ImmutableList.of(new Object[] {0L}));
   }
 }
