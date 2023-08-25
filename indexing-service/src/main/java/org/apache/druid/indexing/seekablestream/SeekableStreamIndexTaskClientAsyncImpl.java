@@ -26,12 +26,14 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.RetryPolicy;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
@@ -59,6 +61,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -72,14 +75,14 @@ import java.util.function.Function;
 
 /**
  * Implementation of {@link SeekableStreamIndexTaskClient} based on {@link ServiceClient}.
- *
- * Used when {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig#getChatAsync()}
- * is true.
  */
 public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, SequenceOffsetType>
     implements SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>
 {
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClientAsyncImpl.class);
+
+  public static final int MIN_RETRY_WAIT_SECONDS = 2;
+  public static final int MAX_RETRY_WAIT_SECONDS = 10;
 
   private final ServiceClientFactory serviceClientFactory;
   private final TaskInfoProvider taskInfoProvider;
@@ -267,7 +270,15 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           if (result != null) {
             return Futures.immediateFuture(result);
           } else {
-            return getOffsetsWhenPaused(id, IndexTaskClient.makeRetryPolicyFactory(httpRetries).makeRetryPolicy());
+            return getOffsetsWhenPaused(
+                id,
+                new RetryPolicyFactory(
+                    new RetryPolicyConfig()
+                        .setMinWait(Period.seconds(MIN_RETRY_WAIT_SECONDS))
+                        .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
+                        .setMaxRetryCount(httpRetries)
+                ).makeRetryPolicy()
+            );
           }
         }
     );
@@ -397,7 +408,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                             {
                               retVal.setException(t);
                             }
-                          }
+                          },
+                          MoreExecutors.directExecutor()
                       ),
                   sleepTime,
                   TimeUnit.MILLISECONDS
@@ -574,7 +586,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                 retVal.set(either.valueOrThrow());
               }
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
 
       return retVal;
@@ -601,8 +614,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
       if (retry) {
         baseRetryPolicy = StandardRetryPolicy.builder()
                                              .maxAttempts(httpRetries + 1)
-                                             .minWaitMillis(IndexTaskClient.MIN_RETRY_WAIT_SECONDS * 1000)
-                                             .maxWaitMillis(IndexTaskClient.MAX_RETRY_WAIT_SECONDS * 1000)
+                                             .minWaitMillis(MIN_RETRY_WAIT_SECONDS * 1000)
+                                             .maxWaitMillis(MAX_RETRY_WAIT_SECONDS * 1000)
                                              .retryNotAvailable(false)
                                              .build();
       } else {

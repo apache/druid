@@ -18,6 +18,7 @@
 
 import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
+import { csvParseRows, tsvParseRows } from 'd3-dsv';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -38,6 +39,7 @@ import {
   findMap,
   isSimpleArray,
   oneOf,
+  oneOfKnown,
   parseCsvLine,
   typeIsKnown,
 } from '../../utils';
@@ -426,6 +428,7 @@ export interface IoConfig {
   inputFormat?: InputFormat;
   appendToExisting?: boolean;
   topic?: string;
+  topicPattern?: string;
   consumerProperties?: any;
   replicas?: number;
   taskCount?: number;
@@ -908,7 +911,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
               >
                 consumerProperties
               </ExternalLink>
@@ -923,8 +926,31 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'topic',
           type: 'string',
           required: true,
-          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-          placeholder: 'topic_name',
+          defined: ioConfig =>
+            oneOfKnown(ioConfig.type, KNOWN_TYPES, 'kafka') && !ioConfig.topicPattern,
+          placeholder: 'your_kafka_topic',
+          info: 'The name of the Kafka topic to ingest from.',
+        },
+        {
+          name: 'topicPattern',
+          type: 'string',
+          required: true,
+          defined: ioConfig => oneOfKnown(ioConfig.type, KNOWN_TYPES, 'kafka') && !ioConfig.topic,
+          placeholder: 'topic1|topic2',
+          info: (
+            <>
+              <p>
+                A regular expression that represents all topics to be ingested from. For example, to
+                ingest data from <Code>clicks</Code> and <Code>impressions</Code>, you can set this
+                to <Code>clicks|impressions</Code>. Alternatively, to ingest from all topics
+                starting with <Code>metrics-</Code> set this to <Code>metrics-.*</Code>.
+              </p>
+              <p>
+                If new topics are added to the cluster that match the regex, Druid will
+                automatically start ingesting from those new topics.
+              </p>
+            </>
+          ),
         },
         {
           name: 'consumerProperties',
@@ -935,7 +961,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
               >
                 consumerProperties
               </ExternalLink>
@@ -1027,7 +1053,7 @@ export function issueWithIoConfig(
       break;
 
     case 'kafka':
-      if (!ioConfig.topic) return 'must have a topic';
+      if (!ioConfig.topic && !ioConfig.topicPattern) return 'must have a topic or topicPattern';
       break;
 
     case 'kinesis':
@@ -1373,7 +1399,7 @@ export function guessDataSourceName(spec: Partial<IngestionSpec>): string | unde
     }
 
     case 'kafka':
-      return ioConfig.topic;
+      return ioConfig.topic || ioConfig.topicPattern;
 
     case 'kinesis':
       return ioConfig.stream;
@@ -1402,7 +1428,6 @@ export interface TuningConfig {
   handoffConditionTimeout?: number;
   resetOffsetAutomatically?: boolean;
   workerThreads?: number;
-  chatThreads?: number;
   chatRetries?: number;
   httpTimeout?: string;
   shutdownTimeout?: string;
@@ -1459,7 +1484,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
     label: 'Segment granularity',
     type: 'string',
-    suggestions: ['hour', 'day', 'week', 'month', 'year', 'all'],
+    suggestions: ['hour', 'day', 'month', 'year', 'all'],
     required: true,
     info: (
       <>
@@ -1977,14 +2002,6 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.chatThreads',
-    type: 'number',
-    placeholder: 'min(10, taskCount * replicas)',
-    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
-    hideInMore: true,
-    info: <>The number of threads that will be used for communicating with indexing tasks.</>,
-  },
-  {
     name: 'spec.tuningConfig.chatRetries',
     type: 'number',
     defaultValue: 8,
@@ -2144,33 +2161,53 @@ export function updateIngestionType(
   return newSpec;
 }
 
+function findValueWithNewline(rows: string[][]): string | undefined {
+  return findMap(rows, row => findMap(row, value => (value.includes('\n') ? value : undefined)));
+}
+
 export function issueWithSampleData(
-  sampleData: SampleResponse,
-  spec: Partial<IngestionSpec>,
+  sampleLines: string[],
+  isStreaming: boolean,
 ): JSX.Element | undefined {
-  if (isStreamingSpec(spec)) return;
+  if (!sampleLines.length) return;
 
-  const firstData: string = findMap(sampleData.data, l => l.input?.raw);
-  if (firstData) return;
+  const firstLine = sampleLines[0];
+  if (!isStreaming) {
+    if (firstLine === '{') {
+      return (
+        <>
+          This data looks like a multi-line formatted JSON object. For Druid to parse a text file,
+          it must have one row per event. Consider reformatting your data as{' '}
+          <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>.
+        </>
+      );
+    }
 
-  if (firstData === '{') {
-    return (
-      <>
-        This data looks like multi-line formatted JSON object. For Druid to parse a text file it
-        must have one row per event. Consider reformatting your data as{' '}
-        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
-      </>
-    );
+    if (oneOf(firstLine, '[', '[]')) {
+      return (
+        <>
+          This data looks like a multi-line JSON array. For Druid to parse a text file, it must have
+          one row per event. Consider reformatting your data as{' '}
+          <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>.
+        </>
+      );
+    }
   }
 
-  if (oneOf(firstData, '[', '[]')) {
-    return (
-      <>
-        This data looks like a multi-line JSON array. For Druid to parse a text file it must have
-        one row per event. Consider reformatting your data as{' '}
-        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
-      </>
+  const format = guessSimpleInputFormat(sampleLines, isStreaming);
+  const text = sampleLines.join('\n');
+  if (oneOf(format.type, 'csv', 'tsv')) {
+    const valueWithNewline = findValueWithNewline(
+      format.type === 'csv' ? csvParseRows(text) : tsvParseRows(text),
     );
+    if (valueWithNewline) {
+      const formatLabel = format.type.toUpperCase();
+      return (
+        <>
+          {`This ${formatLabel} data has values that contain new lines. Druid requires ${formatLabel} files to have one event per line, so ${formatLabel} values can not contain new lines. Consider encoding new lines in the values of your ${formatLabel} with some special delimiter.`}
+        </>
+      );
+    }
   }
 
   return;

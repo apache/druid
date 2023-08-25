@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -69,6 +71,9 @@ public class CoordinatorDynamicConfig
    * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
+
+  private final double killTaskSlotRatio;
+  private final int maxKillTaskSlots;
   private final Set<String> decommissioningNodes;
 
   private final Map<String, String> debugDimensions;
@@ -130,6 +135,8 @@ public class CoordinatorDynamicConfig
       // Keeping the legacy 'killDataSourceWhitelist' property name for backward compatibility. When the project is
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killDataSourceWhitelist") Object specificDataSourcesToKillUnusedSegmentsIn,
+      @JsonProperty("killTaskSlotRatio") @Nullable Double killTaskSlotRatio,
+      @JsonProperty("maxKillTaskSlots") @Nullable Integer maxKillTaskSlots,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
       // strings in the update request, as well as for specificDataSourcesToKillUnusedSegmentsIn.
       // Keeping the legacy 'killPendingSegmentsSkipList' property name for backward compatibility. When the project is
@@ -158,6 +165,20 @@ public class CoordinatorDynamicConfig
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.specificDataSourcesToKillUnusedSegmentsIn
         = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
+    if (null != killTaskSlotRatio && (killTaskSlotRatio < 0 || killTaskSlotRatio > 1)) {
+      throw InvalidInput.exception(
+          "killTaskSlotRatio [%.2f] is invalid. It must be >= 0 and <= 1.",
+          killTaskSlotRatio
+      );
+    }
+    this.killTaskSlotRatio = killTaskSlotRatio != null ? killTaskSlotRatio : Defaults.KILL_TASK_SLOT_RATIO;
+    if (null != maxKillTaskSlots && maxKillTaskSlots < 0) {
+      throw InvalidInput.exception(
+          "maxKillTaskSlots [%d] is invalid. It must be >= 0.",
+          maxKillTaskSlots
+      );
+    }
+    this.maxKillTaskSlots = maxKillTaskSlots != null ? maxKillTaskSlots : Defaults.MAX_KILL_TASK_SLOTS;
     this.dataSourcesToNotKillStalePendingSegmentsIn
         = parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
     this.maxSegmentsInNodeLoadingQueue = Builder.valueOrDefault(
@@ -297,6 +318,18 @@ public class CoordinatorDynamicConfig
     return specificDataSourcesToKillUnusedSegmentsIn;
   }
 
+  @JsonProperty("killTaskSlotRatio")
+  public double getKillTaskSlotRatio()
+  {
+    return killTaskSlotRatio;
+  }
+
+  @JsonProperty("maxKillTaskSlots")
+  public int getMaxKillTaskSlots()
+  {
+    return maxKillTaskSlots;
+  }
+
   @JsonIgnore
   public boolean isKillUnusedSegmentsInAllDataSources()
   {
@@ -406,6 +439,8 @@ public class CoordinatorDynamicConfig
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", specificDataSourcesToKillUnusedSegmentsIn=" + specificDataSourcesToKillUnusedSegmentsIn +
+           ", killTaskSlotRatio=" + killTaskSlotRatio +
+           ", maxKillTaskSlots=" + maxKillTaskSlots +
            ", dataSourcesToNotKillStalePendingSegmentsIn=" + dataSourcesToNotKillStalePendingSegmentsIn +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
@@ -444,6 +479,8 @@ public class CoordinatorDynamicConfig
            && Objects.equals(
                specificDataSourcesToKillUnusedSegmentsIn,
                that.specificDataSourcesToKillUnusedSegmentsIn)
+           && Objects.equals(killTaskSlotRatio, that.killTaskSlotRatio)
+           && Objects.equals(maxKillTaskSlots, that.maxKillTaskSlots)
            && Objects.equals(
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)
@@ -464,6 +501,8 @@ public class CoordinatorDynamicConfig
         balancerComputeThreads,
         maxSegmentsInNodeLoadingQueue,
         specificDataSourcesToKillUnusedSegmentsIn,
+        killTaskSlotRatio,
+        maxKillTaskSlots,
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
@@ -478,6 +517,15 @@ public class CoordinatorDynamicConfig
     return new Builder();
   }
 
+  /**
+   * Returns a value of {@code (num processors / 2)} to ensure that balancing
+   * computations do not hog all Coordinator resources.
+   */
+  public static int getDefaultBalancerComputeThreads()
+  {
+    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
   private static class Defaults
   {
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
@@ -486,8 +534,6 @@ public class CoordinatorDynamicConfig
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
     static final int REPLICATION_THROTTLE_LIMIT = 500;
-    static final int BALANCER_COMPUTE_THREADS = 1;
-    static final boolean EMIT_BALANCING_STATS = false;
     static final int MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
     static final int DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     static final boolean PAUSE_COORDINATION = false;
@@ -495,6 +541,13 @@ public class CoordinatorDynamicConfig
     static final int MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
     static final boolean USE_ROUND_ROBIN_ASSIGNMENT = true;
     static final boolean SMART_SEGMENT_LOADING = true;
+
+    // The following default values for killTaskSlotRatio and maxKillTaskSlots
+    // are to preserve the behavior before Druid 0.28 and a future version may
+    // want to consider better defaults so that kill tasks can not eat up all
+    // the capacity in the cluster would be nice
+    static final double KILL_TASK_SLOT_RATIO = 1.0;
+    static final int MAX_KILL_TASK_SLOTS = Integer.MAX_VALUE;
   }
 
   public static class Builder
@@ -507,6 +560,8 @@ public class CoordinatorDynamicConfig
     private Integer replicationThrottleLimit;
     private Integer balancerComputeThreads;
     private Object specificDataSourcesToKillUnusedSegmentsIn;
+    private Double killTaskSlotRatio;
+    private Integer maxKillTaskSlots;
     private Object dataSourcesToNotKillStalePendingSegmentsIn;
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
@@ -532,6 +587,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
         @JsonProperty("killDataSourceWhitelist") @Nullable Object specificDataSourcesToKillUnusedSegmentsIn,
+        @JsonProperty("killTaskSlotRatio") @Nullable Double killTaskSlotRatio,
+        @JsonProperty("maxKillTaskSlots") @Nullable Integer maxKillTaskSlots,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object dataSourcesToNotKillStalePendingSegmentsIn,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
@@ -553,6 +610,8 @@ public class CoordinatorDynamicConfig
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.balancerComputeThreads = balancerComputeThreads;
       this.specificDataSourcesToKillUnusedSegmentsIn = specificDataSourcesToKillUnusedSegmentsIn;
+      this.killTaskSlotRatio = killTaskSlotRatio;
+      this.maxKillTaskSlots = maxKillTaskSlots;
       this.dataSourcesToNotKillStalePendingSegmentsIn = dataSourcesToNotKillStalePendingSegmentsIn;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.decommissioningNodes = decommissioningNodes;
@@ -625,6 +684,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withKillTaskSlotRatio(Double killTaskSlotRatio)
+    {
+      this.killTaskSlotRatio = killTaskSlotRatio;
+      return this;
+    }
+
+    public Builder withMaxKillTaskSlots(Integer maxKillTaskSlots)
+    {
+      this.maxKillTaskSlots = maxKillTaskSlots;
+      return this;
+    }
+
     public Builder withMaxSegmentsInNodeLoadingQueue(int maxSegmentsInNodeLoadingQueue)
     {
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
@@ -683,8 +754,10 @@ public class CoordinatorDynamicConfig
           valueOrDefault(maxSegmentsToMove, Defaults.MAX_SEGMENTS_TO_MOVE),
           valueOrDefault(replicantLifetime, Defaults.REPLICANT_LIFETIME),
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
-          valueOrDefault(balancerComputeThreads, Defaults.BALANCER_COMPUTE_THREADS),
+          valueOrDefault(balancerComputeThreads, getDefaultBalancerComputeThreads()),
           specificDataSourcesToKillUnusedSegmentsIn,
+          valueOrDefault(killTaskSlotRatio, Defaults.KILL_TASK_SLOT_RATIO),
+          valueOrDefault(maxKillTaskSlots, Defaults.MAX_KILL_TASK_SLOTS),
           dataSourcesToNotKillStalePendingSegmentsIn,
           valueOrDefault(maxSegmentsInNodeLoadingQueue, Defaults.MAX_SEGMENTS_IN_NODE_LOADING_QUEUE),
           decommissioningNodes,
@@ -720,6 +793,8 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicationThrottleLimit, defaults.getReplicationThrottleLimit()),
           valueOrDefault(balancerComputeThreads, defaults.getBalancerComputeThreads()),
           valueOrDefault(specificDataSourcesToKillUnusedSegmentsIn, defaults.getSpecificDataSourcesToKillUnusedSegmentsIn()),
+          valueOrDefault(killTaskSlotRatio, defaults.killTaskSlotRatio),
+          valueOrDefault(maxKillTaskSlots, defaults.maxKillTaskSlots),
           valueOrDefault(dataSourcesToNotKillStalePendingSegmentsIn, defaults.getDataSourcesToNotKillStalePendingSegmentsIn()),
           valueOrDefault(maxSegmentsInNodeLoadingQueue, defaults.getMaxSegmentsInNodeLoadingQueue()),
           valueOrDefault(decommissioningNodes, defaults.getDecommissioningNodes()),

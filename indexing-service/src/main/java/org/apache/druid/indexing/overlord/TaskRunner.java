@@ -138,14 +138,6 @@ public interface TaskRunner
 
   Map<String, Long> getBlacklistedTaskSlotCount();
 
-  /**
-   * Beacause the k8s task runner is an extension, we need to know the task runner type in the overlord resource
-   */
-  default Collection<ImmutableWorkerInfo> getK8sTaskRunnerWorkers()
-  {
-    return ImmutableList.of();
-  }
-
   default List<TaskRunner> getSubTaskRunners()
   {
     return new ArrayList<>();
@@ -161,5 +153,22 @@ public interface TaskRunner
     // do nothing
   }
 
+  /**
+   * The maximum number of tasks this TaskRunner can run concurrently.
+   * Can return -1 if this method is not implemented or capacity can't be found.
+   */
+  default int getTotalCapacity()
+  {
+    return -1;
+  }
+
+  /**
+   * The current number of tasks this TaskRunner is running.
+   * Can return -1 if this method is not implemented or the # of tasks can't be found.
+   */
+  default int getUsedCapacity()
+  {
+    return -1;
+  }
 
 }

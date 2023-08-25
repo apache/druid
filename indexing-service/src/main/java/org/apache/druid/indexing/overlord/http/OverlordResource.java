@@ -32,8 +32,6 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.client.indexing.IndexingWorker;
-import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.exception.DruidException;
@@ -469,27 +467,17 @@ public class OverlordResource
   public Response getTotalWorkerCapacity()
   {
     // Calculate current cluster capacity
-    int currentCapacity;
     Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (!taskRunnerOptional.isPresent()) {
       // Cannot serve call as not leader
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
     TaskRunner taskRunner = taskRunnerOptional.get();
-    Collection<ImmutableWorkerInfo> workers;
-    if (taskRunner instanceof WorkerTaskRunner) {
-      workers = ((WorkerTaskRunner) taskRunner).getWorkers();
-      currentCapacity = workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
-    } else {
-      log.debug(
-          "Cannot calculate capacity as task runner [%s] of type [%s] does not support listing workers",
-          taskRunner,
-          taskRunner.getClass().getName()
-      );
-      workers = ImmutableList.of();
-      currentCapacity = -1;
-    }
+    Collection<ImmutableWorkerInfo> workers = taskRunner instanceof WorkerTaskRunner ?
+        ((WorkerTaskRunner) taskRunner).getWorkers() : ImmutableList.of();
 
+    int currentCapacity = taskRunner.getTotalCapacity();
+    int usedCapacity = taskRunner.getUsedCapacity();
     // Calculate maximum capacity with auto scale
     int maximumCapacity;
     if (workerConfigRef == null) {
@@ -520,7 +508,7 @@ public class OverlordResource
       );
       maximumCapacity = -1;
     }
-    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity)).build();
+    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity)).build();
   }
 
   // default value is used for backwards compatibility
@@ -938,11 +926,7 @@ public class OverlordResource
           {
             // This feels like a hack to get the ingestion capacity for the k8s runner to show up in the Druid Console
             // I think it makes sense to create a new /druid/indexer/v1/capacity api that doesn't require us to pretend to have a worker.
-            if (!taskRunner.getK8sTaskRunnerWorkers().isEmpty()) {
-              return Response.ok(
-                  taskRunner.getK8sTaskRunnerWorkers()
-              ).build();
-            } else if (taskRunner instanceof WorkerTaskRunner) {
+            if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
             } else {
               log.debug(

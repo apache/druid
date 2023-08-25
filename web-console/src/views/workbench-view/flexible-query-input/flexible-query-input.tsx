@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import type { ResizeEntry } from '@blueprintjs/core';
+import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
-import { C, T } from '@druid-toolkit/query';
+import { C, dedupe, T } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
+import debounce from 'lodash.debounce';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -33,16 +35,16 @@ import {
   SQL_KEYWORDS,
 } from '../../../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
+import { AppToaster } from '../../../singletons';
 import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
-import type { ColumnMetadata, RowColumn } from '../../../utils';
-import { uniq } from '../../../utils';
+import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
+import { findAllSqlQueriesInText, findMap, uniq } from '../../../utils';
 
 import './flexible-query-input.scss';
 
 const langTools = ace.require('ace/ext/language_tools');
 
 const V_PADDING = 10;
-const SCROLLBAR = 20;
 
 const COMPLETER = {
   insertMatch: (editor: any, data: Ace.Completion) => {
@@ -59,8 +61,8 @@ interface ItemDescription {
 export interface FlexibleQueryInputProps {
   queryString: string;
   onQueryStringChange?: (newQueryString: string) => void;
-  autoHeight: boolean;
-  minRows?: number;
+  runQuerySlice?: (querySlice: QuerySlice) => void;
+  running?: boolean;
   showGutter?: boolean;
   placeholder?: string;
   columnMetadata?: readonly ColumnMetadata[];
@@ -86,6 +88,8 @@ export class FlexibleQueryInput extends React.PureComponent<
   FlexibleQueryInputState
 > {
   private aceEditor: Ace.Editor | undefined;
+  private lastFoundQueries: QuerySlice[] = [];
+  private highlightFoundQuery: { row: number; marker: number } | undefined;
 
   static replaceDefaultAutoCompleter(): void {
     if (!langTools) return;
@@ -261,6 +265,14 @@ export class FlexibleQueryInput extends React.PureComponent<
         },
       });
     }
+
+    this.markQueries();
+  }
+
+  componentDidUpdate(prevProps: Readonly<FlexibleQueryInputProps>) {
+    if (this.props.queryString !== prevProps.queryString) {
+      this.markQueriesDebounced();
+    }
   }
 
   componentWillUnmount() {
@@ -268,9 +280,43 @@ export class FlexibleQueryInput extends React.PureComponent<
     if (editorStateId && this.aceEditor) {
       AceEditorStateCache.saveState(editorStateId, this.aceEditor);
     }
+    delete this.aceEditor;
   }
 
-  private readonly handleAceContainerResize = (entries: ResizeEntry[]) => {
+  private findAllQueriesByLine() {
+    const { queryString } = this.props;
+    const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
+      String(startRowColumn.row),
+    );
+    if (found.length <= 1) return []; // Do not highlight a single query or no queries
+
+    // Do not report the first query if it is basically the main query minus whitespace
+    const firstQuery = found[0].sql;
+    if (firstQuery === queryString.trim()) return found.slice(1);
+
+    return found;
+  }
+
+  private readonly markQueries = () => {
+    if (!this.props.runQuerySlice) return;
+    const { aceEditor } = this;
+    if (!aceEditor) return;
+    const session = aceEditor.getSession();
+    this.lastFoundQueries = this.findAllQueriesByLine();
+
+    session.clearBreakpoints();
+    this.lastFoundQueries.forEach(({ startRowColumn }) => {
+      // session.addGutterDecoration(startRowColumn.row, `sub-query-gutter-marker query-${i}`);
+      session.setBreakpoint(
+        startRowColumn.row,
+        `sub-query-gutter-marker query-${startRowColumn.row}`,
+      );
+    });
+  };
+
+  private readonly markQueriesDebounced = debounce(this.markQueries, 900, { trailing: true });
+
+  private readonly handleAceContainerResize = (entries: ResizeObserverEntry[]) => {
     if (entries.length !== 1) return;
     this.setState({ editorHeight: entries[0].contentRect.height });
   };
@@ -286,34 +332,15 @@ export class FlexibleQueryInput extends React.PureComponent<
     if (!aceEditor) return;
     aceEditor.focus(); // Grab the focus
     aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
-    if (rowColumn.endRow && rowColumn.endColumn) {
-      aceEditor
-        .getSelection()
-        .selectToPosition({ row: rowColumn.endRow, column: rowColumn.endColumn });
-    }
+    // If we had an end we could also do
+    // aceEditor.getSelection().selectToPosition({ row: endRow, column: endColumn });
   }
 
   renderAce() {
-    const {
-      queryString,
-      onQueryStringChange,
-      autoHeight,
-      minRows,
-      showGutter,
-      placeholder,
-      editorStateId,
-    } = this.props;
+    const { queryString, onQueryStringChange, showGutter, placeholder, editorStateId } = this.props;
     const { editorHeight } = this.state;
 
     const jsonMode = queryString.trim().startsWith('{');
-
-    let height: number;
-    if (autoHeight) {
-      height =
-        Math.max(queryString.split('\n').length, minRows ?? 2) * 18 + 2 * V_PADDING + SCROLLBAR;
-    } else {
-      height = editorHeight;
-    }
 
     return (
       <AceEditor
@@ -328,7 +355,7 @@ export class FlexibleQueryInput extends React.PureComponent<
         focus
         fontSize={13}
         width="100%"
-        height={height + 'px'}
+        height={editorHeight + 'px'}
         showGutter={showGutter}
         showPrintMargin={false}
         value={queryString}
@@ -360,18 +387,83 @@ export class FlexibleQueryInput extends React.PureComponent<
   }
 
   render() {
-    const { autoHeight } = this.props;
+    const { runQuerySlice, running } = this.props;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return (
       <div className="flexible-query-input">
-        {autoHeight ? (
-          this.renderAce()
-        ) : (
-          <ResizeSensor2 onResize={this.handleAceContainerResize}>
-            <div className="ace-container">{this.renderAce()}</div>
-          </ResizeSensor2>
-        )}
+        <ResizeSensor2 onResize={this.handleAceContainerResize}>
+          <div
+            className={classNames('ace-container', running ? 'query-running' : 'query-idle')}
+            onClick={e => {
+              if (!runQuerySlice) return;
+              const classes = [...(e.target as any).classList];
+              if (!classes.includes('sub-query-gutter-marker')) return;
+              const row = findMap(classes, c => {
+                const m = /^query-(\d+)$/.exec(c);
+                return m ? Number(m[1]) : undefined;
+              });
+              if (typeof row === 'undefined') return;
+
+              // Gutter query marker clicked on line ${row}
+              const slice = this.lastFoundQueries.find(
+                ({ startRowColumn }) => startRowColumn.row === row,
+              );
+              if (!slice) return;
+
+              if (running) {
+                AppToaster.show({
+                  icon: IconNames.WARNING_SIGN,
+                  intent: Intent.WARNING,
+                  message: `Another query is currently running`,
+                });
+                return;
+              }
+
+              runQuerySlice(slice);
+            }}
+            onMouseOver={e => {
+              if (!runQuerySlice) return;
+              const aceEditor = this.aceEditor;
+              if (!aceEditor) return;
+
+              const classes = [...(e.target as any).classList];
+              if (!classes.includes('sub-query-gutter-marker')) return;
+              const row = findMap(classes, c => {
+                const m = /^query-(\d+)$/.exec(c);
+                return m ? Number(m[1]) : undefined;
+              });
+              if (typeof row === 'undefined' || this.highlightFoundQuery?.row === row) return;
+
+              const slice = this.lastFoundQueries.find(
+                ({ startRowColumn }) => startRowColumn.row === row,
+              );
+              if (!slice) return;
+              const marker = aceEditor
+                .getSession()
+                .addMarker(
+                  new ace.Range(
+                    slice.startRowColumn.row,
+                    slice.startRowColumn.column,
+                    slice.endRowColumn.row,
+                    slice.endRowColumn.column,
+                  ),
+                  'sub-query-highlight',
+                  'text',
+                );
+              this.highlightFoundQuery = { row, marker };
+            }}
+            onMouseOut={() => {
+              if (!this.highlightFoundQuery) return;
+              const aceEditor = this.aceEditor;
+              if (!aceEditor) return;
+              aceEditor.getSession().removeMarker(this.highlightFoundQuery.marker);
+              this.highlightFoundQuery = undefined;
+            }}
+          >
+            {this.renderAce()}
+          </div>
+        </ResizeSensor2>
       </div>
     );
   }

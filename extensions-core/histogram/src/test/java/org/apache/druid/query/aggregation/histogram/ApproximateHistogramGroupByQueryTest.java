@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -35,7 +35,6 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -58,7 +57,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
   private static final Closer RESOURCE_CLOSER = Closer.create();
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private final QueryRunner<Row> runner;
+  private final QueryRunner<ResultRow> runner;
   private final GroupByQueryRunnerFactory factory;
 
   @BeforeClass
@@ -81,47 +80,8 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
   {
     setUpClass();
 
-    final GroupByQueryConfig v1Config = new GroupByQueryConfig()
-    {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V1;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v1";
-      }
-    };
-    final GroupByQueryConfig v1SingleThreadedConfig = new GroupByQueryConfig()
-    {
-      @Override
-      public boolean isSingleThreaded()
-      {
-        return true;
-      }
-
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V1;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v1SingleThreaded";
-      }
-    };
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
 
       @Override
       public String toString()
@@ -130,19 +90,14 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
       }
     };
 
-    v1Config.setMaxIntermediateRows(10000);
-    v1SingleThreadedConfig.setMaxIntermediateRows(10000);
-
     final List<Object[]> constructors = new ArrayList<>();
     final List<GroupByQueryConfig> configs = ImmutableList.of(
-        v1Config,
-        v1SingleThreadedConfig,
         v2Config
     );
 
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
-      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
@@ -229,7 +184,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
         )
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "approx-histo");
   }
 
@@ -276,7 +231,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
         )
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "approx-histo");
   }
 }

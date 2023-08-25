@@ -126,12 +126,6 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new StringAnyAggregatorFactory(fieldName, fieldName, maxStringBytes));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     return object;

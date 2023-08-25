@@ -204,32 +204,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
-  public Collection<ImmutableWorkerInfo> getK8sTaskRunnerWorkers()
-  {
-    Collection<ImmutableWorkerInfo> workerInfos = new ArrayList<>();
-    workerInfos.add(
-        new ImmutableWorkerInfo(
-            new Worker(
-                null,
-                null,
-                null,
-                kubernetesTaskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
-                null,
-                null
-            ),
-            0,
-            0,
-            Collections.emptySet(),
-            Collections.emptyList(),
-            DateTimes.EPOCH,
-            null
-        )
-    );
-    workerInfos.addAll(getWorkers());
-    return workerInfos;
-  }
-
-  @Override
   public Collection<Worker> getLazyWorkers()
   {
     return workerTaskRunner.getLazyWorkers();

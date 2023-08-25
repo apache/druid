@@ -155,12 +155,6 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new LongAnyAggregatorFactory(fieldName, fieldName));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     // handle "NaN" / "Infinity" values serialized as strings in JSON

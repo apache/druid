@@ -84,7 +84,7 @@ public class SqlExpressionBenchmark
 
   static {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
+    ExpressionProcessing.initializeForTests();
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -106,13 +106,6 @@ public class SqlExpressionBenchmark
     {
       return 1;
     }
-
-    @Override
-    public boolean useParallelMergePoolConfigured()
-    {
-      return true;
-    }
-
     @Override
     public String getFormatString()
     {

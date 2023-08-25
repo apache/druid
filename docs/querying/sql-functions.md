@@ -23,8 +23,10 @@ sidebar_label: "All functions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 This page provides a reference of all Druid SQL functions in alphabetical order.
@@ -48,11 +50,7 @@ Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
-`ANY_VALUE(<NUMERIC>)`
-
-`ANY_VALUE(<BOOLEAN>)`
-
-`ANY_VALUE(<CHARACTER>, <NUMERIC>)`
+`ANY_VALUE(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -183,7 +181,7 @@ Returns the array element at the 0-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.
+Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode)..
 
 ## ARRAY_ORDINAL
 
@@ -198,7 +196,7 @@ Returns the array element at the 1-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.|
+Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode)..|
 
 ## ARRAY_OVERLAP
 
@@ -639,9 +637,7 @@ Returns a union of Tuple sketches which each contain an array of double values a
 
 ## EARLIEST
 
-`EARLIEST(expr)`
-
-`EARLIEST(expr, maxBytesPerString)`
+`EARLIEST(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -649,9 +645,7 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 ## EARLIEST_BY
 
-`EARLIEST_BY(expr, timestampExpr)`
-
-`EARLIEST_BY(expr, timestampExpr, maxBytesPerString)`
+`EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -835,9 +829,7 @@ Extracts a literal value from `expr` at the specified `path`. If you specify `RE
 
 ## LATEST
 
-`LATEST(expr)`
-
-`LATEST(expr, maxBytesPerString)`
+`LATEST(expr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -845,9 +837,7 @@ Returns the value of a numeric or string expression corresponding to the latest 
 
 ## LATEST_BY
 
-`LATEST_BY(expr, timestampExpr)`
-
-`LATEST_BY(expr, timestampExpr, maxBytesPerString)`
+`LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
