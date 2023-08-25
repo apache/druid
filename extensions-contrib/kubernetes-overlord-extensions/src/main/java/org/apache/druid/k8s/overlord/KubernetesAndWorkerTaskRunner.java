@@ -61,18 +61,18 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
 {
   private final KubernetesTaskRunner kubernetesTaskRunner;
   private final WorkerTaskRunner workerTaskRunner;
-  private final Boolean sendTasksToWorkerTaskRunner;
+  private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
 
   private static final EmittingLogger log = new EmittingLogger(KubernetesTaskRunner.class);
   public KubernetesAndWorkerTaskRunner(
       KubernetesTaskRunner kubernetesTaskRunner,
       WorkerTaskRunner workerTaskRunner,
-      Boolean sendTasksToWorkerTaskRunner
+      KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig
   )
   {
     this.kubernetesTaskRunner = kubernetesTaskRunner;
     this.workerTaskRunner = workerTaskRunner;
-    this.sendTasksToWorkerTaskRunner = sendTasksToWorkerTaskRunner;
+    this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
   }
 
   @Override
@@ -104,7 +104,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (sendTasksToWorkerTaskRunner || task.getDataSource().startsWith("worker")) {
+    if (shouldSendTaskToWorkerTaskRunner(task) || task.getDataSource().startsWith("worker")) {
       return workerTaskRunner.run(task);
     } else {
       return kubernetesTaskRunner.run(task);
@@ -255,5 +255,31 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   public List<TaskRunner> getSubTaskRunners()
   {
     return ImmutableList.of(kubernetesTaskRunner, workerTaskRunner);
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return kubernetesTaskRunner.getTotalCapacity() + workerTaskRunner.getTotalCapacity();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return kubernetesTaskRunner.getUsedCapacity() + workerTaskRunner.getUsedCapacity();
+  }
+
+  private boolean shouldSendTaskToWorkerTaskRunner(Task task)
+  {
+    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
+      return true;
+    }
+    if (kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerTaskTypes().contains(task.getType())) {
+      return true;
+    }
+    if (kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerDataSources().contains(task.getDataSource())) {
+      return true;
+    }
+    return false;
   }
 }

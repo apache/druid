@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Inject;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
@@ -31,21 +32,24 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   public static final String TYPE_NAME = "k8sAndWorker";
 
   private final KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
-  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private final HttpRemoteTaskRunnerFactory workerTaskRunnerFactory;
+  private final HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
+  private final RemoteTaskRunnerFactory remoteTaskRunnerFactory;
+  private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
 
   private KubernetesAndWorkerTaskRunner runner;
 
   @Inject
   public KubernetesAndWorkerTaskRunnerFactory(
       KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory,
-      HttpRemoteTaskRunnerFactory workerTaskRunnerFactory,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig
+      HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory,
+      RemoteTaskRunnerFactory remoteTaskRunnerFactory,
+      KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig
   )
   {
     this.kubernetesTaskRunnerFactory = kubernetesTaskRunnerFactory;
-    this.workerTaskRunnerFactory = workerTaskRunnerFactory;
-    this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
+    this.httpRemoteTaskRunnerFactory = httpRemoteTaskRunnerFactory;
+    this.remoteTaskRunnerFactory = remoteTaskRunnerFactory;
+    this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
   }
 
   @Override
@@ -53,8 +57,9 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   {
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunnerFactory.build(),
-        workerTaskRunnerFactory.build(),
-        kubernetesTaskRunnerConfig.getSendTasksToWorkerTaskRunner()
+        kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerType().equals("remote") ?
+            remoteTaskRunnerFactory.build() : httpRemoteTaskRunnerFactory.build(),
+        kubernetesAndWorkerTaskRunnerConfig
     );
     return runner;
   }
