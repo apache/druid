@@ -400,9 +400,7 @@ public class DataSourcePlan
     basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
-
-    int shift = basePlan.getInputSpecs().size();
-    newDataSource = FilteredDataSource.create(shiftInputNumbers(newDataSource, shift), dataSource.getFilter());
+    newDataSource = FilteredDataSource.create(newDataSource, dataSource.getFilter());
     return new DataSourcePlan(
         newDataSource,
         inputSpecs,
@@ -443,9 +441,8 @@ public class DataSourcePlan
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
 
-    int shift = basePlan.getInputSpecs().size();
     newDataSource = UnnestDataSource.create(
-        shiftInputNumbers(newDataSource, shift),
+        newDataSource,
         dataSource.getVirtualColumn(),
         dataSource.getUnnestFilter()
     );
