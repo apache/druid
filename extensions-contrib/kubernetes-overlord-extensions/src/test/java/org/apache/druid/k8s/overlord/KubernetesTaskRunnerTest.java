@@ -628,4 +628,22 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     verifyAll();
   }
+
+  @Test
+  public void test_getTotalCapacity()
+  {
+    Assert.assertEquals(1, runner.getTotalCapacity());
+  }
+
+  @Test
+  public void test_getUsedCapacity()
+  {
+    Assert.assertEquals(0, runner.getUsedCapacity());
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null);
+    runner.tasks.put(task.getId(), workItem);
+    Assert.assertEquals(1, runner.getUsedCapacity());
+    runner.tasks.remove(task.getId());
+    Assert.assertEquals(0, runner.getUsedCapacity());
+
+  }
 }
