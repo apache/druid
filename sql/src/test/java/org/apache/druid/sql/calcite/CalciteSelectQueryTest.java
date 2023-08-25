@@ -1950,6 +1950,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[] {0L}));
   }
 
+  @Test
   public void testSumO1Matches()
   {
     cannotVectorize();
@@ -1987,7 +1988,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 //                    .setContext(QUERY_CONTEXT_DEFAULT)
 //                    .build()))
         .expectedResults(ImmutableList.of(
-            new Object[] {0L}))
+            new Object[]{"#ar.wikipedia", "Amman", "Amman"}
+            ))
         .run();
   }
 
