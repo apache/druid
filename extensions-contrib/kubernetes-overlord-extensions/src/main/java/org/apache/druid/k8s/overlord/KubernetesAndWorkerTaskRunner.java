@@ -104,7 +104,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (shouldSendTaskToWorkerTaskRunner(task) || task.getDataSource().startsWith("worker")) {
+    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
       return workerTaskRunner.run(task);
     } else {
       return kubernetesTaskRunner.run(task);
@@ -267,19 +267,5 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   public int getUsedCapacity()
   {
     return kubernetesTaskRunner.getUsedCapacity() + workerTaskRunner.getUsedCapacity();
-  }
-
-  private boolean shouldSendTaskToWorkerTaskRunner(Task task)
-  {
-    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
-      return true;
-    }
-    if (kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerTaskTypes().contains(task.getType())) {
-      return true;
-    }
-    if (kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerDataSources().contains(task.getDataSource())) {
-      return true;
-    }
-    return false;
   }
 }
