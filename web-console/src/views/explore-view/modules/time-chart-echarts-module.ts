@@ -22,18 +22,19 @@ import * as echarts from 'echarts';
 
 import { getInitQuery } from '../utils';
 
-function transformData(data: any[], vs: string[]): any[] {
+function transformData(data: any[], vs: string[]): Record<string, number>[] {
+  const zeroDatum = Object.fromEntries(vs.map(v => [v, 0]));
+
   let lastTime = -1;
-  let lastDatum: any;
+  let lastDatum: Record<string, number> | undefined;
   const ret = [];
   for (const d of data) {
     if (d.time.valueOf() !== lastTime) {
       if (lastDatum) ret.push(lastDatum);
       lastTime = d.time.valueOf();
-      lastDatum = { time: d.time };
-      for (const v of vs) lastDatum[v] = 0;
+      lastDatum = { ...zeroDatum, time: d.time };
     }
-    lastDatum[d.stack] = d.met;
+    lastDatum![d.stack] = d.met;
   }
   if (lastDatum) ret.push(lastDatum);
   return ret;
