@@ -73,6 +73,18 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
     delegate.close();
   }
 
+  private Entry<KeyType> buildSummaryRow()
+  {
+    final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregatorFactories.length);
+    Object[] values = reusableEntry.getValues();
+    for (int i = 0; i < aggregatorFactories.length; i++) {
+      Aggregator aggregate = aggregatorFactories[i].factorize(columnSelectorFactory);
+      values[i] = aggregate.get();
+    }
+    return reusableEntry;
+  }
+
+
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
@@ -108,47 +120,4 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
       }
     };
   }
-
-  private Entry<KeyType> buildSummaryRow()
-  {
-    final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregatorFactories.length);
-    Object[] values = reusableEntry.getValues();// new
-                                                // Object[aggregatorFactories.length];
-    for (int i = 0; i < aggregatorFactories.length; i++) {
-      Aggregator aggregate = aggregatorFactories[i].factorize(columnSelectorFactory);
-      values[i] = aggregate.get();
-    }
-    // reusableEntry.setValues(values);
-    return reusableEntry;
-
-    //
-    //
-    // int curr = 0;
-    // final int size = getSize();
-    //
-    // @Override
-    // public boolean hasNext()
-    // {
-    // return curr < size;
-    // }
-    //
-    // @Override
-    // public Entry<KeyType> next()
-    // {
-    // if (curr >= size) {
-    // throw new NoSuchElementException();
-    // }
-    // final int offset = offsetList.get(curr);
-    // final Entry<KeyType> entry = populateBucketEntryForOffset(reusableEntry,
-    // offset);
-    // curr++;
-    //
-    // return entry;
-    // }
-
-    // AggregatorAdapters.factorizeBuffered(columnSelectorFactory,
-    // Arrays.asList(aggregatorFactories));
-
-  }
-
 }
