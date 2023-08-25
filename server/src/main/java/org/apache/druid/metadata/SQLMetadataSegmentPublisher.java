@@ -55,8 +55,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
     this.config = config;
     this.connector = connector;
     this.statement = StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
         config.getSegmentsTable(), connector.getQuoteString()
     );
   }
@@ -64,16 +64,18 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
   @Override
   public void publishSegment(final DataSegment segment) throws IOException
   {
+    String now = DateTimes.nowUtc().toString();
     publishSegment(
         segment.getId().toString(),
         segment.getDataSource(),
-        DateTimes.nowUtc().toString(),
+        now,
         segment.getInterval().getStart().toString(),
         segment.getInterval().getEnd().toString(),
         (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
         segment.getVersion(),
         true,
-        jsonMapper.writeValueAsBytes(segment)
+        jsonMapper.writeValueAsBytes(segment),
+        now
     );
   }
 
@@ -87,7 +89,8 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
       final boolean partitioned,
       final String version,
       final boolean used,
-      final byte[] payload
+      final byte[] payload,
+      final String usedFlagLastUpdated
   )
   {
     try {
@@ -128,6 +131,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
                     .bind("version", version)
                     .bind("used", used)
                     .bind("payload", payload)
+                    .bind("used_status_last_updated", usedFlagLastUpdated)
                     .execute();
 
               return null;

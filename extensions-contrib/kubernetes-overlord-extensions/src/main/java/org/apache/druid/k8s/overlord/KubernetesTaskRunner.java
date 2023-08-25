@@ -392,12 +392,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   }
 
   @Override
-  public boolean isK8sTaskRunner()
-  {
-    return true;
-  }
-
-  @Override
   public void unregisterListener(String listenerId)
   {
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
@@ -462,5 +456,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     return workItem.getRunnerTaskState();
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return config.getCapacity();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return tasks.size();
   }
 }

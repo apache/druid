@@ -77,14 +77,11 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -287,11 +284,6 @@ public class CachingClusteredClientBenchmark
                     GroupByQueryRunnerTest.DEFAULT_MAPPER,
                     new GroupByQueryConfig()
                     {
-                      @Override
-                      public String getDefaultStrategy()
-                      {
-                        return GroupByStrategySelector.STRATEGY_V2;
-                      }
                     },
                     processingConfig
                 )
@@ -364,25 +356,17 @@ public class CachingClusteredClientBenchmark
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            processingConfig,
-            configSupplier,
-            bufferPool,
-            mergeBufferPool,
-            mapper,
-            mapper,
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergeBufferPool,
+        mapper,
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
-    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 
   @TearDown(Level.Trial)

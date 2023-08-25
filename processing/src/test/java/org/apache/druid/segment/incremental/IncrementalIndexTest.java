@@ -400,7 +400,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("bool_string").toColumnType());
     Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_long").toColumnType());
     // depends on value of 'druid.expressions.useStrictBooleans', current default is false which parses as strings
-    Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("bool_auto").toColumnType());
+    Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_auto").toColumnType());
     Assert.assertEquals(ColumnType.STRING_ARRAY, index.getColumnCapabilities("array_string").toColumnType());
     Assert.assertEquals(ColumnType.LONG_ARRAY, index.getColumnCapabilities("array_long").toColumnType());
     Assert.assertEquals(ColumnType.DOUBLE_ARRAY, index.getColumnCapabilities("array_double").toColumnType());

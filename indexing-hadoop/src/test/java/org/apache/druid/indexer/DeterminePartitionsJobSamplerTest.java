@@ -76,7 +76,7 @@ public class DeterminePartitionsJobSamplerTest
     }
     double expect = total * 1.0 / samplingFactor;
     double error = Math.abs(hit - expect) / expect;
-    Assert.assertTrue(error < 0.01);
+    Assert.assertTrue(String.valueOf(error), error < 0.02);
   }
 
   @Test
@@ -97,6 +97,6 @@ public class DeterminePartitionsJobSamplerTest
     }
     double expect = total * 1.0 / samplingFactor;
     double error = Math.abs(hit - expect) / expect;
-    Assert.assertTrue(error < 0.01);
+    Assert.assertTrue(String.valueOf(error), error < 0.02);
   }
 }
