@@ -23,6 +23,9 @@ title: "Automatic compaction"
   -->
 
 In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
+This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
+
+## How Druid manages automatic compaction
 
 The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
@@ -33,9 +36,12 @@ At every invocation of auto-compaction, the Coordinator initiates a [segment sea
 When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
 If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
 
+:::info
+ Auto-compaction skips datasources that have a segment granularity of `ALL`.
+:::
+
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
-This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
 
 ## Enable automatic compaction
 
@@ -173,10 +179,6 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
   "skipOffsetFromLatest": "P1W",
 }
 ```
-
-:::info
- Auto-compaction skips datasources that have a segment granularity of `ALL`.
-:::
 
 ### Update partitioning scheme
 
