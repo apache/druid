@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,7 +47,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -1954,18 +1951,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumO1Matches()
   {
-    cannotVectorize();
-//    requireMergeBuffers(3);
     testBuilder()
-        .plannerConfig(PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true,
-                "druid.processing.buffer.sizeBytes", "2GiB"
-                )))
         .sql("SELECT\n"
             + "  channel\n"
             + " ,cityName\n"
-//            + " ,LATEST_BY(\"cityName\", __time, 128) as latest_by_time_page\n"
             + " ,LATEST_BY(\"cityName\", TIMESTAMPADD(HOUR, 1, \"__time\"), 128) as latest_by_time_page\n"
             + "FROM druid.wikipedia\n"
             + "where channel < '#b' and cityName < 'B'\n"
@@ -1982,15 +1971,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     .setDimensions(dimensions(new DefaultDimensionSpec("channel", "d0"),
                         new DefaultDimensionSpec("cityName", "d1")))
                     .setDimFilter(
-                        and(
-                            range("channel", ColumnType.STRING, null, "#b", false, true),
+                        and(range("channel", ColumnType.STRING, null, "#b", false, true),
                             range("cityName", ColumnType.STRING, null, "B", false, true)))
-                    .setAggregatorSpecs(ImmutableList.of(new StringLastAggregatorFactory("a0", "cityName", "a0", 128)))
+                    .setAggregatorSpecs(new StringLastAggregatorFactory("a0", "cityName", "a0", 128))
                     .setContext(QUERY_CONTEXT_DEFAULT)
                     .build()))
         .expectedResults(ImmutableList.of(
-            new Object[]{"#ar.wikipedia", "Amman", "Amman"}
-            ))
+            new Object[] {"#ar.wikipedia", "Amman", "Amman"}))
         .run();
   }
 
