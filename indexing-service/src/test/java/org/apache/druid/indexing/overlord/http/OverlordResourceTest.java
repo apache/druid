@@ -1331,6 +1331,8 @@ public class OverlordResourceTest
     WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
     AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
     EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(-1);
+    EasyMock.expect(taskRunner.getUsedCapacity()).andReturn(-1);
     EasyMock.replay(
         taskRunner,
         taskMaster,
@@ -1344,6 +1346,7 @@ public class OverlordResourceTest
     final Response response = overlordResource.getTotalWorkerCapacity();
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
@@ -1352,6 +1355,8 @@ public class OverlordResourceTest
   {
     AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(null);
     EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(-1);
+    EasyMock.expect(taskRunner.getUsedCapacity()).andReturn(-1);
     EasyMock.replay(
         taskRunner,
         taskMaster,
@@ -1365,6 +1370,7 @@ public class OverlordResourceTest
     final Response response = overlordResource.getTotalWorkerCapacity();
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
@@ -1374,6 +1380,8 @@ public class OverlordResourceTest
     DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, null);
     AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
     EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(-1);
+    EasyMock.expect(taskRunner.getUsedCapacity()).andReturn(-1);
     EasyMock.replay(
         taskRunner,
         taskMaster,
@@ -1387,6 +1395,7 @@ public class OverlordResourceTest
     final Response response = overlordResource.getTotalWorkerCapacity();
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
@@ -1408,6 +1417,9 @@ public class OverlordResourceTest
         )
     );
     EasyMock.expect(workerTaskRunner.getWorkers()).andReturn(workerInfos);
+    EasyMock.expect(workerTaskRunner.getTotalCapacity()).andReturn(expectedWorkerCapacity);
+    EasyMock.expect(workerTaskRunner.getUsedCapacity()).andReturn(0);
+
     EasyMock.reset(taskMaster);
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(workerTaskRunner)
@@ -1435,6 +1447,7 @@ public class OverlordResourceTest
     final Response response = overlordResource.getTotalWorkerCapacity();
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
     Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(0, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
     Assert.assertEquals(expectedWorkerCapacity * maxNumWorkers, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
@@ -1442,20 +1455,24 @@ public class OverlordResourceTest
   public void testGetTotalWorkerCapacityWithAutoScaleConfiguredAndProvisioningStrategyNotSupportExpectedWorkerCapacity()
   {
     int invalidExpectedCapacity = -1;
+    int currentTotalCapacity = 3;
+    int currentCapacityUsed = 2;
     int maxNumWorkers = 2;
     WorkerTaskRunner workerTaskRunner = EasyMock.createMock(WorkerTaskRunner.class);
     Collection<ImmutableWorkerInfo> workerInfos = ImmutableList.of(
         new ImmutableWorkerInfo(
             new Worker(
-                "http", "testWorker", "192.0.0.1", 3, "v1", WorkerConfig.DEFAULT_CATEGORY
+                "http", "testWorker", "192.0.0.1", currentTotalCapacity, "v1", WorkerConfig.DEFAULT_CATEGORY
             ),
-            2,
+            currentCapacityUsed,
             ImmutableSet.of("grp1", "grp2"),
             ImmutableSet.of("task1", "task2"),
             DateTimes.of("2015-01-01T01:01:01Z")
         )
     );
     EasyMock.expect(workerTaskRunner.getWorkers()).andReturn(workerInfos);
+    EasyMock.expect(workerTaskRunner.getTotalCapacity()).andReturn(currentTotalCapacity);
+    EasyMock.expect(workerTaskRunner.getUsedCapacity()).andReturn(currentCapacityUsed);
     EasyMock.reset(taskMaster);
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(workerTaskRunner)
@@ -1484,6 +1501,8 @@ public class OverlordResourceTest
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
     Assert.assertEquals(workerInfos.stream().findFirst().get().getWorker().getCapacity(), ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(invalidExpectedCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+    Assert.assertEquals(currentTotalCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(currentCapacityUsed, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
   }
 
   @Test

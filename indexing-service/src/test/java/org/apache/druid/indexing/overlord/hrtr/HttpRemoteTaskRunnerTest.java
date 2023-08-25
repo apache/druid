@@ -146,6 +146,8 @@ public class HttpRemoteTaskRunnerTest
 
     Assert.assertEquals(numTasks, taskRunner.getKnownTasks().size());
     Assert.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
+    Assert.assertEquals(4, taskRunner.getTotalCapacity());
+    Assert.assertEquals(0, taskRunner.getUsedCapacity());
   }
 
   /*
