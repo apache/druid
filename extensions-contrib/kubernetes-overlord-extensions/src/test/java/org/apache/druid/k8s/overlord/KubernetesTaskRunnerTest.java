@@ -627,7 +627,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   public void test_getTaskLocation_noTaskFound()
   {
     TaskLocation taskLocation = runner.getTaskLocation(task.getId());
-
     Assert.assertEquals(TaskLocation.unknown(), taskLocation);
   }
 
