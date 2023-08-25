@@ -3945,7 +3945,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     skipVectorize();
     cannotVectorize();
-    notMsqCompatible();
+    //notMsqCompatible();
     // @todo check this back
     testQuery(
         "SELECT d3 from (SELECT * from druid.numfoo JOIN (select dim2 as t from druid.numfoo where dim2 IN ('a','b','ab','abc')) ON dim2=t), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
