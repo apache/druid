@@ -46,7 +46,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   {
     super(macroTable, name, fieldName, expression);
     this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
-        AggregatorUtil.COUNT_SUM_CACHE_TYPE_ID,
+        AggregatorUtil.LONG_SUM_CACHE_TYPE_ID,
         fieldName,
         fieldExpression
     );

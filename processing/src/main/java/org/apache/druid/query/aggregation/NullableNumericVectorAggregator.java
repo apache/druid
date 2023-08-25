@@ -102,9 +102,6 @@ public class NullableNumericVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
-    if (numRows <= 0) {
-      return;
-    }
     final boolean[] nullVector = selector.getNullVector();
     if (nullVector != null) {
       // Deferred initialization, since vAggregationPositions and vAggregationRows are only needed if nulls

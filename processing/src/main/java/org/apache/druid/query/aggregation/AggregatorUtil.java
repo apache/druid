@@ -154,8 +154,6 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_CONSTANT_SKETCH_CACHE_TYPE_ID = 0x4D;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_SUM_ESTIMATE_CACHE_TYPE_ID = 0x4E;
 
-  public static final byte COUNT_SUM_CACHE_TYPE_ID = 0x4F;
-
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
    * required to compute the output column.

@@ -318,10 +318,6 @@ public class RowBasedGrouperHelper
       rowPredicate = getResultRowPredicate(query, subquery);
     }
 
-    if (keySerdeFactory.factorize().isEmpty()) {
-      grouper.init();
-    }
-
     final Accumulator<AggregateResult, ResultRow> accumulator = (priorResult, row) -> {
       BaseQuery.checkInterrupted();
 
