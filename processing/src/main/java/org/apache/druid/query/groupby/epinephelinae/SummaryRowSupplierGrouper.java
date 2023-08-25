@@ -18,27 +18,28 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import java.io.IOException;
+import java.util.NoSuchElementException;
+
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
 {
   private Grouper<KeyType> delegate;
-  private KeySerdeFactory<RowBasedKey> keySerdeFactory;
+  private KeySerde<KeyType> keySerde;
   private AggregatorFactory[] aggregatorFactories;
   private ColumnSelectorFactory columnSelectorFactory;
 
-  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerdeFactory<RowBasedKey> keySerdeFactory,
+  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerdeFactory<KeyType> keySerdeFactory,
       ColumnSelectorFactory columnSelectorFactory, AggregatorFactory[] aggregatorFactories)
   {
     delegate = grouper;
-    this.keySerdeFactory = keySerdeFactory;
+    this.keySerde = keySerdeFactory.factorize();
     this.columnSelectorFactory = columnSelectorFactory;
     this.aggregatorFactories = aggregatorFactories;
-
 
   }
 
@@ -79,46 +80,75 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
     if (it.hasNext()) {
       return it;
     }
-      buildSummaryRow();
-    return it;
+    Entry<KeyType> summaryRow = buildSummaryRow();
+    return new CloseableIterator<Grouper.Entry<KeyType>>()
+    {
+      boolean done;
+
+      @Override
+      public boolean hasNext()
+      {
+        return !done;
+      }
+
+      @Override
+      public Entry<KeyType> next()
+      {
+        if (done) {
+          throw new NoSuchElementException();
+        }
+        done = true;
+        return summaryRow;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        it.close();
+      }
+    };
   }
 
-  private void buildSummaryRow()
+  private Entry<KeyType> buildSummaryRow()
   {
-//    final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
+    final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregatorFactories.length);
+    Object[] values = reusableEntry.getValues();// new
+                                                // Object[aggregatorFactories.length];
     for (int i = 0; i < aggregatorFactories.length; i++) {
       Aggregator aggregate = aggregatorFactories[i].factorize(columnSelectorFactory);
-      aggregate.get();
+      values[i] = aggregate.get();
     }
+    // reusableEntry.setValues(values);
+    return reusableEntry;
 
-//
-//
-//    int curr = 0;
-//    final int size = getSize();
-//
-//    @Override
-//    public boolean hasNext()
-//    {
-//      return curr < size;
-//    }
-//
-//    @Override
-//    public Entry<KeyType> next()
-//    {
-//      if (curr >= size) {
-//        throw new NoSuchElementException();
-//      }
-//      final int offset = offsetList.get(curr);
-//      final Entry<KeyType> entry = populateBucketEntryForOffset(reusableEntry, offset);
-//      curr++;
-//
-//      return entry;
-//    }
+    //
+    //
+    // int curr = 0;
+    // final int size = getSize();
+    //
+    // @Override
+    // public boolean hasNext()
+    // {
+    // return curr < size;
+    // }
+    //
+    // @Override
+    // public Entry<KeyType> next()
+    // {
+    // if (curr >= size) {
+    // throw new NoSuchElementException();
+    // }
+    // final int offset = offsetList.get(curr);
+    // final Entry<KeyType> entry = populateBucketEntryForOffset(reusableEntry,
+    // offset);
+    // curr++;
+    //
+    // return entry;
+    // }
 
-
-//    AggregatorAdapters.factorizeBuffered(columnSelectorFactory, Arrays.asList(aggregatorFactories));
+    // AggregatorAdapters.factorizeBuffered(columnSelectorFactory,
+    // Arrays.asList(aggregatorFactories));
 
   }
-
 
 }

@@ -1936,7 +1936,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
                 PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
-        "select COALESCE(count(distinct m1),0) from druid.foo where m1 < -1.0",
+        "select count(distinct m1) from druid.foo where m1 < -1.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
