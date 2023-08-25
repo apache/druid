@@ -51,7 +51,6 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -240,12 +239,6 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new StringFirstAggregatorFactory(name, name, timeColumn, maxStringBytes);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new StringFirstAggregatorFactory(fieldName, fieldName, timeColumn, maxStringBytes));
   }
 
   @Override

@@ -1424,7 +1424,7 @@
                         "minValue":"",
                         "maxValue":"mmx._unknown",
                         "errorMessage":null,
-                        "hasNulls":true
+                        "hasNulls":false
                     },
                     "language":{
                         "typeSignature": "STRING",

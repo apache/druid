@@ -251,7 +251,7 @@ def build_compatible_license_names():
     compatible_licenses['BSD 3-Clause'] = 'BSD-3-Clause License'
     compatible_licenses['BSD-3-Clause'] = 'BSD-3-Clause License'
 
-    compatible_licenses['ICU License'] = 'ICU License'
+    compatible_licenses['Unicode/ICU License'] = 'Unicode/ICU License'
 
     compatible_licenses['SIL Open Font License 1.1'] = 'SIL Open Font License 1.1'
 

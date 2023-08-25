@@ -92,10 +92,13 @@ public class MetadataResourceTest
     IndexerMetadataStorageCoordinator storageCoordinator = Mockito.mock(IndexerMetadataStorageCoordinator.class);
     Mockito.doReturn(segments[4])
            .when(storageCoordinator)
-           .retrieveUsedSegmentForId(segments[4].getId().toString());
+           .retrieveSegmentForId(segments[4].getId().toString(), false);
     Mockito.doReturn(null)
            .when(storageCoordinator)
-           .retrieveUsedSegmentForId(segments[5].getId().toString());
+           .retrieveSegmentForId(segments[5].getId().toString(), false);
+    Mockito.doReturn(segments[5])
+           .when(storageCoordinator)
+           .retrieveSegmentForId(segments[5].getId().toString(), true);
 
     metadataResource = new MetadataResource(
         segmentsMetadataManager,
@@ -120,23 +123,27 @@ public class MetadataResourceTest
   }
 
   @Test
-  public void testGetUsedSegment()
+  public void testGetSegment()
   {
     // Available in snapshot
     Assert.assertEquals(
         segments[0],
-        metadataResource.getUsedSegment(segments[0].getDataSource(), segments[0].getId().toString()).getEntity()
+        metadataResource.getSegment(segments[0].getDataSource(), segments[0].getId().toString(), null).getEntity()
     );
 
     // Unavailable in snapshot, but available in metadata
     Assert.assertEquals(
         segments[4],
-        metadataResource.getUsedSegment(segments[4].getDataSource(), segments[4].getId().toString()).getEntity()
+        metadataResource.getSegment(segments[4].getDataSource(), segments[4].getId().toString(), null).getEntity()
     );
 
-    // Unavailable in both snapshot and metadata
+    // Unavailable and unused
     Assert.assertNull(
-        metadataResource.getUsedSegment(segments[5].getDataSource(), segments[5].getId().toString()).getEntity()
+        metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), null).getEntity()
+    );
+    Assert.assertEquals(
+        segments[5],
+        metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), true).getEntity()
     );
   }
 

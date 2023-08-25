@@ -101,12 +101,11 @@ Caching does not solve all types of query performance issues. For each cache typ
 **Per-segment caching** doesn't work for the following:
 - queries containing a sub-query in them. However the output of sub-queries may be cached. See [Query execution](./query-execution.md) for more details on sub-queries execution.
 - queries with joins do not support any caching on the broker.
-- GroupBy v2 queries do not support any caching on broker.
+- GroupBy queries do not support segment level caching on broker.
 - queries with `bySegment` set in the query context are not cached on the broker.
 
 **Whole-query caching** doesn't work for the following:
 - queries that involve an inline datasource or a lookup datasource.
-- GroupBy v2 queries.
 - queries with joins.
 - queries with a union datasource.
 

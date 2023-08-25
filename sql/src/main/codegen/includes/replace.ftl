@@ -43,7 +43,10 @@ SqlNode DruidSqlReplaceEof() :
         }
     ]
     [
-        <OVERWRITE> replaceTimeQuery = ReplaceTimeQuery()
+	<OVERWRITE>
+	[
+		replaceTimeQuery = ReplaceTimeQuery()
+	]
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
