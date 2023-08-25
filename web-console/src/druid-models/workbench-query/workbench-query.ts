@@ -379,18 +379,22 @@ export class WorkbenchQuery {
   }
 
   public canPrettify(): boolean {
-    return this.isJsonLike();
+    return Boolean(this.isJsonLike() || this.parsedQuery);
   }
 
   public prettify(): WorkbenchQuery {
-    const queryString = this.getQueryString();
-    let parsed;
-    try {
-      parsed = Hjson.parse(queryString);
-    } catch {
-      return this;
+    const { queryString, parsedQuery } = this;
+    if (parsedQuery) {
+      return this.changeQueryString(parsedQuery.prettify().toString());
+    } else {
+      let parsedJson;
+      try {
+        parsedJson = Hjson.parse(queryString);
+      } catch {
+        return this;
+      }
+      return this.changeQueryString(JSONBig.stringify(parsedJson, undefined, 2));
     }
-    return this.changeQueryString(JSONBig.stringify(parsed, undefined, 2));
   }
 
   public getIngestDatasource(): string | undefined {
