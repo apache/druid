@@ -34,6 +34,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1946,18 +1947,28 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             + "where channel < '#b' and cityName < 'D'\n"
             + "GROUP BY 1,2"
             )
-//        .expectedQueries(        ImmutableList.of(
-//            Druids.newTimeseriesQueryBuilder()
-//            .dataSource(InlineDataSource.fromIterable(
-//                ImmutableList.of(),
-//                RowSignature.builder().add("$f1", ColumnType.LONG).build()))
-//            .intervals(querySegmentSpec(Filtration.eternity()))
-//            .granularity(Granularities.ALL)
-//            .aggregators(aggregators(
-//                new FilteredAggregatorFactory(
-//                    new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
-//            .context(QUERY_CONTEXT_DEFAULT)
-//            .build()))
+        .expectedQueries(
+
+            ImmutableList.of(
+                GroupByQuery.builder()
+                .setDataSource("wikipedia")
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    expressionVirtualColumn("v0", "(\"__time\" + 3600000)", ColumnType.LONG)
+                )
+                .setDimensions(dimensions(new DefaultDimensionSpec("channel", "d0"),
+                    new DefaultDimensionSpec("cityName", "d1")))
+                .setDimFilter(
+                    and(
+                        range("channel",ColumnType.STRING,null,"#b",false,true ),
+                        range("cityName",ColumnType.STRING,null,"D",false,true)
+                    )
+                )
+                .setAggregatorSpecs(new StringLastAggregatorFactory("a0","cityName", "a0", 128))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ))
         .expectedResults(ImmutableList.of(
             new Object[] {0L}))
         .run();
