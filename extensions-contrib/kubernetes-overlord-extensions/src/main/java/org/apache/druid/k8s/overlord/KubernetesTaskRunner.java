@@ -331,7 +331,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @LifecycleStart
   public void start()
   {
-    log.info("start KubernetesTaskRunner");
     cleanupExecutor.scheduleAtFixedRate(
         () ->
             client.deleteCompletedPeonJobsOlderThan(

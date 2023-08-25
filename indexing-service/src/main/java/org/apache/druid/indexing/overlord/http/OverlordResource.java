@@ -742,6 +742,7 @@ public class OverlordResource
         dataSource,
         type
     );
+
     if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING) {
       // We are interested in only those tasks which are in taskRunner.
       taskStatusPlusStream = taskStatusPlusStream
@@ -924,8 +925,6 @@ public class OverlordResource
           @Override
           public Response apply(TaskRunner taskRunner)
           {
-            // This feels like a hack to get the ingestion capacity for the k8s runner to show up in the Druid Console
-            // I think it makes sense to create a new /druid/indexer/v1/capacity api that doesn't require us to pretend to have a worker.
             if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
             } else {
