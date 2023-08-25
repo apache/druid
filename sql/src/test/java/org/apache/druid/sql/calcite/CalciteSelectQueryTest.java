@@ -1948,27 +1948,22 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             + "GROUP BY 1,2"
             )
         .expectedQueries(
-
             ImmutableList.of(
                 GroupByQuery.builder()
-                .setDataSource("wikipedia")
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setVirtualColumns(
-                    expressionVirtualColumn("v0", "(\"__time\" + 3600000)", ColumnType.LONG)
-                )
-                .setDimensions(dimensions(new DefaultDimensionSpec("channel", "d0"),
-                    new DefaultDimensionSpec("cityName", "d1")))
-                .setDimFilter(
-                    and(
-                        range("channel",ColumnType.STRING,null,"#b",false,true ),
-                        range("cityName",ColumnType.STRING,null,"D",false,true)
-                    )
-                )
-                .setAggregatorSpecs(new StringLastAggregatorFactory("a0","cityName", "a0", 128))
-                .setContext(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ))
+                    .setDataSource("wikipedia")
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setGranularity(Granularities.ALL)
+                    .setVirtualColumns(
+                        expressionVirtualColumn("v0", "(\"__time\" + 3600000)", ColumnType.LONG))
+                    .setDimensions(dimensions(new DefaultDimensionSpec("channel", "d0"),
+                        new DefaultDimensionSpec("cityName", "d1")))
+                    .setDimFilter(
+                        and(
+                            range("channel", ColumnType.STRING, null, "#b", false, true),
+                            range("cityName", ColumnType.STRING, null, "D", false, true)))
+                    .setAggregatorSpecs(new StringLastAggregatorFactory("a0", "cityName", "a0", 128))
+                    .setContext(QUERY_CONTEXT_DEFAULT)
+                    .build()))
         .expectedResults(ImmutableList.of(
             new Object[] {0L}))
         .run();
