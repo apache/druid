@@ -2222,16 +2222,26 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(outputSignature)
         .setQueryContext(context)
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""},
-            new Object[]{null},
-            new Object[]{null}
-        ))
+        .setExpectedResultRows(
+            useDefault ? ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"c"},
+                new Object[]{"d"},
+                new Object[]{""},
+                new Object[]{""},
+                new Object[]{""}
+            ) : ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"c"},
+                new Object[]{"d"},
+                new Object[]{""},
+                new Object[]{null},
+                new Object[]{null}
+            ))
         .verifyResults();
   }
 
@@ -2300,11 +2310,15 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(outputSignature)
         .setQueryContext(context)
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{""}
-        ))
+        .setExpectedResultRows(
+            useDefault ? ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"}
+            ) : ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{""}
+            ))
         .verifyResults();
   }
 
