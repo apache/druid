@@ -70,7 +70,7 @@ public class SingleStringLastDimensionVectorAggregator implements VectorAggregat
     int index;
 
     long latestTime;
-    for (index = endRow - 1; index >= 0; index--) {
+    for (index = endRow - 1; index >= startRow; index--) {
       if (nullTimeVector != null && nullTimeVector[index]) {
         continue;
       }
