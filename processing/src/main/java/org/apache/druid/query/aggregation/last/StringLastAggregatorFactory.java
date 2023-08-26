@@ -35,6 +35,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -42,6 +43,8 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -155,17 +158,24 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
+    if (capabilities != null) {
+      if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
+        if (!capabilities.hasMultipleValues().isTrue()) {
+          SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
+              DefaultDimensionSpec.of(
+                  fieldName));
+          return new SingleStringLastDimensionVectorAggregator(timeSelector, sSelector, maxStringBytes);
+        }
+      }
+    }
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
-    VectorValueSelector timeSelector = selectorFactory.makeValueSelector(
-        timeColumn);
     if (capabilities != null) {
       return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
     } else {
       return new StringLastVectorAggregator(null, vSelector, maxStringBytes);
     }
-
   }
 
   @Override
