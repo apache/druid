@@ -88,29 +88,36 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
-    CloseableIterator<Entry<KeyType>> it = delegate.iterator(sorted);
-    if (it.hasNext()) {
-      return it;
-    }
-    Entry<KeyType> summaryRow = buildSummaryRow();
+    final CloseableIterator<Entry<KeyType>> it = delegate.iterator(sorted);
     return new CloseableIterator<Grouper.Entry<KeyType>>()
     {
+      boolean delegated;
       boolean done;
 
       @Override
       public boolean hasNext()
       {
+        if (it.hasNext()) {
+          delegated = true;
+          return true;
+        }
+        if(delegated) {
+          return it.hasNext();
+        }
         return !done;
       }
 
       @Override
       public Entry<KeyType> next()
       {
-        if (done) {
+        if (!hasNext()) {
           throw new NoSuchElementException();
         }
+        if(delegated) {
+          return it.next();
+        }
         done = true;
-        return summaryRow;
+        return buildSummaryRow();
       }
 
       @Override
