@@ -36,13 +36,14 @@ All Druid metrics share a common set of fields:
 Metrics may have additional dimensions beyond those listed above.
 
 :::info
- Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
+Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
 :::
 
 ## Query metrics
 
 ### Router
-|Metric|Description|Dimensions|Normal value|
+
+|Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.|< 1s|
 
@@ -164,8 +165,9 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
 
-The `taskIngestionMode` dimension includes the following modes: 
-* `APPEND`: a native ingestion job appending to existing segments 
+The `taskIngestionMode` dimension includes the following modes:
+
+* `APPEND`: a native ingestion job appending to existing segments
 * `REPLACE_LEGACY`: the original replace before tombstones
 * `REPLACE`: a native ingestion job replacing existing segments using tombstones
 
@@ -181,7 +183,7 @@ task's `IOConfig` as follows:
 |`false`|`true`|`REPLACE`|
 
 The `tags` dimension is reported only for metrics emitted from ingestion tasks whose ingest spec specifies the `tags`
-field in the `context` field of the ingestion spec. `tags` is expected to be a map of string to object.  
+field in the `context` field of the ingestion spec. `tags` is expected to be a map of string to object.
 
 ### Ingestion metrics for Kafka
 
@@ -242,7 +244,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
-|`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
+
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
 ## Indexing service
@@ -281,8 +283,8 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 
 ## Shuffle metrics (Native parallel task)
 
-The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`
-See [Enabling Metrics](../configuration/index.md#enabling-metrics) for more details.
+The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`.
+See [Enabling metrics](../configuration/index.md#enabling-metrics) for more details.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -404,7 +406,10 @@ The following metric is only available if the `EventReceiverFirehoseMonitor` mod
 |`ingest/events/buffered`|Number of events queued in the `EventReceiverFirehose` buffer.|`serviceName`, `dataSource`, `taskId`, `taskType`, `bufferCapacity`|Equal to the current number of events in the buffer queue.|
 |`ingest/bytes/received`|Number of bytes received by the `EventReceiverFirehose`.|`serviceName`, `dataSource`, `taskId`, `taskType`|Varies|
 
-## Sys
+## Sys [Deprecated]
+
+> SysMonitor is now deprecated and will be removed in future releases.
+> Instead, use the new OSHI monitor called [OshiSysMonitor](#oshisysmonitor). The new monitor has a wider support for different machine architectures including ARM instances.
 
 These metrics are only available if the `SysMonitor` module is included.
 
@@ -426,6 +431,51 @@ These metrics are only available if the `SysMonitor` module is included.
 |`sys/mem/max`|Memory max||Varies|
 |`sys/storage/used`|Disk space used|`fsDirName`|Varies|
 |`sys/cpu`|CPU used|`cpuName`, `cpuTime`|Varies|
+
+## OshiSysMonitor
+
+These metrics are only available if the `OshiSysMonitor` module is included.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|--------|-----|-----|
+|`sys/swap/free`|Free swap||Varies|
+|`sys/swap/max`|Max swap||Varies|
+|`sys/swap/pageIn`|Paged in swap||Varies|
+|`sys/swap/pageOut`|Paged out swap||Varies|
+|`sys/disk/write/count`|Writes to disk|`diskName`|Varies|
+|`sys/disk/read/count`|Reads from disk|`diskName`|Varies|
+|`sys/disk/write/size`|Bytes written to disk. One indicator of the amount of paging occurring for segments.|`diskName`|Varies|
+|`sys/disk/read/size`|Bytes read from disk. One indicator of the amount of paging occurring for segments.|`diskName`|Varies|
+|`sys/disk/queue`|Disk queue length. Measures number of requests waiting to be processed by Disk|`diskName`|Generally 0|
+|`sys/disk/transferTime`|Transfer time to read from or write to disk|`diskName`|Depends on hardware|
+|`sys/net/write/size`|Bytes written to the network|`netName`, `netAddress`, `netHwaddr`|Varies|
+|`sys/net/read/size`|Bytes read from the network|`netName`, `netAddress`, `netHwaddr`|Varies|
+|`sys/net/read/packets`|Total packets read from the network|`netName`, `netAddress`, `netHwaddr`|Varies|
+|`sys/net/write/packets`|Total packets written to the network|`netName`, `netAddress`, `netHwaddr`|Varies|
+|`sys/net/read/errors`|Total network read errors|`netName`, `netAddress`, `netHwaddr`|Generally 0|
+|`sys/net/write/errors`|Total network write errors|`netName`, `netAddress`, `netHwaddr`|Generally 0|
+|`sys/net/read/dropped`|Total packets dropped coming from network|`netName`, `netAddress`, `netHwaddr`|Generally 0|
+|`sys/net/write/collisions`|Total network write collisions|`netName`, `netAddress`, `netHwaddr`|Generally 0|
+|`sys/fs/used`|Filesystem bytes used |`fsDevName`, `fsDirName`|< max|
+|`sys/fs/max`|Filesystem bytes max |`fsDevName`, `fsDirName`|Varies|
+|`sys/fs/files/count`|Filesystem total IO Nodes |`fsDevName`, `fsDirName`|< max|
+|`sys/fs/files/free`|Filesystem free IO nodes|`fsDevName`, `fsDirName`| Varies |
+|`sys/mem/used`|Memory used||< max|
+|`sys/mem/max`|Memory max||Varies|
+|`sys/mem/free`|Memory free||Varies|
+|`sys/storage/used`|Disk space used|`fsDirName`|Varies|
+|`sys/cpu`|CPU used|`cpuName`, `cpuTime`|Varies|
+|`sys/uptime`|Total system uptime||Varies|
+|`sys/la/{i}`|System CPU Load averages over past i minutes, where i={1,5,15}||Varies|
+|`sys/tcpv4/activeOpens`|Total TCP active open connections||Varies|
+|`sys/tcpv4/passiveOpens`|Total TCP passive open connections||Varies|
+|`sys/tcpv4/attemptFails`|Total TCP active connection failures||Generally 0|
+|`sys/tcpv4/estabResets`|Total TCP connection resets||Generally 0|
+|`sys/tcpv4/in/segs`|Total segments received in connection||Varies|
+|`sys/tcpv4/in/errs`|Errors while reading segments||Generally 0|
+|`sys/tcpv4/out/segs`|Total segments sent||Varies|
+|`sys/tcpv4/out/rsts`|Total "out reset" packets sent to reset the connection||Generally 0|
+|`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies but not to high|
 
 ## Cgroup
 
