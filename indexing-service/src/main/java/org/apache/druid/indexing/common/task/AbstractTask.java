@@ -233,16 +233,19 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
-  public void waitForCleanupToFinish()
+  public boolean waitForCleanupToFinish()
   {
     try {
       if (cleanupCompletionLatch != null) {
         // block until the cleanup process completes
-        cleanupCompletionLatch.await(30, TimeUnit.SECONDS);
+        return cleanupCompletionLatch.await(30, TimeUnit.SECONDS);
       }
+
+      return true;
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+      return false;
     }
   }
 
