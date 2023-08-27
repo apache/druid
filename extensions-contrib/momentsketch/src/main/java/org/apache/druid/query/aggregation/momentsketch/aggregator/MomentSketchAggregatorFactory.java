@@ -167,19 +167,6 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
     }
   }
 
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new MomentSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            k,
-            compress
-        )
-    );
-  }
-
   private MomentSketchWrapper deserializeFromByteArray(byte[] bytes)
   {
     return MomentSketchWrapper.fromByteArray(bytes);

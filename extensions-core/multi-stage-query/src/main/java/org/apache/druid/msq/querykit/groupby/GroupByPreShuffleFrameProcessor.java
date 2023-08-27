@@ -42,9 +42,9 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -61,7 +61,7 @@ import java.io.IOException;
 public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 {
   private final GroupByQuery query;
-  private final GroupByStrategySelector strategySelector;
+  private final GroupingEngine groupingEngine;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
   private final Closer closer = Closer.create();
 
@@ -74,7 +74,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final GroupByQuery query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final GroupByStrategySelector strategySelector,
+      final GroupingEngine groupingEngine,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
@@ -89,7 +89,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         memoryReservedForBroadcastJoin
     );
     this.query = query;
-    this.strategySelector = strategySelector;
+    this.groupingEngine = groupingEngine;
     this.frameWriterColumnSelectorFactory = RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
         query,
         () -> resultYielder.get(),
@@ -104,12 +104,11 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Sequence<ResultRow> rowSequence =
-          strategySelector.strategize(query)
-                          .process(
-                              query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-                              mapSegment(segmentHolder.get()).asStorageAdapter(),
-                              null
-                          );
+          groupingEngine.process(
+              query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
+              mapSegment(segmentHolder.get()).asStorageAdapter(),
+              null
+          );
 
       resultYielder = Yielders.each(rowSequence);
     }
@@ -137,12 +136,11 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("x"));
 
         final Sequence<ResultRow> rowSequence =
-            strategySelector.strategize(query)
-                            .process(
-                                query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                                mapSegment(frameSegment).asStorageAdapter(),
-                                null
-                            );
+            groupingEngine.process(
+                query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
+                mapSegment(frameSegment).asStorageAdapter(),
+                null
+            );
 
         resultYielder = Yielders.each(rowSequence);
       } else if (inputChannel.isFinished()) {
