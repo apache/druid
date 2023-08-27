@@ -437,7 +437,7 @@ These metrics are only available if the `SysMonitor` module is included.
 These metrics are only available if the `OshiSysMonitor` module is included.
 
 |Metric|Description|Dimensions|Normal Value|
-|------|--------|-----|-----|
+|------|-----------|----------|------------|
 |`sys/swap/free`|Free swap||Varies|
 |`sys/swap/max`|Max swap||Varies|
 |`sys/swap/pageIn`|Paged in swap||Varies|
