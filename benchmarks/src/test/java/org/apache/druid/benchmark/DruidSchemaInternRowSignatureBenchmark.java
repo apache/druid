@@ -22,7 +22,7 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -38,8 +38,8 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -80,7 +80,7 @@ public class DruidSchemaInternRowSignatureBenchmark
         final JoinableFactory joinableFactory,
         final PlannerConfig config,
         final Escalator escalator,
-        final BrokerInternalQueryConfig brokerInternalQueryConfig
+        final InternalQueryConfig internalQueryConfig
     )
     {
       super(
@@ -90,7 +90,7 @@ public class DruidSchemaInternRowSignatureBenchmark
           joinableFactory,
           SegmentMetadataCacheConfig.create(),
           escalator,
-          brokerInternalQueryConfig,
+          internalQueryConfig,
           new NoopServiceEmitter()
       );
     }

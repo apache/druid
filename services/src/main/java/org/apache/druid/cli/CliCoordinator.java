@@ -37,19 +37,33 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.HttpServerInventoryViewResource;
+import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
+import org.apache.druid.client.selector.ServerSelectorStrategy;
+import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
+import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.QueryRunnerFactoryModule;
+import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -73,8 +87,13 @@ import org.apache.druid.metadata.MetadataStorageProvider;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
+import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
@@ -139,6 +158,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
+  private static final String SEGMENT_METADATA_CACHE_ENABLED = "druid.coordinator.segmentMetadataCache.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -173,6 +193,12 @@ public class CliCoordinator extends ServerRunnable
     List<Module> modules = new ArrayList<>();
 
     modules.add(JettyHttpClientModule.global());
+    modules.add(new LegacyBrokerParallelMergeConfigModule());
+    modules.add(new QueryRunnerFactoryModule());
+    modules.add(new SegmentWranglerModule());
+    modules.add(new QueryableModule());
+    modules.add(new BrokerProcessingModule());
+    modules.add(new JoinableFactoryModule());
 
     modules.add(
         new Module()
@@ -190,6 +216,8 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
+            binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
+
             JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
@@ -200,6 +228,13 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.balancer.cachingCost",
                 CachingCostBalancerStrategyConfig.class
             );
+            JsonConfigProvider.bind(binder, "druid.coordinator.segment", SegmentMetadataCacheConfig.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             if (beOverlord) {
@@ -221,12 +256,16 @@ public class CliCoordinator extends ServerRunnable
                   .in(ManageLifecycle.class);
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
+            binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class);
+            binder.bind(TimelineServerView.class).to(CoordinatorServerView.class).in(LazySingleton.class);
             binder.bind(DruidCoordinator.class);
 
             LifecycleModule.register(binder, CoordinatorServerView.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
+
+            LifecycleModule.register(binder, SegmentMetadataCache.class);
 
             binder.bind(JettyServerInitializer.class)
                   .to(CoordinatorJettyServerInitializer.class);
@@ -393,6 +432,12 @@ public class CliCoordinator extends ServerRunnable
   {
     return Boolean.parseBoolean(properties.getProperty(AS_OVERLORD_PROPERTY));
   }
+
+  private boolean isSegmentMetadataCacheEnabled()
+  {
+    return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_ENABLED));
+  }
+
 
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
   {

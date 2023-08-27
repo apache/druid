@@ -28,25 +28,21 @@ import java.util.Set;
 
 public class DruidSchema extends AbstractTableSchema
 {
-  private final SegmentMetadataCache segmentCache;
+  private final BrokerSegmentMetadataView brokerSegmentMetadataView;
   private final DruidSchemaManager druidSchemaManager;
 
   @Inject
   public DruidSchema(
-      SegmentMetadataCache segmentCache,
-      final DruidSchemaManager druidSchemaManager)
+      final BrokerSegmentMetadataView brokerSegmentMetadataView,
+      final DruidSchemaManager druidSchemaManager
+  )
   {
-    this.segmentCache = segmentCache;
+    this.brokerSegmentMetadataView = brokerSegmentMetadataView;
     if (druidSchemaManager != null && !(druidSchemaManager instanceof NoopDruidSchemaManager)) {
       this.druidSchemaManager = druidSchemaManager;
     } else {
       this.druidSchemaManager = null;
     }
-  }
-
-  protected SegmentMetadataCache cache()
-  {
-    return segmentCache;
   }
 
   @Override
@@ -55,9 +51,9 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTable(name);
     } else {
-      DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentCache.getDatasource(name);
+  DatasourceTable.PhysicalDatasourceMetadata dsMetadata = brokerSegmentMetadataView.getDatasource(name);
       return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
-    }
+}
   }
 
   @Override
@@ -66,7 +62,7 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTableNames();
     } else {
-      return segmentCache.getDatasourceNames();
+      return brokerSegmentMetadataView.getDatasourceNames();
     }
   }
 }

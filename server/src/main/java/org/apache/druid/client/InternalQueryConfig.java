@@ -29,7 +29,7 @@ import java.util.Map;
  * should add to their query payload. The runtime properties for this class
  * have the prefix "druid.broker.internal.query.config."
  */
-public class BrokerInternalQueryConfig
+public class InternalQueryConfig
 {
   @JsonProperty
   private Map<String, Object> context = new HashMap<>();

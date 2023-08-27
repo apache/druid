@@ -53,6 +53,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -428,5 +429,15 @@ public class BrokerServerView implements TimelineServerView
     return clients.values().stream()
                   .map(queryableDruidServer -> queryableDruidServer.getServer().toImmutableDruidServer())
                   .collect(Collectors.toList());
+  }
+
+  public Map<SegmentId, ServerSelector> getSegmentMetadata()
+  {
+    return selectors;
+  }
+
+  public Set<String> getDatasourceNames()
+  {
+    return timelines.keySet();
   }
 }

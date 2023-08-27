@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -55,7 +55,7 @@ import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -68,7 +68,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -84,6 +84,7 @@ import java.util.stream.Collectors;
 
 public class QueryFrameworkUtils
 {
+
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
@@ -224,7 +225,7 @@ public class QueryFrameworkUtils
         createDefaultJoinableFactory(injector),
         SegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     );
 
@@ -273,5 +274,5 @@ public class QueryFrameworkUtils
   public static LookupSchema createMockLookupSchema(final Injector injector)
   {
     return new LookupSchema(injector.getInstance(LookupExtractorFactoryContainerProvider.class));
-  }
+  } **/
 }

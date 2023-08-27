@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
@@ -33,7 +34,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
@@ -50,7 +51,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
@@ -61,15 +61,11 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -118,8 +114,7 @@ public class SegmentMetadataCache
   private final SegmentMetadataCacheConfig config;
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
-  private final SegmentManager segmentManager;
-  private final JoinableFactory joinableFactory;
+
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
   private final ServiceEmitter emitter;
@@ -129,7 +124,7 @@ public class SegmentMetadataCache
    * Map of DataSource -> DruidTable.
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  private final ConcurrentMap<String, DatasourceTable.PhysicalDatasourceMetadata> tables = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DatasourceSchema> tables = new ConcurrentHashMap<>();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -186,7 +181,7 @@ public class SegmentMetadataCache
    * Currently, there are 2 threads that can access these variables.
    *
    * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
-   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DatasourceTable} if necessary
+   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DatasourceSchema} if necessary
    *   based on the information collected via timeline callbacks.
    */
   private final Object lock = new Object();
@@ -204,7 +199,7 @@ public class SegmentMetadataCache
   private final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
   // Configured context to attach to internally generated queries.
-  private final BrokerInternalQueryConfig brokerInternalQueryConfig;
+  private final InternalQueryConfig internalQueryConfig;
 
   @GuardedBy("lock")
   private boolean refreshImmediately = false;
@@ -223,24 +218,20 @@ public class SegmentMetadataCache
   public SegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
-      final SegmentManager segmentManager,
-      final JoinableFactory joinableFactory,
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
-      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
     Preconditions.checkNotNull(serverView, "serverView");
-    this.segmentManager = segmentManager;
-    this.joinableFactory = joinableFactory;
     this.config = Preconditions.checkNotNull(config, "config");
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
-    this.brokerInternalQueryConfig = brokerInternalQueryConfig;
+    this.internalQueryConfig = internalQueryConfig;
     this.emitter = emitter;
 
     initServerViewTimelineCallback(serverView);
@@ -421,19 +412,23 @@ public class SegmentMetadataCache
 
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
-      final DatasourceTable.PhysicalDatasourceMetadata druidTable = buildDruidTable(dataSource);
-      if (druidTable == null) {
-        log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-        tables.remove(dataSource);
-        continue;
-      }
-      final DatasourceTable.PhysicalDatasourceMetadata oldTable = tables.put(dataSource, druidTable);
-      final String description = druidTable.dataSource().isGlobal() ? "global dataSource" : "dataSource";
-      if (oldTable == null || !oldTable.rowSignature().equals(druidTable.rowSignature())) {
-        log.info("%s [%s] has new signature: %s.", description, dataSource, druidTable.rowSignature());
-      } else {
-        log.debug("%s [%s] signature is unchanged.", description, dataSource);
-      }
+      rebuildDatasource(dataSource);
+    }
+  }
+
+  public void rebuildDatasource(String dataSource)
+  {
+    final DatasourceSchema druidTable = buildDruidTable(dataSource);
+    if (druidTable == null) {
+      log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
+      tables.remove(dataSource);
+      return;
+    }
+    final DatasourceSchema oldTable = tables.put(dataSource, druidTable);
+    if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
+      log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+    } else {
+      log.info("[%s] signature is unchanged.", dataSource);
     }
   }
 
@@ -449,12 +444,17 @@ public class SegmentMetadataCache
     initialized.await();
   }
 
-  protected DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
+  public DatasourceSchema getDatasource(String name)
   {
     return tables.get(name);
   }
 
-  protected Set<String> getDatasourceNames()
+  public Map<String, DatasourceSchema> getDatasourceSchemaMap()
+  {
+    return ImmutableMap.copyOf(tables);
+  }
+
+  public Set<String> getDatasourceNames()
   {
     return tables.keySet();
   }
@@ -717,7 +717,7 @@ public class SegmentMetadataCache
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
+    log.info("Refreshing metadata for dataSource[%s].", dataSource);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -743,7 +743,7 @@ public class SegmentMetadataCache
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
+          log.info("Segment[%s] has signature[%s].", segmentId, rowSignature);
           segmentMetadataInfo.compute(
               dataSource,
               (datasourceKey, dataSourceSegments) -> {
@@ -795,7 +795,7 @@ public class SegmentMetadataCache
 
     emitter.emit(builder.build("metadatacache/refresh/time", refreshDurationMillis));
 
-    log.debug(
+    log.info(
         "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         refreshDurationMillis,
@@ -808,7 +808,7 @@ public class SegmentMetadataCache
 
   @VisibleForTesting
   @Nullable
-  DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
+  public DatasourceSchema buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
@@ -836,32 +836,25 @@ public class SegmentMetadataCache
     final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
 
-    final TableDataSource tableDataSource;
-
-    // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing
-    // in the segment cache, which in this case belongs to the broker meaning only broadcast segments live here)
-    // to be joinable, it must be possibly joinable according to the factory. we only consider broadcast datasources
-    // at this time, and isGlobal is currently strongly coupled with joinable, so only make a global table datasource
-    // if also joinable
-    final GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(dataSource);
-    final boolean isJoinable = joinableFactory.isDirectlyJoinable(maybeGlobal);
-    final boolean isBroadcast = segmentManager.getDataSourceNames().contains(dataSource);
-    if (isBroadcast && isJoinable) {
-      tableDataSource = maybeGlobal;
-    } else {
-      tableDataSource = new TableDataSource(dataSource);
-    }
-    return new DatasourceTable.PhysicalDatasourceMetadata(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DatasourceSchema(dataSource, builder.build());
   }
 
-  @VisibleForTesting
-  Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
     for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
       segmentMetadata.putAll(val);
     }
     return segmentMetadata;
+  }
+
+  @Nullable
+  public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
+  {
+    if (!segmentMetadataInfo.containsKey(datasource)) {
+      return null;
+    }
+    return segmentMetadataInfo.get(datasource).get(segmentId);
   }
 
   /**
@@ -926,7 +919,7 @@ public class SegmentMetadataCache
         false,
         // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
-            brokerInternalQueryConfig.getContext(),
+            internalQueryConfig.getContext(),
             QueryContexts.BROKER_PARALLEL_MERGE_KEY,
             false
         ),

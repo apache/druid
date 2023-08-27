@@ -28,6 +28,9 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.DatasourceSchema;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -54,7 +57,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -69,19 +74,22 @@ public class MetadataResource
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
+  private final SegmentMetadataCache segmentMetadataCache;
 
   @Inject
   public MetadataResource(
       SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
-      DruidCoordinator coordinator
+      DruidCoordinator coordinator,
+      SegmentMetadataCache segmentMetadataCache
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
+    this.segmentMetadataCache = segmentMetadataCache;
   }
 
   @GET
@@ -185,21 +193,40 @@ public class MetadataResource
         .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
+    Set<SegmentId> segmentAlreadySeen = new HashSet<>();
     final Stream<SegmentStatusInCluster> segmentStatus = usedSegments.map(segment -> {
       // The replication factor for unloaded segments is 0 as they will be unloaded soon
       boolean isOvershadowed = overshadowedSegments.contains(segment);
+      AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
       Integer replicationFactor = isOvershadowed ? (Integer) 0
                                                  : coordinator.getReplicationFactor(segment.getId());
-
-      return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor);
+      Long numRows = (null != availableSegmentMetadata) ? availableSegmentMetadata.getNumRows() : null;
+      segmentAlreadySeen.add(segment.getId());
+      return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, numRows, 0L, true);
     });
+
+    final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(availableSegmentMetadata -> !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
+        .map(availableSegmentMetadata -> {
+          return new SegmentStatusInCluster(
+              availableSegmentMetadata.getSegment(),
+              false,
+              (int) availableSegmentMetadata.getNumReplicas(),
+              availableSegmentMetadata.getNumRows(),
+              availableSegmentMetadata.isRealtime(),
+              false
+          );
+        });
 
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
     final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        segmentStatus::iterator,
+        Stream.concat(segmentStatus, realtimeSegmentStatus)::iterator,
         raGenerator,
         authorizerMapper
     );
@@ -301,5 +328,17 @@ public class MetadataResource
       return Response.status(Response.Status.OK).entity(segment).build();
     }
     return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  @POST
+  @Path("/datasourceSchema")
+  public Response getDatasourceSchema(
+      List<String> datasources
+  )
+  {
+    Map<String, DatasourceSchema> datasourceSchemaMap = segmentMetadataCache.getDatasourceSchemaMap();
+    datasourceSchemaMap.keySet().retainAll(datasources);
+
+    return Response.status(Response.Status.OK).entity(datasourceSchemaMap.values()).build();
   }
 }

@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.DruidServer;
@@ -42,6 +42,9 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.metadata.PhysicalDatasourceMetadata;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
@@ -140,7 +143,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -250,7 +253,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {

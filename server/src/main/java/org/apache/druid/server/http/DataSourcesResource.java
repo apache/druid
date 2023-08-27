@@ -487,13 +487,13 @@ public class DataSourcesResource
 
   private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments)
   {
-    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
+    Set<SegmentId> loadedSegmentIds = serverInventoryView.getLoadedSegmentIds();
     int numPublishedSegments = 0;
     int numUnavailableSegments = 0;
     int numLoadedSegments = 0;
     for (DataSegment segment : segments) {
       numPublishedSegments++;
-      if (!segmentLoadInfos.containsKey(segment.getId())) {
+      if (!loadedSegmentIds.contains(segment.getId())) {
         numUnavailableSegments++;
       } else {
         numLoadedSegments++;

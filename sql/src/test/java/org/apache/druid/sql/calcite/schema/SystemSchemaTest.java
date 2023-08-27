@@ -36,7 +36,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -64,6 +64,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -93,7 +94,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -165,7 +166,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private AuthorizerMapper authMapper;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
-  private MetadataSegmentView metadataView;
+  private BrokerSegmentMetadataView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private FilteredServerInventoryView serverInventoryView;
 
@@ -258,13 +259,13 @@ public class SystemSchemaTest extends CalciteTestBase
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     );
     cache.start();
     cache.awaitInitialization();
     druidSchema = new DruidSchema(cache, null);
-    metadataView = EasyMock.createMock(MetadataSegmentView.class);
+    metadataView = EasyMock.createMock(BrokerSegmentMetadataView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     schema = new SystemSchema(
@@ -567,14 +568,14 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2),
-        new SegmentStatusInCluster(segment1, true, 2),
-        new SegmentStatusInCluster(segment2, false, 0)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, 2L, 0L, true),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, 2L, 0L, true),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, 2L, 0L, true),
+        new SegmentStatusInCluster(segment1, true, 2, 2L, 0L, true),
+        new SegmentStatusInCluster(segment2, false, 0, 2L, 0L, true)
     ));
 
-    EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegmentMetadata()).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);

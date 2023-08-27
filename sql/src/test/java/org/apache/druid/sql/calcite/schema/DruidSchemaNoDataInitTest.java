@@ -21,8 +21,9 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -30,7 +31,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -60,7 +61,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           SEGMENT_CACHE_CONFIG_DEFAULT,
           new NoopEscalator(),
-          new BrokerInternalQueryConfig(),
+          new InternalQueryConfig(),
           new NoopServiceEmitter()
       );
 

@@ -19,7 +19,9 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -29,6 +31,8 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
+import java.util.Properties;
+
 /**
  * The module responsible for providing bindings to Calcite schemas.
  */
@@ -36,7 +40,15 @@ public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
   private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+  private static final String SEGMENT_METADATA_CACHE_DISABLED = "druid.sql.planner.disableSegmentMetadataCache";
   static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
+
+  private final Properties properties;
+
+  public DruidCalciteSchemaModule(Properties properties)
+  {
+    this.properties = properties;
+  }
 
   @Override
   public void configure(Binder binder)
@@ -49,8 +61,10 @@ public class DruidCalciteSchemaModule implements Module
           .toProvider(RootSchemaProvider.class)
           .in(Scopes.SINGLETON);
 
-    // SegmentMetadataCache needs to listen to changes for incoming segments
-    LifecycleModule.register(binder, SegmentMetadataCache.class);
+    // BrokerSegmentMetadataCache needs to listen to changes for incoming segments
+    if (!isSegmentMetadataCacheDisabled()) {
+      LifecycleModule.register(binder, BrokerSegmentMetadataCache.class);
+    }
     binder.bind(DruidSchema.class).in(Scopes.SINGLETON);
     binder.bind(SystemSchema.class).in(Scopes.SINGLETON);
     binder.bind(InformationSchema.class).in(Scopes.SINGLETON);
@@ -69,5 +83,10 @@ public class DruidCalciteSchemaModule implements Module
   {
     rootSchema.getRootSchema().add(INFORMATION_SCHEMA_NAME, informationSchema);
     return rootSchema;
+  }
+
+  private boolean isSegmentMetadataCacheDisabled()
+  {
+    return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_DISABLED));
   }
 }

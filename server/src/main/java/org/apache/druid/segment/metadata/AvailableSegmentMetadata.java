@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
- * Immutable representation of RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
+ * Immutable representation of RowSignature and other segment attributes needed by {@code SystemSchema.SegmentsTable}
  * This class contains the metadata of segments announced by historicals or ingestion tasks.
  */
 public class AvailableSegmentMetadata
@@ -159,4 +159,15 @@ public class AvailableSegmentMetadata
     }
   }
 
+  @Override
+  public String toString()
+  {
+    return "AvailableSegmentMetadata{" +
+           "segment=" + segment +
+           ", isRealtime=" + isRealtime +
+           ", segmentServers=" + segmentServers +
+           ", numRows=" + numRows +
+           ", rowSignature=" + rowSignature +
+           '}';
+  }
 }

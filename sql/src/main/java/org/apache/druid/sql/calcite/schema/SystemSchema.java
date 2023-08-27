@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -66,6 +67,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -212,7 +214,7 @@ public class SystemSchema extends AbstractSchema
   @Inject
   public SystemSchema(
       final DruidSchema druidSchema,
-      final MetadataSegmentView metadataView,
+      final BrokerSegmentMetadataView metadataView,
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
@@ -246,11 +248,11 @@ public class SystemSchema extends AbstractSchema
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
-    private final MetadataSegmentView metadataView;
+    private final BrokerSegmentMetadataView metadataView;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
-        MetadataSegmentView metadataView,
+        BrokerSegmentMetadataView metadataView,
         ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
@@ -276,15 +278,16 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      //get available segments from druidSchema
+      final SegmentTableView segmentTableView = metadataView.getSegmentTableView();
+
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
-          druidSchema.cache().getSegmentMetadataSnapshot();
+          segmentTableView.getAvailableSegmentMetadata();
       final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
       final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
-          Maps.newHashMapWithExpectedSize(druidSchema.cache().getTotalSegments());
+          Maps.newHashMapWithExpectedSize(segmentTableView.totalSegmentCount());
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
             new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
@@ -293,9 +296,9 @@ public class SystemSchema extends AbstractSchema
 
       // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = segmentTableView.getPublishedSegments();
 
-      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
+      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(segmentTableView.totalSegmentCount());
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
@@ -439,7 +442,40 @@ public class SystemSchema extends AbstractSchema
       return authorizedSegments.iterator();
     }
 
-    private static class PartialSegmentData
+    protected static class SegmentTableView
+    {
+      private final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata;
+      private final Iterator<SegmentStatusInCluster> publishedSegments;
+
+      private final int totalSegmentsCount;
+
+      public SegmentTableView(
+          Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata,
+          ImmutableSortedSet<SegmentStatusInCluster> publishedSegments
+      )
+      {
+        this.availableSegmentMetadata = availableSegmentMetadata;
+        this.publishedSegments = publishedSegments.iterator();
+        this.totalSegmentsCount = availableSegmentMetadata.size();
+      }
+
+      public Map<SegmentId, AvailableSegmentMetadata> getAvailableSegmentMetadata()
+      {
+        return availableSegmentMetadata;
+      }
+
+      public Iterator<SegmentStatusInCluster> getPublishedSegments()
+      {
+        return publishedSegments;
+      }
+
+      public int totalSegmentCount()
+      {
+        return totalSegmentsCount;
+      }
+    }
+
+    protected static class PartialSegmentData
     {
       private final long isAvailable;
       private final long isRealtime;

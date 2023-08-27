@@ -30,7 +30,7 @@ import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -40,6 +40,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
@@ -70,7 +72,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -299,7 +301,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         config,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -337,7 +339,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
         )
     {
@@ -708,7 +710,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -751,7 +753,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -798,7 +800,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -842,7 +844,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -883,7 +885,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -941,7 +943,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -1002,7 +1004,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -1037,7 +1039,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -1085,7 +1087,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
@@ -1288,11 +1290,11 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
 
     TestHelper.makeJsonMapper();
-    BrokerInternalQueryConfig brokerInternalQueryConfig = MAPPER.readValue(
+    InternalQueryConfig internalQueryConfig = MAPPER.readValue(
         MAPPER.writeValueAsString(
-            MAPPER.readValue(brokerInternalQueryConfigJson, BrokerInternalQueryConfig.class)
+            MAPPER.readValue(brokerInternalQueryConfigJson, InternalQueryConfig.class)
         ),
-        BrokerInternalQueryConfig.class
+        InternalQueryConfig.class
     );
 
     DataSegment segment = newSegment("test", 0);
@@ -1327,7 +1329,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         ),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        brokerInternalQueryConfig,
+        internalQueryConfig,
         new NoopServiceEmitter()
     );
 
@@ -1463,7 +1465,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         emitter
     )
     {
