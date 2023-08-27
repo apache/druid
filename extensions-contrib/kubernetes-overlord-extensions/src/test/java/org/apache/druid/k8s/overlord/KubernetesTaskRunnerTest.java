@@ -123,6 +123,28 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_start_whenDeserializationExceptionThrown_isIgnored() throws IOException
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
+
+    replayAll();
+
+    runner.start();
+
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(0, runner.tasks.size());
+  }
+
+  @Test
   public void test_streamTaskLog_withoutExistingTask_returnsEmptyOptional()
   {
     Optional<InputStream> maybeInputStream = runner.streamTaskLog(task.getId(), 0L);
