@@ -117,7 +117,7 @@ public class FileSmoosher implements Closeable
     return new File(baseDir, StringUtils.format("meta.%s", FILE_EXTENSION));
   }
 
-  public static File makeChunkFile(File baseDir, int i)
+  static File makeChunkFile(File baseDir, int i)
   {
     return new File(baseDir, StringUtils.format("%05d.%s", i, FILE_EXTENSION));
   }
