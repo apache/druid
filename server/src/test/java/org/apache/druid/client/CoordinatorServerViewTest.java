@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
-public class CoordinatorServerViewImplImplTest extends CuratorTestBase
+public class CoordinatorServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;

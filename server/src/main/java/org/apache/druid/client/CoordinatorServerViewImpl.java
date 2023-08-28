@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
 @ManageLifecycle
 public class CoordinatorServerViewImpl implements CoordinatorServerView
 {
-  private static final Logger log = new Logger(Alpha.class);
+  private static final Logger log = new Logger(CoordinatorServerViewImpl.class);
 
   private final Object lock = new Object();
 
