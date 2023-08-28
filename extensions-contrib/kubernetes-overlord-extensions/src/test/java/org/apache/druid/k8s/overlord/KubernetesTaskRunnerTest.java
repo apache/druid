@@ -102,6 +102,23 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_start_withExistingJobs() throws IOException
   {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null))
+                    .getResult();
+      }
+    };
+
     Job job = new JobBuilder()
         .withNewMetadata()
         .withName(ID)
@@ -110,7 +127,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
-    EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong())).andReturn(TaskStatus.running(task.getId()));
 
     replayAll();
 
@@ -125,6 +141,23 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_start_whenDeserializationExceptionThrown_isIgnored() throws IOException
   {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null))
+                    .getResult();
+      }
+    };
+
     Job job = new JobBuilder()
         .withNewMetadata()
         .withName(ID)
