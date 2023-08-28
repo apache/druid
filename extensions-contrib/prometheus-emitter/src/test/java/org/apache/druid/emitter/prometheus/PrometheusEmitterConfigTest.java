@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.CollectorRegistry;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,11 +38,11 @@ public class PrometheusEmitterConfigTest
     extraLabels.put("label Name", "label Value");
 
     // Expect an exception thrown by our own PrometheusEmitterConfig due to invalid label key
-    Exception exception = Assert.assertThrows(IllegalArgumentException.class, () -> {
+    Exception exception = Assert.assertThrows(DruidException.class, () -> {
       new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels);
     });
 
-    String expectedMessage = "Invalid metric label name: label Name";
+    String expectedMessage = "Invalid metric label name [label Name]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*]";
     String actualMessage = exception.getMessage();
 
     Assert.assertTrue(actualMessage.contains(expectedMessage));

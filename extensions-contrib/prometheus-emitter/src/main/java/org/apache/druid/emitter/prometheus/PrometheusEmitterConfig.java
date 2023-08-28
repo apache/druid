@@ -22,6 +22,8 @@ package org.apache.druid.emitter.prometheus;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -66,7 +68,6 @@ public class PrometheusEmitterConfig
   private final boolean addServiceAsLabel;
 
   @JsonProperty
-  @Nullable
   private final Map<String, String> extraLabels;
 
   @JsonCreator
@@ -104,7 +105,17 @@ public class PrometheusEmitterConfig
     this.extraLabels = extraLabels != null ? extraLabels : Collections.emptyMap();
     // Validate label names early to prevent Prometheus exceptions later.
     for (String key : this.extraLabels.keySet()) {
-      Preconditions.checkArgument(PATTERN.matcher(key).matches(), "Invalid metric label name: " + key);
+      if (!PATTERN.matcher(key).matches()) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                StringUtils.format(
+                                    "Invalid metric label name [%s]. Label names must conform to the pattern [%s].",
+                                    key,
+                                    PATTERN.pattern()
+                                )
+                            );
+      }
     }
   }
 
@@ -149,7 +160,6 @@ public class PrometheusEmitterConfig
     return addServiceAsLabel;
   }
 
-  @Nullable
   public Map<String, String> getExtraLabels()
   {
     return extraLabels;

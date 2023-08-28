@@ -139,9 +139,6 @@ public class PrometheusEmitter implements Emitter
       String[] labelNames = metric.getDimensions();
 
       Map<String, String> extraLabels = config.getExtraLabels();
-      if (extraLabels == null) {
-        extraLabels = Collections.emptyMap(); // Avoid null checks later
-      }
 
       for (int i = 0; i < labelValues.length; i++) {
         String labelName = labelNames[i];
