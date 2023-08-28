@@ -319,8 +319,6 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
       {
         return 0L;
       }
-
-
     };
 
     CachingClusteredClient baseClient = new CachingClusteredClient(

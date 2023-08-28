@@ -25,10 +25,10 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 
-public class SubqueryLimitUtils
+public class SubqueryGuardrailUtils
 {
   private static final double SUBQUERY_MEMORY_BYTES_FRACTION = 0.5;
-  private static final Logger log = new Logger(SubqueryLimitUtils.class);
+  private static final Logger log = new Logger(SubqueryGuardrailUtils.class);
 
 
   public static final String UNLIMITED_LIMIT_VALUE = "unlimited";
@@ -38,7 +38,7 @@ public class SubqueryLimitUtils
 
   private final long autoLimitBytes;
 
-  public SubqueryLimitUtils(
+  public SubqueryGuardrailUtils(
       final LookupExtractorFactoryContainerProvider lookupManager,
       final long maxMemoryInJvm,
       final int brokerNumHttpConnections

@@ -108,8 +108,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServerConfig serverConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
-  private final SubqueryLimitUtils subqueryLimitUtils;
-  private final SubqueryCountStatsProvider statsProvider;
+  private final SubqueryGuardrailUtils subqueryGuardrailUtils;
+  private final SubqueryCountStatsProvider subqueryStatsProvider;
 
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
@@ -124,7 +124,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CacheConfig cacheConfig,
       LookupExtractorFactoryContainerProvider lookupManager,
       DruidHttpClientConfig httpClientConfig,
-      SubqueryCountStatsProvider statsProvider
+      SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
     this.emitter = emitter;
@@ -137,12 +137,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
-    this.subqueryLimitUtils = new SubqueryLimitUtils(
+    this.subqueryGuardrailUtils = new SubqueryGuardrailUtils(
         lookupManager,
         Runtime.getRuntime().maxMemory(),
         httpClientConfig.getNumConnections()
     );
-    this.statsProvider = statsProvider;
+    this.subqueryStatsProvider = subqueryStatsProvider;
   }
 
   @Inject
@@ -159,7 +159,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CacheConfig cacheConfig,
       LookupExtractorFactoryContainerProvider lookupManager,
       @Client DruidHttpClientConfig httpClientConfig,
-      SubqueryCountStatsProvider statsProvider
+      SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
     this(
@@ -175,7 +175,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         cacheConfig,
         lookupManager,
         httpClientConfig,
-        statsProvider
+        subqueryStatsProvider
     );
   }
 
@@ -199,7 +199,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
     final String maxSubqueryMemoryString = query.context()
                                                 .getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
-    final long maxSubqueryMemory = subqueryLimitUtils.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
+    final long maxSubqueryMemory = subqueryGuardrailUtils.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
     final boolean useNestedForUnknownTypeInSubquery = query.context()
                                                            .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
 
@@ -452,7 +452,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             maxSubqueryRows,
             maxSubqueryMemory,
             useNestedForUnknownTypeInSubquery,
-            statsProvider
+            subqueryStatsProvider
         );
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
@@ -668,7 +668,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final int limit,
       long memoryLimit,
       boolean useNestedForUnknownTypeInSubquery,
-      SubqueryCountStatsProvider statsProvider
+      SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
@@ -683,7 +683,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               rowLimitToUse
           );
         }
-        statsProvider.incrementSubqueriesWithRowBasedLimit();
+        subqueryStatsProvider.incrementSubqueriesWithRowBasedLimit();
         dataSource = materializeResultsAsArray(
             query,
             results,
@@ -707,7 +707,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             memoryLimitAccumulator,
             memoryLimit,
             useNestedForUnknownTypeInSubquery,
-            statsProvider
+            subqueryStatsProvider
         );
         if (!maybeDataSource.isPresent()) {
           cannotMaterializeToFrames.set(true);
@@ -718,8 +718,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 memoryLimit
             );
           }
-          statsProvider.incrementSubqueriesWithRowBasedLimit();
-          statsProvider.incrementSubqueriesFallingBackToRowBasedLimit();
+          subqueryStatsProvider.incrementSubqueriesWithRowBasedLimit();
+          subqueryStatsProvider.incrementSubqueriesFallingBackToRowBasedLimit();
           dataSource = materializeResultsAsArray(
               query,
               results,
@@ -728,7 +728,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               limit
           );
         } else {
-          statsProvider.incrementSubqueriesWithByteBasedLimit();
+          subqueryStatsProvider.incrementSubqueriesWithByteBasedLimit();
           dataSource = maybeDataSource.get();
         }
         break;
@@ -750,7 +750,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicLong memoryLimitAccumulator,
       long memoryLimit,
       boolean useNestedForUnknownTypeInSubquery,
-      final SubqueryCountStatsProvider statsProvider
+      final SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
     Optional<Sequence<FrameSignaturePair>> framesOptional;
@@ -764,7 +764,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
     catch (UnsupportedColumnTypeException e) {
-      statsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
+      subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
       log.debug(e, "Type info in signature insufficient to materialize rows as frames.");
       return Optional.empty();
     }

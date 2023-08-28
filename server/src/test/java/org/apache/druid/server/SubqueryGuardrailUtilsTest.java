@@ -37,7 +37,7 @@ import java.util.Optional;
  * typical bytes per row can be from 100 bytes to 200 bytes. We can keep this in mind while trying to look through the test
  * values
  */
-public class SubqueryLimitUtilsTest
+public class SubqueryGuardrailUtilsTest
 {
 
   @Test
@@ -121,14 +121,14 @@ public class SubqueryLimitUtilsTest
   }
 
 
-  private SubqueryLimitUtils fetchSubqueryLimitUtilsForNoLookups(long maxMemoryInJvm, int brokerNumHttpConnections)
+  private SubqueryGuardrailUtils fetchSubqueryLimitUtilsForNoLookups(long maxMemoryInJvm, int brokerNumHttpConnections)
   {
-    return new SubqueryLimitUtils(null, maxMemoryInJvm, brokerNumHttpConnections);
+    return new SubqueryGuardrailUtils(null, maxMemoryInJvm, brokerNumHttpConnections);
   }
 
-  private SubqueryLimitUtils fetchSubqueryLimitUtilsForLookups(long maxMemoryInJvm, int brokerNumHttpConnections)
+  private SubqueryGuardrailUtils fetchSubqueryLimitUtilsForLookups(long maxMemoryInJvm, int brokerNumHttpConnections)
   {
-    return new SubqueryLimitUtils(lookupManager(), maxMemoryInJvm, brokerNumHttpConnections);
+    return new SubqueryGuardrailUtils(lookupManager(), maxMemoryInJvm, brokerNumHttpConnections);
   }
 
 
