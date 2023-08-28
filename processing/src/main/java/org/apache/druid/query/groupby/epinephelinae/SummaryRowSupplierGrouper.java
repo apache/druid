@@ -41,7 +41,7 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
     delegate = grouper;
     this.keySerde = keySerdeFactory;//.factorize();
     this.columnSelectorFactory = columnSelectorFactory;
-    this.aggregatorFactories = (AggregatorFactory[]) aggregatorFactories.toArray();
+    this.aggregatorFactories = aggregatorFactories.toArray(new AggregatorFactory[] {});
   }
 
   @Override

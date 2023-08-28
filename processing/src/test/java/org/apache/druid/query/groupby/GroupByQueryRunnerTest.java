@@ -12971,10 +12971,22 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
             new DoubleSumAggregatorFactory("idxDouble", "index")
         )
-        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "rows",
+            0L,
+            "idx",
+            null,
+            "idxFloat",
+            null,
+            "idxDouble",
+            null
+        )
     );
 
     StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
