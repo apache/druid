@@ -24,8 +24,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.vavr.collection.Iterator;
-import org.apache.druid.client.indexing.IndexingWorker;
-import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
@@ -37,20 +35,15 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +56,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   private final WorkerTaskRunner workerTaskRunner;
   private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
 
-  private static final EmittingLogger log = new EmittingLogger(KubernetesTaskRunner.class);
   public KubernetesAndWorkerTaskRunner(
       KubernetesTaskRunner kubernetesTaskRunner,
       WorkerTaskRunner workerTaskRunner,
@@ -78,7 +70,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    return Iterator.concat(kubernetesTaskRunner.restore(), kubernetesTaskRunner.restore()).collect(Collectors.toList());
+    return Iterator.concat(kubernetesTaskRunner.restore(), workerTaskRunner.restore()).collect(Collectors.toList());
   }
 
   @Override
@@ -141,7 +133,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    log.info(Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList()).toString());
     return Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList());
 
   }

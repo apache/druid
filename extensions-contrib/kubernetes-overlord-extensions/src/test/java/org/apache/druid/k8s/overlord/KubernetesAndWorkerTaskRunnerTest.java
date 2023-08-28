@@ -1,3 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+
 package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
@@ -9,7 +29,6 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -28,7 +47,8 @@ import java.util.concurrent.ExecutionException;
 
 
 @RunWith(EasyMockRunner.class)
-public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
+public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
+{
 
   private static final String ID = "id";
   private static final String DATA_SOURCE = "dataSource";
@@ -51,7 +71,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_runOnKubernetes() throws ExecutionException, InterruptedException {
+  public void test_runOnKubernetes() throws ExecutionException, InterruptedException
+  {
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
@@ -66,7 +87,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_runOnWorker() throws ExecutionException, InterruptedException {
+  public void test_runOnWorker() throws ExecutionException, InterruptedException
+  {
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
@@ -81,7 +103,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_getUsedCapacity() {
+  public void test_getUsedCapacity()
+  {
     EasyMock.expect(kubernetesTaskRunner.getUsedCapacity()).andReturn(1);
     EasyMock.expect(workerTaskRunner.getUsedCapacity()).andReturn(1);
 
@@ -91,7 +114,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_getTotalCapacity() {
+  public void test_getTotalCapacity()
+  {
     EasyMock.expect(kubernetesTaskRunner.getTotalCapacity()).andReturn(1);
     EasyMock.expect(workerTaskRunner.getTotalCapacity()).andReturn(1);
 
@@ -101,12 +125,14 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_subTaskRunners() {
+  public void test_subTaskRunners()
+  {
     Assert.assertEquals(ImmutableList.of(kubernetesTaskRunner, workerTaskRunner), runner.getSubTaskRunners());
   }
 
   @Test
-  public void test_getRunnerTaskState_kubernetes() {
+  public void test_getRunnerTaskState_kubernetes()
+  {
     RunnerTaskState runnerTaskState = RunnerTaskState.RUNNING;
     EasyMock.expect(kubernetesTaskRunner.getRunnerTaskState(ID)).andReturn(runnerTaskState);
 
@@ -116,7 +142,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_getRunnerTaskState_worker() {
+  public void test_getRunnerTaskState_worker()
+  {
     RunnerTaskState runnerTaskState = RunnerTaskState.RUNNING;
     EasyMock.expect(kubernetesTaskRunner.getRunnerTaskState(ID)).andReturn(null);
     EasyMock.expect(workerTaskRunner.getRunnerTaskState(ID)).andReturn(runnerTaskState);
@@ -127,7 +154,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_streamTaskLog_kubernetes() throws IOException {
+  public void test_streamTaskLog_kubernetes() throws IOException
+  {
     InputStream inputStream = IOUtils.toInputStream("inputStream", Charset.defaultCharset());
     EasyMock.expect(kubernetesTaskRunner.streamTaskLog(ID, 0)).andReturn(Optional.of(inputStream));
 
@@ -137,7 +165,8 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_streamTasklog_worker() throws IOException {
+  public void test_streamTasklog_worker() throws IOException
+  {
     InputStream inputStream = IOUtils.toInputStream("inputStream", Charset.defaultCharset());
     EasyMock.expect(kubernetesTaskRunner.streamTaskLog(ID, 0)).andReturn(Optional.absent());
     EasyMock.expect(workerTaskRunner.streamTaskLog(ID, 0)).andReturn(Optional.of(inputStream));
@@ -148,50 +177,133 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport {
   }
 
   @Test
-  public void test_getBlacklistedTaskSlotCount() {
-    Map<String, Long> blacklistedTaskSlots = ImmutableMap.of("category", 1L);
-    Map<String, Long> blacklistedTaskSlots2 = ImmutableMap.of("category2", 2L);
+  public void test_getBlacklistedTaskSlotCount()
+  {
+    Map<String, Long> kubernetesTaskSlots = ImmutableMap.of("category", 1L);
+    Map<String, Long> workerTaskSlots = ImmutableMap.of("category2", 2L);
 
-    EasyMock.expect(kubernetesTaskRunner.getBlacklistedTaskSlotCount()).andReturn(blacklistedTaskSlots);
-    EasyMock.expect(workerTaskRunner.getBlacklistedTaskSlotCount()).andReturn(blacklistedTaskSlots2);
+    EasyMock.expect(kubernetesTaskRunner.getBlacklistedTaskSlotCount()).andReturn(kubernetesTaskSlots);
+    EasyMock.expect(workerTaskRunner.getBlacklistedTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
     Assert.assertEquals(
-        ImmutableMap.builder().putAll(blacklistedTaskSlots).putAll(blacklistedTaskSlots2).build(),
+        ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getBlacklistedTaskSlotCount()
     );
     verifyAll();
   }
 
   @Test
-  public void test_getLazyTaskSlotCount() {
-    Map<String, Long> lazyTaskSlots = ImmutableMap.of("category", 1L);
-    Map<String, Long> lazyTaskSlots2 = ImmutableMap.of("category2", 2L);
+  public void test_getLazyTaskSlotCount()
+  {
+    Map<String, Long> kubernetesTaskSlots = ImmutableMap.of("category", 1L);
+    Map<String, Long> workerTaskSlots = ImmutableMap.of("category2", 2L);
 
-    EasyMock.expect(kubernetesTaskRunner.getLazyTaskSlotCount()).andReturn(lazyTaskSlots);
-    EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(lazyTaskSlots2);
+    EasyMock.expect(kubernetesTaskRunner.getLazyTaskSlotCount()).andReturn(kubernetesTaskSlots);
+    EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
     Assert.assertEquals(
-        ImmutableMap.builder().putAll(lazyTaskSlots).putAll(lazyTaskSlots2).build(),
+        ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getLazyTaskSlotCount()
     );
     verifyAll();
   }
 
   @Test
-  public void test_getIdleTaskSlotCount() {
-    Map<String, Long> idleTaskSlots = ImmutableMap.of("category", 1L);
-    Map<String, Long> idleTaskSlots2 = ImmutableMap.of("category2", 2L);
+  public void test_getIdleTaskSlotCount()
+  {
+    Map<String, Long> kubernetesTaskSlots = ImmutableMap.of("category", 1L);
+    Map<String, Long> workerTaskSlots = ImmutableMap.of("category2", 2L);
 
-    EasyMock.expect(kubernetesTaskRunner.getLazyTaskSlotCount()).andReturn(idleTaskSlots);
-    EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(idleTaskSlots2);
+    EasyMock.expect(kubernetesTaskRunner.getLazyTaskSlotCount()).andReturn(kubernetesTaskSlots);
+    EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(workerTaskSlots);
 
     replayAll();
     Assert.assertEquals(
-        ImmutableMap.builder().putAll(idleTaskSlots).putAll(idleTaskSlots2).build(),
+        ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
         runner.getLazyTaskSlotCount()
     );
+    verifyAll();
+  }
+
+  @Test
+  public void test_getTotalTaskSlotCount()
+  {
+    Map<String, Long> kubernetesTaskSlots = ImmutableMap.of("category", 1L);
+    Map<String, Long> workerTaskSlots = ImmutableMap.of("category2", 2L);
+
+    EasyMock.expect(kubernetesTaskRunner.getLazyTaskSlotCount()).andReturn(kubernetesTaskSlots);
+    EasyMock.expect(workerTaskRunner.getLazyTaskSlotCount()).andReturn(workerTaskSlots);
+
+    replayAll();
+    Assert.assertEquals(
+        ImmutableMap.builder().putAll(kubernetesTaskSlots).putAll(workerTaskSlots).build(),
+        runner.getLazyTaskSlotCount()
+    );
+    verifyAll();
+  }
+
+  @Test
+  public void test_getKnownTasks()
+  {
+    EasyMock.expect(kubernetesTaskRunner.getKnownTasks()).andReturn(ImmutableList.of());
+    EasyMock.expect(workerTaskRunner.getKnownTasks()).andReturn(ImmutableList.of());
+
+    replayAll();
+    Assert.assertEquals(
+        0,
+        runner.getKnownTasks().size()
+    );
+    verifyAll();
+  }
+
+  @Test
+  public void test_getPendingTasks()
+  {
+    EasyMock.expect(kubernetesTaskRunner.getPendingTasks()).andReturn(ImmutableList.of());
+    EasyMock.expect(workerTaskRunner.getPendingTasks()).andReturn(ImmutableList.of());
+
+    replayAll();
+    Assert.assertEquals(
+        0,
+        runner.getPendingTasks().size()
+    );
+    verifyAll();
+  }
+
+  @Test
+  public void test_getRunningTasks()
+  {
+    EasyMock.expect(kubernetesTaskRunner.getRunningTasks()).andReturn(ImmutableList.of());
+    EasyMock.expect(workerTaskRunner.getRunningTasks()).andReturn(ImmutableList.of());
+
+    replayAll();
+    Assert.assertEquals(
+        0,
+        runner.getRunningTasks().size()
+    );
+    verifyAll();
+  }
+
+  @Test
+  public void test_shutdown()
+  {
+    String reason = "reason";
+    kubernetesTaskRunner.shutdown(ID, reason);
+    workerTaskRunner.shutdown(ID, reason);
+    replayAll();
+    runner.shutdown(ID, reason);
+    verifyAll();
+  }
+
+  @Test
+  public void test_restore()
+  {
+    EasyMock.expect(kubernetesTaskRunner.restore()).andReturn(ImmutableList.of());
+    EasyMock.expect(workerTaskRunner.restore()).andReturn(ImmutableList.of());
+    replayAll();
+    Assert.assertEquals(0, runner.restore().size());
     verifyAll();
   }
 }

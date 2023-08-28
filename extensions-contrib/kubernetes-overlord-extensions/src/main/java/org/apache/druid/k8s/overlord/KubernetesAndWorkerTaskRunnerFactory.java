@@ -22,8 +22,6 @@ package org.apache.druid.k8s.overlord;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
-import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 

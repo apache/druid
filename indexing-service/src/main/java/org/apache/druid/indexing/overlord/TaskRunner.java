@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -138,11 +137,6 @@ public interface TaskRunner
 
   Map<String, Long> getBlacklistedTaskSlotCount();
 
-  default List<TaskRunner> getSubTaskRunners()
-  {
-    return new ArrayList<>();
-  }
-
   default void updateStatus(Task task, TaskStatus status)
   {
     // do nothing
@@ -171,4 +165,8 @@ public interface TaskRunner
     return -1;
   }
 
+  default List<TaskRunner> getSubTaskRunners()
+  {
+    return new ArrayList<>();
+  }
 }

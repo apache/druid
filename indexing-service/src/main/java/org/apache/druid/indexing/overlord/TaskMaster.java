@@ -136,7 +136,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           }
 
           leaderLifecycle.addManagedInstance(taskRunner);
-          for (TaskRunner subTaskRunner: taskRunner.getSubTaskRunners()) {
+          for (TaskRunner subTaskRunner : taskRunner.getSubTaskRunners()) {
             leaderLifecycle.addManagedInstance(subTaskRunner);
           }
           leaderLifecycle.addManagedInstance(taskQueue);
