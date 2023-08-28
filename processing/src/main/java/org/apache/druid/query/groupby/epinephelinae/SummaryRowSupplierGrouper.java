@@ -25,6 +25,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
@@ -34,13 +35,13 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
   private AggregatorFactory[] aggregatorFactories;
   private ColumnSelectorFactory columnSelectorFactory;
 
-  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerdeFactory<KeyType> keySerdeFactory,
-      ColumnSelectorFactory columnSelectorFactory, AggregatorFactory[] aggregatorFactories)
+  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerde<KeyType> keySerdeFactory,
+      ColumnSelectorFactory columnSelectorFactory, List<AggregatorFactory> aggregatorFactories)
   {
     delegate = grouper;
-    this.keySerde = keySerdeFactory.factorize();
+    this.keySerde = keySerdeFactory;//.factorize();
     this.columnSelectorFactory = columnSelectorFactory;
-    this.aggregatorFactories = aggregatorFactories;
+    this.aggregatorFactories = (AggregatorFactory[]) aggregatorFactories.toArray();
   }
 
   @Override

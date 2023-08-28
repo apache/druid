@@ -300,14 +300,14 @@ public class RowBasedGrouperHelper
       );
     }
     final Grouper<RowBasedKey> grouper;
-    if (keySerdeFactory.factorize().isEmpty()) {
-      grouper = new SummaryRowSupplierGrouper<RowBasedKey>(baseGrouper,
-          keySerdeFactory,
-          columnSelectorFactory,
-          aggregatorFactories);
-    } else {
+//    if (keySerdeFactory.factorize().isEmpty()) {
+//      grouper = new SummaryRowSupplierGrouper<RowBasedKey>(baseGrouper,
+//          keySerdeFactory,
+//          columnSelectorFactory,
+//          aggregatorFactories);
+//    } else {
       grouper = baseGrouper;
-    }
+//    }
 
     final int keySize = includeTimestamp ? query.getDimensions().size() + 1 : query.getDimensions().size();
     final ValueExtractFunction valueExtractFn = makeValueExtractFunction(
