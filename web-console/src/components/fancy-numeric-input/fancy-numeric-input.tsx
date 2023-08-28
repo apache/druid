@@ -73,6 +73,7 @@ export interface FancyNumericInputProps {
   value: number | undefined;
   defaultValue?: number;
   onValueChange(value: number): void;
+  onValueEmpty?: () => void;
 
   min?: number;
   max?: number;
@@ -98,6 +99,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
     value,
     defaultValue,
     onValueChange,
+    onValueEmpty,
 
     min,
     max,
@@ -139,8 +141,8 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
   }
 
   function increment(delta: number): void {
-    if (typeof shownNumberRaw !== 'number') return;
-    changeValue(shownNumberRaw + delta);
+    if (typeof shownNumberRaw !== 'number' && shownValue !== '') return;
+    changeValue((shownNumberRaw ?? 0) + delta);
   }
 
   function getIncrementSize(isShiftKeyPressed: boolean, isAltKeyPressed: boolean): number {
@@ -170,6 +172,9 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
           const shownNumber = shownToNumber(valueAsString);
           if (typeof shownNumber === 'number') {
             changeValue(shownNumber);
+          }
+          if (valueAsString === '' && onValueEmpty) {
+            onValueEmpty();
           }
         }}
         onBlur={e => {

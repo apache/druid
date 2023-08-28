@@ -23,8 +23,10 @@ sidebar_label: "JSON-based batch (simple)"
   ~ under the License.
   -->
 
-> This page describes native batch ingestion using [ingestion specs](ingestion-spec.md). Refer to the [ingestion
-> methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+:::info
+ This page describes native batch ingestion using [ingestion specs](ingestion-spec.md). Refer to the [ingestion
+ methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+:::
 
 The simple task ([task type](tasks.md) `index`) executes single-threaded as a single task within the indexing service. For parallel, scalable options consider using [`index_parallel` tasks](./native-batch.md) or [SQL-based batch ingestion](../multi-stage-query/index.md).
 

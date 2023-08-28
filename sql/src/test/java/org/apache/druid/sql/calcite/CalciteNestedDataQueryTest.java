@@ -1373,6 +1373,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       return;
     }
     cannotVectorize();
+    skipVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -1389,8 +1390,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setGranularity(Granularities.ALL)
                             .setDimFilter(
                                 or(
-                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY),
-                                    isNull("arrayLongNulls")
+                                    isNull("arrayLongNulls"),
+                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY)
                                 )
                             )
                             .setDimensions(
@@ -5660,7 +5661,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "",
                 0L,
                 0.0D,
-                "true",
+                1L,
                 "51",
                 -0.13D,
                 "1",
@@ -5675,7 +5676,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 "[null]",
                 null,
-                "[\"true\",\"false\",\"true\"]",
+                "[1,0,1]",
                 null,
                 "[{\"x\":1},{\"x\":2}]",
                 "",
@@ -5698,7 +5699,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "",
                 2L,
                 0.0D,
-                "false",
+                0L,
                 "b",
                 1.1D,
                 "\"b\"",
@@ -5713,7 +5714,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[3.3,4.4,5.5]",
                 "[999.0,null,5.5]",
                 "[null,null,2.2]",
-                "[\"true\",\"true\"]",
+                "[1,1]",
                 "[null,[null],[]]",
                 "[{\"x\":3},{\"x\":4}]",
                 "",
@@ -5736,7 +5737,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "a",
                 1L,
                 1.0D,
-                "true",
+                1L,
                 "1",
                 1.0D,
                 "1",
@@ -5751,7 +5752,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[1.1,2.2,3.3]",
                 "[1.1,2.2,null]",
                 "[\"a\",\"1\",\"2.2\"]",
-                "[\"true\",\"false\",\"true\"]",
+                "[1,0,1]",
                 "[[1,2,null],[3,4]]",
                 "[{\"x\":1},{\"x\":2}]",
                 "",
@@ -5774,7 +5775,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "b",
                 4L,
                 3.3D,
-                "true",
+                1L,
                 "1",
                 0.0D,
                 "{}",
@@ -5789,7 +5790,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[2.2,3.3,4.0]",
                 null,
                 "[\"a\",\"b\",\"c\"]",
-                "[null,\"false\",\"true\"]",
+                "[null,0,1]",
                 "[[1,2],[3,4],[5,6,7]]",
                 "[{\"x\":null},{\"x\":2}]",
                 "",
@@ -5812,7 +5813,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "c",
                 0L,
                 4.4D,
-                "true",
+                1L,
                 "hello",
                 -1000.0D,
                 "{}",
@@ -5827,7 +5828,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[1.1,2.2,3.3]",
                 null,
                 null,
-                "[\"false\"]",
+                "[0]",
                 null,
                 "[{\"x\":1000},{\"y\":2000}]",
                 "",
@@ -5850,7 +5851,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "d",
                 5L,
                 5.9D,
-                "false",
+                0L,
                 "",
                 3.33D,
                 "\"a\"",
@@ -5888,7 +5889,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "null",
                 3L,
                 2.0D,
-                "",
+                0L,
                 "3.0",
                 1.0D,
                 "3.3",
@@ -5903,7 +5904,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[1.1,3.3]",
                 "[null,2.2,null]",
                 "[1,null,1]",
-                "[\"true\",null,\"true\"]",
+                "[1,null,1]",
                 "[[1],null,[1,2,3]]",
                 "[null,{\"x\":2}]",
                 "",
@@ -5928,7 +5929,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 null,
                 null,
-                "true",
+                1L,
                 "51",
                 -0.13D,
                 "1",
@@ -5943,7 +5944,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 null,
                 "[null]",
                 null,
-                "[\"true\",\"false\",\"true\"]",
+                "[1,0,1]",
                 null,
                 "[{\"x\":1},{\"x\":2}]",
                 null,
@@ -5966,7 +5967,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "",
                 2L,
                 null,
-                "false",
+                0L,
                 "b",
                 1.1D,
                 "\"b\"",
@@ -5981,7 +5982,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[3.3,4.4,5.5]",
                 "[999.0,null,5.5]",
                 "[null,null,2.2]",
-                "[\"true\",\"true\"]",
+                "[1,1]",
                 "[null,[null],[]]",
                 "[{\"x\":3},{\"x\":4}]",
                 null,
@@ -6004,7 +6005,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "a",
                 1L,
                 1.0D,
-                "true",
+                1L,
                 "1",
                 1.0D,
                 "1",
@@ -6019,7 +6020,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[1.1,2.2,3.3]",
                 "[1.1,2.2,null]",
                 "[\"a\",\"1\",\"2.2\"]",
-                "[\"true\",\"false\",\"true\"]",
+                "[1,0,1]",
                 "[[1,2,null],[3,4]]",
                 "[{\"x\":1},{\"x\":2}]",
                 null,
@@ -6042,7 +6043,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "b",
                 4L,
                 3.3D,
-                "true",
+                1L,
                 "1",
                 null,
                 "{}",
@@ -6057,7 +6058,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[2.2,3.3,4.0]",
                 null,
                 "[\"a\",\"b\",\"c\"]",
-                "[null,\"false\",\"true\"]",
+                "[null,0,1]",
                 "[[1,2],[3,4],[5,6,7]]",
                 "[{\"x\":null},{\"x\":2}]",
                 null,
@@ -6080,7 +6081,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "c",
                 null,
                 4.4D,
-                "true",
+                1L,
                 "hello",
                 -1000.0D,
                 "{}",
@@ -6095,7 +6096,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[1.1,2.2,3.3]",
                 null,
                 null,
-                "[\"false\"]",
+                "[0]",
                 null,
                 "[{\"x\":1000},{\"y\":2000}]",
                 null,
@@ -6118,7 +6119,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "d",
                 5L,
                 5.9D,
-                "false",
+                0L,
                 null,
                 3.33D,
                 "\"a\"",
@@ -6171,7 +6172,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[1.1,3.3]",
                 "[null,2.2,null]",
                 "[1,null,1]",
-                "[\"true\",null,\"true\"]",
+                "[1,null,1]",
                 "[[1],null,[1,2,3]]",
                 "[null,{\"x\":2}]",
                 null,
@@ -6195,7 +6196,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("str", ColumnType.STRING)
                     .add("long", ColumnType.LONG)
                     .add("double", ColumnType.DOUBLE)
-                    .add("bool", ColumnType.STRING)
+                    .add("bool", ColumnType.LONG)
                     .add("variant", ColumnType.STRING)
                     .add("variantNumeric", ColumnType.DOUBLE)
                     .add("variantEmptyObj", ColumnType.NESTED_DATA)
@@ -6210,7 +6211,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
                     .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
                     .add("arrayVariant", ColumnType.STRING_ARRAY)
-                    .add("arrayBool", ColumnType.STRING_ARRAY)
+                    .add("arrayBool", ColumnType.LONG_ARRAY)
                     .add("arrayNestedLong", ColumnType.NESTED_DATA)
                     .add("arrayObject", ColumnType.NESTED_DATA)
                     .add("null", ColumnType.STRING)

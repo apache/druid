@@ -35,7 +35,9 @@ All Druid metrics share a common set of fields:
 
 Metrics may have additional dimensions beyond those listed above.
 
-> Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
+:::info
+ Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
+:::
 
 ## Query metrics
 
@@ -320,6 +322,9 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
 |`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. This is the max number of task slots minus any currently running compaction tasks.| |Varies|
+|`killTask/availableSlot/count`| Number of available task slots that can be used for auto kill tasks in the auto kill run. This is the max number of task slots minus any currently running auto kill tasks.                                                                                                                                                                                                                                                                                                                     | |Varies|
+|`killTask/maxSlot/count`| Maximum number of task slots available for auto kill tasks in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                | |Varies|
+|`kill/task/count`| Number of tasks issued in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                                                    | |Varies|
 |`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
 |`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
 |`interval/waitCompact/count`|Total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|

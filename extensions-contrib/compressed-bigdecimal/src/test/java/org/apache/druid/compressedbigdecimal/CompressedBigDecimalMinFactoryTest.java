@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Arrays;
 
 
 public class CompressedBigDecimalMinFactoryTest extends CompressedBigDecimalFactoryTestBase
@@ -50,10 +49,7 @@ public class CompressedBigDecimalMinFactoryTest extends CompressedBigDecimalFact
     Assert.assertEquals("5", aggregatorFactory.deserialize(new BigDecimal(5)).toString());
     Assert.assertEquals("5.0", aggregatorFactory.deserialize(5d).toString());
     Assert.assertEquals("5", aggregatorFactory.deserialize("5").toString());
-    Assert.assertEquals(
-        "[CompressedBigDecimalMinAggregatorFactory{name='name', type='COMPLEX<compressedBigDecimal>', fieldName='fieldName', requiredFields='[fieldName]', size='9', scale='0', strictNumberParsing='false'}]",
-        Arrays.toString(aggregatorFactory.getRequiredColumns().toArray())
-    );
+
     // default is to initialize to
     Assert.assertNull(aggregatorFactory.combine(null, null));
     Assert.assertEquals("4", aggregatorFactory.combine(new BigDecimal(4), null).toString());

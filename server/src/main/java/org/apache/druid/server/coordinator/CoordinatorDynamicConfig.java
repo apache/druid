@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -516,6 +517,15 @@ public class CoordinatorDynamicConfig
     return new Builder();
   }
 
+  /**
+   * Returns a value of {@code (num processors / 2)} to ensure that balancing
+   * computations do not hog all Coordinator resources.
+   */
+  public static int getDefaultBalancerComputeThreads()
+  {
+    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
   private static class Defaults
   {
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
@@ -524,8 +534,6 @@ public class CoordinatorDynamicConfig
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
     static final int REPLICATION_THROTTLE_LIMIT = 500;
-    static final int BALANCER_COMPUTE_THREADS = 1;
-    static final boolean EMIT_BALANCING_STATS = false;
     static final int MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
     static final int DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     static final boolean PAUSE_COORDINATION = false;
@@ -746,7 +754,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(maxSegmentsToMove, Defaults.MAX_SEGMENTS_TO_MOVE),
           valueOrDefault(replicantLifetime, Defaults.REPLICANT_LIFETIME),
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
-          valueOrDefault(balancerComputeThreads, Defaults.BALANCER_COMPUTE_THREADS),
+          valueOrDefault(balancerComputeThreads, getDefaultBalancerComputeThreads()),
           specificDataSourcesToKillUnusedSegmentsIn,
           valueOrDefault(killTaskSlotRatio, Defaults.KILL_TASK_SLOT_RATIO),
           valueOrDefault(maxKillTaskSlots, Defaults.MAX_KILL_TASK_SLOTS),

@@ -360,20 +360,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new DoublesSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            k,
-            maxStreamLength,
-            shouldFinalize
-        )
-    );
-  }
-
-  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new DoublesSketchMergeAggregatorFactory(name, k, maxStreamLength, shouldFinalize);

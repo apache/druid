@@ -53,6 +53,7 @@ Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
+CLI
 DDL
 DML
 DNS
@@ -218,6 +219,7 @@ SslContextFactory
 StatsD
 SYSTEM_TABLE
 TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -328,6 +330,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -1096,6 +1099,7 @@ numProcessors
 q.size
 repartitionTransitionDuration
 replicastaskCounttaskCount
+resetOffsets
 resetuseEarliestSequenceNumberPOST
 resumePOST
 statusrecentErrorsdruid.supervisor.maxStoredExceptionEventsstatedetailedStatestatedetailedStatestatestatePENDINGRUNNINGSUSPENDEDSTOPPINGUNHEALTHY_SUPERVISORUNHEALTHY_TASKSdetailedStatestatedruid.supervisor.unhealthinessThresholddruid.supervisor.taskUnhealthinessThresholdtaskDurationtaskCountreplicasdetailedStatedetailedStateRUNNINGPOST
@@ -1254,6 +1258,7 @@ KafkaStringHeaderFormat
 kafka.header.
 kafka.key
 kafka.timestamp
+kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
@@ -2309,3 +2314,6 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+taskslots
+loadstatus
+sqlQueryId

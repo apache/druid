@@ -24,13 +24,15 @@ describe('ingest-query-pattern', () => {
   it('works', () => {
     const query = SqlQuery.parse(sane`
       INSERT INTO "kttm-2019"
-      WITH "ext" AS (SELECT *
-      FROM TABLE(
-        EXTERN(
-          '{"type":"http","uris":["https://example.com/data.json.gz"]}',
-          '{"type":"json"}'
-        )
-      ) EXTEND ("timestamp" VARCHAR, "agent_category" VARCHAR, "agent_type" VARCHAR, "browser" VARCHAR, "browser_version" VARCHAR, "city" VARCHAR, "continent" VARCHAR, "country" VARCHAR, "version" VARCHAR, "event_type" VARCHAR, "event_subtype" VARCHAR, "loaded_image" VARCHAR, "adblock_list" VARCHAR, "forwarded_for" VARCHAR, "language" VARCHAR, "number" BIGINT, "os" VARCHAR, "path" VARCHAR, "platform" VARCHAR, "referrer" VARCHAR, "referrer_host" VARCHAR, "region" VARCHAR, "remote_address" VARCHAR, "screen" VARCHAR, "session" VARCHAR, "session_length" BIGINT, "timezone" VARCHAR, "timezone_offset" BIGINT, "window" VARCHAR))
+      WITH "ext" AS (
+        SELECT *
+        FROM TABLE(
+          EXTERN(
+            '{"type":"http","uris":["https://example.com/data.json.gz"]}',
+            '{"type":"json"}'
+          )
+        ) EXTEND ("timestamp" VARCHAR, "agent_category" VARCHAR, "agent_type" VARCHAR, "browser" VARCHAR, "browser_version" VARCHAR, "city" VARCHAR, "continent" VARCHAR, "country" VARCHAR, "version" VARCHAR, "event_type" VARCHAR, "event_subtype" VARCHAR, "loaded_image" VARCHAR, "adblock_list" VARCHAR, "forwarded_for" VARCHAR, "language" VARCHAR, "number" BIGINT, "os" VARCHAR, "path" VARCHAR, "platform" VARCHAR, "referrer" VARCHAR, "referrer_host" VARCHAR, "region" VARCHAR, "remote_address" VARCHAR, "screen" VARCHAR, "session" VARCHAR, "session_length" BIGINT, "timezone" VARCHAR, "timezone_offset" BIGINT, "window" VARCHAR)
+      )
       SELECT
         TIME_PARSE("timestamp") AS __time,
         agent_category,

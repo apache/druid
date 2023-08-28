@@ -41,7 +41,6 @@ import org.apache.druid.segment.column.ColumnType;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -221,12 +220,6 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
         };
       }
     };
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override

@@ -54,7 +54,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -69,7 +69,6 @@ import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
@@ -366,17 +365,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1),
         new CacheConfig(),
         httpClientConfig,
-        new DruidProcessingConfig()
-        {
-          @Override
-          public String getFormatString()
-          {
-            return null;
-          }
-        },
+        new BrokerParallelMergeConfig(),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new JoinableFactoryWrapper(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of())),
         new NoopServiceEmitter()
     );
 

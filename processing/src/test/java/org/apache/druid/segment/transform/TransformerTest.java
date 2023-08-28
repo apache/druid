@@ -155,7 +155,8 @@ public class TransformerTest extends InitializedNullHandlingTest
     final InputRow actual = transformer.transform(row);
     Assert.assertNotNull(actual);
     Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
-    Assert.assertEquals(5L, actual.getRaw("dim"));
+    // booleans are longs by default, so strlen of false (0L) is 1
+    Assert.assertEquals(1L, actual.getRaw("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 

@@ -108,7 +108,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
-
+  // currently worker categories aren't supported, so it's hardcoded.
+  protected static final String WORKER_CATEGORY = "_k8s_worker_category";
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -181,10 +182,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         KubernetesWorkItem workItem = tasks.get(task.getId());
 
         if (workItem == null) {
-          throw new ISE("Task [%s] disappeared", task.getId());
-        }
-
-        if (workItem.isShutdownRequested()) {
           throw new ISE("Task [%s] has been shut down", task.getId());
         }
 
@@ -211,11 +208,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
-    }
-    finally {
-      synchronized (tasks) {
-        tasks.remove(task.getId());
-      }
     }
   }
 
@@ -268,6 +260,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     if (workItem == null) {
       log.info("Ignoring request to cancel unknown task [%s]", taskid);
       return;
+    }
+
+    synchronized (tasks) {
+      tasks.remove(taskid);
     }
 
     workItem.shutdown();
@@ -356,7 +352,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of("taskQueue", (long) config.getCapacity());
+    return ImmutableMap.of(WORKER_CATEGORY, (long) config.getCapacity());
   }
 
   @Override
@@ -374,13 +370,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, config.getCapacity() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(config.getCapacity(), tasks.size()));
   }
 
   @Override
@@ -393,12 +389,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     return Collections.emptyMap();
-  }
-
-  @Override
-  public boolean isK8sTaskRunner()
-  {
-    return true;
   }
 
   @Override
@@ -445,6 +435,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                 .collect(Collectors.toList());
   }
 
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    final KubernetesWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return TaskLocation.unknown();
+    } else {
+      return workItem.getLocation();
+    }
+  }
+
   @Nullable
   @Override
   public RunnerTaskState getRunnerTaskState(String taskId)
@@ -455,5 +456,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     return workItem.getRunnerTaskState();
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return config.getCapacity();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return tasks.size();
   }
 }

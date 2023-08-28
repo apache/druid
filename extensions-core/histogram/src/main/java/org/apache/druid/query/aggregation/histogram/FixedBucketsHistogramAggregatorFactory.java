@@ -223,22 +223,6 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new FixedBucketsHistogramAggregatorFactory(
-            fieldName,
-            fieldName,
-            numBuckets,
-            lowerLimit,
-            upperLimit,
-            outlierHandlingMode,
-            finalizeAsBase64Binary
-        )
-    );
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     if (object instanceof String) {
