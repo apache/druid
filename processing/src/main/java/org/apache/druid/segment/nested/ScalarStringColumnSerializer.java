@@ -23,6 +23,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.IndexSpec;
@@ -67,6 +68,15 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
         name
     );
     dictionaryWriter.open();
+    dictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            dictionaryWriter,
+            null,
+            null,
+            null
+        )
+    );
   }
 
   @Override
@@ -89,7 +99,6 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
 
     // null is always 0
     dictionaryWriter.write(null);
-    dictionaryIdLookup.addString(null);
     for (String value : strings) {
       value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
@@ -97,7 +106,6 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
       }
 
       dictionaryWriter.write(value);
-      dictionaryIdLookup.addString(value);
     }
     dictionarySerialized = true;
   }
@@ -106,5 +114,18 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   protected void writeValueColumn(FileSmoosher smoosher)
   {
     // no extra value column for strings
+  }
+
+  @Override
+  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  {
+    if (dictionaryIdLookup.getStringBufferMapper() != null) {
+      SmooshedFileMapper fileMapper = dictionaryIdLookup.getStringBufferMapper();
+      for (String name : fileMapper.getInternalFilenames()) {
+        smoosher.add(name, fileMapper.mapFile(name));
+      }
+    } else {
+      writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
+    }
   }
 }
