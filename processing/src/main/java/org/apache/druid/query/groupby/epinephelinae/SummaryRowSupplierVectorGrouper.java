@@ -19,16 +19,17 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.NoSuchElementException;
-
+import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
-import com.google.common.base.Suppliers;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.NoSuchElementException;
+
 
 public class SummaryRowSupplierVectorGrouper implements VectorGrouper
 {

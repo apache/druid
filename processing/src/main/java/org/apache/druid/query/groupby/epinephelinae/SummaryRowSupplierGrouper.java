@@ -35,13 +35,20 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
   private AggregatorFactory[] aggregatorFactories;
   private ColumnSelectorFactory columnSelectorFactory;
 
-  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerde<KeyType> keySerdeFactory,
+  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerde<KeyType> keySerde,
       ColumnSelectorFactory columnSelectorFactory, List<AggregatorFactory> aggregatorFactories)
   {
+    this(grouper, keySerde, columnSelectorFactory,
+        aggregatorFactories.toArray(new AggregatorFactory[0]));
+  }
+
+  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerde<KeyType> keySerde,
+      ColumnSelectorFactory columnSelectorFactory, AggregatorFactory[] aggregatorFactories)
+  {
     delegate = grouper;
-    this.keySerde = keySerdeFactory;//.factorize();
+    this.keySerde = keySerde;
     this.columnSelectorFactory = columnSelectorFactory;
-    this.aggregatorFactories = aggregatorFactories.toArray(new AggregatorFactory[] {});
+    this.aggregatorFactories = aggregatorFactories;
   }
 
   @Override
@@ -85,7 +92,6 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
     return reusableEntry;
   }
 
-
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
@@ -102,7 +108,7 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
           delegated = true;
           return true;
         }
-        if(delegated) {
+        if (delegated) {
           return it.hasNext();
         }
         return !done;
@@ -114,7 +120,7 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
         if (!hasNext()) {
           throw new NoSuchElementException();
         }
-        if(delegated) {
+        if (delegated) {
           return it.next();
         }
         done = true;

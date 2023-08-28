@@ -29,6 +29,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -725,13 +727,12 @@ public class GroupByQueryEngineV2
         );
       }
 
-         if (keySerde.isEmpty() /*&& Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) <= 0*/) {
-              grouper = new SummaryRowSupplierGrouper<ByteBuffer>(grouper,
-                  keySerde,
-                  selectorFactory,
-                  query.getAggregatorSpecs());
-            }
-
+      if (keySerde.isEmpty() && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) <= 0) {
+        grouper = new SummaryRowSupplierGrouper<ByteBuffer>(grouper,
+            keySerde,
+            selectorFactory,
+            query.getAggregatorSpecs());
+      }
 
       return grouper;
     }

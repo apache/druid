@@ -261,6 +261,7 @@ public class VectorGroupByEngine
 
     @Nullable
     private CloseableGrouperIterator<MemoryPointer, ResultRow> delegate = null;
+    private boolean grouperHasAtLeastOneRow;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
@@ -312,7 +313,8 @@ public class VectorGroupByEngine
       if (delegate != null && delegate.hasNext()) {
         return true;
       } else {
-        final boolean moreToRead = !cursor.isDone() || partiallyAggregatedRows >= 0 || delegate == null;
+        final boolean moreToRead = !cursor.isDone() || partiallyAggregatedRows >= 0 || grouperHasAtLeastOneRow;
+        grouperHasAtLeastOneRow = false;
 
         if (bucketInterval != null && moreToRead) {
           while (delegate == null || !delegate.hasNext()) {
@@ -379,12 +381,13 @@ public class VectorGroupByEngine
         );
       }
 
-      if(keySize == 0 && query.getGranularity().IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL)>=0) {
-        grouper = new SummaryRowSupplierVectorGrouper(grouper,AggregatorAdapters.factorizeVector(
+      if (keySize == 0
+          && query.getGranularity().IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
+        grouper = new SummaryRowSupplierVectorGrouper(grouper, AggregatorAdapters.factorizeVector(
             cursor.getColumnSelectorFactory(),
-            query.getAggregatorSpecs()
-        )
-);
+            query.getAggregatorSpecs())
+        );
+        grouperHasAtLeastOneRow = true;
       }
 
       grouper.initVectorized(cursor.getMaxVectorSize());
