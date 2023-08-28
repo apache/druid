@@ -28,7 +28,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.Alpha;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -83,7 +83,7 @@ import java.util.stream.Collectors;
 
 public class DataSourcesResourceTest
 {
-  private CoordinatorServerView inventoryView;
+  private Alpha inventoryView;
   private DruidServer server;
   private List<DruidDataSource> listDataSources;
   private List<DataSegment> dataSegmentList;
@@ -94,7 +94,7 @@ public class DataSourcesResourceTest
   public void setUp()
   {
     request = EasyMock.createStrictMock(HttpServletRequest.class);
-    inventoryView = EasyMock.createStrictMock(CoordinatorServerView.class);
+    inventoryView = EasyMock.createStrictMock(Alpha.class);
     server = EasyMock.niceMock(DruidServer.class);
     dataSegmentList = new ArrayList<>();
     dataSegmentList.add(

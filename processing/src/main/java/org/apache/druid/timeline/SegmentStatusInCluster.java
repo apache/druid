@@ -67,12 +67,12 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
       @JsonProperty("overshadowed") boolean overshadowed,
       @JsonProperty("replicationFactor") @Nullable Integer replicationFactor,
       @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("isRealtime") Long isRealtime,
-      @JsonProperty("isPublished") boolean isPublished
+      @JsonProperty("isPublished") boolean isPublished,
+      @JsonProperty("isRealtime") Long isRealtime
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, replicationFactor, numRows, isRealtime, isPublished);
+    this(null, overshadowed, replicationFactor, numRows, isPublished, isRealtime);
   }
 
   public SegmentStatusInCluster(
@@ -80,8 +80,8 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
       boolean overshadowed,
       Integer replicationFactor,
       Long numRows,
-      Long isRealtime,
-      boolean isPublished
+      boolean isPublished,
+      Long isRealtime
   )
   {
     this.dataSegment = dataSegment;
@@ -144,13 +144,14 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
            && Objects.equals(replicationFactor, that.replicationFactor)
            && Objects.equals(dataSegment, that.dataSegment)
            && Objects.equals(numRows, that.numRows)
-           && Objects.equals(isRealtime, that.isRealtime);
+           && Objects.equals(isRealtime, that.isRealtime)
+           && isPublished == that.isPublished;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(overshadowed, replicationFactor, dataSegment, numRows, isRealtime);
+    return Objects.hash(overshadowed, replicationFactor, dataSegment, numRows, isPublished, isRealtime);
   }
 
   @Override
@@ -167,6 +168,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
            ", replicationFactor=" + replicationFactor +
            ", dataSegment=" + dataSegment +
            ", numRows=" + numRows +
+           ", isPublished=" + isPublished +
            ", isRealtime=" + isRealtime +
            '}';
   }

@@ -40,7 +40,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
-import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.Alpha;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
@@ -52,7 +52,6 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
-import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -257,11 +256,11 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
-            binder.bind(CoordinatorServerView.class);
-            binder.bind(TimelineServerView.class).to(CoordinatorServerView.class).in(LazySingleton.class);
+            binder.bind(Alpha.class);
+            binder.bind(TimelineServerView.class).to(Alpha.class).in(LazySingleton.class);
             binder.bind(DruidCoordinator.class);
 
-            LifecycleModule.register(binder, CoordinatorServerView.class);
+            LifecycleModule.register(binder, Alpha.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
 

@@ -60,8 +60,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+
+
 
 /**
  * This class polls the Coordinator in background to keep the latest published segments.
@@ -204,8 +208,8 @@ public class BrokerSegmentMetadataView
           segment.isOvershadowed(),
           replicationFactor,
           segment.getNumRows(),
-          segment.isRealtime(),
-          segment.isPublished()
+          true,
+          segment.isRealtime()
       );
       builder.add(segmentStatusInCluster);
     }
@@ -219,7 +223,8 @@ public class BrokerSegmentMetadataView
 
     Map<String, DatasourceTable.PhysicalDatasourceMetadata> physicalDatasourceMetadataMap = new HashMap<>();
 
-    for (List<String> partition : Iterables.partition(datasources, 10)) {
+    for (List<String> partition : Iterables.partition(datasources, 100)) {
+      // retain watched datasources
       List<DatasourceSchema> datasourceSchemas = FutureUtils.getUnchecked(coordinatorClient.fetchDatasourceSchema(
           partition), true);
 
@@ -246,6 +251,7 @@ public class BrokerSegmentMetadataView
   protected SystemSchema.SegmentsTable.SegmentTableView getSegmentTableView() {
     ImmutableSortedSet<SegmentStatusInCluster> allSegmentMetadata = getSegmentMetadata();
 
+    log.info("logging polled segments from coordinator %s", allSegmentMetadata);
     final ImmutableSortedSet.Builder<SegmentStatusInCluster> publishedSegmentBuilder = ImmutableSortedSet.naturalOrder();
 
     Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataMap;
@@ -262,12 +268,14 @@ public class BrokerSegmentMetadataView
       // build available segment metadata map by combining stuff from brokerServerView and numRows from data returned from coordinator
       availableSegmentMetadataMap = new HashMap<>();
       Map<SegmentId, ServerSelector> brokerSegmentMetadata = brokerServerView.getSegmentMetadata();
+      // only look at watched ds, confirm if brokerServerView is also looking for watched ds
       for (SegmentStatusInCluster segmentStatusInCluster : allSegmentMetadata) {
         if (segmentStatusInCluster.isPublished()) {
           publishedSegmentBuilder.add(segmentStatusInCluster);
         }
         SegmentId segmentId = segmentStatusInCluster.getDataSegment().getId();
         if (!brokerSegmentMetadata.containsKey(segmentId)) {
+          // log and count ignored segments
           continue;
         }
         ServerSelector serverSelector = brokerSegmentMetadata.get(segmentId);

@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
-public class CoordinatorServerViewTest extends CuratorTestBase
+public class TimelineAwareCoordinatorServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
@@ -63,9 +63,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   private CountDownLatch segmentRemovedLatch;
 
   private BatchServerInventoryView baseView;
-  private CoordinatorServerViewImpl overlordServerView;
+  private TimelineAwareCoordinatorServerView overlordServerView;
 
-  public CoordinatorServerViewImplImplTest()
+  public TimelineAwareCoordinatorServerViewTest()
   {
     jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
@@ -332,7 +332,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       }
     };
 
-    overlordServerView = new CoordinatorServerViewImpl(
+    overlordServerView = new TimelineAwareCoordinatorServerView(
         baseView,
         new CoordinatorSegmentWatcherConfig(),
         new NoopServiceEmitter()

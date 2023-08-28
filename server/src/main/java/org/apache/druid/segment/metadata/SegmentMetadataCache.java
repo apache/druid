@@ -281,6 +281,17 @@ public class SegmentMetadataCache
     );
   }
 
+  public void removeFromTable(String s)
+  {
+    tables.remove(s);
+  }
+
+  public boolean tablesContains(String s)
+  {
+    return tables.containsKey(s);
+  }
+
+
   private void startCacheExec()
   {
     cacheExec.submit(
@@ -523,7 +534,7 @@ public class SegmentMetadataCache
             }
         );
       }
-      if (!tables.containsKey(segment.getDataSource())) {
+      if (!tablesContains(segment.getDataSource())) {
         refreshImmediately = true;
       }
 
@@ -554,7 +565,7 @@ public class SegmentMetadataCache
                 totalSegments--;
               }
               if (segmentsMap.isEmpty()) {
-                tables.remove(segment.getDataSource());
+                removeFromTable(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {

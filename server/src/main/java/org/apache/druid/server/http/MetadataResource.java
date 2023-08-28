@@ -28,6 +28,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.DatasourceSchema;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
@@ -42,6 +43,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -70,6 +72,7 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
+  private final Logger log = new Logger(MetadataResource.class);
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -145,7 +148,8 @@ public class MetadataResource
   public Response getAllUsedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
-      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
+      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus,
+      @QueryParam("includeOvershadowedStatus") final @Nullable String includeRealtime
   )
   {
     if (includeOvershadowedStatus != null) {
@@ -188,45 +192,52 @@ public class MetadataResource
           .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
           .collect(Collectors.toList());
     }
-    final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
+    final Set<SegmentId> segmentAlreadySeen = new HashSet<>();
+    final Stream<SegmentStatusInCluster> segmentStatus = dataSourcesWithUsedSegments
+        .stream()
+        .flatMap(t -> t.getSegments().stream())
+        .map(segment -> {
+          // The replication factor for unloaded segments is 0 as they will be unloaded soon
+          boolean isOvershadowed = overshadowedSegments.contains(segment);
+          AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(
+              segment.getDataSource(),
+              segment.getId()
+          );
+          Integer replicationFactor = isOvershadowed ? (Integer) 0
+                                                     : coordinator.getReplicationFactor(segment.getId());
+          Long numRows = (null != availableSegmentMetadata) ? availableSegmentMetadata.getNumRows() : null;
+          segmentAlreadySeen.add(segment.getId());
+          return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, 20L, true, 0L);
+        }).peek(v -> log.info("peeking into first stream segmentseen [%s], id [%s] isPublished [%s]", segmentAlreadySeen, v.getDataSegment().getId(), v.isPublished()));
 
-    Set<SegmentId> segmentAlreadySeen = new HashSet<>();
-    final Stream<SegmentStatusInCluster> segmentStatus = usedSegments.map(segment -> {
-      // The replication factor for unloaded segments is 0 as they will be unloaded soon
-      boolean isOvershadowed = overshadowedSegments.contains(segment);
-      AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
-      Integer replicationFactor = isOvershadowed ? (Integer) 0
-                                                 : coordinator.getReplicationFactor(segment.getId());
-      Long numRows = (null != availableSegmentMetadata) ? availableSegmentMetadata.getNumRows() : null;
-      segmentAlreadySeen.add(segment.getId());
-      return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, numRows, 0L, true);
-    });
+    log.info("printing the content in smc cache %s", segmentMetadataCache.getSegmentMetadataSnapshot().values());
 
     final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
+        .peek(v -> log.info("peeking into second stream (first) segmentseen [%s], id [%s]", segmentAlreadySeen, v.getSegment().getId()))
         .filter(availableSegmentMetadata -> !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
         .map(availableSegmentMetadata -> {
           return new SegmentStatusInCluster(
               availableSegmentMetadata.getSegment(),
               false,
               (int) availableSegmentMetadata.getNumReplicas(),
-              availableSegmentMetadata.getNumRows(),
-              availableSegmentMetadata.isRealtime(),
-              false
+              /**availableSegmentMetadata.getNumRows(), **/ 30L,
+              false,
+              availableSegmentMetadata.isRealtime()
           );
-        });
+        }).peek(v -> log.info("peeking into second stream (second) segmentseen [%s], id [%s]", segmentAlreadySeen, v.getDataSegment().getId()));;
 
+
+    Stream<SegmentStatusInCluster> combined = Stream.concat(segmentStatus, realtimeSegmentStatus).peek(v -> log.info("combined stream element %s", v));
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
     final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        Stream.concat(segmentStatus, realtimeSegmentStatus)::iterator,
+        combined::iterator,
         raGenerator,
         authorizerMapper
     );

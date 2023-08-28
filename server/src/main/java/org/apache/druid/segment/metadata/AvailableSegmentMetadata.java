@@ -163,11 +163,9 @@ public class AvailableSegmentMetadata
   public String toString()
   {
     return "AvailableSegmentMetadata{" +
-           "segment=" + segment +
+           "segmentId=" + segment.getId() +
            ", isRealtime=" + isRealtime +
-           ", segmentServers=" + segmentServers +
            ", numRows=" + numRows +
-           ", rowSignature=" + rowSignature +
            '}';
   }
 }

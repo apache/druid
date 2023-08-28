@@ -30,7 +30,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
-import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.Alpha;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -97,7 +97,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private static final long COORDINATOR_PERIOD = 100;
 
   private BatchServerInventoryView baseView;
-  private CoordinatorServerView serverView;
+  private Alpha serverView;
   private CountDownLatch segmentViewInitLatch;
   /**
    * The following two fields are changed during {@link #testMoveSegment()}, the change might not be visible from the
@@ -405,7 +405,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       }
     };
 
-    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter());
+    serverView = new Alpha(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter());
 
     baseView.start();
 

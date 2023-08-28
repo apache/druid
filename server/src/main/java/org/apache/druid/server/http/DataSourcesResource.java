@@ -30,12 +30,12 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
-import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.Alpha;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.client.SegmentLoadInfo;
+import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
@@ -102,7 +102,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
   private static final long DEFAULT_LOADSTATUS_INTERVAL_OFFSET = 14 * 24 * 60 * 60 * 1000;
 
-  private final CoordinatorServerView serverInventoryView;
+  private final Alpha serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
   private final OverlordClient overlordClient;
@@ -111,7 +111,7 @@ public class DataSourcesResource
 
   @Inject
   public DataSourcesResource(
-      CoordinatorServerView serverInventoryView,
+      Alpha serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
@@ -820,7 +820,7 @@ public class DataSourcesResource
       @QueryParam("partial") final boolean partial
   )
   {
-    TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+    TimelineLookup<String, ServerSelector> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
@@ -833,19 +833,19 @@ public class DataSourcesResource
   }
 
   private Iterable<ImmutableSegmentLoadInfo> prepareServedSegmentsInInterval(
-      TimelineLookup<String, SegmentLoadInfo> dataSourceServingTimeline,
+      TimelineLookup<String, ServerSelector> dataSourceServingTimeline,
       Interval interval
   )
   {
-    Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup =
+    Iterable<TimelineObjectHolder<String, ServerSelector>> lookup =
         dataSourceServingTimeline.lookupWithIncompletePartitions(interval);
     return FunctionalIterable
         .create(lookup)
         .transformCat(
-            (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
+            (TimelineObjectHolder<String, ServerSelector> input) ->
                 Iterables.transform(
                     input.getObject(),
-                    (PartitionChunk<SegmentLoadInfo> chunk) -> chunk.getObject().toImmutableSegmentLoadInfo()
+                    (PartitionChunk<ServerSelector> chunk) -> chunk.getObject().toImmutableSegmentLoadInfo()
                 )
         );
   }
@@ -885,7 +885,7 @@ public class DataSourcesResource
         return Response.ok(true).build();
       }
 
-      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+      TimelineLookup<String, ServerSelector> timeline = serverInventoryView.getTimeline(
           new TableDataSource(dataSourceName)
       );
       if (timeline == null) {

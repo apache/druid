@@ -1,5 +1,6 @@
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
@@ -13,6 +14,8 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -66,6 +69,24 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     } else {
       log.info("[%s] signature is unchanged.", dataSource);
     }
+  }
+
+  @Override
+  public Set<String> getDatasourceNames()
+  {
+    return tables.keySet();
+  }
+
+  @Override
+  public void removeFromTable(String s)
+  {
+    tables.remove(s);
+  }
+
+  @Override
+  public boolean tablesContains(String s)
+  {
+    return tables.containsKey(s);
   }
 
   public DatasourceTable.PhysicalDatasourceMetadata getPhysicalDatasourceMetadata(String name)

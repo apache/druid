@@ -444,8 +444,9 @@ public class SystemSchema extends AbstractSchema
 
     protected static class SegmentTableView
     {
+      // pass the stitched
       private final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata;
-      private final Iterator<SegmentStatusInCluster> publishedSegments;
+      private final Iterator<SegmentStatusInCluster> publishedSegments; // coordinator
 
       private final int totalSegmentsCount;
 

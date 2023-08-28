@@ -6,6 +6,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 public class DatasourceSchema
 {
+  // dsinfo
   private final String datasource;
   private final RowSignature rowSignature;
 
