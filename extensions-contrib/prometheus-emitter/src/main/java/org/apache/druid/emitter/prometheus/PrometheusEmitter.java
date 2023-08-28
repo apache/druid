@@ -36,7 +36,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
