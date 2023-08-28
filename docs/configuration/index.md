@@ -984,7 +984,7 @@ Druid computes the values to optimize Coordinator performance, based on the curr
 |--------|--------------|-----------|
 |`useRoundRobinSegmentAssignment`|true|Speeds up segment assignment.|
 |`maxSegmentsInNodeLoadingQueue`|0|Removes the limit on load queue size.|
-|`replicationThrottleLimit`|2% of used segments, minimum value 100|Prevents aggressive replication when a historical disappears only intermittently.|
+|`replicationThrottleLimit`|5% of used segments, minimum value 100|Prevents aggressive replication when a historical disappears only intermittently.|
 |`replicantLifetime`|60|Allows segments to wait about an hour (assuming a Coordinator period of 1 minute) in the load queue before an alert is raised. In `smartSegmentLoading` mode, load queues are not limited by size. Segments might therefore assigned to a load queue even if the corresponding server is slow to load them.|
 |`maxNonPrimaryReplicantsToLoad`|`Integer.MAX_VALUE` (no limit)|This throttling is already handled by `replicationThrottleLimit`.|
 |`maxSegmentsToMove`|2% of used segments, minimum value 100, maximum value 1000|Ensures that some segments are always moving in the cluster to keep it well balanced. The maximum value keeps the Coordinator run times bounded.|
