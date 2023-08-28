@@ -235,6 +235,7 @@ data:
 |`druid.indexer.runner.capacity`| `Integer`       | Number of concurrent jobs that can be sent to Kubernetes.                                                                                                                                                                                        |`2147483647`|No|
 |`druid.indexer.runner.taskPayloadAsEnvVariable`| `Boolean`       | Whether task payloads should be passed to K8s jobs as a compressed environment variable. Set this to false if you plan on using task payloads > 1 MB.                                                                                                                                                                                        |`true`|No|
 |`druid.indexer.task.enableTaskPayloadManagerPerTask`| `Boolean`       | Whether druid.indexer.logs.type should be used to pass task payloads to the K8s jobs. Set this to true if you plan on using task payloads > 1 MB MB.                                                                                                                                                                                        |`false`|No|
+
 ### Metrics added
 
 |Metric|Description|Dimensions|Normal value|
