@@ -1296,10 +1296,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
             throw new IAE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
           }
-        } else {
-          if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
-            throw new IAE("DynamicPartitionsSpec must be used for best-effort rollup");
-          }
         }
         return partitionsSpec;
       }
