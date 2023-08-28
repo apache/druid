@@ -28,11 +28,16 @@ import javax.validation.constraints.NotNull;
 public class KubernetesAndWorkerTaskRunnerConfig
 {
 
-  // Select which worker task runner to use in addition to the Kubernetes runner, options are httpRemote or remote.
+  /**
+  * Select which worker task runner to use in addition to the Kubernetes runner, options are httpRemote or remote.
+   * */
   @JsonProperty
   @NotNull
   private String workerTaskRunnerType = "httpRemote";
 
+  /**
+   * Whether or not to send tasks to the worker task runner instead of the Kubernetes runner.
+   * */
   @JsonProperty
   @NotNull
   private Boolean sendAllTasksToWorkerTaskRunner;

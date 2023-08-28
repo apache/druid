@@ -50,6 +50,10 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
+/**
+ * Mixed mode task runner that can run tasks on either Kubernetes or workers based on KubernetesAndWorkerTaskRunnerConfig.
+ * This task runner is always aware of task runner running on either system.
+ */
 public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTaskRunner
 {
   private final KubernetesTaskRunner kubernetesTaskRunner;
