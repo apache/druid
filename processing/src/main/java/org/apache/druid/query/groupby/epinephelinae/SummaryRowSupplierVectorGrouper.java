@@ -21,34 +21,25 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
-import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-
-import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 public class SummaryRowSupplierVectorGrouper implements VectorGrouper
 {
-  private VectorGrouper delegate;
-  private List<AggregatorFactory> aggregatorSpecs;
-  private VectorColumnSelectorFactory columnSelectorFactory;
-  private Supplier<ByteBuffer> supplier;
+  private final VectorGrouper delegate;
+  private final AggregatorAdapters aggregatorAdapters;
+  private ByteBuffer buffer;
 
-  public SummaryRowSupplierVectorGrouper(VectorGrouper grouper, Supplier<ByteBuffer> supplier, List<AggregatorFactory> aggregatorSpecs,
-      VectorColumnSelectorFactory columnSelectorFactory)
+  public SummaryRowSupplierVectorGrouper(VectorGrouper grouper, AggregatorAdapters aggregatorAdapters)
   {
     delegate = grouper;
-    this.supplier = supplier;
-    this.aggregatorSpecs = aggregatorSpecs;
-    this.columnSelectorFactory = columnSelectorFactory;
-
+    this.aggregatorAdapters = aggregatorAdapters;
   }
 
   @Override
@@ -77,30 +68,11 @@ public class SummaryRowSupplierVectorGrouper implements VectorGrouper
 
   private CloseableIterator<Entry<MemoryPointer>> buildSummaryRow()
   {
-//    final MemoryPointer reusableKey = new MemoryPointer();
-//    final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(reusableKey, new Object[aggregators.size()]);
-//    // final ReusableEntry<Entry<MemoryPointer>> reusableEntry =
-//    // ReusableEntry.create(keySerde, aggregatorFactories.length);
-//    Object[] values = reusableEntry.getValues();
-//
-AggregatorAdapters ada = AggregatorAdapters.factorizeVector(
-        columnSelectorFactory,
-        aggregatorSpecs
-    );
-//
-//
-//    for (int i = 0; i < aggregatorSpecs.size(); i++) {
-//
-//      ada.init(null, i);
-//      ada.get
-//
-//      aggregatorSpecs.get(i).factorize(columnSelectorFactory);
-//      aggregatorAdapters.Aggregator aggregate = aggregatorFactories[i].factorize(columnSelectorFactory);
-//      values[i] = aggregate.get();
-//    }
-//    return reusableEntry;
-    BufferArrayGrouper bag = new BufferArrayGrouper(supplier, ada, 0) {
-      public void init() {
+    buffer = ByteBuffer.allocate(1 + 2 * aggregatorAdapters.spaceNeeded());
+    BufferArrayGrouper bag = new BufferArrayGrouper(Suppliers.ofInstance(buffer), aggregatorAdapters, 1)
+    {
+      public void init()
+      {
         super.init();
         initializeSlotIfNeeded(0);
       }

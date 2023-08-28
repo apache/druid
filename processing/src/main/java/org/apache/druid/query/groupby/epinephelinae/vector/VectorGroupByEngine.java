@@ -312,7 +312,7 @@ public class VectorGroupByEngine
       if (delegate != null && delegate.hasNext()) {
         return true;
       } else {
-        final boolean moreToRead = !cursor.isDone() || partiallyAggregatedRows >= 0;
+        final boolean moreToRead = !cursor.isDone() || partiallyAggregatedRows >= 0 || delegate == null;
 
         if (bucketInterval != null && moreToRead) {
           while (delegate == null || !delegate.hasNext()) {
@@ -380,7 +380,11 @@ public class VectorGroupByEngine
       }
 
       if(keySize == 0 && query.getGranularity().IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL)>=0) {
-        grouper = new SummaryRowSupplierVectorGrouper(grouper,Suppliers.ofInstance(processingBuffer),query.getAggregatorSpecs(),cursor.getColumnSelectorFactory());
+        grouper = new SummaryRowSupplierVectorGrouper(grouper,AggregatorAdapters.factorizeVector(
+            cursor.getColumnSelectorFactory(),
+            query.getAggregatorSpecs()
+        )
+);
       }
 
       grouper.initVectorized(cursor.getMaxVectorSize());
