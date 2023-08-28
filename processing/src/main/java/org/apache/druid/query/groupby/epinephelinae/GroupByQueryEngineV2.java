@@ -557,7 +557,7 @@ public class GroupByQueryEngineV2
       if (delegate != null && delegate.hasNext()) {
         return true;
       } else {
-        if (!cursor.isDone() || delegate==null) {
+        if (!cursor.isDone() || delegate == null) {
           if (delegate != null) {
             delegate.close();
           }

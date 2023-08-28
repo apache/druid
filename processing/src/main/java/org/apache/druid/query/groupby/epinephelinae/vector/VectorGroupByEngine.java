@@ -41,7 +41,7 @@ import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
-import org.apache.druid.query.groupby.epinephelinae.SummaryRowSupplierGrouper;
+import org.apache.druid.query.groupby.epinephelinae.SummaryRowSupplierVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
@@ -380,7 +380,7 @@ public class VectorGroupByEngine
       }
 
       if(keySize == 0 && query.getGranularity().IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL)>=0) {
-        grouper = new SummaryRowSupplierGrouper(grouper, null, null, null);
+        grouper = new SummaryRowSupplierVectorGrouper(grouper,Suppliers.ofInstance(processingBuffer),query.getAggregatorSpecs(),cursor.getColumnSelectorFactory());
       }
 
       grouper.initVectorized(cursor.getMaxVectorSize());

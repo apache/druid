@@ -241,7 +241,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     return AggregateResult.ok();
   }
 
-  private void initializeSlotIfNeeded(int dimIndex)
+  protected void initializeSlotIfNeeded(int dimIndex)
   {
     final int index = dimIndex / Byte.SIZE;
     final int extraIndex = dimIndex % Byte.SIZE;

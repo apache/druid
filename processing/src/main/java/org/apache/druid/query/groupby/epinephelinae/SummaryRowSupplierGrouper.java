@@ -19,11 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.io.IOException;
@@ -130,44 +128,4 @@ public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
       }
     };
   }
-
-  public static class VectorGrouper1 implements VectorGrouper
-  {
-
-    VectorGrouper delegate;
-    @Override
-    public void initVectorized(int maxVectorSize)
-    {
-      delegate.initVectorized(maxVectorSize);
-    }
-
-    @Override
-    public AggregateResult aggregateVector(Memory keySpace, int startRow, int endRow)
-    {
-      return delegate.aggregateVector(keySpace, startRow, endRow);
-    }
-
-    @Override
-    public void reset()
-    {
-      delegate.reset();
-    }
-
-    @Override
-    public void close()
-    {
-      throw new RuntimeException("Unimplemented!");
-
-    }
-
-    @Override
-    public CloseableIterator<Entry<MemoryPointer>> iterator()
-    {
-      return null;
-      throw new RuntimeException("Unimplemented!");
-
-    }
-
-  }
-
 }
