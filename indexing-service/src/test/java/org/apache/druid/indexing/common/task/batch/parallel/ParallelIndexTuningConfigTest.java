@@ -251,10 +251,8 @@ public class ParallelIndexTuningConfigTest
   }
 
   @Test
-  public void testConstructorWithHashedPartitionsSpecAndNonForceGuaranteedRollupFailToCreate()
+  public void testConstructorWithHashedPartitionsSpecAndNonForceGuaranteedRollup()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
     final boolean forceGuaranteedRollup = false;
     new ParallelIndexTuningConfig(
         null,
@@ -297,10 +295,8 @@ public class ParallelIndexTuningConfigTest
   }
 
   @Test
-  public void testConstructorWithSingleDimensionPartitionsSpecAndNonForceGuaranteedRollupFailToCreate()
+  public void testConstructorWithSingleDimensionPartitionsSpecAndNonForceGuaranteedRollup()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
     final boolean forceGuaranteedRollup = false;
     new ParallelIndexTuningConfig(
         null,
