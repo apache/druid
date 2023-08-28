@@ -1179,19 +1179,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           partialShardSpec.complete(jsonMapper, newPartitionId, 0)
       );
       return SegmentAllocateResult.success(segmentId);
-    } else if (!overallMaxId.getInterval().equals(interval)
-               || overallMaxId.getVersion().compareTo(existingVersion) > 0) {
+    } else if (!overallMaxId.getInterval().equals(interval)) {
       return SegmentAllocateResult.failure(
-          "Segment[%s] in conflicting interval[%s] has higher version[%s].",
-          overallMaxId, overallMaxId.getInterval(), overallMaxId.getVersion()
+          "Segment[%s] has mismatching interval[%s].",
+          overallMaxId, overallMaxId.getInterval()
+      );
+    } else if (overallMaxId.getVersion().compareTo(existingVersion) > 0) {
+      return SegmentAllocateResult.failure(
+          "Segment[%s] in interval[%s] has version[%s] which is higher than [%s].",
+          overallMaxId, overallMaxId.getInterval(), overallMaxId.getVersion(), existingVersion
       );
     } else if (committedMaxId != null
                && committedMaxId.getShardSpec().getNumCorePartitions()
                   == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
-      log.warn(
-          "Committed segment[%s] has unknown core partition size in shardSpec[%s].",
-          committedMaxId, committedMaxId.getShardSpec()
-      );
       return SegmentAllocateResult.failure(
           "Shard spec of committed segment[%s] has unknown number of core partitions.",
           committedMaxId
