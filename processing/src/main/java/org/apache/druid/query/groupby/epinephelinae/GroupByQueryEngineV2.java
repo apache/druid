@@ -113,6 +113,7 @@ public class GroupByQueryEngineV2
     return retInfo;
   }
 
+
   private GroupByQueryEngineV2()
   {
     // No instantiation
@@ -469,6 +470,7 @@ public class GroupByQueryEngineV2
     protected final GroupByColumnSelectorPlus[] dims;
     protected final DateTime timestamp;
 
+
     @Nullable
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
@@ -727,7 +729,7 @@ public class GroupByQueryEngineV2
         );
       }
 
-      if (keySerde.isEmpty() && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) <= 0) {
+      if (keySerde.isEmpty() && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
         grouper = new SummaryRowSupplierGrouper<ByteBuffer>(grouper,
             keySerde,
             selectorFactory,
