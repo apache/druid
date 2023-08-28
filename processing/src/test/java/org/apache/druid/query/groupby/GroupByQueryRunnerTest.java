@@ -13000,6 +13000,37 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
+
+  @Test
+  public void testSummaryrowForEmptyInputByDay()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimFilter(new SelectorDimFilter("placementish", "xxa", null))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index"),
+            new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
+            new DoubleSumAggregatorFactory("idxDouble", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+    );
+
+    StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(
+        factory,
+        originalRunner,
+        query,
+        serviceEmitter
+    );
+    serviceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
   private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)
   {
     return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);

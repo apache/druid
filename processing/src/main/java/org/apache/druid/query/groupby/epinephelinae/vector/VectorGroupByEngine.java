@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -40,6 +41,7 @@ import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
+import org.apache.druid.query.groupby.epinephelinae.SummaryRowSupplierGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
@@ -345,7 +347,7 @@ public class VectorGroupByEngine
     @VisibleForTesting
     VectorGrouper makeGrouper()
     {
-      final VectorGrouper grouper;
+      VectorGrouper grouper;
 
       final int cardinalityForArrayAggregation = GroupByQueryEngineV2.getCardinalityForArrayAggregation(
           querySpecificConfig,
@@ -375,6 +377,10 @@ public class VectorGroupByEngine
             querySpecificConfig.getBufferGrouperMaxLoadFactor(),
             querySpecificConfig.getBufferGrouperInitialBuckets()
         );
+      }
+
+      if(keySize == 0 && query.getGranularity().IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL)>=0) {
+        grouper = new SummaryRowSupplierGrouper(grouper, null, null, null);
       }
 
       grouper.initVectorized(cursor.getMaxVectorSize());

@@ -725,7 +725,7 @@ public class GroupByQueryEngineV2
         );
       }
 
-         if (keySerde.isEmpty()) {
+         if (keySerde.isEmpty() /*&& Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) <= 0*/) {
               grouper = new SummaryRowSupplierGrouper<ByteBuffer>(grouper,
                   keySerde,
                   selectorFactory,
