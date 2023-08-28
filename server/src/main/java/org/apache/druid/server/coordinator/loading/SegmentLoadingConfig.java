@@ -48,7 +48,7 @@ public class SegmentLoadingConfig
   {
     if (dynamicConfig.isSmartSegmentLoading()) {
       // Compute replicationThrottleLimit with a lower bound of 100
-      final int throttlePercentage = 2;
+      final int throttlePercentage = 5;
       final int replicationThrottleLimit = Math.max(100, numUsedSegments * throttlePercentage / 100);
       log.info(
           "Smart segment loading is enabled. Calculated replicationThrottleLimit[%,d] (%d%% of used segments[%,d]).",
