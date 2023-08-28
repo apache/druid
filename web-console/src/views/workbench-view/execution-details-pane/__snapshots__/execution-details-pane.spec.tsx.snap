@@ -23,6 +23,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
         "label": "Native query",
       },
       undefined,
+      undefined,
       Object {
         "icon": "error",
         "id": "error",
@@ -38,7 +39,10 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
 >
   <div>
     <p>
-      General info for query-8f889312-e989-4b4c-9895-485a1fe796d3 ingesting into "kttm-blank-lines"
+      General info for query-af8a263d-213f-418e-ad8d-37d55beff59b ingesting into "kttm-blank-lines"
+    </p>
+    <p>
+      Results written to dataSource
     </p>
     <Memo(ExecutionErrorPane)
       execution={
@@ -50,10 +54,14 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm-blank-lines",
-              "groupId": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
-              "id": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+              "groupId": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+              "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+              "nativeTypeNames": Array [
+                "LONG",
+                "STRING",
+              ],
               "resource": Object {
-                "availabilityGroup": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+                "availabilityGroup": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -83,15 +91,16 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                   ],
                   "context": Object {
                     "__user": "allowAll",
+                    "executionMode": "async",
                     "finalize": false,
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
                     "maxNumTasks": 2,
                     "maxParseExceptions": 2,
-                    "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                    "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                    "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                    "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
@@ -158,13 +167,14 @@ FROM TABLE(
 ) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
 PARTITIONED BY DAY",
               "sqlQueryContext": Object {
+                "executionMode": "async",
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
                 "maxParseExceptions": 2,
-                "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                 "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                 "sqlReplaceTimeChunks": "all",
               },
               "sqlResultsContext": Object {
@@ -178,7 +188,7 @@ PARTITIONED BY DAY",
               ],
               "type": "query_controller",
             },
-            "task": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+            "task": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
           },
           "capacityInfo": undefined,
           "destination": Object {
@@ -189,7 +199,8 @@ PARTITIONED BY DAY",
             "segmentGranularity": "DAY",
             "type": "dataSource",
           },
-          "duration": 14760,
+          "destinationPages": undefined,
+          "duration": 14545,
           "engine": "sql-msq-task",
           "error": Object {
             "error": Object {
@@ -199,9 +210,9 @@ PARTITIONED BY DAY",
               "rootErrorCode": "CannotParseExternalData",
             },
             "host": "localhost",
-            "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
           },
-          "id": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+          "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
@@ -209,15 +220,16 @@ PARTITIONED BY DAY",
             ],
             "context": Object {
               "__user": "allowAll",
+              "executionMode": "async",
               "finalize": false,
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
-              "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+              "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "\\"DAY\\"",
-              "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+              "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
@@ -267,6 +279,7 @@ PARTITIONED BY DAY",
             ],
           },
           "queryContext": Object {
+            "executionMode": "async",
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
@@ -337,7 +350,7 @@ PARTITIONED BY DAY",
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "d337a3d8-e361-4795-8eaa-97ced72d9a7b_0",
+                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
@@ -375,15 +388,16 @@ PARTITIONED BY DAY",
                       "context": Object {
                         "__timeColumn": "v0",
                         "__user": "allowAll",
+                        "executionMode": "async",
                         "finalize": false,
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
                         "maxNumTasks": 2,
                         "maxParseExceptions": 2,
-                        "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                        "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                        "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                        "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
@@ -471,16 +485,16 @@ PARTITIONED BY DAY",
                     },
                   ],
                 },
-                "duration": 14412,
+                "duration": 14193,
                 "phase": "FAILED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2023-06-19T05:37:48.952Z",
+                "startTime": "2023-08-01T04:20:25.296Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "d337a3d8-e361-4795-8eaa-97ced72d9a7b_1",
+                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_1",
                   "input": Array [
                     Object {
                       "stage": 0,
@@ -550,7 +564,7 @@ PARTITIONED BY DAY",
               },
             ],
           },
-          "startTime": 2023-06-19T05:37:48.605Z,
+          "startTime": 2023-08-01T04:20:24.945Z,
           "status": "FAILED",
           "usageInfo": Object {
             "pendingTasks": 0,
@@ -567,19 +581,20 @@ PARTITIONED BY DAY",
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
-	at org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:183)
+	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:246)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:173)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
 	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:138)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:820)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -596,11 +611,11 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 22 more
+	... 23 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
             },
             Object {
               "error": Object {
@@ -612,19 +627,20 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
-	at org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:183)
+	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:246)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:173)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
 	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:138)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:820)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -641,11 +657,11 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 22 more
+	... 23 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
             },
           ],
         }
@@ -661,10 +677,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm-blank-lines",
-              "groupId": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
-              "id": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+              "groupId": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+              "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+              "nativeTypeNames": Array [
+                "LONG",
+                "STRING",
+              ],
               "resource": Object {
-                "availabilityGroup": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+                "availabilityGroup": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -694,15 +714,16 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                   ],
                   "context": Object {
                     "__user": "allowAll",
+                    "executionMode": "async",
                     "finalize": false,
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
                     "maxNumTasks": 2,
                     "maxParseExceptions": 2,
-                    "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                    "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                    "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                    "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
@@ -769,13 +790,14 @@ FROM TABLE(
 ) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
 PARTITIONED BY DAY",
               "sqlQueryContext": Object {
+                "executionMode": "async",
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
                 "maxParseExceptions": 2,
-                "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                 "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                 "sqlReplaceTimeChunks": "all",
               },
               "sqlResultsContext": Object {
@@ -789,7 +811,7 @@ PARTITIONED BY DAY",
               ],
               "type": "query_controller",
             },
-            "task": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+            "task": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
           },
           "capacityInfo": undefined,
           "destination": Object {
@@ -800,7 +822,8 @@ PARTITIONED BY DAY",
             "segmentGranularity": "DAY",
             "type": "dataSource",
           },
-          "duration": 14760,
+          "destinationPages": undefined,
+          "duration": 14545,
           "engine": "sql-msq-task",
           "error": Object {
             "error": Object {
@@ -810,9 +833,9 @@ PARTITIONED BY DAY",
               "rootErrorCode": "CannotParseExternalData",
             },
             "host": "localhost",
-            "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
           },
-          "id": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+          "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
@@ -820,15 +843,16 @@ PARTITIONED BY DAY",
             ],
             "context": Object {
               "__user": "allowAll",
+              "executionMode": "async",
               "finalize": false,
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
-              "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+              "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "\\"DAY\\"",
-              "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+              "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
@@ -878,6 +902,7 @@ PARTITIONED BY DAY",
             ],
           },
           "queryContext": Object {
+            "executionMode": "async",
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
@@ -948,7 +973,7 @@ PARTITIONED BY DAY",
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "d337a3d8-e361-4795-8eaa-97ced72d9a7b_0",
+                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
@@ -986,15 +1011,16 @@ PARTITIONED BY DAY",
                       "context": Object {
                         "__timeColumn": "v0",
                         "__user": "allowAll",
+                        "executionMode": "async",
                         "finalize": false,
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
                         "maxNumTasks": 2,
                         "maxParseExceptions": 2,
-                        "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                        "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                        "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                        "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
@@ -1082,16 +1108,16 @@ PARTITIONED BY DAY",
                     },
                   ],
                 },
-                "duration": 14412,
+                "duration": 14193,
                 "phase": "FAILED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2023-06-19T05:37:48.952Z",
+                "startTime": "2023-08-01T04:20:25.296Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "d337a3d8-e361-4795-8eaa-97ced72d9a7b_1",
+                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_1",
                   "input": Array [
                     Object {
                       "stage": 0,
@@ -1161,7 +1187,7 @@ PARTITIONED BY DAY",
               },
             ],
           },
-          "startTime": 2023-06-19T05:37:48.605Z,
+          "startTime": 2023-08-01T04:20:24.945Z,
           "status": "FAILED",
           "usageInfo": Object {
             "pendingTasks": 0,
@@ -1178,19 +1204,20 @@ PARTITIONED BY DAY",
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
-	at org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:183)
+	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:246)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:173)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
 	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:138)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:820)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1207,11 +1234,11 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 22 more
+	... 23 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
             },
             Object {
               "error": Object {
@@ -1223,19 +1250,20 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
-	at org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:183)
+	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:246)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:173)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
 	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:138)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:820)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1252,11 +1280,11 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 22 more
+	... 23 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
             },
           ],
         }
@@ -1292,6 +1320,7 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
         "label": "Native query",
       },
       undefined,
+      undefined,
       Object {
         "icon": "error",
         "id": "error",
@@ -1315,10 +1344,14 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
               "useLineageBasedSegmentAllocation": true,
             },
             "dataSource": "kttm-blank-lines",
-            "groupId": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
-            "id": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+            "groupId": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+            "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+            "nativeTypeNames": Array [
+              "LONG",
+              "STRING",
+            ],
             "resource": Object {
-              "availabilityGroup": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+              "availabilityGroup": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
               "requiredCapacity": 1,
             },
             "spec": Object {
@@ -1348,15 +1381,16 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
                 ],
                 "context": Object {
                   "__user": "allowAll",
+                  "executionMode": "async",
                   "finalize": false,
                   "finalizeAggregations": false,
                   "groupByEnableMultiValueUnnesting": false,
                   "maxNumTasks": 2,
                   "maxParseExceptions": 2,
-                  "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                  "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                   "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                   "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                  "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                  "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                   "sqlReplaceTimeChunks": "all",
                 },
                 "dataSource": Object {
@@ -1423,13 +1457,14 @@ FROM TABLE(
 ) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
 PARTITIONED BY DAY",
             "sqlQueryContext": Object {
+              "executionMode": "async",
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
-              "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+              "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
               "sqlInsertSegmentGranularity": "\\"DAY\\"",
-              "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+              "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
               "sqlReplaceTimeChunks": "all",
             },
             "sqlResultsContext": Object {
@@ -1443,7 +1478,7 @@ PARTITIONED BY DAY",
             ],
             "type": "query_controller",
           },
-          "task": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+          "task": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
         },
         "capacityInfo": undefined,
         "destination": Object {
@@ -1454,7 +1489,8 @@ PARTITIONED BY DAY",
           "segmentGranularity": "DAY",
           "type": "dataSource",
         },
-        "duration": 14760,
+        "destinationPages": undefined,
+        "duration": 14545,
         "engine": "sql-msq-task",
         "error": Object {
           "error": Object {
@@ -1464,9 +1500,9 @@ PARTITIONED BY DAY",
             "rootErrorCode": "CannotParseExternalData",
           },
           "host": "localhost",
-          "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+          "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
         },
-        "id": "query-8f889312-e989-4b4c-9895-485a1fe796d3",
+        "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
         "nativeQuery": Object {
           "columns": Array [
             "agent_type",
@@ -1474,15 +1510,16 @@ PARTITIONED BY DAY",
           ],
           "context": Object {
             "__user": "allowAll",
+            "executionMode": "async",
             "finalize": false,
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
             "maxParseExceptions": 2,
-            "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+            "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
             "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
             "sqlInsertSegmentGranularity": "\\"DAY\\"",
-            "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+            "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
             "sqlReplaceTimeChunks": "all",
           },
           "dataSource": Object {
@@ -1532,6 +1569,7 @@ PARTITIONED BY DAY",
           ],
         },
         "queryContext": Object {
+          "executionMode": "async",
           "finalizeAggregations": false,
           "groupByEnableMultiValueUnnesting": false,
           "maxNumTasks": 2,
@@ -1602,7 +1640,7 @@ PARTITIONED BY DAY",
           "stages": Array [
             Object {
               "definition": Object {
-                "id": "d337a3d8-e361-4795-8eaa-97ced72d9a7b_0",
+                "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_0",
                 "input": Array [
                   Object {
                     "inputFormat": Object {
@@ -1640,15 +1678,16 @@ PARTITIONED BY DAY",
                     "context": Object {
                       "__timeColumn": "v0",
                       "__user": "allowAll",
+                      "executionMode": "async",
                       "finalize": false,
                       "finalizeAggregations": false,
                       "groupByEnableMultiValueUnnesting": false,
                       "maxNumTasks": 2,
                       "maxParseExceptions": 2,
-                      "queryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                      "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                       "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                       "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                      "sqlQueryId": "8f889312-e989-4b4c-9895-485a1fe796d3",
+                      "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
                       "sqlReplaceTimeChunks": "all",
                     },
                     "dataSource": Object {
@@ -1736,16 +1775,16 @@ PARTITIONED BY DAY",
                   },
                 ],
               },
-              "duration": 14412,
+              "duration": 14193,
               "phase": "FAILED",
               "sort": true,
               "stageNumber": 0,
-              "startTime": "2023-06-19T05:37:48.952Z",
+              "startTime": "2023-08-01T04:20:25.296Z",
               "workerCount": 1,
             },
             Object {
               "definition": Object {
-                "id": "d337a3d8-e361-4795-8eaa-97ced72d9a7b_1",
+                "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_1",
                 "input": Array [
                   Object {
                     "stage": 0,
@@ -1815,7 +1854,7 @@ PARTITIONED BY DAY",
             },
           ],
         },
-        "startTime": 2023-06-19T05:37:48.605Z,
+        "startTime": 2023-08-01T04:20:24.945Z,
         "status": "FAILED",
         "usageInfo": Object {
           "pendingTasks": 0,
@@ -1832,19 +1871,20 @@ PARTITIONED BY DAY",
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
-	at org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:183)
+	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:246)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:173)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
 	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:138)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:820)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1861,11 +1901,11 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 22 more
+	... 23 more
 ",
             "host": "localhost:8101",
             "stageNumber": 0,
-            "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
           },
           Object {
             "error": Object {
@@ -1877,19 +1917,20 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
 	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
-	at org.apache.druid.msq.input.external.ExternalInputSliceReader$1$1.hasNext(ExternalInputSliceReader.java:183)
+	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:246)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:173)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
 	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:138)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:820)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1906,11 +1947,11 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 22 more
+	... 23 more
 ",
             "host": "localhost:8101",
             "stageNumber": 0,
-            "taskId": "query-8f889312-e989-4b4c-9895-485a1fe796d3-worker0_0",
+            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
           },
         ],
       }

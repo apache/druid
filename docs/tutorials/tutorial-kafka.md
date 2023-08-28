@@ -45,9 +45,11 @@ Before you follow the steps in this tutorial, download Druid as described in the
    ```
 2. If you're already running Kafka on the machine you're using for this tutorial, delete or rename the `kafka-logs` directory in `/tmp`.
    
-   > Druid and Kafka both rely on [Apache ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br />
-   > 
-   > In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
+:::info
+ Druid and Kafka both rely on [Apache ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br />
+
+ In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
+:::
 
 3. In the Kafka root directory, run this command to start a Kafka broker:
 
@@ -76,8 +78,7 @@ In this section, you download sample data to the tutorial's directory and send t
 2. Download the sample data to your new directory and extract it:
 
    ```bash
-   cd sample-data
-   curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz
+   (cd sample-data && curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz)
    ```
 
 3. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic:
@@ -171,7 +172,9 @@ To use the console data loader:
 
     When the `kttm-kafka` datasource appears here, you can query it. See [Query your data](#query-your-data) for details.
 
-    > If the datasource doesn't appear after a minute you might not have set the supervisor to read data from the start of the stream&mdash;the `Use earliest offset` setting in the **Tune** step. Go to the **Ingestion** page and terminate the supervisor using the **Actions(...)** menu. [Load the sample data](#load-data-with-the-console-data-loader) again and apply the correct setting when you get to the **Tune** step.
+:::info
+ If the datasource doesn't appear after a minute you might not have set the supervisor to read data from the start of the stream&mdash;the `Use earliest offset` setting in the **Tune** step. Go to the **Ingestion** page and terminate the supervisor using the **Actions(...)** menu. [Load the sample data](#load-data-with-the-console-data-loader) again and apply the correct setting when you get to the **Tune** step.
+:::
 
 ### Submit a supervisor spec
 
@@ -265,13 +268,13 @@ You can also use the Druid API to submit a supervisor spec.
 1. Run the following command to download the sample spec:
 
    ```bash
-   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-kafka-supervisor.json
+   curl -o kttm-kafka-supervisor.json https://raw.githubusercontent.com/apache/druid/master/docs/assets/files/kttm-kafka-supervisor.json
    ```
 
 2. Run the following command to submit the spec in the `kttm-kafka-supervisor.json` file:
 
     ```bash
-    curl -XPOST -H 'Content-Type: application/json' kttm-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
+    curl -X POST -H 'Content-Type: application/json' -d @kttm-kafka-supervisor.json http://localhost:8081/druid/indexer/v1/supervisor
     ```
 
     After Druid successfully creates the supervisor, you get a response containing the supervisor ID: `{"id":"kttm-kafka-supervisor-api"}`.

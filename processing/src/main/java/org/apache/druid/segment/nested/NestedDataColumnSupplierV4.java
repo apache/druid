@@ -115,7 +115,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         final ByteBuffer stringDictionaryBuffer = loadInternalFile(
             mapper,
             metadata,
-            NestedDataColumnSerializerV4.STRING_DICTIONARY_FILE_NAME
+            NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
         );
 
         final int dictionaryStartPosition = stringDictionaryBuffer.position();
@@ -149,7 +149,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         final ByteBuffer longDictionaryBuffer = loadInternalFile(
             mapper,
             metadata,
-            NestedDataColumnSerializerV4.LONG_DICTIONARY_FILE_NAME
+            NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
         );
         longDictionarySupplier = FixedIndexed.read(
             longDictionaryBuffer,
@@ -160,7 +160,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         final ByteBuffer doubleDictionaryBuffer = loadInternalFile(
             mapper,
             metadata,
-            NestedDataColumnSerializerV4.DOUBLE_DICTIONARY_FILE_NAME
+            NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
         );
         doubleDictionarySupplier = FixedIndexed.read(
             doubleDictionaryBuffer,
@@ -172,7 +172,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
           final ByteBuffer arrayDictionarybuffer = loadInternalFile(
               mapper,
               metadata,
-              NestedDataColumnSerializerV4.ARRAY_DICTIONARY_FILE_NAME
+              NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME
           );
           arrayDictionarySupplier = FrontCodedIntArrayIndexed.read(
               arrayDictionarybuffer,
@@ -181,10 +181,10 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         } else {
           arrayDictionarySupplier = null;
         }
-        final ByteBuffer rawBuffer = loadInternalFile(mapper, metadata, NestedDataColumnSerializerV4.RAW_FILE_NAME);
+        final ByteBuffer rawBuffer = loadInternalFile(mapper, metadata, NestedCommonFormatColumnSerializer.RAW_FILE_NAME);
         compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
-            NestedDataColumnSerializerV4.getInternalFileName(
-                metadata.getFileNameBase(), NestedDataColumnSerializerV4.RAW_FILE_NAME
+            NestedCommonFormatColumnSerializer.getInternalFileName(
+                metadata.getFileNameBase(), NestedCommonFormatColumnSerializer.RAW_FILE_NAME
             ),
             rawBuffer,
             metadata.getByteOrder(),
@@ -195,7 +195,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
           final ByteBuffer nullIndexBuffer = loadInternalFile(
               mapper,
               metadata,
-              NestedDataColumnSerializerV4.NULL_BITMAP_FILE_NAME
+              NestedCommonFormatColumnSerializer.NULL_BITMAP_FILE_NAME
           );
           nullValues = metadata.getBitmapSerdeFactory().getObjectStrategy().fromByteBufferWithSize(nullIndexBuffer);
         } else {
@@ -422,7 +422,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
   ) throws IOException
   {
     return fileMapper.mapFile(
-        NestedDataColumnSerializerV4.getInternalFileName(metadata.getFileNameBase(), internalFileName)
+        NestedCommonFormatColumnSerializer.getInternalFileName(metadata.getFileNameBase(), internalFileName)
     );
   }
 }

@@ -42,22 +42,23 @@ const PERIOD_SUGGESTIONS: string[] = ['P1D', 'P7D', 'P1M', 'P1Y', 'P1000Y'];
 export interface RuleEditorProps {
   rule: Rule;
   tiers: string[];
-  onChange(newRule: Rule): void;
-  onDelete(): void;
-  moveUp: (() => void) | undefined;
-  moveDown: (() => void) | undefined;
+  onChange?: (newRule: Rule) => void;
+  onDelete?: () => void;
+  moveUp?: () => void;
+  moveDown?: () => void;
 }
 
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
   const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
+  const disabled = !onChange;
 
   function removeTier(key: string) {
     const newTierReplicants = { ...rule.tieredReplicants };
     delete newTierReplicants[key];
 
     const newRule = { ...rule, tieredReplicants: newTierReplicants };
-    onChange(newRule);
+    onChange?.(newRule);
   }
 
   function addTier() {
@@ -72,7 +73,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       }
     }
 
-    onChange(RuleUtil.addTieredReplicant(rule, newTierName, 1));
+    onChange?.(RuleUtil.addTieredReplicant(rule, newTierName, 1));
   }
 
   function renderTiers() {
@@ -81,7 +82,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
     if (!tieredReplicantsList.length) {
       return (
         <FormGroup>
-          There is no historical replication configured, data will not be loaded on hisotricals.
+          There is no historical replication configured, data will not be loaded on historicals.
         </FormGroup>
       );
     }
@@ -90,14 +91,15 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       <FormGroup>
         {tieredReplicantsList.map(([tier, replication]) => (
           <ControlGroup key={tier}>
-            <Button minimal style={{ pointerEvents: 'none' }}>
+            <Button minimal disabled={disabled} style={{ pointerEvents: 'none' }}>
               Tier:
             </Button>
             <HTMLSelect
               fill
               value={tier}
+              disabled={disabled}
               onChange={(e: any) =>
-                onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
+                onChange?.(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
               }
             >
               <option key={tier} value={tier}>
@@ -111,19 +113,20 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                   </option>
                 ))}
             </HTMLSelect>
-            <Button minimal style={{ pointerEvents: 'none' }}>
+            <Button minimal disabled={disabled} style={{ pointerEvents: 'none' }}>
               Replicants:
             </Button>
             <NumericInput
               value={replication}
+              disabled={disabled}
               onValueChange={(v: number) => {
                 if (isNaN(v)) return;
-                onChange(RuleUtil.addTieredReplicant(rule, tier, v));
+                onChange?.(RuleUtil.addTieredReplicant(rule, tier, v));
               }}
               min={0}
               max={256}
             />
-            <Button onClick={() => removeTier(tier)} icon={IconNames.TRASH} />
+            {onChange && <Button onClick={() => removeTier(tier)} icon={IconNames.TRASH} />}
           </ControlGroup>
         ))}
       </FormGroup>
@@ -131,7 +134,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
   }
 
   function renderTierAdder() {
-    const { rule, tiers } = props;
+    if (!onChange) return;
     const disabled = Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length;
 
     return (
@@ -163,7 +166,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
         <div className="spacer" />
         {moveUp && <Button minimal icon={IconNames.ARROW_UP} onClick={moveUp} />}
         {moveDown && <Button minimal icon={IconNames.ARROW_DOWN} onClick={moveDown} />}
-        <Button minimal icon={IconNames.TRASH} onClick={onDelete} />
+        {onDelete && <Button minimal icon={IconNames.TRASH} onClick={onDelete} />}
       </div>
 
       <Collapse isOpen={isOpen}>
@@ -172,7 +175,8 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
             <ControlGroup>
               <HTMLSelect
                 value={rule.type}
-                onChange={(e: any) => onChange(RuleUtil.changeRuleType(rule, e.target.value))}
+                disabled={disabled}
+                onChange={(e: any) => onChange?.(RuleUtil.changeRuleType(rule, e.target.value))}
               >
                 {RuleUtil.TYPES.map(type => (
                   <option key={type} value={type}>
@@ -184,9 +188,10 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 <SuggestibleInput
                   value={rule.period || ''}
                   sanitizer={durationSanitizer}
+                  disabled={disabled}
                   onValueChange={period => {
                     if (typeof period === 'undefined') return;
-                    onChange(RuleUtil.changePeriod(rule, period));
+                    onChange?.(RuleUtil.changePeriod(rule, period));
                   }}
                   placeholder={PERIOD_SUGGESTIONS[0]}
                   suggestions={PERIOD_SUGGESTIONS}
@@ -197,15 +202,17 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                   className="include-future"
                   checked={rule.includeFuture || false}
                   label="Include future"
+                  disabled={disabled}
                   onChange={() => {
-                    onChange(RuleUtil.changeIncludeFuture(rule, !rule.includeFuture));
+                    onChange?.(RuleUtil.changeIncludeFuture(rule, !rule.includeFuture));
                   }}
                 />
               )}
               {RuleUtil.hasInterval(rule) && (
                 <InputGroup
                   value={rule.interval || ''}
-                  onChange={(e: any) => onChange(RuleUtil.changeInterval(rule, e.target.value))}
+                  readOnly={!onChange}
+                  onChange={(e: any) => onChange?.(RuleUtil.changeInterval(rule, e.target.value))}
                   placeholder="2010-01-01/2020-01-01"
                 />
               )}

@@ -21,6 +21,7 @@ package org.apache.druid.msq.sql.resources;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -49,6 +50,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
@@ -72,10 +74,8 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
@@ -103,7 +103,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -115,9 +114,9 @@ import java.util.stream.Collectors;
 public class SqlStatementResource
 {
 
+  public static final String RESULT_FORMAT = "__resultFormat";
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
-  private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
@@ -126,14 +125,12 @@ public class SqlStatementResource
   @Inject
   public SqlStatementResource(
       final @MSQ SqlStatementFactory msqSqlStatementFactory,
-      final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnector storageConnector
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
-    this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnector;
@@ -148,16 +145,8 @@ public class SqlStatementResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response isEnabled(@Context final HttpServletRequest request)
   {
-    // All authenticated users are authorized for this API: check an empty resource list.
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        Collections.emptyList(),
-        authorizerMapper
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
-    }
+    // All authenticated users are authorized for this API.
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
 
     return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
@@ -167,12 +156,14 @@ public class SqlStatementResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response doPost(final SqlQuery sqlQuery, @Context final HttpServletRequest req)
   {
-    final HttpStatement stmt = msqSqlStatementFactory.httpStatement(sqlQuery, req);
+    SqlQuery modifiedQuery = createModifiedSqlQuery(sqlQuery);
+
+    final HttpStatement stmt = msqSqlStatementFactory.httpStatement(modifiedQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
     boolean isDebug = false;
     try {
-      QueryContext queryContext = QueryContext.of(sqlQuery.getContext());
+      QueryContext queryContext = QueryContext.of(modifiedQuery.getContext());
       isDebug = queryContext.isDebug();
       contextChecks(queryContext);
 
@@ -190,7 +181,7 @@ public class SqlStatementResource
         return buildTaskResponse(sequence, stmt.query().authResult().getIdentity());
       } else {
         // Used for EXPLAIN
-        return buildStandardResponse(sequence, sqlQuery, sqlQueryId, rowTransformer);
+        return buildStandardResponse(sequence, modifiedQuery, sqlQueryId, rowTransformer);
       }
     }
     catch (DruidException e) {
@@ -235,14 +226,7 @@ public class SqlStatementResource
   )
   {
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
@@ -278,18 +262,12 @@ public class SqlStatementResource
   public Response doGetResults(
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
+      @QueryParam("resultFormat") String resultFormat,
       @Context final HttpServletRequest req
   )
   {
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       if (page != null && page < 0) {
@@ -328,12 +306,14 @@ public class SqlStatementResource
         return Response.ok().build();
       }
 
+      ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
       return Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
-          new CountingOutputStream(outputStream)
+          new CountingOutputStream(outputStream),
+          preferredFormat
       )).build();
     }
 
@@ -368,14 +348,7 @@ public class SqlStatementResource
   {
 
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
@@ -658,6 +631,48 @@ public class SqlStatementResource
     return msqControllerTask;
   }
 
+  /**
+   * Creates a new sqlQuery from the user submitted sqlQuery after performing required modifications.
+   */
+  private SqlQuery createModifiedSqlQuery(SqlQuery sqlQuery)
+  {
+    Map<String, Object> context = sqlQuery.getContext();
+    if (context.containsKey(RESULT_FORMAT)) {
+      throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
+    }
+    Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
+                                                      .putAll(context)
+                                                      .put(RESULT_FORMAT, sqlQuery.getResultFormat().toString())
+                                                      .build();
+    return new SqlQuery(
+        sqlQuery.getQuery(),
+        sqlQuery.getResultFormat(),
+        sqlQuery.includeHeader(),
+        sqlQuery.includeTypesHeader(),
+        sqlQuery.includeSqlTypesHeader(),
+        modifiedContext,
+        sqlQuery.getParameters()
+    );
+  }
+
+  private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQSpec msqSpec)
+  {
+    if (resultFormatParam == null) {
+      return QueryContexts.getAsEnum(
+          RESULT_FORMAT,
+          msqSpec.getQuery().context().get(RESULT_FORMAT),
+          ResultFormat.class,
+          ResultFormat.DEFAULT_RESULT_FORMAT
+      );
+    }
+
+    return QueryContexts.getAsEnum(
+        "resultFormat",
+        resultFormatParam,
+        ResultFormat.class
+    );
+  }
+
   private Optional<Yielder<Object[]>> getResultYielder(
       String queryId,
       Long page,
@@ -726,7 +741,7 @@ public class SqlStatementResource
                                         finalStage.getId(),
                                         (int) pageInformation.getId(),
                                         (int) pageInformation.getId()
-// we would always have partition number == worker number
+                                        // we would always have partition number == worker number
                                     ));
                                   }
                                   catch (Exception e) {
@@ -769,29 +784,15 @@ public class SqlStatementResource
       Optional<List<ColumnNameAndTypes>> signature,
       Closer closer,
       Optional<Yielder<Object[]>> results,
-      CountingOutputStream os
+      CountingOutputStream os,
+      ResultFormat resultFormat
   ) throws IOException
   {
     try {
-      try (final ResultFormat.Writer writer = ResultFormat.OBJECTLINES.createFormatter(os, jsonMapper)) {
+      try (final ResultFormat.Writer writer = resultFormat.createFormatter(os, jsonMapper)) {
         Yielder<Object[]> yielder = results.get();
         List<ColumnNameAndTypes> rowSignature = signature.get();
-        writer.writeResponseStart();
-
-        while (!yielder.isDone()) {
-          writer.writeRowStart();
-          Object[] row = yielder.get();
-          for (int i = 0; i < Math.min(rowSignature.size(), row.length); i++) {
-            writer.writeRowField(
-                rowSignature.get(i).getColName(),
-                row[i]
-            );
-          }
-          writer.writeRowEnd();
-          yielder = yielder.next(null);
-        }
-        writer.writeResponseEnd();
-        yielder.close();
+        resultPusherInternal(writer, yielder, rowSignature);
       }
       catch (Exception e) {
         log.error(e, "Unable to stream results back for query[%s]", queryId);
@@ -805,6 +806,31 @@ public class SqlStatementResource
     finally {
       closer.close();
     }
+  }
+
+  @VisibleForTesting
+  static void resultPusherInternal(
+      ResultFormat.Writer writer,
+      Yielder<Object[]> yielder,
+      List<ColumnNameAndTypes> rowSignature
+  ) throws IOException
+  {
+    writer.writeResponseStart();
+
+    while (!yielder.isDone()) {
+      writer.writeRowStart();
+      Object[] row = yielder.get();
+      for (int i = 0; i < Math.min(rowSignature.size(), row.length); i++) {
+        writer.writeRowField(
+            rowSignature.get(i).getColName(),
+            row[i]
+        );
+      }
+      writer.writeRowEnd();
+      yielder = yielder.next(null);
+    }
+    writer.writeResponseEnd();
+    yielder.close();
   }
 
   private static void throwIfQueryIsNotSuccessful(String queryId, TaskStatusPlus statusPlus)

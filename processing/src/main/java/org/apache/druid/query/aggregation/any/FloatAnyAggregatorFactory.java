@@ -157,12 +157,6 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new FloatAnyAggregatorFactory(fieldName, fieldName));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     // handle "NaN" / "Infinity" values serialized as strings in JSON

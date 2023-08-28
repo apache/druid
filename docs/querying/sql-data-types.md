@@ -23,8 +23,10 @@ sidebar_label: "SQL data types"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 Druid associates each column with a specific data type. This topic describes supported data types in [Druid SQL](./sql.md).
 
@@ -64,15 +66,14 @@ The following table describes how Druid maps SQL types onto native types when ru
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
-<sup>*</sup> Default value applies if `druid.generic.useDefaultValueForNull = true` (the default mode). Otherwise, the default value is `NULL` for all types.
+<sup>*</sup> The default value is `NULL` for all types, except in legacy mode (`druid.generic.useDefaultValueForNull = true`) which initialize a default value. 
 
 Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
 
 Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
 
-If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid either substitutes a default
-value (when `druid.generic.useDefaultValueForNull = true`, the default mode), or substitutes [NULL](#null-values) (when
-`druid.generic.useDefaultValueForNull = false`). NULL values cast to non-nullable types are also substituted with a default value. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
+If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid a substitutes [NULL](#null-values).
+When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
 ## Multi-value strings
 
@@ -84,10 +85,12 @@ You can treat multi-value string dimensions as arrays using special
 
 Grouping by multi-value dimensions observes the native Druid multi-value aggregation behavior, which is similar to an implicit SQL UNNEST. See [Grouping](multi-value-dimensions.md#grouping) for more information.
 
-> Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
+:::info
+ Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 `false`, even though it is possible for a single row to have both `'a'` and `'b'` as values for `multi_val_dim`.
->
-> The SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide nearly all possible native functionality.
+
+ The SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide nearly all possible native functionality.
+:::
 
 ## Arrays
 
@@ -113,9 +116,11 @@ distinguish between empty and null rows. An empty row will never appear natively
 but any multi-value function which manipulates the array form of the value may produce an empty array, which is handled
 separately while processing.
 
-> Do not mix the usage of multi-value functions and normal scalar functions within the same expression, as the planner will be unable
-> to determine how to properly process the value given its ambiguous usage. A multi-value string must be treated consistently within
-> an expression.
+:::info
+ Do not mix the usage of multi-value functions and normal scalar functions within the same expression, as the planner will be unable
+ to determine how to properly process the value given its ambiguous usage. A multi-value string must be treated consistently within
+ an expression.
+:::
 
 When converted to ARRAY or used with [array functions](./sql-array-functions.md), multi-value strings behave as standard SQL arrays and can no longer
 be manipulated with non-array functions.
@@ -129,32 +134,32 @@ VARCHAR. ARRAY typed results will be serialized into stringified JSON arrays if 
 ## NULL values
 
 The [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling)
-runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, set this to `false`.
+runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, set this to `false` (the default).
 
-When `druid.generic.useDefaultValueForNull = true` (the default mode), Druid treats NULLs and empty strings
-interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
-For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col`
-contains an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty
-string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows
-where `expr` is neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing
-values are treated as zeroes.
-
-When `druid.generic.useDefaultValueForNull = false`, NULLs are treated more closely to the SQL standard. In this mode,
+When `druid.generic.useDefaultValueForNull = false` (the default), NULLs are treated more closely to the SQL standard. In this mode,
 numeric NULL is permitted, and NULLs and empty strings are no longer treated as interchangeable. This property
 affects both storage and querying, and must be set on all Druid service types to be available at both ingestion time
 and query time. There is some overhead associated with the ability to handle NULLs; see
 the [segment internals](../design/segments.md#handling-null-values) documentation for more details.
 
+When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid treats NULLs and empty strings
+interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
+For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col`
+contains an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty
+string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows
+where `expr` is neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing
+values are treated as zeroes. This was the default prior to Druid 28.0.0.
+
 ## Boolean logic
 
 The [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations)
-runtime property controls Druid's boolean logic mode. For the most SQL compliant behavior, set this to `true`.
-
-When `druid.expressions.useStrictBooleans = false` (the default mode), Druid uses two-valued logic.
+runtime property controls Druid's boolean logic mode. For the most SQL compliant behavior, set this to `true` (the default).
 
 When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic for
 [expressions](math-expr.md) evaluation, such as `expression` virtual columns or `expression` filters.
 However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
+
+When `druid.expressions.useStrictBooleans = false` (legacy mode), Druid uses two-valued logic.
 
 ## Nested columns
 

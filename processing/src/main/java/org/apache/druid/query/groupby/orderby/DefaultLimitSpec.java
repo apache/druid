@@ -280,12 +280,6 @@ public class DefaultLimitSpec implements LimitSpec
     }
   }
 
-  @Override
-  public LimitSpec merge(LimitSpec other)
-  {
-    return this;
-  }
-
   private ColumnType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
   {
     for (DimensionSpec dimSpec : dimensions) {

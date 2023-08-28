@@ -130,7 +130,7 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
     final List<Result<TopNResultValue>> expected = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 ImmutableList.of(
                     new DimensionAndMetricValueExtractor(MapVirtualColumnTestBase.mapOf("count", 2L, "params.key3", null)),
                     new DimensionAndMetricValueExtractor(MapVirtualColumnTestBase.mapOf("count", 1L, "params.key3", "value3"))

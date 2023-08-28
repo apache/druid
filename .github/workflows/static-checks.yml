@@ -95,13 +95,6 @@ jobs:
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
-      - name: analyze dependencies for hadoop2
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop2
-        run: |
-          ./.github/scripts/analyze_dependencies_script.sh
-
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
@@ -173,7 +166,7 @@ jobs:
         run: |
           (cd website && npm install)
           cd website
-          npm run link-lint
+          npm run build
           npm run spellcheck
 
       - name: web console

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -27,7 +26,6 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -77,8 +75,7 @@ public class MetadataResource
       SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
-      DruidCoordinator coordinator,
-      @Json ObjectMapper jsonMapper
+      DruidCoordinator coordinator
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
@@ -282,9 +279,10 @@ public class MetadataResource
   @Path("/datasources/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response isSegmentUsed(
+  public Response getSegment(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId
+      @PathParam("segmentId") String segmentId,
+      @QueryParam("includeUnused") @Nullable Boolean includeUnused
   )
   {
     ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
@@ -297,6 +295,11 @@ public class MetadataResource
       if (segment != null) {
         return Response.status(Response.Status.OK).entity(segment).build();
       }
+    }
+    // fallback to db
+    DataSegment segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId, Boolean.TRUE.equals(includeUnused));
+    if (segment != null) {
+      return Response.status(Response.Status.OK).entity(segment).build();
     }
     return Response.status(Response.Status.NOT_FOUND).build();
   }

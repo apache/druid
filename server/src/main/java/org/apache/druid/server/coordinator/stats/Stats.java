@@ -129,6 +129,26 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("groupRunTime", "coordinator/global/time");
   }
 
+  public static class Kill
+  {
+    public static final CoordinatorStat COMPACTION_CONFIGS
+        = CoordinatorStat.toDebugAndEmit("killedCompactConfigs", "metadata/kill/compaction/count");
+    public static final CoordinatorStat SUPERVISOR_SPECS
+        = CoordinatorStat.toDebugAndEmit("killedSupervisorSpecs", "metadata/kill/supervisor/count");
+    public static final CoordinatorStat RULES
+        = CoordinatorStat.toDebugAndEmit("killedRules", "metadata/kill/rule/count");
+    public static final CoordinatorStat AUDIT_LOGS
+        = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
+    public static final CoordinatorStat DATASOURCES
+        = CoordinatorStat.toDebugAndEmit("killedDatasources", "metadata/kill/datasource/count");
+    public static final CoordinatorStat AVAILABLE_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killAvailSlots", "killTask/availableSlot/count");
+    public static final CoordinatorStat MAX_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
+    public static final CoordinatorStat SUBMITTED_TASKS
+        = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+  }
+
   public static class Balancer
   {
     public static final CoordinatorStat COMPUTATION_ERRORS = CoordinatorStat.toLogAndEmit(

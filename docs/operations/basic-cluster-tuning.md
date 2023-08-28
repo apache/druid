@@ -326,13 +326,13 @@ The TopN and GroupBy queries use these buffers to store intermediate computed re
 
 ### GroupBy merging buffers
 
-If you plan to issue GroupBy V2 queries, `druid.processing.numMergeBuffers` is an important configuration property.
+If you plan to issue GroupBy queries, `druid.processing.numMergeBuffers` is an important configuration property.
 
-GroupBy V2 queries use an additional pool of off-heap buffers for merging query results. These buffers have the same size as the processing buffers described above, set by the `druid.processing.buffer.sizeBytes` property.
+GroupBy queries use an additional pool of off-heap buffers for merging query results. These buffers have the same size as the processing buffers described above, set by the `druid.processing.buffer.sizeBytes` property.
 
-Non-nested GroupBy V2 queries require 1 merge buffer per query, while a nested GroupBy V2 query requires 2 merge buffers (regardless of the depth of nesting).
+Non-nested GroupBy queries require 1 merge buffer per query, while a nested GroupBy query requires 2 merge buffers (regardless of the depth of nesting).
 
-The number of merge buffers determines the number of GroupBy V2 queries that can be processed concurrently.
+The number of merge buffers determines the number of GroupBy queries that can be processed concurrently.
 
 <a name="connection-pool"></a>
 
@@ -421,8 +421,10 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:HeapDumpPath=/var/logs/druid/historical.hprof
 -XX:MaxDirectMemorySize=1g
 ```
-> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate
+:::info
+ Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate
 for your specific scenario and be sure to test any changes in staging environments.
+:::
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 

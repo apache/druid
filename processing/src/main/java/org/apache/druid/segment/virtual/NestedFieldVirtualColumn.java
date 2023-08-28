@@ -535,7 +535,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         );
       }
       final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(parts, offset);
-      if (leastRestrictiveType != null && leastRestrictiveType.isArray() && !expectedType.isArray()) {
+      if (leastRestrictiveType != null &&
+          leastRestrictiveType.isArray() &&
+          expectedType != null &&
+          !expectedType.isArray()
+      ) {
         final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
         final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(expectedType);
         return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
@@ -575,6 +579,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
     if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
+      final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(
+          arrayColumn.getLogicalType().isArray() ? arrayColumn.getLogicalType().getElementType() : arrayColumn.getLogicalType()
+      );
+      final ExpressionType castTo = expectedType == null
+                                    ? ExpressionType.STRING
+                                    : ExpressionType.fromColumnTypeStrict(expectedType);
       VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -595,7 +605,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
               if (maybeArray instanceof Object[]) {
                 Object[] anArray = (Object[]) maybeArray;
                 if (elementNumber < anArray.length) {
-                  elements[i] = anArray[elementNumber];
+                  elements[i] = ExprEval.ofType(elementType, anArray[elementNumber]).castTo(castTo).value();
                 } else {
                   elements[i] = null;
                 }

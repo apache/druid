@@ -76,8 +76,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
@@ -476,7 +478,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           (Function<TaskStatus, TaskStatus>) status -> {
             shutdownTask(task);
             return status;
-          }
+          },
+          MoreExecutors.directExecutor()
       );
       return cleanupFuture;
     }
@@ -708,6 +711,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
         .taskLogPusher(null)
         .attemptId("1")
+        .emitter(new ServiceEmitter("service", "host", new CachingEmitter()))
         .build();
   }
 
@@ -1035,7 +1039,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       ImmutableDruidDataSource druidDataSource;
       try {

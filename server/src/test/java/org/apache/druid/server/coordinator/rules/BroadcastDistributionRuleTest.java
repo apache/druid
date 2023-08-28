@@ -238,7 +238,7 @@ public class BroadcastDistributionRuleTest
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
         .build();
   }
 

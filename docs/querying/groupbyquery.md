@@ -23,17 +23,21 @@ sidebar_label: "GroupBy"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes a query
-> type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql-translation.md#query-types).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes a query
+ type in the native language. For information about when Druid SQL will use this query type, refer to the
+ [SQL documentation](sql-translation.md#query-types).
+:::
 
 These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
-> Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,
-> consider [Timeseries](timeseriesquery.md) and [TopN](topnquery.md) queries as well as
-> groupBy. Their performance may be better in some cases. See [Alternatives](#alternatives) below for more details.
+:::info
+ Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,
+ consider [Timeseries](timeseriesquery.md) and [TopN](topnquery.md) queries as well as
+ groupBy. Their performance may be better in some cases. See [Alternatives](#alternatives) below for more details.
+:::
 
 An example groupBy query object is shown below:
 
@@ -227,56 +231,18 @@ The response for the query above would look something like:
 ]
 ```
 
-> Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0. 
-> In release 0.17.0 and earlier, such dimensions were entirely excluded from the result. If you were relying on this old behavior to determine whether a particular dimension was not part of
-> a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#grouping-aggregator) instead.  
+:::info
+ Notice that dimensions that are not included in an individual subtotalsSpec grouping are returned with a `null` value. This response format represents a behavior change as of Apache Druid 0.18.0.
+ In release 0.17.0 and earlier, such dimensions were entirely excluded from the result. If you were relying on this old behavior to determine whether a particular dimension was not part of
+ a subtotal grouping, you can now use [Grouping aggregator](aggregations.md#grouping-aggregator) instead.
+:::
 
 
 ## Implementation details
 
-### Strategies
-
-GroupBy queries can be executed using two different strategies. The default strategy for a cluster is determined by the
-"druid.query.groupBy.defaultStrategy" runtime property on the Broker. This can be overridden using "groupByStrategy" in
-the query context. If neither the context field nor the property is set, the "v2" strategy will be used.
-
-- "v2", the default, is designed to offer better performance and memory management. This strategy generates
-per-segment results using a fully off-heap map. Data processes merge the per-segment results using a fully off-heap
-concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
-processes return sorted results to the Broker, which merges result streams using an N-way merge. The broker materializes
-the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
-back as they are merged.
-
-- "v1", a legacy engine, generates per-segment results on data processes (Historical, realtime, MiddleManager) using a map which
-is partially on-heap (dimension keys and the map itself) and partially off-heap (the aggregated values). Data processes then
-merge the per-segment results using Druid's indexing mechanism. This merging is multi-threaded by default, but can
-optionally be single-threaded. The Broker merges the final result set using Druid's indexing mechanism again. The broker
-merging is always single-threaded. Because the Broker merges results using the indexing mechanism, it must materialize
-the full result set before returning any results. On both the data processes and the Broker, the merging index is fully
-on-heap by default, but it can optionally store aggregated values off-heap.
-
-### Differences between v1 and v2
-
-Query API and results are compatible between the two engines; however, there are some differences from a cluster
-configuration perspective:
-
-- groupBy v1 controls resource usage using a row-based limit (maxResults) whereas groupBy v2 uses bytes-based limits.
-In addition, groupBy v1 merges results on-heap, whereas groupBy v2 merges results off-heap. These factors mean that
-memory tuning and resource limits behave differently between v1 and v2. In particular, due to this, some queries
-that can complete successfully in one engine may exceed resource limits and fail with the other engine. See the
-"Memory tuning and resource limits" section for more details.
-- groupBy v1 imposes no limit on the number of concurrently running queries, whereas groupBy v2 controls memory usage
-by using a finite-sized merge buffer pool. By default, the number of merge buffers is 1/4 the number of processing
-threads. You can adjust this as necessary to balance concurrency and memory usage.
-- groupBy v1 supports caching on either the Broker or Historical processes, whereas groupBy v2 only supports caching on
-Historical processes.
-- groupBy v2 supports both array-based aggregation and hash-based aggregation. The array-based aggregation is used only
-when the grouping key is a single indexed string column. In array-based aggregation, the dictionary-encoded value is used
-as the index, so the aggregated values in the array can be accessed directly without finding buckets based on hashing.
-
 ### Memory tuning and resource limits
 
-When using groupBy v2, four parameters control resource usage and limits:
+When using groupBy, four parameters control resource usage and limits:
 
 - `druid.processing.buffer.sizeBytes`: size of the off-heap hash table used for aggregation, per query, in bytes. At
 most `druid.processing.numMergeBuffers` of these will be created at once, which also serves as an upper limit on the
@@ -300,7 +266,7 @@ sorted and flushed to disk. Then, both in-memory structures will be cleared out 
 then go on to exceed `maxOnDiskStorage` will fail with a "Resource limit exceeded" error indicating that they ran out of
 disk space.
 
-With groupBy v2, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
+With groupBy, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
 will not exceed available memory for the maximum possible concurrent query load (given by
 `druid.processing.numMergeBuffers`). See the [basic cluster tuning guide](../operations/basic-cluster-tuning.md) 
 for more details about direct memory usage, organized by Druid process type.
@@ -309,24 +275,18 @@ Brokers do not need merge buffers for basic groupBy queries. Queries with subque
 
 Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.md#parallel-combine) is enabled, in which case they need two merge buffers per query.
 
-When using groupBy v1, all aggregation is done on-heap, and resource limits are done through the parameter
-`druid.query.groupBy.maxResults`. This is a cap on the maximum number of results in a result set. Queries that exceed
-this limit will fail with a "Resource limit exceeded" error indicating they exceeded their row limit. Cluster
-operators should make sure that the on-heap aggregations will not exceed available JVM heap space for the expected
-concurrent query load.
-
-### Performance tuning for groupBy v2
+### Performance tuning for groupBy
 
 #### Limit pushdown optimization
 
-Druid pushes down the `limit` spec in groupBy queries to the segments on Historicals wherever possible to early prune unnecessary intermediate results and minimize the amount of data transferred to Brokers. By default, this technique is applied only when all fields in the `orderBy` spec is a subset of the grouping keys. This is because the `limitPushDown` doesn't guarantee the exact results if the `orderBy` spec includes any fields that are not in the grouping keys. However, you can enable this technique even in such cases if you can sacrifice some accuracy for fast query processing like in topN queries. See `forceLimitPushDown` in [advanced groupBy v2 configurations](#groupby-v2-configurations).
+Druid pushes down the `limit` spec in groupBy queries to the segments on Historicals wherever possible to early prune unnecessary intermediate results and minimize the amount of data transferred to Brokers. By default, this technique is applied only when all fields in the `orderBy` spec is a subset of the grouping keys. This is because the `limitPushDown` doesn't guarantee the exact results if the `orderBy` spec includes any fields that are not in the grouping keys. However, you can enable this technique even in such cases if you can sacrifice some accuracy for fast query processing like in topN queries. See `forceLimitPushDown` in [advanced configurations](#advanced-configurations).
 
 
 #### Optimizing hash table
 
-The groupBy v2 engine uses an open addressing hash table for aggregation. The hash table is initialized with a given initial bucket number and gradually grows on buffer full. On hash collisions, the linear probing technique is used.
+The groupBy engine uses an open addressing hash table for aggregation. The hash table is initialized with a given initial bucket number and gradually grows on buffer full. On hash collisions, the linear probing technique is used.
 
-The default number of initial buckets is 1024 and the default max load factor of the hash table is 0.7. If you can see too many collisions in the hash table, you can adjust these numbers. See `bufferGrouperInitialBuckets` and `bufferGrouperMaxLoadFactor` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
+The default number of initial buckets is 1024 and the default max load factor of the hash table is 0.7. If you can see too many collisions in the hash table, you can adjust these numbers. See `bufferGrouperInitialBuckets` and `bufferGrouperMaxLoadFactor` in [advanced configurations](#advanced-configurations).
 
 
 #### Parallel combine
@@ -344,16 +304,16 @@ longer time than timeseries or topN queries, they should release processing thre
 However, you might care about the performance of some really heavy groupBy queries. Usually, the performance bottleneck
 of heavy groupBy queries is merging sorted aggregates. In such cases, you can use processing threads for it as well.
 This is called _parallel combine_. To enable parallel combine, see `numParallelCombineThreads` in
-[Advanced groupBy v2 configurations](#groupby-v2-configurations). Note that parallel combine can be enabled only when
+[advanced configurations](#advanced-configurations). Note that parallel combine can be enabled only when
 data is actually spilled (see [Memory tuning and resource limits](#memory-tuning-and-resource-limits)).
 
-Once parallel combine is enabled, the groupBy v2 engine can create a combining tree for merging sorted aggregates. Each
+Once parallel combine is enabled, the groupBy engine can create a combining tree for merging sorted aggregates. Each
 intermediate node of the tree is a thread merging aggregates from the child nodes. The leaf node threads read and merge
 aggregates from hash tables including spilled ones. Usually, leaf processes are slower than intermediate nodes because they
 need to read data from disk. As a result, less threads are used for intermediate nodes by default. You can change the
-degree of intermediate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
+degree of intermediate nodes. See `intermediateCombineDegree` in [advanced configurations](#advanced-configurations).
 
-Please note that each Historical needs two merge buffers to process a groupBy v2 query with parallel combine: one for
+Please note that each Historical needs two merge buffers to process a groupBy query with parallel combine: one for
 computing intermediate aggregates from each segment and another for combining intermediate aggregates in parallel.
 
 
@@ -371,17 +331,13 @@ results acceptable.
 
 ### Nested groupBys
 
-Nested groupBys (dataSource of type "query") are performed differently for "v1" and "v2". The Broker first runs the
-inner groupBy query in the usual way. "v1" strategy then materializes the inner query's results on-heap with Druid's
-indexing mechanism, and runs the outer query on these materialized results. "v2" strategy runs the outer query on the
-inner query's results stream with off-heap fact map and on-heap string dictionary that can spill to disk. Both
-strategy perform the outer query on the Broker in a single-threaded fashion.
+Nested groupBys (dataSource of type "query") are performed with the Broker first running the inner groupBy query in the
+usual way. Next, the outer query is run on the inner query's results stream with off-heap fact map and on-heap string
+dictionary that can spill to disk. The outer query is run on the Broker in a single-threaded fashion.
 
 ### Configurations
 
 This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](query-context.md).
-
-#### Configurations for groupBy v2
 
 Supported runtime properties:
 
@@ -399,30 +355,12 @@ Supported query contexts:
 
 ### Advanced configurations
 
-#### Common configurations for all groupBy strategies
-
 Supported runtime properties:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
 |`druid.query.groupBy.intermediateResultAsMapCompat`|Whether Brokers are able to understand map-based result rows. Setting this to `true` adds some overhead to all groupBy queries. It is required for compatibility with data servers running versions older than 0.16.0, which introduced [array-based result rows](#array-based-result-rows).|false|
-
-Supported query contexts:
-
-|Key|Description|
-|---|-----------|
-|`groupByStrategy`|Overrides the value of `druid.query.groupBy.defaultStrategy` for this query.|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
-
-
-#### GroupBy v2 configurations
-
-Supported runtime properties:
-
-|Property|Description|Default|
-|--------|-----------|-------|
 |`druid.query.groupBy.bufferGrouperInitialBuckets`|Initial number of buckets in the off-heap hash table used for grouping results. Set to 0 to use a reasonable default (1024).|0|
 |`druid.query.groupBy.bufferGrouperMaxLoadFactor`|Maximum load factor of the off-heap hash table used for grouping results. When the load factor exceeds this size, the table will be grown or spilled to disk. Set to 0 to use a reasonable default (0.7).|0|
 |`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
@@ -434,6 +372,7 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|None|
 |`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|None|
 |`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|None|
 |`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|None|
@@ -445,23 +384,6 @@ Supported query contexts:
 |`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|true|
 |`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|true|
 
-
-#### GroupBy v1 configurations
-
-Supported runtime properties:
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows for the per-segment grouping engine. This is a tuning parameter that does not impose a hard limit; rather, it potentially shifts merging work from the per-segment engine to the overall merging index. Queries that exceed this limit will not fail.|50000|
-|`druid.query.groupBy.maxResults`|Maximum number of results. Queries that exceed this limit will fail.|500000|
-
-Supported query contexts:
-
-|Key|Description|Default|
-|---|-----------|-------|
-|`maxIntermediateRows`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for a groupBy v1 query.|None|
-|`maxResults`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxResults` for a groupBy v1 query.|None|
-|`useOffheap`|Ignored by groupBy v2, and no longer supported for groupBy v1. Enabling this option with groupBy v1 will result in an error. For off-heap aggregation, switch to groupBy v2, which always operates off-heap.|false|
 
 #### Array based result rows
 

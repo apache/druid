@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.utils.JvmUtils;
 
 /**
@@ -37,7 +36,6 @@ public class GroupByQueryConfig
 
   public static final long AUTOMATIC = 0;
 
-  public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT = "applyLimitPushDownToSegment";
@@ -47,8 +45,6 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
   public static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
-  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
-  private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
@@ -72,16 +68,7 @@ public class GroupByQueryConfig
   private static final long MAX_AUTOMATIC_DICTIONARY_SIZE = 1_000_000_000;
 
   @JsonProperty
-  private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
-
-  @JsonProperty
   private boolean singleThreaded = false;
-
-  @JsonProperty
-  private int maxIntermediateRows = 50000;
-
-  @JsonProperty
-  private int maxResults = 500000;
 
   @JsonProperty
   // Not documented, only used for tests to force spilling
@@ -139,11 +126,6 @@ public class GroupByQueryConfig
   @JsonProperty
   private boolean enableMultiValueUnnesting = true;
 
-  public String getDefaultStrategy()
-  {
-    return defaultStrategy;
-  }
-
   public boolean isSingleThreaded()
   {
     return singleThreaded;
@@ -152,26 +134,6 @@ public class GroupByQueryConfig
   public void setSingleThreaded(boolean singleThreaded)
   {
     this.singleThreaded = singleThreaded;
-  }
-
-  public int getMaxIntermediateRows()
-  {
-    return maxIntermediateRows;
-  }
-
-  public void setMaxIntermediateRows(int maxIntermediateRows)
-  {
-    this.maxIntermediateRows = maxIntermediateRows;
-  }
-
-  public int getMaxResults()
-  {
-    return maxResults;
-  }
-
-  public void setMaxResults(int maxResults)
-  {
-    this.maxResults = maxResults;
   }
 
   public int getBufferGrouperMaxSize()
@@ -337,16 +299,7 @@ public class GroupByQueryConfig
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
     final QueryContext queryContext = query.context();
-    newConfig.defaultStrategy = queryContext.getString(CTX_KEY_STRATEGY, getDefaultStrategy());
     newConfig.singleThreaded = queryContext.getBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
-    newConfig.maxIntermediateRows = Math.min(
-        queryContext.getInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
-        getMaxIntermediateRows()
-    );
-    newConfig.maxResults = Math.min(
-        queryContext.getInt(CTX_KEY_MAX_RESULTS, getMaxResults()),
-        getMaxResults()
-    );
     newConfig.bufferGrouperMaxSize = Math.min(
         queryContext.getInt(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
@@ -403,10 +356,7 @@ public class GroupByQueryConfig
   public String toString()
   {
     return "GroupByQueryConfig{" +
-           "defaultStrategy='" + defaultStrategy + '\'' +
-           ", singleThreaded=" + singleThreaded +
-           ", maxIntermediateRows=" + maxIntermediateRows +
-           ", maxResults=" + maxResults +
+           "singleThreaded=" + singleThreaded +
            ", bufferGrouperMaxSize=" + bufferGrouperMaxSize +
            ", bufferGrouperMaxLoadFactor=" + bufferGrouperMaxLoadFactor +
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +

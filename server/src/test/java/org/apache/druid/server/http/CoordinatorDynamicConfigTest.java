@@ -24,9 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -50,6 +52,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+                     + "  \"killTaskSlotRatio\": 0.15,\n"
+                     + "  \"maxKillTaskSlots\": 2,\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
                      + "  \"decommissioningMaxPercentOfMaxSegmentsToMove\": 9,\n"
@@ -79,6 +83,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        0.15,
+        2,
         false,
         1,
         decommissioning,
@@ -99,6 +105,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        0.15,
+        2,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -119,6 +127,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        0.15,
+        2,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -139,6 +149,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        0.15,
+        2,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -159,6 +171,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        0.15,
+        2,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -179,6 +193,52 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        0.15,
+        2,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10
+    );
+
+    actual = CoordinatorDynamicConfig.builder().withKillTaskSlotRatio(1.0).build(actual);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        whitelist,
+        1.0,
+        2,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10
+    );
+
+    actual = CoordinatorDynamicConfig.builder().withMaxKillTaskSlots(5).build(actual);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        whitelist,
+        1.0,
+        5,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -216,6 +276,8 @@ public class CoordinatorDynamicConfigTest
         null,
         null,
         null,
+        null,
+        null,
         ImmutableSet.of("host1"),
         5,
         true,
@@ -241,6 +303,8 @@ public class CoordinatorDynamicConfigTest
         2,
         10,
         ImmutableSet.of("test1"),
+        null,
+        null,
         null,
         null,
         ImmutableSet.of("host1"),
@@ -292,6 +356,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        1.0,
+        Integer.MAX_VALUE,
         false,
         1,
         decommissioning,
@@ -312,6 +378,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        1.0,
+        Integer.MAX_VALUE,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -332,6 +400,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        1.0,
+        Integer.MAX_VALUE,
         false,
         1,
         ImmutableSet.of("host1"),
@@ -376,6 +446,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of("test1", "test2"),
+        1.0,
+        Integer.MAX_VALUE,
         false,
         1,
         ImmutableSet.of(),
@@ -435,6 +507,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         whitelist,
+        1.0,
+        Integer.MAX_VALUE,
         false,
         1,
         decommissioning,
@@ -477,6 +551,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of(),
+        1.0,
+        Integer.MAX_VALUE,
         true,
         1,
         ImmutableSet.of(),
@@ -530,6 +606,8 @@ public class CoordinatorDynamicConfigTest
         1,
         2,
         ImmutableSet.of(),
+        1.0,
+        Integer.MAX_VALUE,
         true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
@@ -553,8 +631,10 @@ public class CoordinatorDynamicConfigTest
         100,
         15,
         500,
-        1,
+        getDefaultNumBalancerThreads(),
         emptyList,
+        1.0,
+        Integer.MAX_VALUE,
         true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
@@ -581,8 +661,10 @@ public class CoordinatorDynamicConfigTest
         100,
         15,
         500,
-        1,
+        getDefaultNumBalancerThreads(),
         ImmutableSet.of("DATASOURCE"),
+        1.0,
+        Integer.MAX_VALUE,
         false,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
@@ -604,6 +686,8 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         current,
         new CoordinatorDynamicConfig.Builder(
+            null,
+            null,
             null,
             null,
             null,
@@ -670,6 +754,8 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
+      Double expectedKillTaskSlotRatio,
+      @Nullable Integer expectedMaxKillTaskSlots,
       boolean expectedKillUnusedSegmentsInAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioningNodes,
@@ -694,6 +780,8 @@ public class CoordinatorDynamicConfigTest
         config.getSpecificDataSourcesToKillUnusedSegmentsIn()
     );
     Assert.assertEquals(expectedKillUnusedSegmentsInAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
+    Assert.assertEquals(expectedKillTaskSlotRatio, config.getKillTaskSlotRatio(), 0.001);
+    Assert.assertEquals((int) expectedMaxKillTaskSlots, config.getMaxKillTaskSlots());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
     Assert.assertEquals(
@@ -703,5 +791,10 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
     Assert.assertEquals(maxNonPrimaryReplicantsToLoad, config.getMaxNonPrimaryReplicantsToLoad());
+  }
+
+  private static int getDefaultNumBalancerThreads()
+  {
+    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
   }
 }

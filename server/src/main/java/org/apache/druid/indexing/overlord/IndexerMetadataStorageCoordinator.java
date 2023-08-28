@@ -123,16 +123,29 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * see {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer)}
+   */
+  default List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
+  {
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
+  }
+
+  /**
    * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
    * metadata store.
    *
-   * @param dataSource The data source the segments belong to
-   * @param interval   Filter the data segments to ones that include data in this interval exclusively.
+   * @param dataSource  The data source the segments belong to
+   * @param interval    Filter the data segments to ones that include data in this interval exclusively.
+   * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
    *
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval
    */
-  List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval);
+  List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit
+  );
 
   /**
    * Mark as unused segments which include ONLY data within the given interval.
@@ -243,7 +256,6 @@ public interface IndexerMetadataStorageCoordinator
    * {@param segments} and dropping {@param segmentsToDrop}
    *
    * @param segments       set of segments to add, must all be from the same dataSource
-   * @param segmentsToDrop set of segments to drop, must all be from the same dataSource
    * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
    *                       {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
    *                       not involve a metadata transaction
@@ -260,7 +272,6 @@ public interface IndexerMetadataStorageCoordinator
    */
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
   ) throws IOException;
@@ -338,4 +349,18 @@ public interface IndexerMetadataStorageCoordinator
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);
+
+  /**
+   * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
+   * <br>
+   * If includeUnused is set, this also returns unused segments. Unused segments could be deleted by a kill task at any
+   * time and might lead to unexpected behaviour. This option exists mainly to provide a consistent view of the metadata,
+   * for example, in calls from MSQ controller and worker and would generally not be requrired.
+   *
+   * @param id The segment id
+   *
+   * @return DataSegment used segment corresponding to given id
+   */
+  DataSegment retrieveSegmentForId(String id, boolean includeUnused);
+
 }
