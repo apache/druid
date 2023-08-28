@@ -43,7 +43,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 
 ### Router
 
-|Metric|Description|Dimensions|Normal Value|
+|Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.|< 1s|
 
@@ -446,7 +446,7 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/disk/read/count`|Reads from disk|`diskName`|Varies|
 |`sys/disk/write/size`|Bytes written to disk. One indicator of the amount of paging occurring for segments.|`diskName`|Varies|
 |`sys/disk/read/size`|Bytes read from disk. One indicator of the amount of paging occurring for segments.|`diskName`|Varies|
-|`sys/disk/queue`|Disk queue length. Measures number of requests waiting to be processed by Disk|`diskName`|Generally 0|
+|`sys/disk/queue`|Disk queue length. Measures number of requests waiting to be processed by disk|`diskName`|Generally 0|
 |`sys/disk/transferTime`|Transfer time to read from or write to disk|`diskName`|Depends on hardware|
 |`sys/net/write/size`|Bytes written to the network|`netName`, `netAddress`, `netHwaddr`|Varies|
 |`sys/net/read/size`|Bytes read from the network|`netName`, `netAddress`, `netHwaddr`|Varies|
@@ -458,7 +458,7 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/net/write/collisions`|Total network write collisions|`netName`, `netAddress`, `netHwaddr`|Generally 0|
 |`sys/fs/used`|Filesystem bytes used |`fsDevName`, `fsDirName`|< max|
 |`sys/fs/max`|Filesystem bytes max |`fsDevName`, `fsDirName`|Varies|
-|`sys/fs/files/count`|Filesystem total IO Nodes |`fsDevName`, `fsDirName`|< max|
+|`sys/fs/files/count`|Filesystem total IO nodes |`fsDevName`, `fsDirName`|< max|
 |`sys/fs/files/free`|Filesystem free IO nodes|`fsDevName`, `fsDirName`| Varies |
 |`sys/mem/used`|Memory used||< max|
 |`sys/mem/max`|Memory max||Varies|
@@ -466,7 +466,7 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/storage/used`|Disk space used|`fsDirName`|Varies|
 |`sys/cpu`|CPU used|`cpuName`, `cpuTime`|Varies|
 |`sys/uptime`|Total system uptime||Varies|
-|`sys/la/{i}`|System CPU Load averages over past i minutes, where i={1,5,15}||Varies|
+|`sys/la/{i}`|System CPU load averages over past `i` minutes, where `i={1,5,15}`||Varies|
 |`sys/tcpv4/activeOpens`|Total TCP active open connections||Varies|
 |`sys/tcpv4/passiveOpens`|Total TCP passive open connections||Varies|
 |`sys/tcpv4/attemptFails`|Total TCP active connection failures||Generally 0|
@@ -475,7 +475,7 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/tcpv4/in/errs`|Errors while reading segments||Generally 0|
 |`sys/tcpv4/out/segs`|Total segments sent||Varies|
 |`sys/tcpv4/out/rsts`|Total "out reset" packets sent to reset the connection||Generally 0|
-|`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies but not to high|
+|`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies|
 
 ## Cgroup
 
