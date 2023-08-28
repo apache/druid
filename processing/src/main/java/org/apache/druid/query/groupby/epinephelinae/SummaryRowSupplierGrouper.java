@@ -30,19 +30,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class SummaryRowSupplierGrouper
+public class SummaryRowSupplierGrouper<KeyType> implements Grouper<KeyType>
 {
-  public static class SummaryRowGrouperImpl<KeyType> implements Grouper<KeyType> {
   private Grouper<KeyType> delegate;
   private KeySerde<KeyType> keySerde;
   private AggregatorFactory[] aggregatorFactories;
   private ColumnSelectorFactory columnSelectorFactory;
 
-  public SummaryRowGrouperImpl(Grouper<KeyType> grouper, KeySerde<KeyType> keySerdeFactory,
+  public SummaryRowSupplierGrouper(Grouper<KeyType> grouper, KeySerde<KeyType> keySerdeFactory,
       ColumnSelectorFactory columnSelectorFactory, List<AggregatorFactory> aggregatorFactories)
   {
     delegate = grouper;
-    this.keySerde = keySerdeFactory;// .factorize();
+    this.keySerde = keySerdeFactory;//.factorize();
     this.columnSelectorFactory = columnSelectorFactory;
     this.aggregatorFactories = aggregatorFactories.toArray(new AggregatorFactory[] {});
   }
@@ -88,68 +87,54 @@ public class SummaryRowSupplierGrouper
     return reusableEntry;
   }
 
-  private static class FirstNonEmptyIterator<T> implements CloseableIterator<T>
-  {
-    final CloseableIterator<T>[] iterators;
-    private CloseableIterator<T> currentIterator;
-
-    public FirstNonEmptyIterator(CloseableIterator<T>... iterators)
-    {
-      this.iterators = iterators;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      if (currentIterator == null) {
-        for (CloseableIterator<T> it : iterators) {
-          if (it.hasNext()) {
-            currentIterator = it;
-            break;
-          }
-        }
-        if (currentIterator == null) {
-          return false;
-        }
-      }
-      return currentIterator.hasNext();
-    }
-
-    @Override
-    public T next()
-    {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      return currentIterator.next();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      for (CloseableIterator<T> it : iterators) {
-        it.close();
-      }
-    }
-  }
 
   @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
     final CloseableIterator<Entry<KeyType>> it = delegate.iterator(sorted);
-    return new FirstNonEmptyIterator<Grouper.Entry<KeyType>>(it);
+    return new CloseableIterator<Grouper.Entry<KeyType>>()
+    {
+      boolean delegated;
+      boolean done;
+
+      @Override
+      public boolean hasNext()
+      {
+        if (it.hasNext()) {
+          delegated = true;
+          return true;
+        }
+        if(delegated) {
+          return it.hasNext();
+        }
+        return !done;
+      }
+
+      @Override
+      public Entry<KeyType> next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        if(delegated) {
+          return it.next();
+        }
+        done = true;
+        return buildSummaryRow();
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        it.close();
+      }
+    };
   }
 
   public static class VectorGrouper1 implements VectorGrouper
   {
 
     VectorGrouper delegate;
-
-    public VectorGrouper1(VectorGrouper grouper)
-    {
-      delegate = grouper;
-    }
-
     @Override
     public void initVectorized(int maxVectorSize)
     {
@@ -171,33 +156,16 @@ public class SummaryRowSupplierGrouper
     @Override
     public void close()
     {
-      delegate.close();
+      throw new RuntimeException("Unimplemented!");
+
     }
 
     @Override
     public CloseableIterator<Entry<MemoryPointer>> iterator()
     {
-      CloseableIterator<Entry<MemoryPointer>> it = delegate.iterator();
-      return new CloseableIterator<Grouper.Entry<MemoryPointer>>()
-      {
-        @Override
-        public void close() throws IOException
-        {
-          it.close();
-        }
+      return null;
+      throw new RuntimeException("Unimplemented!");
 
-        @Override
-        public Entry<MemoryPointer> next()
-        {
-          return it.next();
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-          return it.hasNext();
-        }
-      };
     }
 
   }
