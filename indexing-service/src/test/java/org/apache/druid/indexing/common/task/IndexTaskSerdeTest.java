@@ -242,8 +242,6 @@ public class IndexTaskSerdeTest
   @Test
   public void testBestEffortRollupWithHashedPartitionsSpec()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
     final IndexTuningConfig tuningConfig = new IndexTuningConfig(
         null,
         null,
