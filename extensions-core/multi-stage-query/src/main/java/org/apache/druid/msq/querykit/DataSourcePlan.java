@@ -140,6 +140,7 @@ public class DataSourcePlan
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forLookup((LookupDataSource) dataSource, broadcast);
     } else if (dataSource instanceof FilteredDataSource) {
+      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forFilteredDataSource(
           queryKit,
           queryId,
@@ -425,6 +426,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
+    // Find the plan for base data source by recursing
     final DataSourcePlan basePlan = forDataSource(
         queryKit,
         queryId,
@@ -441,11 +443,14 @@ public class DataSourcePlan
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
 
+    // Create the new data source using the data source from the base plan
     newDataSource = UnnestDataSource.create(
         newDataSource,
         dataSource.getVirtualColumn(),
         dataSource.getUnnestFilter()
     );
+    // The base data source can be a join and might already have broadcast inputs
+    // Need to set the broadcast inputs from the basePlan
     return new DataSourcePlan(
         newDataSource,
         inputSpecs,

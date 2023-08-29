@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.UnnestDataSource;
@@ -97,7 +98,11 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final long memoryReservedForBroadcastJoin
   )
   {
-    if (!(dataSource instanceof JoinDataSource || dataSource instanceof UnnestDataSource) && !sideChannels.isEmpty()) {
+    // An UnnestDataSource or FilteredDataSource can have a join as a base
+    // In such a case a side channel is expected to be there
+    if (!(dataSource instanceof JoinDataSource
+          || dataSource instanceof UnnestDataSource
+          || dataSource instanceof FilteredDataSource) && !sideChannels.isEmpty()) {
       throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
     }
 
@@ -109,7 +114,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     }
 
 
-    if (dataSource instanceof JoinDataSource || dataSource instanceof UnnestDataSource) {
+    if (dataSource instanceof JoinDataSource || dataSource instanceof UnnestDataSource || dataSource instanceof FilteredDataSource) {
       final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
       final List<FrameReader> channelReaders = new ArrayList<>();
 
