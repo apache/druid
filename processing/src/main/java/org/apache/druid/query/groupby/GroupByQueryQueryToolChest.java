@@ -43,6 +43,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -67,20 +68,25 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
 
 /**
@@ -181,7 +187,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     } else {
       process = mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
     }
-    return GroupByQueryRunnerFactory.wrapSummaryRowIfNeeded(query, process);
+    return wrapSummaryRowIfNeeded(query, process);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(
@@ -763,4 +769,59 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
     return retVal;
   }
+
+  /**
+   * Wraps the sequence around if for this query a summary row might be needed in case the input becomes empty.
+   *
+   * @return
+   */
+  public static Sequence<ResultRow> wrapSummaryRowIfNeeded(GroupByQuery query, Sequence<ResultRow> process)
+  {
+    if (!summaryRowPreconditions(query)) {
+      return process;
+    }
+
+    final AtomicBoolean t = new AtomicBoolean();
+
+    return Sequences.concat(
+        Sequences.map(process, ent -> {
+          t.set(true);
+          return ent;
+        }),
+        Sequences.simple(() -> {
+          if (t.get()) {
+            return Collections.emptyIterator();
+          }
+          return summaryRowIterator(query);
+        }));
+  }
+
+  private static boolean summaryRowPreconditions(GroupByQuery query)
+  {
+    LimitSpec limit = query.getLimitSpec();
+    if (limit instanceof DefaultLimitSpec) {
+      DefaultLimitSpec limitSpec = (DefaultLimitSpec) limit;
+      if (limitSpec.getLimit() == 0 || limitSpec.getOffset() > 0) {
+        return false;
+      }
+    }
+    if (!query.getDimensions().isEmpty()) {
+      return false;
+    }
+    if (query.getGranularity().isFinerThan(Granularities.ALL)) {
+      return false;
+    }
+    return true;
+  }
+
+  private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)
+  {
+    List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
+    Object[] values = new Object[aggSpec.size()];
+    for (int i = 0; i < aggSpec.size(); i++) {
+      values[i] = aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get();
+    }
+    return Collections.singleton(ResultRow.of(values)).iterator();
+  }
+
 }
