@@ -20,6 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.primitives.Ints;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
@@ -245,6 +246,7 @@ public final class DictionaryIdLookup implements Closeable
     }
   }
 
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   private MappedByteBuffer mapWriter(Path path, DictionaryWriter<?> writer)
   {
     final EnumSet<StandardOpenOption> options = EnumSet.of(
