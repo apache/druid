@@ -38,6 +38,7 @@ import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -96,7 +97,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final long memoryReservedForBroadcastJoin
   )
   {
-    if (!(dataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
+    if (!(dataSource instanceof JoinDataSource || dataSource instanceof UnnestDataSource) && !sideChannels.isEmpty()) {
       throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
     }
 
@@ -107,7 +108,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       inputChannels.add(baseInput.getChannel());
     }
 
-    if (dataSource instanceof JoinDataSource) {
+
+    if (dataSource instanceof JoinDataSource || dataSource instanceof UnnestDataSource) {
       final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
       final List<FrameReader> channelReaders = new ArrayList<>();
 

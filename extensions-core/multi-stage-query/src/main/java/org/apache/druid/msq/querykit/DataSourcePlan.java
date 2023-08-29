@@ -449,7 +449,7 @@ public class DataSourcePlan
     return new DataSourcePlan(
         newDataSource,
         inputSpecs,
-        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        basePlan.getBroadcastInputs(),
         subQueryDefBuilder
     );
   }
