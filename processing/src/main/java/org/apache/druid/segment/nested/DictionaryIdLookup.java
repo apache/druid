@@ -256,9 +256,9 @@ public final class DictionaryIdLookup implements Closeable
 
     try (FileChannel fileChannel = FileChannel.open(path, options);
          GatheringByteChannel smooshChannel = makeWriter(fileChannel, writer.getSerializedSize())) {
+      //noinspection DataFlowIssue
       writer.writeTo(smooshChannel, null);
-      MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, writer.getSerializedSize());
-      return buffer;
+      return fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, writer.getSerializedSize());
     }
     catch (IOException e) {
       throw new RuntimeException(e);
