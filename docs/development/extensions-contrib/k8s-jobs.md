@@ -275,7 +275,7 @@ roleRef:
 ```
 
 ## Migration/Kubernetes and Worker Task Runner
-If you are running a cluster with tasks running on middle managers or indexers and want to do a zero downtime migration to mm-less ingestion, the mm-less ingestion system is capable of running in migration mode by reading tasks from middle manageres/indexers and Kubernetes and writing tasks to either middle managers or to Kubernetes.
+If you are running a cluster with tasks running on middle managers or indexers and want to do a zero downtime migration to mm-less ingestion, the mm-less ingestion system is capable of running in migration mode by reading tasks from middle managers/indexers and Kubernetes and writing tasks to either middle managers or to Kubernetes.
 
 To do this, set the following property.
 `druid.indexer.runner.type: k8sAndWorker` (instead of `druid.indexer.runner.type: k8s`)
