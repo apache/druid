@@ -441,8 +441,8 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
     if (globalDictionaryIdLookup.getStringBufferMapper() != null) {
       SmooshedFileMapper fileMapper = globalDictionaryIdLookup.getStringBufferMapper();
-      for (String name : fileMapper.getInternalFilenames()) {
-        smoosher.add(name, fileMapper.mapFile(name));
+      for (String internalName : fileMapper.getInternalFilenames()) {
+        smoosher.add(internalName, fileMapper.mapFile(internalName));
       }
     } else {
       writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
