@@ -23,8 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -42,7 +40,6 @@ import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.CloseableGrouperIterator;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.groupby.epinephelinae.HashVectorGrouper;
-import org.apache.druid.query.groupby.epinephelinae.SummaryRowSupplierVectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
@@ -56,6 +53,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+
 import javax.annotation.Nullable;
 
 import java.io.IOException;
@@ -261,7 +259,6 @@ public class VectorGroupByEngine
 
     @Nullable
     private CloseableGrouperIterator<MemoryPointer, ResultRow> delegate = null;
-    private boolean grouperHasAtLeastOneRow;
 
     VectorGroupByEngineIterator(
         final GroupByQuery query,
@@ -313,8 +310,7 @@ public class VectorGroupByEngine
       if (delegate != null && delegate.hasNext()) {
         return true;
       } else {
-        final boolean moreToRead = !cursor.isDone() || partiallyAggregatedRows >= 0 || grouperHasAtLeastOneRow;
-        grouperHasAtLeastOneRow = false;
+        final boolean moreToRead = !cursor.isDone() || partiallyAggregatedRows >= 0;
 
         if (bucketInterval != null && moreToRead) {
           while (delegate == null || !delegate.hasNext()) {
@@ -349,7 +345,7 @@ public class VectorGroupByEngine
     @VisibleForTesting
     VectorGrouper makeGrouper()
     {
-      VectorGrouper grouper;
+      final VectorGrouper grouper;
 
       final int cardinalityForArrayAggregation = GroupByQueryEngineV2.getCardinalityForArrayAggregation(
           querySpecificConfig,
@@ -379,16 +375,6 @@ public class VectorGroupByEngine
             querySpecificConfig.getBufferGrouperMaxLoadFactor(),
             querySpecificConfig.getBufferGrouperInitialBuckets()
         );
-      }
-
-      query.getGranularity();
-      if (keySize == 0
-          && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
-        grouper = new SummaryRowSupplierVectorGrouper(grouper, AggregatorAdapters.factorizeVector(
-            cursor.getColumnSelectorFactory(),
-            query.getAggregatorSpecs())
-        );
-        grouperHasAtLeastOneRow = true;
       }
 
       grouper.initVectorized(cursor.getMaxVectorSize());

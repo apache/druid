@@ -29,8 +29,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -112,7 +110,6 @@ public class GroupByQueryEngineV2
     }
     return retInfo;
   }
-
 
   private GroupByQueryEngineV2()
   {
@@ -470,7 +467,6 @@ public class GroupByQueryEngineV2
     protected final GroupByColumnSelectorPlus[] dims;
     protected final DateTime timestamp;
 
-
     @Nullable
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
@@ -561,7 +557,7 @@ public class GroupByQueryEngineV2
       if (delegate != null && delegate.hasNext()) {
         return true;
       } else {
-        if (!cursor.isDone() || delegate == null) {
+        if (!cursor.isDone()) {
           if (delegate != null) {
             delegate.close();
           }
@@ -584,7 +580,6 @@ public class GroupByQueryEngineV2
     {
       if (delegate != null) {
         delegate.close();
-        delegate = null;
       }
     }
 
@@ -727,13 +722,6 @@ public class GroupByQueryEngineV2
             querySpecificConfig.getBufferGrouperInitialBuckets(),
             true
         );
-      }
-
-      if (keySerde.isEmpty() && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
-        grouper = new SummaryRowSupplierGrouper<ByteBuffer>(grouper,
-            keySerde,
-            selectorFactory,
-            query.getAggregatorSpecs());
       }
 
       return grouper;

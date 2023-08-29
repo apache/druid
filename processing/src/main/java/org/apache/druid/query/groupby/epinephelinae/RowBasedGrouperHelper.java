@@ -37,8 +37,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
@@ -254,9 +252,9 @@ public class RowBasedGrouperHelper
         limitSpec
     );
 
-    final Grouper<RowBasedKey> baseGrouper;
+    final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
-      baseGrouper = new SpillingGrouper<>(
+      grouper = new SpillingGrouper<>(
           bufferSupplier,
           keySerdeFactory,
           columnSelectorFactory,
@@ -282,7 +280,7 @@ public class RowBasedGrouperHelper
           limitSpec
       );
 
-      baseGrouper = new ConcurrentGrouper<>(
+      grouper = new ConcurrentGrouper<>(
           querySpecificConfig,
           bufferSupplier,
           combineBufferHolder,
@@ -300,16 +298,6 @@ public class RowBasedGrouperHelper
           hasQueryTimeout,
           queryTimeoutAt
       );
-    }
-    final Grouper<RowBasedKey> grouper;
-    if (keySerdeFactory.factorize().isEmpty()
-        && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
-      grouper = new SummaryRowSupplierGrouper<RowBasedKey>(baseGrouper,
-          keySerdeFactory.factorize(),
-          columnSelectorFactory,
-          aggregatorFactories);
-    } else {
-      grouper = baseGrouper;
     }
 
     final int keySize = includeTimestamp ? query.getDimensions().size() + 1 : query.getDimensions().size();
