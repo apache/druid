@@ -146,11 +146,11 @@ public class TaskLocks
 
     final Map<DataSegment, TaskLockInfo> segmentToReplaceLock = new HashMap<>();
 
-    intervalToSegments.forEach((interval, segmentsForInterval) -> {
+    intervalToSegments.forEach((interval, segmentsInInterval) -> {
       // For each interval, find the lock that covers it, if any
       for (TaskLockInfo lock : replaceLocks) {
         if (lock.getInterval().contains(interval)) {
-          segmentsForInterval.forEach(s -> segmentToReplaceLock.put(s, lock));
+          segmentsInInterval.forEach(s -> segmentToReplaceLock.put(s, lock));
           return;
         }
       }
@@ -174,7 +174,7 @@ public class TaskLocks
 
   public static TaskLockInfo toLockInfo(TaskLock taskLock)
   {
-    return new TaskLockInfo(taskLock.getInterval(), taskLock.getVersion());
+    return new TaskLockInfo(taskLock.getGroupId(), taskLock.getInterval(), taskLock.getVersion());
   }
 
   public static List<TaskLock> findLocksForSegments(

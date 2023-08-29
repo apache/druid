@@ -159,21 +159,21 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public SegmentPublishResult commitReplaceSegments(
-      Set<DataSegment> segments,
-      Set<TaskLockInfo> taskLockInfos
+      Set<DataSegment> replaceSegments,
+      Set<TaskLockInfo> locksHeldByReplaceTask
   )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(commitSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(replaceSegments));
   }
 
   @Override
   public SegmentPublishResult commitAppendSegments(
-      Set<DataSegment> segments,
-      Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, TaskLockInfo> appendSegmentToReplaceLock
   )
   {
-    return SegmentPublishResult.ok(commitSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(appendSegments));
   }
 
   @Override

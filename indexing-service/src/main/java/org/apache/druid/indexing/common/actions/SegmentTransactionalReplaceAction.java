@@ -95,10 +95,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitReplaceSegments(
-                      segments,
-                      replaceLocksForTask
-                  )
+                  () -> toolbox.getIndexerMetadataStorageCoordinator()
+                               .commitReplaceSegments(segments, replaceLocksForTask)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(

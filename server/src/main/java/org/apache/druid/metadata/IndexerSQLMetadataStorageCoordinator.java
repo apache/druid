@@ -94,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -407,59 +408,55 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Override
   public SegmentPublishResult commitReplaceSegments(
-      final Set<DataSegment> segments,
-      final Set<TaskLockInfo> taskLockInfos
+      final Set<DataSegment> replaceSegments,
+      final Set<TaskLockInfo> locksHeldByReplaceTask
   )
   {
-    verifySegmentsToCommit(segments);
+    verifySegmentsToCommit(replaceSegments);
 
-    final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
     try {
       return connector.retryTransaction(
           (handle, transactionStatus) -> {
-            // Set definitelyNotUpdated back to false upon retrying.
-            definitelyNotUpdated.set(false);
-
-            final Set<DataSegment> inserted = commitReplaceSegmentBatch(handle, segments, taskLockInfos);
-            return SegmentPublishResult.ok(inserted);
+            final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
+            segmentsToInsert.addAll(
+                getSegmentsToUpgradeOnReplace(handle, replaceSegments, locksHeldByReplaceTask)
+            );
+            return SegmentPublishResult.ok(
+                insertSegments(handle, segmentsToInsert)
+            );
           },
           3,
           getSqlMetadataMaxRetry()
       );
     }
     catch (CallbackFailedException e) {
-      if (definitelyNotUpdated.get()) {
-        return SegmentPublishResult.fail(e.getMessage());
-      } else {
-        // Must throw exception if we are not sure if we updated or not.
-        throw e;
-      }
+      return SegmentPublishResult.fail(e.getMessage());
     }
   }
 
   @Override
   public SegmentPublishResult commitAppendSegments(
-      final Set<DataSegment> segments,
-      final Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+      final Set<DataSegment> appendSegments,
+      final Map<DataSegment, TaskLockInfo> appendSegmentToReplaceLock
   )
   {
-    verifySegmentsToCommit(segments);
+    verifySegmentsToCommit(appendSegments);
 
-    // For each append segment, check if extra versions need to be inserted into the DB
-    // This may be required if a REPLACE job has run after the allocation of these append segments
-    final String dataSource = segments.iterator().next().getDataSource();
+    final String dataSource = appendSegments.iterator().next().getDataSource();
     final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewIds = connector.retryTransaction(
-        (handle, transactionStatus) -> allocateExtraIdsForAppendSegments(handle, dataSource, segments),
+        (handle, transactionStatus)
+            -> getSegmentsToUpgradeOnAppend(handle, dataSource, appendSegments),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
 
-    // Insert entries for all required versions of the append segments into the DB
-    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(segments);
+    // Create entries for all required versions of the append segments
+    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
     for (Map.Entry<DataSegment, Set<SegmentIdWithShardSpec>> entry : segmentToNewIds.entrySet()) {
       final DataSegment segment = entry.getKey();
       for (SegmentIdWithShardSpec newId : entry.getValue()) {
         DataSegment newSegment = DataSegment.builder(segment)
+                                            .interval(newId.getInterval())
                                             .version(newId.getVersion())
                                             .shardSpec(newId.getShardSpec())
                                             .build();
@@ -470,8 +467,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     try {
       return connector.retryTransaction(
           (handle, transactionStatus) -> {
-            insertSegmentLockVersions(segmentToReplaceLock, handle);
-            return SegmentPublishResult.ok(insertSegments(allSegmentsToInsert, handle));
+            insertSegmentLockVersions(handle, appendSegmentToReplaceLock);
+            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -1064,14 +1061,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Allocates and returns any extra versions that need to be committed for the
    * given append segments.
    * <p>
-   *
    * This is typically needed when a REPLACE task started and finished after
    * these append segments had already been allocated. As such,
    * there would be some used segments in the DB with versions higher than these
    * append segments.
    */
   @VisibleForTesting
-  Map<DataSegment, Set<SegmentIdWithShardSpec>> allocateExtraIdsForAppendSegments(
+  Map<DataSegment, Set<SegmentIdWithShardSpec>> getSegmentsToUpgradeOnAppend(
       Handle handle,
       String dataSource,
       Set<DataSegment> segmentsToAppend
@@ -1081,115 +1077,133 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
-    final Set<Interval> appendIntervals = segmentsToAppend.stream()
-                                                          .map(DataSegment::getInterval)
-                                                          .collect(Collectors.toSet());
-
-    // Find all used segments whose interval overlaps with any of append intervals
-    final Map<String, Set<DataSegment>> committedVersionToSegments = new HashMap<>();
-    final Map<String, Set<Interval>> committedVersionToIntervals = new HashMap<>();
-    try (final CloseableIterator<DataSegment> iterator =
-             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                     .retrieveUsedSegments(dataSource, appendIntervals)
-    ) {
-      while (iterator.hasNext()) {
-        final DataSegment segment = iterator.next();
-        committedVersionToSegments.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
-                                  .add(segment);
-        committedVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
-                                   .add(segment.getInterval());
-      }
+    final Set<Interval> appendIntervals = new HashSet<>();
+    final TreeMap<String, Set<DataSegment>> appendVersionToSegments = new TreeMap<>();
+    for (DataSegment segment : segmentsToAppend) {
+      appendIntervals.add(segment.getInterval());
+      appendVersionToSegments.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
+                             .add(segment);
     }
 
-    final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewIds = new HashMap<>();
+    // Fetch all used non-overshadowed segments that overlap with any of the append intervals
+    final Collection<DataSegment> overlappingSegments
+        = retrieveUsedSegmentsForIntervals(dataSource, new ArrayList<>(appendIntervals), Segments.ONLY_VISIBLE);
 
-    // Identify the append segments that need to be carried forward to each new version
-    for (final String version : committedVersionToSegments.keySet()) {
-      final Set<DataSegment> segmentsToCarryForward = new HashSet<>();
-      for (final DataSegment segment : segmentsToAppend) {
-        if (segment.getVersion().compareTo(version) < 0) {
-          for (final Interval interval : committedVersionToIntervals.get(version)) {
-            if (interval.overlaps(segment.getInterval())) {
-              segmentsToCarryForward.add(segment);
-              break;
-            }
-          }
-        }
-      }
+    final Set<String> committedVersions = new HashSet<>();
+    final Map<Interval, Set<DataSegment>> committedIntervalToSegments = new HashMap<>();
+    for (DataSegment segment : overlappingSegments) {
+      committedVersions.add(segment.getVersion());
+      committedIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
+                               .add(segment);
+    }
 
-      final Map<Interval, Set<DataSegment>> intervalToCarryForwardSegments = new HashMap<>();
-      for (DataSegment segment : segmentsToCarryForward) {
-        for (final Map.Entry<Interval, Set<DataSegment>> entry : intervalToCarryForwardSegments.entrySet()) {
-          if (entry.getKey().contains(segment.getInterval())) {
-            entry.getValue().add(segment);
-            break;
-          }
-        }
-        Collection<DataSegment> overlappingSegments = retrieveUsedSegmentsForIntervals(
-            segment.getDataSource(),
-            ImmutableList.of(segment.getInterval()),
-            Segments.ONLY_VISIBLE
-        );
-        for (DataSegment overlappingSegment : overlappingSegments) {
-          if (overlappingSegment.getInterval().contains(segment.getInterval())) {
-            intervalToCarryForwardSegments.computeIfAbsent(overlappingSegment.getInterval(), itvl -> new HashSet<>())
-                              .add(segment);
-          } else {
-            throw new ISE(
-                "Existing segment interval[%s] conflicts with that of the new segment[%s]",
-                overlappingSegment.getInterval(),
-                segment.getInterval()
-            );
-          }
-        }
-      }
-
-      for (Map.Entry<Interval, Set<DataSegment>> entry : intervalToCarryForwardSegments.entrySet()) {
-        final Interval interval = entry.getKey();
-        // For each interval, fetch the pending segments
-        Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>(
-            getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval)
-        );
-        // For each interval, fetch all the used segments
-        Collection<DataSegment> committedSegments = retrieveAllUsedSegmentsForIntervalsWithHandle(
+    final Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds = new HashMap<>();
+    for (String version : committedVersions) {
+      Map<Interval, Set<DataSegment>> committedIntervalToCarrySegments
+          = getIntervalToCarrySegments(version, committedIntervalToSegments.keySet(), appendVersionToSegments);
+      for (Map.Entry<Interval, Set<DataSegment>> entry : committedIntervalToCarrySegments.entrySet()) {
+        computeNewAppendIdsForVersion(
             handle,
+            version,
             dataSource,
-            ImmutableList.of(interval)
-        )
-            .stream()
-            .filter(s -> s.getVersion().equals(version) && s.getInterval().equals(interval))
-            .collect(Collectors.toSet());
-        SegmentIdWithShardSpec committedMaxId = null;
-        for (DataSegment committedSegment : committedSegments) {
-          if (committedMaxId == null
-              || committedMaxId.getShardSpec().getPartitionNum() < committedSegment.getShardSpec().getPartitionNum()) {
-            committedMaxId = SegmentIdWithShardSpec.fromDataSegment(committedSegment);
-          }
-        }
-        for (DataSegment segment : entry.getValue()) {
-          SegmentCreateRequest request = new SegmentCreateRequest(
-              segment.getId() + version,
-              null,
-              version,
-              NumberedPartialShardSpec.instance()
+            entry.getKey(),
+            entry.getValue(),
+            committedIntervalToSegments,
+            appendSegmentToNewIds
+        );
+      }
+    }
+
+    return appendSegmentToNewIds;
+  }
+
+  private Map<Interval, Set<DataSegment>> getIntervalToCarrySegments(
+      String version,
+      Set<Interval> committedIntervals,
+      TreeMap<String, Set<DataSegment>> appendVersionToSegments
+  )
+  {
+    // Find all the append segments with version strictly less than this version
+    final Set<DataSegment> segmentsToCarryForward = new HashSet<>();
+
+    Map<String, Set<DataSegment>> candidateVersionToSegments = appendVersionToSegments.headMap(version);
+    for (Set<DataSegment> segments : candidateVersionToSegments.values()) {
+      segmentsToCarryForward.addAll(segments);
+    }
+
+    final Map<Interval, Set<DataSegment>> committedIntervalToAppendSegments = new HashMap<>();
+    for (DataSegment appendSegment : segmentsToCarryForward) {
+      final Interval appendSegmentInterval = appendSegment.getInterval();
+      for (Interval committedInterval : committedIntervals) {
+        if (committedInterval.contains(appendSegmentInterval)) {
+          committedIntervalToAppendSegments.computeIfAbsent(committedInterval, itvl -> new HashSet<>())
+                                           .add(appendSegment);
+          break;
+        } else if (committedInterval.overlaps(appendSegmentInterval)) {
+          // Committed interval overlaps only partially
+          throw new ISE(
+              "Committed interval[%s] conflicts with interval[%s] of append segment[%s].",
+              committedInterval, appendSegmentInterval, appendSegment.getId()
           );
-          // allocate new segment id
-          SegmentIdWithShardSpec newId = createNewSegment(
-              request,
-              dataSource,
-              interval,
-              version,
-              committedMaxId,
-              pendingSegments
-          );
-          // Add to set of pending segments so that shard specs are computed taking the new id into account
-          pendingSegments.add(newId);
-          segmentToNewIds.computeIfAbsent(segment, s -> new HashSet<>())
-                         .add(newId);
         }
       }
     }
-    return segmentToNewIds;
+
+    return committedIntervalToAppendSegments;
+  }
+
+  private void computeNewAppendIdsForVersion(
+      Handle handle,
+      String committedVersion,
+      String dataSource,
+      Interval interval,
+      Set<DataSegment> carrySegments,
+      Map<Interval, Set<DataSegment>> committedIntervalToSegments,
+      Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds
+  ) throws IOException
+  {
+    final Set<DataSegment> committedSegments
+        = committedIntervalToSegments.getOrDefault(interval, Collections.emptySet())
+                                     .stream()
+                                     .filter(s -> s.getVersion().equals(committedVersion))
+                                     .collect(Collectors.toSet());
+
+    SegmentIdWithShardSpec committedMaxId = null;
+    for (DataSegment committedSegment : committedSegments) {
+      if (committedMaxId == null
+          || committedMaxId.getShardSpec().getPartitionNum() < committedSegment.getShardSpec().getPartitionNum()) {
+        committedMaxId = SegmentIdWithShardSpec.fromDataSegment(committedSegment);
+      }
+    }
+
+    // Get pending segments for the new version, if any
+    final Set<SegmentIdWithShardSpec> pendingSegments
+        = getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval);
+
+    // Determine new IDs for each append segment by taking into account both
+    // committed and pending segments for this version
+    for (DataSegment segment : carrySegments) {
+      SegmentCreateRequest request = new SegmentCreateRequest(
+          segment.getId() + committedVersion,
+          null,
+          committedVersion,
+          NumberedPartialShardSpec.instance()
+      );
+      // allocate new segment id
+      final SegmentIdWithShardSpec newId = createNewSegment(
+          request,
+          dataSource,
+          interval,
+          committedVersion,
+          committedMaxId,
+          pendingSegments
+      );
+
+      // Add to set of pending segments so that shard specs are computed taking the new id into account
+      pendingSegments.add(newId);
+      appendSegmentToNewIds.computeIfAbsent(segment, s -> new HashSet<>())
+                           .add(newId);
+    }
   }
 
   private Map<SegmentCreateRequest, SegmentIdWithShardSpec> createNewSegments(
@@ -1644,170 +1658,65 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return toInsertSegments;
   }
 
-
-  /**
-   * Commit all the segments corresponding to a replace job,
-   * AND also carry forward the segment metadata for segments associated with the given REPLACE locks.
-   * To be called within a single transaction
-   *
-   * @param replaceLocks - The REPLACE locks held for the datasource over the specified set of segments
-   * @return The set of segments committed by the replace job as well as the new metadata for segments carried forward
-   */
-  private Set<DataSegment> commitReplaceSegmentBatch(
+  private Set<DataSegment> getSegmentsToUpgradeOnReplace(
       final Handle handle,
-      final Set<DataSegment> segments,
-      final Set<TaskLockInfo> replaceLocks
-  ) throws IOException
+      final Set<DataSegment> replaceSegments,
+      final Set<TaskLockInfo> locksHeldByReplaceTask
+  )
   {
-    final Set<DataSegment> toInsertSegments = new HashSet<>();
-    final Set<DataSegment> retVal = new HashSet<>();
-    try {
-      final Set<String> existingSegments = segmentExistsBatch(handle, segments);
-      log.debug("There are [%d] segment IDs already present in the metadata store.", existingSegments.size());
-      for (DataSegment segment : segments) {
-        if (!existingSegments.contains(segment.getId().toString())) {
-          toInsertSegments.add(segment);
-        }
-      }
+    // For each replace interval, find the number of core partitions and total partitions
+    final Map<Interval, Integer> intervalToNumCorePartitions = new HashMap<>();
+    final Map<Interval, Integer> intervalToCurrentPartitionNum = new HashMap<>();
+    for (DataSegment segment : replaceSegments) {
+      intervalToNumCorePartitions.put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
 
-      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
-      // Avoiding ON DUPLICATE KEY since it's not portable.
-      // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-      final List<List<DataSegment>> partitionedSegments = Lists.partition(
-          new ArrayList<>(toInsertSegments),
-          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
+      int partitionNum = segment.getShardSpec().getPartitionNum();
+      intervalToCurrentPartitionNum.compute(
+          segment.getInterval(),
+          (i, value) -> value == null ? partitionNum : Math.max(value, partitionNum)
       );
+    }
 
-      // Commit the set of segments generated by the replace job
-      PreparedBatch preparedBatch = handle.prepareBatch(buildSqlToInsertSegments());
-      for (List<DataSegment> partition : partitionedSegments) {
-        for (DataSegment segment : partition) {
-          retVal.add(segment);
-          final String now = DateTimes.nowUtc().toString();
-          preparedBatch.add()
-                       .bind("id", segment.getId().toString())
-                       .bind("dataSource", segment.getDataSource())
-                       .bind("created_date", now)
-                       .bind("start", segment.getInterval().getStart().toString())
-                       .bind("end", segment.getInterval().getEnd().toString())
-                       .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-                       .bind("version", segment.getVersion())
-                       .bind("used", true)
-                       .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                       .bind("used_status_last_updated", now);
-        }
-        final int[] affectedInsertRows = preparedBatch.execute();
+    final Map<String, String> carryForwardSegmentToLockVersion
+        = getAppendSegmentsCommittedDuringTask(handle, locksHeldByReplaceTask);
 
-        final boolean succeeded = Arrays.stream(affectedInsertRows).allMatch(eachAffectedRow -> eachAffectedRow == 1);
-        if (succeeded) {
-          log.infoSegments(partition, "Published segments to DB");
-        } else {
-          final List<DataSegment> failedToPublish = IntStream.range(0, partition.size())
-                                                             .filter(i -> affectedInsertRows[i] != 1)
-                                                             .mapToObj(partition::get)
-                                                             .collect(Collectors.toList());
+    final List<DataSegment> carryForwardSegments
+        = retrieveSegmentsById(handle, carryForwardSegmentToLockVersion.keySet());
+
+    final Set<DataSegment> segmentsToInsert = new HashSet<>();
+    for (DataSegment oldSegment : carryForwardSegments) {
+      Interval newInterval = oldSegment.getInterval();
+      for (DataSegment segment : replaceSegments) {
+        final Interval segmentInterval = segment.getInterval();
+        if (segmentInterval.contains(newInterval)) {
+          newInterval = segmentInterval;
+          break;
+        } else if (segmentInterval.overlaps(newInterval)) {
           throw new ISE(
-              "Failed to publish segments to DB: %s",
-              SegmentUtils.commaSeparatedIdentifiers(failedToPublish)
+              "Incompatible segment intervals for commit: [%s] and [%s].",
+              newInterval, segmentInterval
           );
         }
       }
 
-      // Find the committed appended segment ids associated with one of the given REPLACE locks
-      Map<String, TaskLockInfo> segmentsToBeForwarded = getAppendedSegmentIds(
-          handle,
-          segments.iterator().next().getDataSource(),
-          replaceLocks
+      // Compute shard spec for the new version of the segment
+      final int partitionNum = intervalToCurrentPartitionNum.compute(
+          newInterval,
+          (i, value) -> value == null ? 0 : value + 1
       );
-      // Compute the core partition count as well as the max partition num
-      Map<Interval, Integer> intervalToCorePartition = new HashMap<>();
-      Map<Interval, Integer> intervalToPartitionNum = new HashMap<>();
-      for (DataSegment segment : toInsertSegments) {
-        intervalToCorePartition.put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
-        intervalToPartitionNum.putIfAbsent(segment.getInterval(), 0);
-        int maxPartitionNum = Integer.max(
-            intervalToPartitionNum.get(segment.getInterval()),
-            segment.getShardSpec().getPartitionNum()
-        );
-        intervalToPartitionNum.put(segment.getInterval(), maxPartitionNum);
-      }
+      final int numCorePartitions = intervalToNumCorePartitions.get(newInterval);
+      ShardSpec shardSpec = new NumberedShardSpec(partitionNum, numCorePartitions);
 
-      final List<List<Map.Entry<String, TaskLockInfo>>> forwardSegmentsBatch = Lists.partition(
-          new ArrayList<>(segmentsToBeForwarded.entrySet()),
-          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
-      );
-      for (List<Map.Entry<String, TaskLockInfo>> batch : forwardSegmentsBatch) {
-        Map<String, TaskLockInfo> batchMap = new HashMap<>();
-        for (Map.Entry<String, TaskLockInfo> entry : batch) {
-          batchMap.put(entry.getKey(), entry.getValue());
-        }
-        // Find the segment metadata for the segment ids in this batch
-        List<DataSegment> oldSegments = retrieveSegmentsById(handle, batchMap.keySet());
-        for (DataSegment oldSegment : oldSegments) {
-          Interval newInterval = oldSegment.getInterval();
-          for (DataSegment segment : toInsertSegments) {
-            // Check for interval overlap between each segment inserted with the segment in the batch.
-            // Overlapping segments can only be carried forward if their intervals are enclosed
-            // by those of the existing segments.
-            if (segment.getInterval().overlaps(newInterval)) {
-              if (segment.getInterval().contains(newInterval)) {
-                newInterval = segment.getInterval();
-              } else {
-                throw new ISE("Incompatible segment intervals for commit: [%s] and [%s].",
-                              newInterval,
-                              segment.getInterval()
-                );
-              }
-            }
-          }
-          TaskLockInfo lock = batchMap.get(oldSegment.getId().toString());
-          // Update states for generating unique shard specs
-          final int partitionNum = intervalToPartitionNum.get(newInterval) + 1;
-          final int numCorePartitions = intervalToCorePartition.get(newInterval);
-          ShardSpec shardSpec = new NumberedShardSpec(partitionNum, numCorePartitions);
-          intervalToPartitionNum.put(newInterval, partitionNum);
-          // Create the new segment metadata for the already appended segment using the same load spec
-          DataSegment newSegment = new DataSegment(
-              oldSegment.getDataSource(),
-              newInterval,
-              lock.getVersion(),
-              oldSegment.getLoadSpec(),
-              oldSegment.getDimensions(),
-              oldSegment.getMetrics(),
-              shardSpec,
-              oldSegment.getBinaryVersion(),
-              oldSegment.getSize()
-          );
-          retVal.add(newSegment);
-          final String now = DateTimes.nowUtc().toString();
-          preparedBatch.add()
-                       .bind("id", newSegment.getId().toString())
-                       .bind("dataSource", newSegment.getDataSource())
-                       .bind("created_date", now)
-                       .bind("start", newSegment.getInterval().getStart().toString())
-                       .bind("end", newSegment.getInterval().getEnd().toString())
-                       .bind("partitioned", (newSegment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-                       .bind("version", newSegment.getVersion())
-                       .bind("used", true)
-                       .bind("payload", jsonMapper.writeValueAsBytes(newSegment))
-                       .bind("used_status_last_updated", now);
-        }
-        final int[] affectedInsertRows = preparedBatch.execute();
-
-        final boolean succeeded = Arrays.stream(affectedInsertRows).allMatch(eachAffectedRow -> eachAffectedRow == 1);
-        if (succeeded) {
-          log.info("Published segments with updated metadata to DB");
-        } else {
-          throw new ISE("Failed to update segment metadatas in DB");
-        }
-      }
-    }
-    catch (Exception e) {
-      log.errorSegments(segments, "Exception inserting segment metadata");
-      throw e;
+      String lockVersion = carryForwardSegmentToLockVersion.get(oldSegment.getId().toString());
+      DataSegment newSegment = DataSegment.builder(oldSegment)
+                                          .interval(newInterval)
+                                          .version(lockVersion)
+                                          .shardSpec(shardSpec)
+                                          .build();
+      segmentsToInsert.add(newSegment);
     }
 
-    return retVal;
+    return segmentsToInsert;
   }
 
   /**
@@ -1840,7 +1749,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Callers of this method might need to retry as INSERT followed by SELECT
    * might fail due to race conditions.
    */
-  private Set<DataSegment> insertSegments(Set<DataSegment> segments, Handle handle)
+  private Set<DataSegment> insertSegments(Handle handle, Set<DataSegment> segments)
       throws IOException
   {
     // Do not insert segment IDs which already exist
@@ -1898,8 +1807,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * {@link #MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}.
    */
   private void insertSegmentLockVersions(
-      Map<DataSegment, TaskLockInfo> segmentToReplaceLock,
-      Handle handle
+      Handle handle,
+      Map<DataSegment, TaskLockInfo> segmentToReplaceLock
   )
   {
     if (segmentToReplaceLock.isEmpty()) {
@@ -1908,9 +1817,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final PreparedBatch batch = handle.prepareBatch(
         StringUtils.format(
-            "INSERT INTO %1$s (id, dataSource, start, %2$send%2$s, segment_id, lock_version) "
-            + "VALUES (:id, :dataSource, :start, :end, :segment_id, :lock_version)",
-            dbTables.getSegmentVersionsTable(), connector.getQuoteString()
+            "INSERT INTO %1$s (id, group_id, segment_id, lock_version)"
+            + " VALUES (:id, :group_id, :segment_id, :lock_version)",
+            dbTables.getSegmentVersionsTable()
         )
     );
 
@@ -1923,10 +1832,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         DataSegment segment = entry.getKey();
         TaskLockInfo lock = entry.getValue();
         batch.add()
-             .bind("id", segment.getId() + ":" + lock.hashCode())
-             .bind("dataSource", segment.getDataSource())
-             .bind("start", lock.getInterval().getStartMillis())
-             .bind("end", lock.getInterval().getEndMillis())
+             .bind("group_id", lock.getGroupId())
              .bind("segment_id", segment.getId().toString())
              .bind("lock_version", lock.getVersion());
       }
@@ -1949,18 +1855,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private List<DataSegment> retrieveSegmentsById(Handle handle, Set<String> segmentIds)
   {
-    final String segmentIdCsv = segmentIds.stream().map(id -> "'" + id + "'")
+    final String segmentIdCsv = segmentIds.stream()
+                                          .map(id -> "'" + id + "'")
                                           .collect(Collectors.joining(","));
-    final Query<Map<String, Object>> query = handle.createQuery(
-        StringUtils.format(
-            "SELECT payload FROM %s WHERE id in (%s)",
-            dbTables.getSegmentsTable(), segmentIdCsv
+    ResultIterator<DataSegment> resultIterator = handle
+        .createQuery(
+            StringUtils.format(
+                "SELECT payload FROM %s WHERE id in (%s)",
+                dbTables.getSegmentsTable(), segmentIdCsv
+            )
         )
-    ).setFetchSize(connector.getStreamingFetchSize());
-
-    ResultIterator<DataSegment> resultIterator = query.map(
-        (index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class)
-    ).iterator();
+        .setFetchSize(connector.getStreamingFetchSize())
+        .map(
+            (index, r, ctx) ->
+                JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class)
+        )
+        .iterator();
 
     return Lists.newArrayList(resultIterator);
   }
@@ -1977,66 +1887,38 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  /**
+   * Finds the append segments that were covered by the given task REPLACE locks.
+   * These append segments must now be carried forward to the same version as
+   * the segments being committed by this replace task.
+   *
+   * @return Map from append Segment ID to REPLACE lock version
+   */
   @VisibleForTesting
-  Map<String, TaskLockInfo> getAppendedSegmentIds(
+  Map<String, String> getAppendSegmentsCommittedDuringTask(
       Handle handle,
-      String datasource,
       Set<TaskLockInfo> replaceLocks
   )
   {
     if (CollectionUtils.isNullOrEmpty(replaceLocks)) {
       return Collections.emptyMap();
     }
-    final StringBuilder sb = new StringBuilder();
-    sb.append(
-        StringUtils.format(
-            "SELECT segment_id, start, %1$send%1$s, lock_version FROM %2$s where dataSource = :dataSource AND (",
-            connector.getQuoteString(), dbTables.getSegmentVersionsTable()
+
+    final String groupId = replaceLocks.iterator().next().getGroupId();
+    ResultIterator<Pair<String, String>> resultIterator = handle
+        .createQuery("SELECT segment_id, lock_version FROM %2$s where group_id = :group_id")
+        .bind("group_id", groupId)
+        .map(
+            (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
         )
-    );
+        .iterator();
 
-    List<TaskLockInfo> locks = new ArrayList<>(replaceLocks);
-    int n = locks.size();
-    for (int i = 0; i < n; i++) {
-      sb.append(
-          StringUtils.format(
-              "(start = %2$s AND %1$send%1$s = %3$s AND lock_version = %4$s)",
-              connector.getQuoteString(),
-              StringUtils.format(":start%d", i),
-              StringUtils.format(":end%d", i),
-              StringUtils.format(":lock_version%d", i)
-          )
-      );
-      if (i < n - 1) {
-        sb.append(" OR ");
-      }
-    }
-
-    sb.append(")");
-
-    Query<Map<String, Object>> query = handle
-        .createQuery(
-            sb.toString()
-        )
-        .bind("dataSource", datasource);
-    for (int i = 0; i < n; i++) {
-      query.bind(StringUtils.format("start%d", i), locks.get(i).getInterval().getStartMillis())
-           .bind(StringUtils.format("end%d", i), locks.get(i).getInterval().getEndMillis())
-           .bind(StringUtils.format("lock_version%d", i), locks.get(i).getVersion());
-    }
-
-    final ResultIterator<Pair<String, TaskLockInfo>> resultIterator = query.map((index, r, ctx) -> {
-      String segmentId = r.getString("segment_id");
-      Interval interval = Intervals.utc(r.getLong("start"), r.getLong("end"));
-      String version = r.getString("lock_version");
-      return Pair.of(segmentId, new TaskLockInfo(interval, version));
-    }).iterator();
-    Map<String, TaskLockInfo> retVal = new HashMap<>();
+    final Map<String, String> segmentIdToLockVersion = new HashMap<>();
     while (resultIterator.hasNext()) {
-      Pair<String, TaskLockInfo> result = resultIterator.next();
-      retVal.put(result.lhs, result.rhs);
+      Pair<String, String> result = resultIterator.next();
+      segmentIdToLockVersion.put(result.lhs, result.rhs);
     }
-    return retVal;
+    return segmentIdToLockVersion;
   }
 
   private Set<String> segmentExistsBatch(final Handle handle, final Set<DataSegment> segments)

@@ -78,6 +78,8 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+
     final String datasource = task.getDataSource();
     final Map<DataSegment, TaskLockInfo> segmentToReplaceLock
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);

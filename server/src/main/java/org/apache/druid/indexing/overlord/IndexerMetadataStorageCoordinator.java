@@ -277,14 +277,29 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata endMetadata
   ) throws IOException;
 
+  /**
+   * Commits segments created by an APPEND task. If any REPLACE segment that
+   * overlaps with these {@code appendSegments} was committed while this append
+   * task was in progress, the {@code appendSegments} are also added to the
+   * version of the replace segment.
+   *
+   * @param appendSegments
+   * @param appendSegmentToReplaceLock
+   */
   SegmentPublishResult commitAppendSegments(
-      Set<DataSegment> segments,
-      Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, TaskLockInfo> appendSegmentToReplaceLock
   );
 
+  /**
+   * Commits segments created by a REPLACE task. If any APPEND segment that
+   * overlaps with these {@code replaceSegments} was committed while this replace
+   * task was in progress, the append segments are also added to the version of
+   * these {@code replaceSegments}.
+   */
   SegmentPublishResult commitReplaceSegments(
-      Set<DataSegment> segments,
-      Set<TaskLockInfo> taskLockInfos
+      Set<DataSegment> replaceSegments,
+      Set<TaskLockInfo> locksHeldByReplaceTask
   );
 
   /**

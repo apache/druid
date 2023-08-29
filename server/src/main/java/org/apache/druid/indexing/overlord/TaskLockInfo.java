@@ -25,13 +25,20 @@ import java.util.Objects;
 
 public class TaskLockInfo
 {
+  private final String groupId;
   private final Interval interval;
   private final String version;
 
-  public TaskLockInfo(Interval interval, String version)
+  public TaskLockInfo(String groupId, Interval interval, String version)
   {
+    this.groupId = groupId;
     this.interval = interval;
     this.version = version;
+  }
+
+  public String getGroupId()
+  {
+    return groupId;
   }
 
   public Interval getInterval()
@@ -54,13 +61,14 @@ public class TaskLockInfo
       return false;
     }
     TaskLockInfo that = (TaskLockInfo) o;
-    return Objects.equals(interval, that.getInterval()) &&
-           Objects.equals(version, that.version);
+    return Objects.equals(groupId, that.groupId)
+           && Objects.equals(interval, that.interval)
+           && Objects.equals(version, that.version);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, version);
+    return Objects.hash(groupId, interval, version);
   }
 }

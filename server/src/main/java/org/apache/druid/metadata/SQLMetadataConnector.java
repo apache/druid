@@ -105,13 +105,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Auto-incrementing SQL type to use for IDs
-   * Must be an integer type, which values will be automatically set by the database
-   * <p/>
-   * The resulting string will be interpolated into the table creation statement, e.g.
-   * <code>CREATE TABLE druid_table ( id <type> NOT NULL, ... )</code>
+   * Auto-incrementing integer SQL type to use for IDs.
+   * The returned string is interpolated into the table creation statement as follows:
+   * <pre>
+   * CREATE TABLE druid_table (
+   *   id &lt;serial-type&gt; NOT NULL,
+   *   col_2 VARCHAR(255) NOT NULL,
+   *   col_3 VARCHAR(255) NOT NULL
+   *   ...
+   * )
+   * </pre>
    *
-   * @return String representing the SQL type and auto-increment statement
+   * @return String representing auto-incrementing SQL integer type to use for IDs.
    */
   public abstract String getSerialType();
 
@@ -342,20 +347,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
-                + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) %3$s NOT NULL,\n"
-                + "  start BIGINT NOT NULL,\n"
-                + "  %2$send%2$s BIGINT NOT NULL,\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  group_id VARCHAR(255) NOT NULL,\n"
                 + "  segment_id VARCHAR(255) NOT NULL,\n"
                 + "  lock_version VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getQuoteString(), getCollation()
+                tableName, getSerialType()
             ),
             StringUtils.format(
-                "CREATE INDEX idx_%1$s_datasource_end_start ON %1$s(dataSource, %2$send%2$s, start)",
-                tableName,
-                getQuoteString()
+                "CREATE INDEX idx_%1$s_group_lock_version ON %1$s(group_id, lock_version)",
+                tableName
             )
         )
     );

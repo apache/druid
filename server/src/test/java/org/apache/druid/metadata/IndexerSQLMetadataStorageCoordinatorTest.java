@@ -61,7 +61,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.util.StringMapper;
@@ -86,9 +85,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -468,12 +464,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  private Map<String, TaskLockInfo> getAppendedSegmentIds(String datasource, Set<TaskLockInfo> replaceLocks)
+  private Map<String, String> getAppendedSegmentIds(Set<TaskLockInfo> replaceLocks)
   {
     return derbyConnector.retryWithHandle(
-        handle -> {
-          return coordinator.getAppendedSegmentIds(handle, datasource, replaceLocks);
-        }
+        handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, replaceLocks)
     );
   }
 
@@ -635,7 +629,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     segmentsToBeProcessed.addAll(month1);
     segmentsToBeProcessed.addAll(month2);
     final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewIds = derbyConnector.retryWithHandle(
-        handle -> coordinator.allocateExtraIdsForAppendSegments(handle, "foo", segmentsToBeProcessed)
+        handle -> coordinator.getSegmentsToUpgradeOnAppend(handle, "foo", segmentsToBeProcessed)
     );
 
     for (DataSegment segment : day1) {
@@ -672,7 +666,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final Set<DataSegment> allSegments = new HashSet<>();
     final Set<String> segmentIdsToBeCarriedForward = new HashSet<>();
-    final TaskLockInfo lock = new TaskLockInfo(Intervals.of("2023-01-01/2023-01-03"), "2024-01-01");
+    final TaskLockInfo lock = new TaskLockInfo("g1", Intervals.of("2023-01-01/2023-01-03"), "2024-01-01");
     final Map<DataSegment, TaskLockInfo> segmentLockMap = new HashMap<>();
 
     for (int i = 0; i < 10; i++) {
@@ -732,11 +726,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     final Set<TaskLockInfo> replaceLocks = Collections.singleton(lock);
-    final Map<String, TaskLockInfo> segmentLockMetadata = getAppendedSegmentIds("foo", replaceLocks);
+    final Map<String, String> segmentLockMetadata = getAppendedSegmentIds(replaceLocks);
     Assert.assertEquals(segmentIdsToBeCarriedForward, segmentLockMetadata.keySet());
     Assert.assertEquals(
-        lock,
-        Iterables.getOnlyElement(ImmutableSet.copyOf(segmentLockMetadata.values()))
+        lock.getVersion(),
+        Iterables.getOnlyElement(segmentLockMetadata.values())
     );
   }
 
@@ -744,7 +738,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testCommitReplaceSegments()
   {
-    final TaskLockInfo replaceLock = new TaskLockInfo(Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+    final TaskLockInfo replaceLock = new TaskLockInfo("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, TaskLockInfo> appendedSegmentToReplaceLockMap = new HashMap<>();
     for (int i = 1; i < 9; i++) {
