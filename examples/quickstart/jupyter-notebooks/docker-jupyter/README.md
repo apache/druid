@@ -52,9 +52,9 @@ Any changes to `docker-compose.yaml` should also be made to `docker-compose-loca
 and vice versa. These files should be identical except that `docker-compose.yaml`
 contains an `image` attribute while `docker-compose-local.yaml` contains a `build` subsection.
 
-If you update `docker-compose.yaml`, recreate the ZIP file using the following command:
+If you update any of the notebooks, `docker-compose.yaml`, or the environment file, recreate the ZIP file using the following command:
 
 ```bash
-zip tutorial-jupyter-docker.zip docker-compose.yaml environment
+zip -r tutorial-jupyter-docker.zip docker-compose.yaml environment ../notebooks -x ../notebooks/\*/.ipynb_checkpoints/\* -x ../notebooks/.ipynb_checkpoints/\* -x ../notebooks/\*/__pycache__/\*
 ```
 
