@@ -22,16 +22,27 @@ package org.apache.druid.query.groupby;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -104,7 +115,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       Sequence<ResultRow> process = groupingEngine.process(groupByQuery, adapter,
           (GroupByQueryMetrics) queryPlus.getQueryMetrics());
 
-      return GroupByQueryQueryToolChest.wrapSummaryRowIfNeeded(groupByQuery, process);
+      return wrapSummaryRowIfNeeded(groupByQuery, process);
     }
   }
 
@@ -113,4 +124,59 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
   {
     return groupingEngine;
   }
+
+  /**
+   * Wraps the sequence around if for this query a summary row might be needed in case the input becomes empty.
+   *
+   * @return
+   */
+  public static Sequence<ResultRow> wrapSummaryRowIfNeeded(GroupByQuery query, Sequence<ResultRow> process)
+  {
+    if (!summaryRowPreconditions(query)) {
+      return process;
+    }
+
+    final AtomicBoolean t = new AtomicBoolean();
+
+    return Sequences.concat(
+        Sequences.map(process, ent -> {
+          t.set(true);
+          return ent;
+        }),
+        Sequences.simple(() -> {
+          if (t.get()) {
+            return Collections.emptyIterator();
+          }
+          return summaryRowIterator(query);
+        }));
+  }
+
+  private static boolean summaryRowPreconditions(GroupByQuery query)
+  {
+    LimitSpec limit = query.getLimitSpec();
+    if (limit instanceof DefaultLimitSpec) {
+      DefaultLimitSpec limitSpec = (DefaultLimitSpec) limit;
+      if (limitSpec.getLimit() == 0 || limitSpec.getOffset() > 0) {
+        return false;
+      }
+    }
+    if (!query.getDimensions().isEmpty()) {
+      return false;
+    }
+    if (query.getGranularity().isFinerThan(Granularities.ALL)) {
+      return false;
+    }
+    return true;
+  }
+
+  private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)
+  {
+    List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
+    Object[] values = new Object[aggSpec.size()];
+    for (int i = 0; i < aggSpec.size(); i++) {
+      values[i] = aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get();
+    }
+    return Collections.singleton(ResultRow.of(values)).iterator();
+  }
+
 }
