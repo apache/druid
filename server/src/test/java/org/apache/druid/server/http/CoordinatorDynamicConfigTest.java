@@ -56,10 +56,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"maxKillTaskSlots\": 2,\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
-                     + "  \"decommissioningMaxPercentOfMaxSegmentsToMove\": 9,\n"
                      + "  \"pauseCoordination\": false,\n"
-                     + "  \"replicateAfterLoadTimeout\": false,\n"
-                     + "  \"maxNonPrimaryReplicantsToLoad\": 2147483647\n"
+                     + "  \"replicateAfterLoadTimeout\": false\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -431,20 +429,6 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testSerdeHandlesInvalidDecommissioningPercentToMove()
-  {
-    final String errorMsg = "'decommissioningMaxPercentOfMaxSegmentsToMove' should be in range [0, 100]";
-    assertThatDeserializationFailsWithMessage(
-        "{\"decommissioningMaxPercentOfMaxSegmentsToMove\": -1}",
-        errorMsg
-    );
-    assertThatDeserializationFailsWithMessage(
-        "{\"decommissioningMaxPercentOfMaxSegmentsToMove\": 105}",
-        errorMsg
-    );
-  }
-
-  @Test
   public void testHandleMissingPercentOfSegmentsToConsiderPerMove() throws Exception
   {
     String jsonStr = "{\n"
@@ -458,7 +442,6 @@ public class CoordinatorDynamicConfigTest
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
-                     + "  \"decommissioningMaxPercentOfMaxSegmentsToMove\": 9,\n"
                      + "  \"pauseCoordination\": false\n"
                      + "}\n";
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -667,15 +650,6 @@ public class CoordinatorDynamicConfigTest
             null,
             null
         ).build(current)
-    );
-  }
-
-  @Test
-  public void testSerdeHandleInvalidMaxNonPrimaryReplicantsToLoad()
-  {
-    assertThatDeserializationFailsWithMessage(
-        "{\"maxNonPrimaryReplicantsToLoad\": -1}",
-        "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
     );
   }
 
