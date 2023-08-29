@@ -50,7 +50,7 @@ public class CollectSegmentAndServerStatsTest
                                      .withDruidCluster(DruidCluster.EMPTY)
                                      .withUsedSegmentsInTest()
                                      .withBalancerStrategy(new RandomBalancerStrategy())
-                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
                                      .build();
 
     Mockito.when(mockTaskMaster.getAllPeons())
