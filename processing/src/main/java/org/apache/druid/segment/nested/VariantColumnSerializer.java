@@ -384,8 +384,8 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 
     if (dictionaryIdLookup.getStringBufferMapper() != null) {
       SmooshedFileMapper fileMapper = dictionaryIdLookup.getStringBufferMapper();
-      for (String name : fileMapper.getInternalFilenames()) {
-        smoosher.add(name, fileMapper.mapFile(name));
+      for (String internalName : fileMapper.getInternalFilenames()) {
+        smoosher.add(internalName, fileMapper.mapFile(internalName));
       }
     } else {
       writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);

@@ -52,7 +52,6 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   protected final IndexSpec indexSpec;
   @SuppressWarnings("unused")
   protected final Closer closer;
-  protected final String dictionaryFileName;
 
   protected DictionaryIdLookup dictionaryIdLookup;
   protected DictionaryWriter<T> dictionaryWriter;
@@ -66,14 +65,12 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
 
   public ScalarNestedCommonFormatColumnSerializer(
       String name,
-      String dictionaryFileName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
     this.name = name;
-    this.dictionaryFileName = dictionaryFileName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;

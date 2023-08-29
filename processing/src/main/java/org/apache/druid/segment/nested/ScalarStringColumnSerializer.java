@@ -47,7 +47,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
       Closer closer
   )
   {
-    super(name, STRING_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

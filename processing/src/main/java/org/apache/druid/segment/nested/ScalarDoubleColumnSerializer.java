@@ -49,7 +49,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
       Closer closer
   )
   {
-    super(name, DOUBLE_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

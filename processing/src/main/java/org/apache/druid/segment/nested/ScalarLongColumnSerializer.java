@@ -49,7 +49,7 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
       Closer closer
   )
   {
-    super(name, LONG_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

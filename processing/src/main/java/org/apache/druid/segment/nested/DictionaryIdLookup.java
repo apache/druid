@@ -205,7 +205,7 @@ public final class DictionaryIdLookup implements Closeable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     if (stringBufferMapper != null) {
       stringBufferMapper.close();
@@ -267,14 +267,14 @@ public final class DictionaryIdLookup implements Closeable
     }
   }
 
-  private GatheringByteChannel makeWriter(FileChannel channel, long size) throws IOException
+  private GatheringByteChannel makeWriter(FileChannel channel, long size)
   {
     // basically same code as smooshed writer, can't use channel directly because copying between channels
     // doesn't handle size of source channel correctly
     return new GatheringByteChannel()
     {
       private boolean isClosed = false;
-      private int currOffset = 0;
+      private long currOffset = 0;
 
       @Override
       public boolean isOpen()
