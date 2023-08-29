@@ -154,7 +154,7 @@ SELECT cust_id, sum(revenue) FROM myDatasource
 GROUP BY cust_id
 ```
 
-This query could be split into multiple queries over smaller timespans, with the results combined client-side. For example:
+This query could be split into multiple queries over smaller time spans, with the results combined client-side. For example:
 
 ```
 SELECT cust_id, sum(revenue) FROM myDatasource
