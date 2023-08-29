@@ -128,7 +128,8 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities != null && capabilities.isNumeric();
   }
 
   @Override
@@ -137,10 +138,9 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   )
   {
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-    VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(
-        timeColumn);
     if (capabilities == null || capabilities.isNumeric()) {
+      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new LongLastVectorAggregator(timeSelector, valueSelector);
     } else {
       return NumericNilVectorAggregator.longNilVectorAggregator();
