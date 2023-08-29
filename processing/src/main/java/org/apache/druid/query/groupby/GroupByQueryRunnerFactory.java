@@ -122,9 +122,9 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
     }
   }
 
-  public static Sequence<ResultRow> wrapSummaryRow(GroupByQuery q, Sequence<ResultRow> process)
+  public static Sequence<ResultRow> wrapSummaryRow(GroupByQuery query, Sequence<ResultRow> process)
   {
-    if (!summaryRowPreconditions(q)) {
+    if (!summaryRowPreconditions(query)) {
       return process;
     }
 
@@ -139,23 +139,23 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
           if (t.get()) {
             return Collections.emptyIterator();
           }
-          return summaryRowIterator(q);
+          return summaryRowIterator(query);
         }));
   }
 
-  private static boolean summaryRowPreconditions(GroupByQuery q)
+  private static boolean summaryRowPreconditions(GroupByQuery query)
   {
-    LimitSpec limit = q.getLimitSpec();
+    LimitSpec limit = query.getLimitSpec();
     if (limit instanceof DefaultLimitSpec) {
-      DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limit;
-      if (defaultLimitSpec.getLimit() == 0 || defaultLimitSpec.getOffset() > 0) {
+      DefaultLimitSpec limitSpec = (DefaultLimitSpec) limit;
+      if (limitSpec.getLimit() == 0 || limitSpec.getOffset() > 0) {
         return false;
       }
     }
-    if (!q.getDimensions().isEmpty()) {
+    if (!query.getDimensions().isEmpty()) {
       return false;
     }
-    if (q.getGranularity().isFinerThan(Granularities.ALL)) {
+    if (query.getGranularity().isFinerThan(Granularities.ALL)) {
       return false;
     }
     return true;
