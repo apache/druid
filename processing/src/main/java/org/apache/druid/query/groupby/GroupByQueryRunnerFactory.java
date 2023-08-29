@@ -127,8 +127,6 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
   /**
    * Wraps the sequence around if for this query a summary row might be needed in case the input becomes empty.
-   *
-   * @return
    */
   public static Sequence<ResultRow> wrapSummaryRowIfNeeded(GroupByQuery query, Sequence<ResultRow> process)
   {
