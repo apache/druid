@@ -84,7 +84,7 @@ Only select the columns needed for the query instead of retrieving all columns f
 
 #### Use filters
 
-Use filters, for example the WHERE clause, and filter on time. Avoid using non-equal filters because they're very resource-intensive.
+Use filters, such as the WHERE clause, and filter on time. Avoid using non-equal filters because they're very resource-intensive.
 
 The following example query filters on `__time` and `product`:
 
