@@ -115,10 +115,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
       protected ListenableFuture<TaskStatus> joinAsync(Task task)
       {
         return tasks.computeIfAbsent(
-                        task.getId(),
-                        k -> new KubernetesWorkItem(task, Futures.immediateFuture(TaskStatus.success(task.getId())))
-                    )
-                    .getResult();
+            task.getId(),
+            k -> new KubernetesWorkItem(
+                task,
+                Futures.immediateFuture(TaskStatus.success(task.getId()))
+            )
+        ).getResult();
       }
     };
 
