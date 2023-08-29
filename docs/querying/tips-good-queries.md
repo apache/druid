@@ -180,7 +180,7 @@ The query:
 - selects from a single table
 - groups by low cardinality columns
 - filters on both dimensions and time
-- orders by a dimension and a measure.
+- orders by a dimension and a measure
 - includes a limit
 
 ```
