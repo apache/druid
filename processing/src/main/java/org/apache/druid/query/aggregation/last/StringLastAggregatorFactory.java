@@ -293,7 +293,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    return Objects.hash(fieldName, name, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes, timeColumn);
   }
 
   @Override
