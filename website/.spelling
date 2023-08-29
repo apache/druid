@@ -1258,6 +1258,7 @@ KafkaStringHeaderFormat
 kafka.header.
 kafka.key
 kafka.timestamp
+kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
@@ -2313,5 +2314,6 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+taskslots
 loadstatus
 sqlQueryId

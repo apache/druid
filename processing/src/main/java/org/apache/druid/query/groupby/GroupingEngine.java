@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.strategy;
+package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -41,13 +40,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
@@ -59,10 +56,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
-import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
@@ -70,7 +63,6 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
-import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -87,13 +79,10 @@ import java.util.Set;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
-public class GroupByStrategyV2 implements GroupByStrategy
+public class GroupingEngine
 {
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
-
-  // see countRequiredMergeBufferNumWithoutSubtotal() for explanation
-  private static final int MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL = 2;
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
@@ -104,7 +93,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   private final QueryWatcher queryWatcher;
 
   @Inject
-  public GroupByStrategyV2(
+  public GroupingEngine(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
@@ -123,10 +112,19 @@ public class GroupByStrategyV2 implements GroupByStrategy
     this.queryWatcher = queryWatcher;
   }
 
-  @Override
-  public GroupByQueryResource prepareResource(GroupByQuery query)
+  /**
+   * Initializes resources required to run {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} for a
+   * particular query. That method is also the primary caller of this method.
+   *
+   * Used by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)}.
+   *
+   * @param query a groupBy query to be processed
+   *
+   * @return broker resource
+   */
+  public GroupByQueryResources prepareResource(GroupByQuery query)
   {
-    final int requiredMergeBufferNum = countRequiredMergeBufferNum(query);
+    final int requiredMergeBufferNum = GroupByQueryResources.countRequiredMergeBufferNum(query);
 
     if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
       throw new ResourceLimitExceededException(
@@ -134,7 +132,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           + mergeBufferPool.maxSize() + " merge buffers were configured"
       );
     } else if (requiredMergeBufferNum == 0) {
-      return new GroupByQueryResource();
+      return new GroupByQueryResources();
     } else {
       final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
       final QueryContext context = query.context();
@@ -151,61 +149,49 @@ public class GroupByStrategyV2 implements GroupByStrategy
             )
         );
       } else {
-        return new GroupByQueryResource(mergeBufferHolders);
+        return new GroupByQueryResources(mergeBufferHolders);
       }
     }
   }
 
-  @VisibleForTesting
-  public static int countRequiredMergeBufferNum(GroupByQuery query)
-  {
-    return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
-  }
-
-  private static int countRequiredMergeBufferNumWithoutSubtotal(Query query, int foundNum)
-  {
-    // Note: A broker requires merge buffers for processing the groupBy layers beyond the inner-most one.
-    // For example, the number of required merge buffers for a nested groupBy (groupBy -> groupBy -> table) is 1.
-    // If the broker processes an outer groupBy which reads input from an inner groupBy,
-    // it requires two merge buffers for inner and outer groupBys to keep the intermediate result of inner groupBy
-    // until the outer groupBy processing completes.
-    // This is same for subsequent groupBy layers, and thus the maximum number of required merge buffers becomes 2.
-
-    final DataSource dataSource = query.getDataSource();
-    if (foundNum == MAX_MERGE_BUFFER_NUM_WITHOUT_SUBTOTAL + 1 || !(dataSource instanceof QueryDataSource)) {
-      return foundNum - 1;
-    } else {
-      return countRequiredMergeBufferNumWithoutSubtotal(((QueryDataSource) dataSource).getQuery(), foundNum + 1);
-    }
-  }
-
-  @Override
-  public boolean isCacheable(boolean willMergeRunners, boolean bySegment)
-  {
-    //disable segment-level cache on borker,
-    //see PR https://github.com/apache/druid/issues/3820
-    return willMergeRunners || !bySegment;
-  }
-
-  @Override
-  public boolean doMergeResults(final GroupByQuery query)
-  {
-    return true;
-  }
-
-  @Override
+  /**
+   * See {@link org.apache.druid.query.QueryToolChest#createResultComparator(Query)}, allows
+   * {@link GroupByQueryQueryToolChest} to delegate implementation to the strategy
+   */
   public Comparator<ResultRow> createResultComparator(Query<ResultRow> queryParam)
   {
     return ((GroupByQuery) queryParam).getRowOrdering(true);
   }
 
-  @Override
+  /**
+   * See {@link org.apache.druid.query.QueryToolChest#createMergeFn(Query)} for details, allows
+   * {@link GroupByQueryQueryToolChest} to delegate implementation to the strategy
+   */
   public BinaryOperator<ResultRow> createMergeFn(Query<ResultRow> queryParam)
   {
     return new GroupByBinaryFnV2((GroupByQuery) queryParam);
   }
 
-  @Override
+  /**
+   * Runs a provided {@link QueryRunner} on a provided {@link GroupByQuery}, which is assumed to return rows that are
+   * properly sorted (by timestamp and dimensions) but not necessarily fully merged (that is, there may be adjacent
+   * rows with the same timestamp and dimensions) and without PostAggregators computed. This method will fully merge
+   * the rows, apply PostAggregators, and return the resulting {@link Sequence}.
+   *
+   * The query will be modified before passing it down to the base runner. For example, "having" clauses will be
+   * removed and various context parameters will be adjusted.
+   *
+   * Despite the similar name, this method is much reduced in scope compared to
+   * {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)}. That method does delegate to this one at some points,
+   * but has a truckload of other responsibility, including computing outer query results (if there are subqueries),
+   * computing subtotals (like GROUPING SETS), and computing the havingSpec and limitSpec.
+   *
+   * @param baseRunner      base query runner
+   * @param query           the groupBy query to run inside the base query runner
+   * @param responseContext the response context to pass to the base query runner
+   *
+   * @return merged result sequence
+   */
   public Sequence<ResultRow> mergeResults(
       final QueryRunner<ResultRow> baseRunner,
       final GroupByQuery query,
@@ -223,7 +209,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
     // Set up downstream context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
     context.put(QueryContexts.FINALIZE_KEY, false);
-    context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
     context.put(CTX_KEY_OUTERMOST, false);
 
     Granularity granularity = query.getGranularity();
@@ -382,35 +367,73 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  private void moveOrReplicateTimestampInRow(
-      GroupByQuery query,
-      int timestampResultFieldIndexInOriginalDimensions,
-      ResultRow before,
-      ResultRow after
+  /**
+   * Merge a variety of single-segment query runners into a combined runner. Used by
+   * {@link GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
+   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
+   * by that method will be fed into this method).
+   * <p>
+   * This method is only called on data servers, like Historicals (not the Broker).
+   *
+   * @param queryProcessingPool {@link QueryProcessingPool} service used for parallel execution of the query runners
+   * @param queryRunners  collection of query runners to merge
+   * @return merged query runner
+   */
+  public QueryRunner<ResultRow> mergeRunners(
+      final QueryProcessingPool queryProcessingPool,
+      final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
-    // d1 is the __time
-    // when query.granularity=all:  convert [__time, d0] to [d0, d1] (actually, [d0, __time])
-    // when query.granularity!=all: convert [__time, d0] to [__time, d0, d1] (actually, [__time, d0, __time])
-    // overall, insert the removed d1 at the position where it is removed and remove the first __time if granularity=all
-    Object theTimestamp = before.get(0);
-    int expectedDimensionStartInAfterRow = 0;
-    if (query.getResultRowHasTimestamp()) {
-      expectedDimensionStartInAfterRow = 1;
-      after.set(0, theTimestamp);
-    }
-    int timestampResultFieldIndexInAfterRow = timestampResultFieldIndexInOriginalDimensions + expectedDimensionStartInAfterRow;
-    for (int i = expectedDimensionStartInAfterRow; i < timestampResultFieldIndexInAfterRow; i++) {
-      // 0 in beforeRow is the timestamp, so plus 1 is the start of dimension in beforeRow
-      after.set(i, before.get(i + 1));
-    }
-    after.set(timestampResultFieldIndexInAfterRow, theTimestamp);
-    for (int i = timestampResultFieldIndexInAfterRow + 1; i < before.length() + expectedDimensionStartInAfterRow; i++) {
-      after.set(i, before.get(i - expectedDimensionStartInAfterRow));
-    }
+    return new GroupByMergingQueryRunnerV2(
+        configSupplier.get(),
+        processingConfig,
+        queryProcessingPool,
+        queryWatcher,
+        queryRunners,
+        processingConfig.getNumThreads(),
+        mergeBufferPool,
+        processingConfig.intermediateComputeSizeBytes(),
+        spillMapper,
+        processingConfig.getTmpDir()
+    );
   }
 
-  @Override
+  /**
+   * Process a groupBy query on a single {@link StorageAdapter}. This is used by
+   * {@link GroupByQueryRunnerFactory#createRunner} to create per-segment
+   * QueryRunners.
+   *
+   * This method is only called on data servers, like Historicals (not the Broker).
+   *
+   * @param query          the groupBy query
+   * @param storageAdapter storage adatper for the segment in question
+   *
+   * @return result sequence for the storage adapter
+   */
+  public Sequence<ResultRow> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter,
+      @Nullable GroupByQueryMetrics groupByQueryMetrics
+  )
+  {
+    return GroupByQueryEngineV2.process(
+        query,
+        storageAdapter,
+        bufferPool,
+        configSupplier.get().withOverrides(query),
+        processingConfig,
+        groupByQueryMetrics
+    );
+  }
+
+  /**
+   * Apply the {@link GroupByQuery} "postProcessingFn", which is responsible for HavingSpec and LimitSpec.
+   *
+   * @param results sequence of results
+   * @param query   the groupBy query
+   *
+   * @return post-processed results, with HavingSpec and LimitSpec applied
+   */
   public Sequence<ResultRow> applyPostProcessing(Sequence<ResultRow> results, GroupByQuery query)
   {
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
@@ -421,11 +444,22 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  @Override
+  /**
+   * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to process a subquery.
+   *
+   * @param subquery           inner query
+   * @param query              outer query
+   * @param resource           resources returned by {@link #prepareResource(GroupByQuery)}
+   * @param subqueryResult     result rows from the subquery
+   * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
+   *                           results, not run it from scratch like a normal outer query)
+   *
+   * @return results of the outer query
+   */
   public Sequence<ResultRow> processSubqueryResult(
       GroupByQuery subquery,
       GroupByQuery query,
-      GroupByQueryResource resource,
+      GroupByQueryResources resource,
       Sequence<ResultRow> subqueryResult,
       boolean wasQueryPushedDown
   )
@@ -462,7 +496,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
           mergeResults(
               (queryPlus, responseContext) -> finalResultSupplier.results(null),
               query,
-              null
+              ResponseContext.createEmpty()
           ),
           finalResultSupplier
       );
@@ -472,10 +506,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
   }
 
-  @Override
+  /**
+   * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to generate subtotals.
+   *
+   * @param query       query that has a "subtotalsSpec"
+   * @param resource    resources returned by {@link #prepareResource(GroupByQuery)}
+   * @param queryResult result rows from the main query
+   *
+   * @return results for each list of subtotals in the query, concatenated together
+   */
   public Sequence<ResultRow> processSubtotalsSpec(
       GroupByQuery query,
-      GroupByQueryResource resource,
+      GroupByQueryResources resource,
       Sequence<ResultRow> queryResult
   )
   {
@@ -631,11 +673,39 @@ public class GroupByStrategyV2 implements GroupByStrategy
                   )
               ),
           subtotalQuery,
-          null
+          ResponseContext.createEmpty()
       );
     }
     catch (Throwable e) {
       throw CloseableUtils.closeAndWrapInCatch(e, baseResultsSupplier.get());
+    }
+  }
+
+  private void moveOrReplicateTimestampInRow(
+      GroupByQuery query,
+      int timestampResultFieldIndexInOriginalDimensions,
+      ResultRow before,
+      ResultRow after
+  )
+  {
+    // d1 is the __time
+    // when query.granularity=all:  convert [__time, d0] to [d0, d1] (actually, [d0, __time])
+    // when query.granularity!=all: convert [__time, d0] to [__time, d0, d1] (actually, [__time, d0, __time])
+    // overall, insert the removed d1 at the position where it is removed and remove the first __time if granularity=all
+    Object theTimestamp = before.get(0);
+    int expectedDimensionStartInAfterRow = 0;
+    if (query.getResultRowHasTimestamp()) {
+      expectedDimensionStartInAfterRow = 1;
+      after.set(0, theTimestamp);
+    }
+    int timestampResultFieldIndexInAfterRow = timestampResultFieldIndexInOriginalDimensions + expectedDimensionStartInAfterRow;
+    for (int i = expectedDimensionStartInAfterRow; i < timestampResultFieldIndexInAfterRow; i++) {
+      // 0 in beforeRow is the timestamp, so plus 1 is the start of dimension in beforeRow
+      after.set(i, before.get(i + 1));
+    }
+    after.set(timestampResultFieldIndexInAfterRow, theTimestamp);
+    for (int i = timestampResultFieldIndexInAfterRow + 1; i < before.length() + expectedDimensionStartInAfterRow; i++) {
+      after.set(i, before.get(i - expectedDimensionStartInAfterRow));
     }
   }
 
@@ -655,75 +725,5 @@ public class GroupByStrategyV2 implements GroupByStrategy
     }
 
     return aggsAndPostAggs;
-  }
-
-  private static int numMergeBuffersNeededForSubtotalsSpec(GroupByQuery query)
-  {
-    List<List<String>> subtotalSpecs = query.getSubtotalsSpec();
-    final DataSource dataSource = query.getDataSource();
-    int numMergeBuffersNeededForSubQuerySubtotal = 0;
-    if (dataSource instanceof QueryDataSource) {
-      Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
-      if (subQuery instanceof GroupByQuery) {
-        numMergeBuffersNeededForSubQuerySubtotal = numMergeBuffersNeededForSubtotalsSpec((GroupByQuery) subQuery);
-      }
-
-    }
-    if (subtotalSpecs == null || subtotalSpecs.size() == 0) {
-      return numMergeBuffersNeededForSubQuerySubtotal;
-    }
-
-    List<String> queryDimOutputNames = query.getDimensions().stream().map(DimensionSpec::getOutputName).collect(
-        Collectors.toList());
-    for (List<String> subtotalSpec : subtotalSpecs) {
-      if (!Utils.isPrefix(subtotalSpec, queryDimOutputNames)) {
-        return 2;
-      }
-    }
-
-    return Math.max(1, numMergeBuffersNeededForSubQuerySubtotal);
-  }
-
-  @Override
-  public QueryRunner<ResultRow> mergeRunners(
-      final QueryProcessingPool queryProcessingPool,
-      final Iterable<QueryRunner<ResultRow>> queryRunners
-  )
-  {
-    return new GroupByMergingQueryRunnerV2(
-        configSupplier.get(),
-        processingConfig,
-        queryProcessingPool,
-        queryWatcher,
-        queryRunners,
-        processingConfig.getNumThreads(),
-        mergeBufferPool,
-        processingConfig.intermediateComputeSizeBytes(),
-        spillMapper,
-        processingConfig.getTmpDir()
-    );
-  }
-
-  @Override
-  public Sequence<ResultRow> process(
-      GroupByQuery query,
-      StorageAdapter storageAdapter,
-      @Nullable GroupByQueryMetrics groupByQueryMetrics
-  )
-  {
-    return GroupByQueryEngineV2.process(
-        query,
-        storageAdapter,
-        bufferPool,
-        configSupplier.get().withOverrides(query),
-        processingConfig,
-        groupByQueryMetrics
-    );
-  }
-
-  @Override
-  public boolean supportsNestedQueryPushDown()
-  {
-    return true;
   }
 }

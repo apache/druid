@@ -50,7 +50,11 @@ public class ExpressionProcessingConfig
       @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays
   )
   {
-    this.useStrictBooleans = getWithPropertyFallbackFalse(useStrictBooleans, NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING);
+    this.useStrictBooleans = getWithPropertyFallback(
+        useStrictBooleans,
+        NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
+        "true"
+    );
     this.processArraysAsMultiValueStrings = getWithPropertyFallbackFalse(
         processArraysAsMultiValueStrings,
         PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING
@@ -78,6 +82,11 @@ public class ExpressionProcessingConfig
 
   private static boolean getWithPropertyFallbackFalse(@Nullable Boolean value, String property)
   {
-    return value != null ? value : Boolean.valueOf(System.getProperty(property, "false"));
+    return getWithPropertyFallback(value, property, "false");
+  }
+
+  private static boolean getWithPropertyFallback(@Nullable Boolean value, String property, String fallback)
+  {
+    return value != null ? value : Boolean.valueOf(System.getProperty(property, fallback));
   }
 }

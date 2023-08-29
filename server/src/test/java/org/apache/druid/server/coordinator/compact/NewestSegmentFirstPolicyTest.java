@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.coordinator.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -58,7 +57,7 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.assertj.core.api.Assertions;
+import org.apache.druid.utils.Streams;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -72,6 +71,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
@@ -208,7 +208,7 @@ public class NewestSegmentFirstPolicyTest
 
     Interval lastInterval = null;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next();
+      final List<DataSegment> segments = iterator.next().getSegments();
       lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
@@ -264,7 +264,7 @@ public class NewestSegmentFirstPolicyTest
 
     Interval lastInterval = null;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next();
+      final List<DataSegment> segments = iterator.next().getSegments();
       lastInterval = segments.get(0).getInterval();
 
       Interval prevInterval = null;
@@ -352,9 +352,13 @@ public class NewestSegmentFirstPolicyTest
     );
     expectedSegmentsToCompact2.sort(Comparator.naturalOrder());
 
-    Assertions.assertThat(iterator)
-              .toIterable()
-              .containsExactly(expectedSegmentsToCompact, expectedSegmentsToCompact2);
+    Set<List<DataSegment>> observedSegments = Streams.sequentialStreamFrom(iterator)
+                                                     .map(SegmentsToCompact::getSegments)
+                                                     .collect(Collectors.toSet());
+    Assert.assertEquals(
+        observedSegments,
+        ImmutableSet.of(expectedSegmentsToCompact, expectedSegmentsToCompact2)
+    );
   }
 
   @Test
@@ -419,7 +423,13 @@ public class NewestSegmentFirstPolicyTest
     );
 
     Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(Iterables.concat(ImmutableSet.copyOf(iterator))));
+    Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
+                                                        .flatMap(s -> s.getSegments().stream())
+                                                        .collect(Collectors.toSet());
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        observedSegmentsToCompact
+    );
   }
 
   @Test
@@ -446,7 +456,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> actual = iterator.next();
+    List<DataSegment> actual = iterator.next().getSegments();
     Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
     Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     Assert.assertFalse(iterator.hasNext());
@@ -472,7 +482,13 @@ public class NewestSegmentFirstPolicyTest
     );
 
     Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(Iterables.concat(ImmutableSet.copyOf(iterator))));
+    Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
+                                                        .flatMap(s -> s.getSegments().stream())
+                                                        .collect(Collectors.toSet());
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        observedSegmentsToCompact
+    );
   }
 
   @Test
@@ -585,7 +601,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // Month of Nov
     Assert.assertTrue(iterator.hasNext());
@@ -594,7 +610,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // Month of Oct
     Assert.assertTrue(iterator.hasNext());
@@ -603,7 +619,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -631,7 +647,7 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-15"), Partitions.ONLY_COMPLETE)
     );
     Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> actual = iterator.next();
+    List<DataSegment> actual = iterator.next().getSegments();
     Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
     Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // Month of Jan
@@ -639,7 +655,7 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-01/2020-02-03"), Partitions.ONLY_COMPLETE)
     );
     Assert.assertTrue(iterator.hasNext());
-    actual = iterator.next();
+    actual = iterator.next().getSegments();
     Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
     Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
     // No more
@@ -663,7 +679,10 @@ public class NewestSegmentFirstPolicyTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
     );
     Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(iterator.next()));
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next().getSegments())
+    );
     // Iterator should return only once since all the "minute" interval of the iterator contains the same interval
     Assert.assertFalse(iterator.hasNext());
   }
@@ -689,7 +708,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -701,7 +720,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -734,7 +753,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -767,7 +786,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -798,7 +817,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -810,7 +829,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -841,7 +860,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -853,7 +872,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -893,7 +912,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -905,7 +924,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -944,7 +963,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -956,7 +975,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // rollup=false for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -996,7 +1015,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1004,7 +1023,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1016,7 +1035,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // queryGranularity=DAY for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1056,7 +1075,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1064,7 +1083,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1076,7 +1095,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // Dimensions=["foo", "bar"] for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1130,7 +1149,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1138,7 +1157,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1146,7 +1165,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1175,7 +1194,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // filter=SelectorDimFilter("dim1", "foo", null) for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1250,7 +1269,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1258,7 +1277,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1266,7 +1285,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1299,7 +1318,7 @@ public class NewestSegmentFirstPolicyTest
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have
     // metricsSpec={CountAggregatorFactory("cnt")} for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
@@ -1374,7 +1393,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1382,7 +1401,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     Assert.assertTrue(iterator.hasNext());
     expectedSegmentsToCompact = new ArrayList<>(
@@ -1390,7 +1409,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1436,7 +1455,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1448,7 +1467,7 @@ public class NewestSegmentFirstPolicyTest
     // Different indexSpec as what is set in the auto compaction config
     IndexSpec newIndexSpec = IndexSpec.builder().withBitmapSerdeFactory(new ConciseBitmapSerdeFactory()).build();
     Map<String, Object> newIndexSpecMap = mapper.convertValue(newIndexSpec, new TypeReference<Map<String, Object>>() {});
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
@@ -1487,7 +1506,7 @@ public class NewestSegmentFirstPolicyTest
     );
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1497,7 +1516,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec()
   {
     NullHandling.initializeForTests();
-    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
     final SegmentTimeline timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
@@ -1691,7 +1710,7 @@ public class NewestSegmentFirstPolicyTest
   {
     Interval expectedSegmentIntervalStart = to;
     while (iterator.hasNext()) {
-      final List<DataSegment> segments = iterator.next();
+      final List<DataSegment> segments = iterator.next().getSegments();
 
       final Interval firstInterval = segments.get(0).getInterval();
       Assert.assertTrue(

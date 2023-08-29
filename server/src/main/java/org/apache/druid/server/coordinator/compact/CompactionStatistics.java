@@ -17,40 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.server.coordinator.compact;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
-
-public class NestedDataDimensionSchema extends DimensionSchema
+/**
+ * Used to track statistics for segments in different states of compaction.
+ */
+public class CompactionStatistics
 {
-  @JsonCreator
-  public NestedDataDimensionSchema(
-      @JsonProperty("name") String name
-  )
+  private long totalBytes;
+  private long numSegments;
+  private long numIntervals;
+
+  public static CompactionStatistics create()
   {
-    super(name, null, true);
+    return new CompactionStatistics();
   }
 
-  @Override
-  public String getTypeName()
+  public long getTotalBytes()
   {
-    return NestedDataComplexTypeSerde.TYPE_NAME;
+    return totalBytes;
   }
 
-  @Override
-  public ColumnType getColumnType()
+  public long getNumSegments()
   {
-    return ColumnType.NESTED_DATA;
+    return numSegments;
   }
 
-  @Override
-  public DimensionHandler getDimensionHandler()
+  public long getNumIntervals()
   {
-    return new NestedDataDimensionHandler(getName());
+    return numIntervals;
+  }
+
+  public void addFrom(SegmentsToCompact segments)
+  {
+    totalBytes += segments.getTotalBytes();
+    numIntervals += segments.getNumIntervals();
+    numSegments += segments.size();
   }
 }
-

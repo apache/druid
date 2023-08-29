@@ -303,7 +303,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null, null);
+    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null);
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
@@ -316,7 +316,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       final Set<DataSegment> segments,
-      final Set<DataSegment> segmentsToDrop,
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata
   ) throws IOException
@@ -382,27 +381,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 }
               }
 
-              if (segmentsToDrop != null && !segmentsToDrop.isEmpty()) {
-                final DataStoreMetadataUpdateResult result = dropSegmentsWithHandle(
-                    handle,
-                    segmentsToDrop,
-                    dataSource
-                );
-                if (result.isFailed()) {
-                  // Metadata store was definitely not updated.
-                  transactionStatus.setRollbackOnly();
-                  definitelyNotUpdated.set(true);
-
-                  if (result.canRetry()) {
-                    throw new RetryTransactionException(result.getErrorMsg());
-                  } else {
-                    throw new RuntimeException(result.getErrorMsg());
-                  }
-                }
-              }
-
               final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments);
-
               return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
           },
@@ -1533,7 +1512,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return SUCCESS if dataSource metadata was updated from matching startMetadata to matching endMetadata, FAILURE or
    * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
-   * {@link #announceHistoricalSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
+   * {@link #announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)}
    * achieve its own guarantee.
    *
    * @throws RuntimeException if state is unknown after this call
@@ -1651,61 +1630,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     return retVal;
-  }
-
-  /**
-   * Mark segments as unsed in a transaction. This method is idempotent in that if
-   * the segments was already marked unused, it will return true.
-   *
-   * @param handle         database handle
-   * @param segmentsToDrop segments to mark as unused
-   * @param dataSource     druid dataSource
-   *
-   * @return SUCCESS if segment was marked unused, FAILURE or
-   * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
-   * {@link #announceHistoricalSegments(Set, Set, DataSourceMetadata, DataSourceMetadata)}
-   * achieve its own guarantee.
-   *
-   * @throws RuntimeException if state is unknown after this call
-   */
-  protected DataStoreMetadataUpdateResult dropSegmentsWithHandle(
-      final Handle handle,
-      final Collection<DataSegment> segmentsToDrop,
-      final String dataSource
-  )
-  {
-    Preconditions.checkNotNull(dataSource, "dataSource");
-    Preconditions.checkNotNull(segmentsToDrop, "segmentsToDrop");
-
-    if (segmentsToDrop.isEmpty()) {
-      return DataStoreMetadataUpdateResult.SUCCESS;
-    }
-
-    if (segmentsToDrop.stream().anyMatch(segment -> !dataSource.equals(segment.getDataSource()))) {
-      // All segments to drop must belong to the same datasource
-      return new DataStoreMetadataUpdateResult(
-          true,
-          false,
-          "Not dropping segments, as not all segments belong to the datasource[%s].",
-          dataSource);
-    }
-
-    final int numChangedSegments =
-        SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper).markSegments(
-            segmentsToDrop.stream().map(DataSegment::getId).collect(Collectors.toList()),
-            false
-        );
-
-    if (numChangedSegments != segmentsToDrop.size()) {
-      return new DataStoreMetadataUpdateResult(
-          true,
-          true,
-          "Failed to drop some segments. Only %d could be dropped out of %d. Trying again",
-          numChangedSegments,
-          segmentsToDrop.size()
-      );
-    }
-    return DataStoreMetadataUpdateResult.SUCCESS;
   }
 
   @Override
@@ -1886,12 +1810,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public DataSegment retrieveUsedSegmentForId(final String id)
+  public DataSegment retrieveSegmentForId(final String id, boolean includeUnused)
   {
     return connector.retryTransaction(
-        (handle, status) ->
-            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                    .retrieveUsedSegmentForId(id),
+        (handle, status) -> {
+          if (includeUnused) {
+            return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                           .retrieveSegmentForId(id);
+          } else {
+            return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                           .retrieveUsedSegmentForId(id);
+          }
+        },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );

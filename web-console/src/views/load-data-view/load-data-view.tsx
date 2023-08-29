@@ -226,6 +226,7 @@ function showKafkaLine(line: SampleEntry): string {
   if (!input) return 'Invalid kafka row';
   return compact([
     `[ Kafka timestamp: ${input['kafka.timestamp']}`,
+    `  Topic: ${input['kafka.topic']}`,
     ...filterMap(Object.entries(input), ([k, v]) => {
       if (!k.startsWith('kafka.header.')) return;
       return `  Header: ${k.slice(13)}=${v}`;
