@@ -110,37 +110,33 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       GroupByQuery q = (GroupByQuery) query;
       List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
 
+      Sequence<ResultRow> process = groupingEngine.process((GroupByQuery) query, adapter,
+          (GroupByQueryMetrics) queryPlus.getQueryMetrics());
 
-
-      Sequence<ResultRow> process = groupingEngine.process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
-
-      if(q.getDimensions().isEmpty() && !q.getGranularity().isFinerThan(Granularities.ALL)) {
+      if (q.getDimensions().isEmpty() && !q.getGranularity().isFinerThan(Granularities.ALL)) {
         AllNullColumnSelectorFactory nullSelector = new AllNullColumnSelectorFactory();
 
         AtomicBoolean t = new AtomicBoolean();
-        process=Sequences.<ResultRow>concat(
-        Sequences.<ResultRow,ResultRow>map(process, ent -> {
-          t.set(true);
-          return ent;
-        }),
+        process = Sequences.<ResultRow> concat(
+            Sequences.<ResultRow, ResultRow> map(process, ent -> {
+              t.set(true);
+              return ent;
+            }),
 
-//        aggSpec=q.getAggregatorSpecs();
-
-
-Sequences.<ResultRow>simple(() -> {
-  if (t.get()) {
-    return Collections.emptyIterator();
-  }
-  ResultRow row = ResultRow.create(aggSpec.size());
-  Object[] values = row.getArray();
-  for (int i = 0; i < aggSpec.size(); i++) {
-    values[i] = aggSpec.get(i).factorize(nullSelector).get();
-  }
-  return Collections.singleton(row).iterator();
-}));
-        //      Sequences.simple( () -> {if(t.get()) { return Iterables.empty() else } } );
+            Sequences.<ResultRow> simple(() -> {
+              if (t.get()) {
+                return Collections.emptyIterator();
+              }
+              ResultRow row = ResultRow.create(aggSpec.size());
+              Object[] values = row.getArray();
+              for (int i = 0; i < aggSpec.size(); i++) {
+                values[i] = aggSpec.get(i).factorize(nullSelector).get();
+              }
+              return Collections.singleton(row).iterator();
+            }));
+        // Sequences.simple( () -> {if(t.get()) { return Iterables.empty() else
+        // } } );
       }
-
 
       return process;
     }

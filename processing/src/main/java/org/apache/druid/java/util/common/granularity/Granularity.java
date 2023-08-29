@@ -220,7 +220,8 @@ public abstract class Granularity implements Cacheable
    *
    * @return true if this {@link Granularity} is finer than the passed one
    */
-  public boolean isFinerThan(Granularity g) {
+  public boolean isFinerThan(Granularity g)
+  {
     return IS_FINER_THAN.compare(this, g) < 0;
   }
 
