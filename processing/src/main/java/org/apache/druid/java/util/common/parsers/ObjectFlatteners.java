@@ -19,14 +19,15 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.collect.Utils;
 
 import javax.annotation.Nullable;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -80,135 +81,126 @@ public class ObjectFlatteners
 
     return new ObjectFlattener<T>()
     {
+      private final Set<String> extractorsKeySet = extractors.keySet();
+
       @Override
       public Map<String, Object> flatten(final T obj)
       {
-        return new AbstractMap<String, Object>()
-        {
-          @Override
-          public int size()
-          {
-            return keySet().size();
+        Set<String> keySet = getRequiredKeySet(obj);
+        Map<String, Object> map = getCustomHashMap(keySet.stream().collect(Utils.toMap(Functions.identity(), key -> {
+          final Function<T, Object> extractor = extractors.get(key);
+          if (extractor != null) {
+            return extractor.apply(obj);
+          } else {
+            return flattenerMaker.getRootField(obj, key);
           }
+        })));
+        return map;
+      }
 
-          @Override
-          public boolean isEmpty()
-          {
-            return keySet().isEmpty();
+      private Set<String> getRequiredKeySet(final T obj)
+      {
+        if (flattenSpec.isUseFieldDiscovery()) {
+          final Iterable<String> rootFields = flattenerMaker.discoverRootFields(obj);
+          if (extractors.isEmpty() && rootFields instanceof Set) {
+            return (Set<String>) rootFields;
+          } else {
+            final Set<String> keys = new LinkedHashSet<>(this.extractorsKeySet);
+            Iterables.addAll(keys, rootFields);
+            return keys;
           }
-
-          @Override
-          public boolean containsKey(final Object key)
-          {
-            if (key == null) {
-              return false;
-            }
-
-            return keySet().contains(key.toString());
-          }
-
-          @Override
-          public boolean containsValue(final Object value)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public Object get(final Object key)
-          {
-            final String keyString = key.toString();
-            final Function<T, Object> extractor = extractors.get(keyString);
-            if (extractor != null) {
-              return extractor.apply(obj);
-            } else {
-              return flattenerMaker.getRootField(obj, keyString);
-            }
-          }
-
-          @Override
-          public Object put(final String key, final Object value)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public Object remove(final Object key)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public void putAll(final Map<? extends String, ?> m)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public void clear()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public Set<String> keySet()
-          {
-            if (flattenSpec.isUseFieldDiscovery()) {
-              final Iterable<String> rootFields = flattenerMaker.discoverRootFields(obj);
-              if (extractors.isEmpty() && rootFields instanceof Set) {
-                return (Set<String>) rootFields;
-              } else {
-                final Set<String> keys = new LinkedHashSet<>(extractors.keySet());
-                Iterables.addAll(keys, rootFields);
-                return keys;
-              }
-            } else {
-              return extractors.keySet();
-            }
-          }
-
-          @Override
-          public Collection<Object> values()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public Set<Entry<String, Object>> entrySet()
-          {
-            return keySet().stream()
-                           .map(
-                               field -> {
-                                 return new Entry<String, Object>()
-                                 {
-                                   @Override
-                                   public String getKey()
-                                   {
-                                     return field;
-                                   }
-
-                                   @Override
-                                   public Object getValue()
-                                   {
-                                     return get(field);
-                                   }
-
-                                   @Override
-                                   public Object setValue(final Object value)
-                                   {
-                                     throw new UnsupportedOperationException();
-                                   }
-                                 };
-                               }
-                           )
-                           .collect(Collectors.toCollection(LinkedHashSet::new));
-          }
-        };
+        } else {
+          return this.extractorsKeySet;
+        }
       }
 
       @Override
       public Map<String, Object> toMap(T obj)
       {
         return flattenerMaker.toMap(obj);
+      }
+    };
+  }
+
+  private static Map<String, Object> getCustomHashMap(Map<String, Object> initMap)
+  {
+    return new HashMap<String, Object>(initMap)
+    {
+      @Override
+      public boolean containsKey(final Object key)
+      {
+        if (key == null) {
+          return false;
+        }
+
+        return keySet().contains(key.toString());
+      }
+
+      @Override
+      public boolean containsValue(final Object value)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Object put(final String key, final Object value)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Object remove(final Object key)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void putAll(final Map<? extends String, ?> m)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void clear()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Collection<Object> values()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Set<Entry<String, Object>> entrySet()
+      {
+        return keySet().stream()
+                       .map(
+                           field -> {
+                             return new Entry<String, Object>()
+                             {
+                               @Override
+                               public String getKey()
+                               {
+                                 return field;
+                               }
+
+                               @Override
+                               public Object getValue()
+                               {
+                                 return get(field);
+                               }
+
+                               @Override
+                               public Object setValue(final Object value)
+                               {
+                                 throw new UnsupportedOperationException();
+                               }
+                             };
+                           }
+                       )
+                       .collect(Collectors.toCollection(LinkedHashSet::new));
       }
     };
   }

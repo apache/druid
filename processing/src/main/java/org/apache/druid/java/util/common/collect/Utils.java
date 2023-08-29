@@ -26,10 +26,13 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collector;
 
 public class Utils
 {
@@ -107,5 +110,28 @@ public class Utils
   )
   {
     return new MergeIterator<>(sortedIterators, comparator);
+  }
+
+  /**
+   * Custom toMap collectors to avoid merge due to bug in the JDK, it throws NPE on null values in map.
+   * https://bugs.openjdk.org/browse/JDK-8148463
+   */
+  public static <T, K, V> Collector<T, Map<K, V>, Map<K, V>> toMap(
+      final Function<? super T, K> keyMapper,
+      final Function<T, V> valueMapper
+  )
+  {
+    return Collector.of(
+        HashMap::new,
+        (kvMap, t) -> {
+          kvMap.put(keyMapper.apply(t), valueMapper.apply(t));
+        },
+        (kvMap, kvMap2) -> {
+          kvMap.putAll(kvMap2);
+          return kvMap;
+        },
+        Function.identity(),
+        Collector.Characteristics.IDENTITY_FINISH
+    );
   }
 }
