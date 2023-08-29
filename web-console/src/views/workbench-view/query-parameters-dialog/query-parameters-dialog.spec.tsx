@@ -16,23 +16,27 @@
  * limitations under the License.
  */
 
-export * from './column-metadata';
-export * from './date';
-export * from './download';
-export * from './download-query-detail-archive';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './formatter';
-export * from './general';
-export * from './intermediate-query-state';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './object-change';
-export * from './query-action';
-export * from './query-manager';
-export * from './query-state';
-export * from './sample-query';
-export * from './sanitizers';
-export * from './sql';
-export * from './table-helpers';
-export * from './types';
+import React from 'react';
+
+import { shallow } from '../../../utils/shallow-renderer';
+
+import { QueryParametersDialog } from './query-parameters-dialog';
+
+describe('QueryParametersDialog', () => {
+  it('matches snapshot', () => {
+    const comp = shallow(
+      <QueryParametersDialog
+        queryParameters={[
+          { type: 'VARCHAR', value: 'Hello world' },
+          { type: 'TIMESTAMP', value: '2022-02-02 01:02:03' },
+          { type: 'BIGINT', value: 42 },
+          { type: 'DOUBLE', value: 1.618 },
+        ]}
+        onQueryParametersChange={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(comp).toMatchSnapshot();
+  });
+});
