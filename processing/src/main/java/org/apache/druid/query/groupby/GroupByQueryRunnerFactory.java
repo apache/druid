@@ -77,6 +77,9 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
       {
         QueryRunner<ResultRow> rowQueryRunner = groupingEngine.mergeRunners(queryProcessingPool, queryRunners);
+//        return wrapSummaryRow(q, process);
+
+//        return wrapSummaryRow((GroupByQuery)queryPlus, rowQueryRunner.run(queryPlus, responseContext));
         return rowQueryRunner.run(queryPlus, responseContext);
       }
     };
@@ -108,38 +111,40 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       }
 
       GroupByQuery q = (GroupByQuery) query;
-      List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
 
       Sequence<ResultRow> process = groupingEngine.process((GroupByQuery) query, adapter,
           (GroupByQueryMetrics) queryPlus.getQueryMetrics());
 
-      if (q.getDimensions().isEmpty() && !q.getGranularity().isFinerThan(Granularities.ALL)) {
-        AllNullColumnSelectorFactory nullSelector = new AllNullColumnSelectorFactory();
-
-        AtomicBoolean t = new AtomicBoolean();
-        process = Sequences.<ResultRow>concat(
-            Sequences.<ResultRow, ResultRow>map(process, ent -> {
-              t.set(true);
-              return ent;
-            }),
-
-            Sequences.<ResultRow>simple(() -> {
-              if (t.get()) {
-                return Collections.emptyIterator();
-              }
-              ResultRow row = ResultRow.create(aggSpec.size());
-              Object[] values = row.getArray();
-              for (int i = 0; i < aggSpec.size(); i++) {
-                values[i] = aggSpec.get(i).factorize(nullSelector).get();
-              }
-              return Collections.singleton(row).iterator();
-            }));
-        // Sequences.simple( () -> {if(t.get()) { return Iterables.empty() else
-        // } } );
-      }
-
-      return process;
+      return wrapSummaryRow(q, process);
     }
+  }
+
+  public static Sequence<ResultRow> wrapSummaryRow(GroupByQuery q, Sequence<ResultRow> process)
+  {
+    if (q.getDimensions().isEmpty() && !q.getGranularity().isFinerThan(Granularities.ALL)) {
+      List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
+      AllNullColumnSelectorFactory nullSelector = new AllNullColumnSelectorFactory();
+
+      AtomicBoolean t = new AtomicBoolean();
+      process = Sequences.<ResultRow> concat(
+          Sequences.<ResultRow, ResultRow> map(process, ent -> {
+            t.set(true);
+            return ent;
+          }),
+
+          Sequences.<ResultRow> simple(() -> {
+            if (t.get()) {
+              return Collections.emptyIterator();
+            }
+            ResultRow row = ResultRow.create(aggSpec.size());
+            Object[] values = row.getArray();
+            for (int i = 0; i < aggSpec.size(); i++) {
+              values[i] = aggSpec.get(i).factorize(nullSelector).get();
+            }
+            return Collections.singleton(row).iterator();
+          }));
+    }
+    return process;
   }
 
   @VisibleForTesting
