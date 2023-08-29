@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -6810,14 +6809,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void a () {
-    Assert.assertFalse( Granularity.IS_FINER_THAN.compare(Granularities.DAY, Granularities.ALL)>=0 );
-    Assert.assertTrue( Granularity.IS_FINER_THAN.compare(Granularities.ALL, Granularities.ALL)>=0 );
-  }
-
-
-
-  @Test
   public void testSubqueryWithOuterVirtualColumns()
   {
     final GroupByQuery subquery = makeQueryBuilder()
@@ -12974,6 +12965,54 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimFilter(new SelectorDimFilter("placementish", "xxa", null))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index"),
+            new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
+            new DoubleSumAggregatorFactory("idxDouble", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "rows",
+            0L,
+            "idx",
+            null,
+            "idxFloat",
+            null,
+            "idxDouble",
+            null
+        )
+    );
+
+    StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(
+        factory,
+        originalRunner,
+        query,
+        serviceEmitter
+    );
+    serviceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testSummaryrowForEmptySubqueryInput()
+  {
+    GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimFilter(new SelectorDimFilter("placementish", "xxa", null))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
             new LongSumAggregatorFactory("idx", "index"),

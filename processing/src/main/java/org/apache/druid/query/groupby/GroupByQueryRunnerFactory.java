@@ -117,13 +117,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
         AllNullColumnSelectorFactory nullSelector = new AllNullColumnSelectorFactory();
 
         AtomicBoolean t = new AtomicBoolean();
-        process = Sequences.<ResultRow> concat(
-            Sequences.<ResultRow, ResultRow> map(process, ent -> {
+        process = Sequences.<ResultRow>concat(
+            Sequences.<ResultRow, ResultRow>map(process, ent -> {
               t.set(true);
               return ent;
             }),
 
-            Sequences.<ResultRow> simple(() -> {
+            Sequences.<ResultRow>simple(() -> {
               if (t.get()) {
                 return Collections.emptyIterator();
               }
