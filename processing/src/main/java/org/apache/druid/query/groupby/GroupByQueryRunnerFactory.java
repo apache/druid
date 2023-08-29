@@ -22,16 +22,24 @@ package org.apache.druid.query.groupby;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -100,19 +108,40 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       }
 
       GroupByQuery q = (GroupByQuery) query;
+      List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
 
-//      if(aggregatesEmptySet(query)) {
-//
-//      }
+
 
       Sequence<ResultRow> process = groupingEngine.process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
-//      AtomicBoolean t=new AtomicBoolean();
-//      Sequences.map(process, ent -> { t.set(true);return ent;} );
-//
-//      Iterable it=() -> {return t.get()?Collections.emptyIterator()  :Collections.emptyIterator();  }
-//          ;
-//      Sequences.simple( it);
-//      Sequences.simple( () -> {if(t.get()) { return Iterables.empty() else } } );
+
+      if(q.getDimensions().isEmpty() && !q.getGranularity().isFinerThan(Granularities.ALL)) {
+        AllNullColumnSelectorFactory nullSelector = new AllNullColumnSelectorFactory();
+
+        AtomicBoolean t = new AtomicBoolean();
+        process=Sequences.<ResultRow>concat(
+        Sequences.<ResultRow,ResultRow>map(process, ent -> {
+          t.set(true);
+          return ent;
+        }),
+
+//        aggSpec=q.getAggregatorSpecs();
+
+
+Sequences.<ResultRow>simple(() -> {
+  if (t.get()) {
+    return Collections.emptyIterator();
+  }
+  ResultRow row = ResultRow.create(aggSpec.size());
+  Object[] values = row.getArray();
+  for (int i = 0; i < aggSpec.size(); i++) {
+    values[i] = aggSpec.get(i).factorize(nullSelector).get();
+  }
+  return Collections.singleton(row).iterator();
+}));
+        //      Sequences.simple( () -> {if(t.get()) { return Iterables.empty() else } } );
+      }
+
+
       return process;
     }
   }
