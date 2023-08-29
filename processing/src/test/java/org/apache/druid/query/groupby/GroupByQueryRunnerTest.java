@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -6807,6 +6808,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-timeout");
   }
+
+  @Test
+  public void a () {
+    Assert.assertFalse( Granularity.IS_FINER_THAN.compare(Granularities.DAY, Granularities.ALL)>=0 );
+    Assert.assertTrue( Granularity.IS_FINER_THAN.compare(Granularities.ALL, Granularities.ALL)>=0 );
+  }
+
+
 
   @Test
   public void testSubqueryWithOuterVirtualColumns()

@@ -99,7 +99,21 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), GroupByQuery.class);
       }
 
-      return groupingEngine.process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
+      GroupByQuery q = (GroupByQuery) query;
+
+//      if(aggregatesEmptySet(query)) {
+//
+//      }
+
+      Sequence<ResultRow> process = groupingEngine.process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
+//      AtomicBoolean t=new AtomicBoolean();
+//      Sequences.map(process, ent -> { t.set(true);return ent;} );
+//
+//      Iterable it=() -> {return t.get()?Collections.emptyIterator()  :Collections.emptyIterator();  }
+//          ;
+//      Sequences.simple( it);
+//      Sequences.simple( () -> {if(t.get()) { return Iterables.empty() else } } );
+      return process;
     }
   }
 

@@ -24,6 +24,7 @@ import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -55,7 +56,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-
 import javax.annotation.Nullable;
 
 import java.io.IOException;
@@ -381,8 +381,9 @@ public class VectorGroupByEngine
         );
       }
 
+      query.getGranularity();
       if (keySize == 0
-          && query.getGranularity().IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
+          && Granularity.IS_FINER_THAN.compare(query.getGranularity(), Granularities.ALL) >= 0) {
         grouper = new SummaryRowSupplierVectorGrouper(grouper, AggregatorAdapters.factorizeVector(
             cursor.getColumnSelectorFactory(),
             query.getAggregatorSpecs())
