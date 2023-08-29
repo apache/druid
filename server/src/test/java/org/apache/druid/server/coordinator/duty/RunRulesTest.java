@@ -152,7 +152,7 @@ public class RunRulesTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
-                .withMaxNonPrimaryReplicantsToLoad(10)
+                .withReplicationThrottleLimit(10)
                 .withSmartSegmentLoading(false)
                 .build()
         )
@@ -216,7 +216,7 @@ public class RunRulesTest
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
-                                    .withMaxNonPrimaryReplicantsToLoad(10)
+                                    .withReplicationThrottleLimit(10)
                                     .withSmartSegmentLoading(false)
                                     .build()
         )

@@ -32,7 +32,6 @@ public class SegmentLoadingConfig
 
   private final int maxSegmentsInLoadQueue;
   private final int replicationThrottleLimit;
-  private final int maxReplicaAssignmentsInRun;
   private final int maxLifetimeInLoadQueue;
 
   private final int balancerComputeThreads;
@@ -58,7 +57,6 @@ public class SegmentLoadingConfig
       return new SegmentLoadingConfig(
           0,
           replicationThrottleLimit,
-          Integer.MAX_VALUE,
           60,
           true,
           CoordinatorDynamicConfig.getDefaultBalancerComputeThreads()
@@ -68,7 +66,6 @@ public class SegmentLoadingConfig
       return new SegmentLoadingConfig(
           dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
           dynamicConfig.getReplicationThrottleLimit(),
-          dynamicConfig.getMaxNonPrimaryReplicantsToLoad(),
           dynamicConfig.getReplicantLifetime(),
           dynamicConfig.isUseRoundRobinSegmentAssignment(),
           dynamicConfig.getBalancerComputeThreads()
@@ -79,7 +76,6 @@ public class SegmentLoadingConfig
   private SegmentLoadingConfig(
       int maxSegmentsInLoadQueue,
       int replicationThrottleLimit,
-      int maxReplicaAssignmentsInRun,
       int maxLifetimeInLoadQueue,
       boolean useRoundRobinSegmentAssignment,
       int balancerComputeThreads
@@ -87,7 +83,6 @@ public class SegmentLoadingConfig
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
     this.replicationThrottleLimit = replicationThrottleLimit;
-    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
     this.maxLifetimeInLoadQueue = maxLifetimeInLoadQueue;
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     this.balancerComputeThreads = balancerComputeThreads;
@@ -111,11 +106,6 @@ public class SegmentLoadingConfig
   public int getMaxLifetimeInLoadQueue()
   {
     return maxLifetimeInLoadQueue;
-  }
-
-  public int getMaxReplicaAssignmentsInRun()
-  {
-    return maxReplicaAssignmentsInRun;
   }
 
   public int getBalancerComputeThreads()
