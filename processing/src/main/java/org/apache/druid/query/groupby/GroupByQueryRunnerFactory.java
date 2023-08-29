@@ -33,11 +33,14 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -121,30 +124,51 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
   public static Sequence<ResultRow> wrapSummaryRow(GroupByQuery q, Sequence<ResultRow> process)
   {
-    if (q.getDimensions().isEmpty() && !q.getGranularity().isFinerThan(Granularities.ALL)) {
-      List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
-      AllNullColumnSelectorFactory nullSelector = new AllNullColumnSelectorFactory();
-
-      AtomicBoolean t = new AtomicBoolean();
-      process = Sequences.<ResultRow> concat(
-          Sequences.<ResultRow, ResultRow> map(process, ent -> {
-            t.set(true);
-            return ent;
-          }),
-
-          Sequences.<ResultRow> simple(() -> {
-            if (t.get()) {
-              return Collections.emptyIterator();
-            }
-            ResultRow row = ResultRow.create(aggSpec.size());
-            Object[] values = row.getArray();
-            for (int i = 0; i < aggSpec.size(); i++) {
-              values[i] = aggSpec.get(i).factorize(nullSelector).get();
-            }
-            return Collections.singleton(row).iterator();
-          }));
+    if (!summaryRowPreconditions(q)) {
+      return process;
     }
-    return process;
+
+    final AtomicBoolean t = new AtomicBoolean();
+
+    return Sequences.<ResultRow> concat(
+        Sequences.<ResultRow, ResultRow> map(process, ent -> {
+          t.set(true);
+          return ent;
+        }),
+        Sequences.<ResultRow> simple(() -> {
+          if (t.get()) {
+            return Collections.emptyIterator();
+          }
+          return summaryRowIterator(q);
+        }));
+  }
+
+  private static boolean summaryRowPreconditions(GroupByQuery q)
+  {
+    LimitSpec limit = q.getLimitSpec();
+    if (limit instanceof DefaultLimitSpec) {
+      DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limit;
+      if (defaultLimitSpec.getLimit() == 0 || defaultLimitSpec.getOffset() > 0) {
+        return false;
+      }
+    }
+    if (!q.getDimensions().isEmpty()) {
+      return false;
+    }
+    if (q.getGranularity().isFinerThan(Granularities.ALL)) {
+      return false;
+    }
+    return true;
+  }
+
+  private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)
+  {
+    List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
+    Object[] values = new Object[aggSpec.size()];
+    for (int i = 0; i < aggSpec.size(); i++) {
+      values[i] = aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get();
+    }
+    return Collections.singleton(ResultRow.of(values)).iterator();
   }
 
   @VisibleForTesting
