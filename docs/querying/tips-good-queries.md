@@ -176,7 +176,7 @@ The following example query demonstrates many of the tips outlined in this topic
 The query:
 
 - selects specific dimensions and metrics
-- uses approximation.
+- uses approximation
 - selects from a single table.
 - groups by low cardinality columns.
 - filters on both dimensions and time.
