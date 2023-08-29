@@ -22,8 +22,9 @@ package org.apache.druid.k8s.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.vavr.collection.Iterator;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
@@ -48,7 +49,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
 
 /**
  * Mixed mode task runner that can run tasks on either Kubernetes or workers based on KubernetesAndWorkerTaskRunnerConfig.
@@ -74,7 +74,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    return Iterator.concat(kubernetesTaskRunner.restore(), workerTaskRunner.restore()).collect(Collectors.toList());
+    return Lists.newArrayList(Iterables.concat(kubernetesTaskRunner.restore(), workerTaskRunner.restore()));
   }
 
   @Override
@@ -124,20 +124,20 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public Collection<? extends TaskRunnerWorkItem> getRunningTasks()
   {
-    return Iterator.concat(kubernetesTaskRunner.getRunningTasks(), workerTaskRunner.getRunningTasks()).collect(Collectors.toList());
+    return Lists.newArrayList(Iterables.concat(kubernetesTaskRunner.getRunningTasks(), workerTaskRunner.getRunningTasks()));
   }
 
   @Override
   public Collection<? extends TaskRunnerWorkItem> getPendingTasks()
   {
-    return Iterator.concat(kubernetesTaskRunner.getPendingTasks(), workerTaskRunner.getPendingTasks()).collect(Collectors.toList());
+    return Lists.newArrayList(Iterables.concat(kubernetesTaskRunner.getPendingTasks(), workerTaskRunner.getPendingTasks()));
 
   }
 
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    return Iterator.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()).collect(Collectors.toList());
+    return Lists.newArrayList(Iterables.concat(kubernetesTaskRunner.getKnownTasks(), workerTaskRunner.getKnownTasks()));
 
   }
 
