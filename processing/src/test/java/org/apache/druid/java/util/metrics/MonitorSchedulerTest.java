@@ -34,10 +34,10 @@ public class MonitorSchedulerTest
   @Test
   public void testMonitorAndStopOnRemove() throws IOException
   {
-    MonitorSchedulerConfig infiniteFlushDelayConfig = new MonitorSchedulerConfig()
+    DruidMonitorSchedulerConfig infiniteFlushDelayConfig = new DruidMonitorSchedulerConfig()
     {
       @Override
-      public Duration getEmitterPeriod()
+      public Duration getEmissionDuration()
       {
         return Duration.millis(Long.MAX_VALUE);
       }

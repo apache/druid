@@ -1170,16 +1170,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
+    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
         );
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments,
-                                     Collections.emptySet(),
-                                     newSegments, annotateFunction,
-                                     null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());

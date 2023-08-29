@@ -133,27 +133,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
-  /**
-   * Used by groupBy v1 to create a "transfer aggregator".
-   *
-   * {@inheritDoc}
-   */
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new HllSketchBuildAggregatorFactory(
-            fieldName,
-            fieldName,
-            lgK,
-            tgtHllType.toString(),
-            stringEncoding,
-            shouldFinalize,
-            round
-        )
-    );
-  }
-
   @Override
   public HllSketchHolder deserialize(final Object object)
   {

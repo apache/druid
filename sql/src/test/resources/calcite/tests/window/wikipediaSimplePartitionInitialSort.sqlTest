@@ -1,4 +1,4 @@
-type: "operatorValidation"
+type: "failingTest"
 
 # Like wikipediaSimplePartition, but requires re-sorting the input data because the order of the GROUP BY
 # does not match the required order for window partitioning. ("t" and "countryIsoCode" are flipped.)
@@ -24,15 +24,19 @@ expectedOperators:
     processor:
       type: "composing"
       processors:
-        - { "type": "offset", "inputColumn": "d0", "outputColumn": "w1", "offset": -2 }
-        - { "type": "offset", "inputColumn": "d0", "outputColumn": "w2", "offset": 1 }
-        - { "type": "first", "inputColumn": "a0", "outputColumn": "w3" }
-        - { "type": "last", "inputColumn": "a0", "outputColumn": "w4" }
-        - { "type": "percentile", "outputColumn": "w5", "numBuckets": 3 }
+        - { "type": "first", "inputColumn": "a0", "outputColumn": "w1" }
+        - { "type": "last", "inputColumn": "a0", "outputColumn": "w2" }
+        - { "type": "percentile", "outputColumn": "w3", "numBuckets": 3 }
         - type: "framedAgg"
           frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
           aggregations:
             - { "type": "longSum", "name": "w0", "fieldName": "a0" }
+  - type: "window"
+    processor:
+      type: "composing"
+      processors:
+        - { "type": "offset", "inputColumn": "d0", "outputColumn": "w4", "offset": -2 }
+        - { "type": "offset", "inputColumn": "d0", "outputColumn": "w5", "offset": 1 }
 
 expectedResults:
   - [ 1442016000000, "", 29873, 8414700, null, 1442019600000, 29873, 276159, 1 ]

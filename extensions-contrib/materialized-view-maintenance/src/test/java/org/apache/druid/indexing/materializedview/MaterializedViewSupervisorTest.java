@@ -387,4 +387,37 @@ public class MaterializedViewSupervisorTest
     EasyMock.replay(mock);
     supervisor.run();
   }
+
+  @Test
+  public void testResetOffsetsNotSupported()
+  {
+    MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
+        "base",
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
+        new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
+        HadoopTuningConfig.makeDefaultTuningConfig(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        true,
+        objectMapper,
+        taskMaster,
+        taskStorage,
+        metadataSupervisorManager,
+        sqlSegmentsMetadataManager,
+        indexerMetadataStorageCoordinator,
+        new MaterializedViewTaskConfig(),
+        EasyMock.createMock(AuthorizerMapper.class),
+        EasyMock.createMock(ChatHandlerProvider.class),
+        new SupervisorStateManagerConfig()
+    );
+    MaterializedViewSupervisor supervisor = (MaterializedViewSupervisor) suspended.createSupervisor();
+    Assert.assertThrows(
+        "Reset offsets not supported in MaterializedViewSupervisor",
+        UnsupportedOperationException.class,
+        () -> supervisor.resetOffsets(null)
+    );
+  }
 }

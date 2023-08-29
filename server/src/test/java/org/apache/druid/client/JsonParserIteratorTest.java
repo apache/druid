@@ -103,7 +103,7 @@ public class JsonParserIteratorTest
           OBJECT_MAPPER
       );
       expectedException.expect(QueryInterruptedException.class);
-      expectedException.expectMessage("Immediate cancelled future.");
+      expectedException.expectMessage("Task was cancelled.");
       iterator.hasNext();
     }
 

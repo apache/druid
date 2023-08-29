@@ -24,11 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.util.Set;
 
 /**
@@ -631,7 +631,7 @@ public class CoordinatorDynamicConfigTest
         100,
         15,
         500,
-        1,
+        getDefaultNumBalancerThreads(),
         emptyList,
         1.0,
         Integer.MAX_VALUE,
@@ -661,7 +661,7 @@ public class CoordinatorDynamicConfigTest
         100,
         15,
         500,
-        1,
+        getDefaultNumBalancerThreads(),
         ImmutableSet.of("DATASOURCE"),
         1.0,
         Integer.MAX_VALUE,
@@ -791,5 +791,10 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
     Assert.assertEquals(maxNonPrimaryReplicantsToLoad, config.getMaxNonPrimaryReplicantsToLoad());
+  }
+
+  private static int getDefaultNumBalancerThreads()
+  {
+    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
   }
 }
