@@ -175,14 +175,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       ResponseContext context
   )
   {
-
-    Sequence<ResultRow> p;
+    Sequence<ResultRow> process;
     if (isNestedQueryPushDown(query)) {
-      p=mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
-    }else {
-    p=mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
+      process = mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
+    } else {
+      process = mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
     }
-    return GroupByQueryRunnerFactory.wrapSummaryRow(query, p);
+    return GroupByQueryRunnerFactory.wrapSummaryRowIfNeeded(query, process);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(

@@ -80,9 +80,6 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
       {
         QueryRunner<ResultRow> rowQueryRunner = groupingEngine.mergeRunners(queryProcessingPool, queryRunners);
-//        return wrapSummaryRow(q, process);
-
-//        return wrapSummaryRow((GroupByQuery)queryPlus, rowQueryRunner.run(queryPlus, responseContext));
         return rowQueryRunner.run(queryPlus, responseContext);
       }
     };
@@ -113,16 +110,16 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), GroupByQuery.class);
       }
 
-      GroupByQuery q = (GroupByQuery) query;
+      GroupByQuery groupByQuery = (GroupByQuery) query;
 
-      Sequence<ResultRow> process = groupingEngine.process((GroupByQuery) query, adapter,
+      Sequence<ResultRow> process = groupingEngine.process(groupByQuery, adapter,
           (GroupByQueryMetrics) queryPlus.getQueryMetrics());
 
-      return wrapSummaryRow(q, process);
+      return wrapSummaryRowIfNeeded(groupByQuery, process);
     }
   }
 
-  public static Sequence<ResultRow> wrapSummaryRow(GroupByQuery query, Sequence<ResultRow> process)
+  public static Sequence<ResultRow> wrapSummaryRowIfNeeded(GroupByQuery query, Sequence<ResultRow> process)
   {
     if (!summaryRowPreconditions(query)) {
       return process;
