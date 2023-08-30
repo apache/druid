@@ -84,7 +84,7 @@ Only select the columns needed for the query instead of retrieving all columns f
 
 #### Use filters
 
-Use filters, such as the WHERE clause, and filter on time. Avoid using non-equal filters because they're very resource-intensive.
+Use filters, for example the WHERE clause, and filter on time. Try to minimize the use of non-equal filters, because they're very resource-intensive.
 
 The following example query filters on `__time` and `product`:
 
@@ -104,6 +104,7 @@ The following example uses a wildcard filter on the `diffUrl` column:
 ```
 SELECT * from Wikipedia
 WHERE diffUrl LIKE 'https://en.wikipedia%'
+AND __time BETWEEN '2016-06-27 00:00' AND '2016-06-27 12:00'
 ```
 
 #### Shorten your queries
@@ -141,11 +142,11 @@ Consider whether you can pre-compute a subquery task and store it as a join or m
 
 Consider using Timeseries and TopN as alternatives to GroupBy. See [GroupBy queries: alternatives](./groupbyquery.md#alternatives) for more information.
 
-Avoid grouping on a high cardinality column, for example user ID. Investigate whether you can filter on user ID first. Find out whether your dataset is already partitioned by user ID.
+Avoid grouping on a high cardinality column, for example user ID. Investigate whether you can filter on user ID first. Find out whether your dataset is already partitioned by user ID. See [Partitioning](../ingestion/partitioning.md) for information on configuring paritioning.
 
-#### Query at a lower granularity
+#### Query over smaller intervals
 
-Consider whether you can query at a lower granularity to return a smaller results set.
+Consider whether you can query a smaller time interval to return a smaller results set.
 
 For example, the following query doesn't limit on time and could be resource-intensive:
 
@@ -191,7 +192,7 @@ SELECT
    APPROX_COUNT_DISTINCT_DS_HLL(userid)
 FROM sales
 GROUP BY month, country
-WHERE artist = 'Madonna' and "__time" BETWEEN [] AND []
+WHERE artist = 'Madonna' and "__time" BETWEEN '2023-08-01' AND '2023-08-31'
 ORDER BY country, SUM(price) DESC
 LIMIT 100
 ```
