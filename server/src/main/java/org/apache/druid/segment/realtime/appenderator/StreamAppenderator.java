@@ -101,6 +101,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("CheckReturnValue")
 public class StreamAppenderator implements Appenderator
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
@@ -397,7 +398,8 @@ public class StreamAppenderator implements Appenderator
               {
                 persistError = t;
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
       } else {
         isPersistRequired = true;

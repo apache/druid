@@ -39,7 +39,7 @@ public abstract class MonitorScheduler
 {
   private static final Logger log = new Logger(MonitorScheduler.class);
 
-  private final MonitorSchedulerConfig config;
+  private final DruidMonitorSchedulerConfig config;
   private final ServiceEmitter emitter;
   private final Set<Monitor> monitors;
   private final Object lock = new Object();
@@ -47,7 +47,7 @@ public abstract class MonitorScheduler
   private volatile boolean started = false;
 
   MonitorScheduler(
-      MonitorSchedulerConfig config,
+      DruidMonitorSchedulerConfig config,
       ServiceEmitter emitter,
       List<Monitor> monitors
   )
@@ -135,7 +135,7 @@ public abstract class MonitorScheduler
     }
   }
 
-  MonitorSchedulerConfig getConfig()
+  DruidMonitorSchedulerConfig getConfig()
   {
     return config;
   }

@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -68,6 +69,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       .thenComparing(pair -> pair.rhs);
 
   private final CoordinatorRunStats stats = new CoordinatorRunStats();
+  private final AtomicLong computeTimeNanos = new AtomicLong(0);
 
   public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
   {
@@ -263,9 +265,13 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public CoordinatorRunStats getStats()
   {
-    return stats.getSnapshotAndReset();
+    stats.add(
+        Stats.Balancer.COMPUTATION_TIME,
+        TimeUnit.NANOSECONDS.toMillis(computeTimeNanos.getAndSet(0))
+    );
+    return stats;
   }
 
   /**
@@ -351,8 +357,8 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     // Report computation stats
     computeTime.stop();
-    stats.add(Stats.Balancer.COMPUTATION_COUNT, metricKey, 1);
-    stats.add(Stats.Balancer.COMPUTATION_TIME, metricKey, computeTime.elapsed(TimeUnit.MILLISECONDS));
+    stats.add(Stats.Balancer.COMPUTATION_COUNT, 1);
+    computeTimeNanos.addAndGet(computeTime.elapsed(TimeUnit.NANOSECONDS));
 
     return costPrioritizedServers.stream().map(pair -> pair.rhs)
                                  .collect(Collectors.toList());

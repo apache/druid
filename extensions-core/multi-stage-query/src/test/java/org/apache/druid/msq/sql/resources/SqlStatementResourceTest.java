@@ -648,7 +648,6 @@ public class SqlStatementResourceTest extends MSQTestBase
     setupMocks(overlordClient);
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         overlordClient,
         new LocalFileStorageConnector(tmpFolder.newFolder("local"))

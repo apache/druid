@@ -23,7 +23,9 @@ sidebar_label: "Firehose (deprecated)"
   ~ under the License.
   -->
 
-> Firehose ingestion is deprecated. See [Migrate from firehose to input source ingestion](../operations/migrate-from-firehose-ingestion.md) for instructions on migrating from firehose ingestion to using native batch ingestion input sources.
+:::info
+ Firehose ingestion is deprecated. See [Migrate from firehose to input source ingestion](../operations/migrate-from-firehose-ingestion.md) for instructions on migrating from firehose ingestion to using native batch ingestion input sources.
+:::
 
 There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
 

@@ -125,6 +125,15 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
         ),
         ImmutableList.of(
             new HttpEntity(new URI("testscheme://some/path"), null, null)
+            {
+              @Override
+              protected int getMaxRetries()
+              {
+                // override so this test does not take like 4 minutes to run
+                return 2;
+              }
+            }
+
         ).iterator(),
         temporaryFolder.newFolder()
     );

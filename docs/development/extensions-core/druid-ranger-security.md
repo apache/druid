@@ -26,7 +26,9 @@ This Apache Druid extension adds an Authorizer which implements access control f
 
 Make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-ranger-security` in the extensions load list.
 
-> The latest release of Apache Ranger is at the time of writing version 2.0. This version has a dependency on `log4j 1.2.17` which has a vulnerability if you configure it to use a `SocketServer` (CVE-2019-17571). Next to that, it also includes Kafka 2.0.0 which has 2 known vulnerabilities (CVE-2019-12399, CVE-2018-17196). Kafka can be used by the audit component in Ranger, but is not required. 
+:::info
+ The latest release of Apache Ranger is at the time of writing version 2.0. This version has a dependency on `log4j 1.2.17` which has a vulnerability if you configure it to use a `SocketServer` (CVE-2019-17571). Next to that, it also includes Kafka 2.0.0 which has 2 known vulnerabilities (CVE-2019-12399, CVE-2018-17196). Kafka can be used by the audit component in Ranger, but is not required.
+:::
 
 ## Configuration
 
@@ -67,7 +69,9 @@ druid.escalator.internalClientPassword=password2
 druid.escalator.authorizerName=ranger
 ```
 
-> Contrary to the documentation of `druid-basic-auth` Ranger does not automatically provision a highly privileged system user, you will need to do this yourself. This system user in the case of `druid-basic-auth` is named `druid_system` and for the escalator it is configurable, as shown above. Make sure to take note of these user names and configure `READ` access to `state:STATE` and to `config:security` in your ranger policies, otherwise system services will not work properly.
+:::info
+ Contrary to the documentation of `druid-basic-auth` Ranger does not automatically provision a highly privileged system user, you will need to do this yourself. This system user in the case of `druid-basic-auth` is named `druid_system` and for the escalator it is configurable, as shown above. Make sure to take note of these user names and configure `READ` access to `state:STATE` and to `config:security` in your ranger policies, otherwise system services will not work properly.
+:::
 
 #### Properties to configure the extension in Apache Druid
 |Property|Description|Default|required|
@@ -92,7 +96,9 @@ You should get back `json` describing the service definition you just added. You
 
 When installing a new Druid service in Apache Ranger for the first time, Ranger will provision the policies to allow the administrative user `read/write` access to all properties and data sources. You might want to limit this. Do not forget to add the correct policies for the `druid_system` user and the `internalClientUserName` of the escalator.
 
-> Loading new data sources requires `write` access to the `datasource` prior to the loading itself. So if you want to create a datasource `wikipedia` you are required to have an `allow` policy inside Apache Ranger before trying to load the spec. 
+:::info
+ Loading new data sources requires `write` access to the `datasource` prior to the loading itself. So if you want to create a datasource `wikipedia` you are required to have an `allow` policy inside Apache Ranger before trying to load the spec.
+:::
 
 ## Usage
 

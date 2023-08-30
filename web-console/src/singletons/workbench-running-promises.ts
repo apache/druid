@@ -20,7 +20,7 @@ import type { QueryResult } from '@druid-toolkit/query';
 
 export interface WorkbenchRunningPromise {
   promise: Promise<QueryResult>;
-  sqlPrefixLines: number | undefined;
+  prefixLines: number;
 }
 
 export class WorkbenchRunningPromises {
@@ -40,11 +40,5 @@ export class WorkbenchRunningPromises {
 
   static deletePromise(id: string): void {
     delete WorkbenchRunningPromises.promises[id];
-  }
-
-  static deletePromises(ids: string[]): void {
-    for (const id of ids) {
-      delete WorkbenchRunningPromises.promises[id];
-    }
   }
 }

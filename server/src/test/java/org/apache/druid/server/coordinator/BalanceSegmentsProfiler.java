@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Before;
@@ -66,7 +67,7 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -129,7 +130,7 @@ public class BalanceSegmentsProfiler
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(segments)
+        .withUsedSegments(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
@@ -142,7 +143,7 @@ public class BalanceSegmentsProfiler
         .withDatabaseRuleManager(manager)
         .build();
 
-    BalanceSegments tester = new BalanceSegments();
+    BalanceSegments tester = new BalanceSegments(Duration.standardMinutes(1));
     RunRules runner = new RunRules(Set::size);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
@@ -184,11 +185,11 @@ public class BalanceSegmentsProfiler
                 )
                 .build()
         )
-        .withUsedSegmentsInTest(segments)
+        .withUsedSegments(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
-    BalanceSegments tester = new BalanceSegments();
+    BalanceSegments tester = new BalanceSegments(Duration.standardMinutes(1));
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     System.out.println(watch.stop());
