@@ -93,7 +93,7 @@ export default typedVisualModule({
       },
     },
   },
-  module: ({ container, host }) => {
+  module: ({ container, host, updateWhere }) => {
     const myChart = echarts.init(container, 'dark');
 
     myChart.setOption({
@@ -103,6 +103,7 @@ export default typedVisualModule({
       },
       tooltip: {
         trigger: 'axis',
+        transitionDuration: 0,
         axisPointer: {
           type: 'cross',
           label: {
@@ -117,6 +118,10 @@ export default typedVisualModule({
         feature: {
           saveAsImage: {},
         },
+      },
+      brush: {
+        toolbox: ['lineX'],
+        xAxisIndex: 0,
       },
       grid: {
         left: '3%',
@@ -147,6 +152,8 @@ export default typedVisualModule({
     return {
       async update({ table, where, parameterValues }) {
         const { splitColumn, metric, numberToStack, showOthers, timeGranularity } = parameterValues;
+
+        myChart.off('brushend');
 
         const vs = splitColumn
           ? (
@@ -187,6 +194,28 @@ export default typedVisualModule({
         const effectiveVs = vs && showOthers ? vs.concat(OTHERS_VALUE) : vs;
         const sourceData = effectiveVs ? transformData(dataset, effectiveVs) : dataset;
 
+        myChart.on('brushend', (params: any) => {
+          if (!params.areas.length) return;
+
+          const [start, end] = params.areas[0].coordRange;
+
+          updateWhere(
+            where.changeClauseInWhere(
+              SqlExpression.parse(
+                `TIME_IN_INTERVAL(${C('__time')}, '${new Date(start).toISOString()}/${new Date(
+                  end,
+                ).toISOString()}')`,
+              ),
+            ),
+          );
+
+          myChart.dispatchAction({
+            type: 'brush',
+            command: 'clear',
+            areas: [],
+          });
+        });
+
         const showSymbol = sourceData.length < 2;
         myChart.setOption(
           {
@@ -194,6 +223,7 @@ export default typedVisualModule({
               dimensions: ['time'].concat(vs || ['met']),
               source: sourceData,
             },
+            animation: false,
             legend: effectiveVs
               ? {
                   data: effectiveVs,
