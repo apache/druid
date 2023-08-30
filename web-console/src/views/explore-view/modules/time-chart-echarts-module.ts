@@ -22,6 +22,9 @@ import * as echarts from 'echarts';
 
 import { getInitQuery } from '../utils';
 
+const TIME_NAME = '__t__';
+const METRIC_NAME = '__met__';
+const STACK_NAME = '__stack__';
 const OTHERS_VALUE = 'Others';
 
 function transformData(data: any[], vs: string[]): Record<string, number>[] {
@@ -31,12 +34,13 @@ function transformData(data: any[], vs: string[]): Record<string, number>[] {
   let lastDatum: Record<string, number> | undefined;
   const ret = [];
   for (const d of data) {
-    if (d.time.valueOf() !== lastTime) {
+    const t = d[TIME_NAME];
+    if (t.valueOf() !== lastTime) {
       if (lastDatum) ret.push(lastDatum);
-      lastTime = d.time.valueOf();
-      lastDatum = { ...zeroDatum, time: d.time };
+      lastTime = t.valueOf();
+      lastDatum = { ...zeroDatum, [TIME_NAME]: t };
     }
-    lastDatum![d.stack] = d.met;
+    lastDatum![d[STACK_NAME]] = d[METRIC_NAME];
   }
   if (lastDatum) ret.push(lastDatum);
   return ret;
@@ -78,7 +82,7 @@ export default typedVisualModule({
     },
     showOthers: {
       type: 'boolean',
-      default: false,
+      default: true,
       control: {
         visible: ({ params }) => Boolean(params.splitColumn),
       },
@@ -172,7 +176,7 @@ export default typedVisualModule({
               table,
               splitColumn && vs && !showOthers ? where.and(splitColumn.expression.in(vs)) : where,
             )
-              .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as('time'), {
+              .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as(TIME_NAME), {
                 addToGroupBy: 'end',
                 addToOrderBy: 'end',
                 direction: 'ASC',
@@ -183,11 +187,11 @@ export default typedVisualModule({
                   (showOthers
                     ? SqlCase.ifThenElse(splitEx.in(vs!), splitEx, L(OTHERS_VALUE))
                     : splitEx
-                  ).as('stack'),
+                  ).as(STACK_NAME),
                   { addToGroupBy: 'end' },
                 );
               })
-              .addSelect(metric.expression.as('met')),
+              .addSelect(metric.expression.as(METRIC_NAME)),
           )
         ).toObjectArray();
 
@@ -220,7 +224,7 @@ export default typedVisualModule({
         myChart.setOption(
           {
             dataset: {
-              dimensions: ['time'].concat(vs || ['met']),
+              dimensions: [TIME_NAME].concat(effectiveVs || [METRIC_NAME]),
               source: sourceData,
             },
             animation: false,
@@ -229,19 +233,20 @@ export default typedVisualModule({
                   data: effectiveVs,
                 }
               : undefined,
-            series: (effectiveVs || ['met']).map(v => {
+            series: (effectiveVs || [METRIC_NAME]).map(v => {
               return {
                 id: v,
                 name: effectiveVs ? v : metric.name,
                 type: 'line',
                 stack: 'Total',
                 showSymbol,
-                areaStyle: {},
+                lineStyle: v === OTHERS_VALUE ? { color: '#ccc' } : {},
+                areaStyle: v === OTHERS_VALUE ? { color: '#ccc' } : {},
                 emphasis: {
                   focus: 'series',
                 },
                 encode: {
-                  x: 'time',
+                  x: TIME_NAME,
                   y: v,
                   itemId: v,
                 },
