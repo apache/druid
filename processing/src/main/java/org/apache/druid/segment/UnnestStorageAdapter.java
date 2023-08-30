@@ -495,6 +495,8 @@ public class UnnestStorageAdapter implements StorageAdapter
               false
           );
           preFilterList.add(new OrFilter(orChildFilters));
+        } else if (filter instanceof NotFilter) {
+          continue;
         } else {
           final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
               filter,
@@ -579,7 +581,8 @@ public class UnnestStorageAdapter implements StorageAdapter
       }
       return true;
     } else if (filter instanceof NotFilter) {
-      return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());
+      return false;
+      //return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());
     } else {
       return filter instanceof SelectorFilter
              || filter instanceof InDimFilter

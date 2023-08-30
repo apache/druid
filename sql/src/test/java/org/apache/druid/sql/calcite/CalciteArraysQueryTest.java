@@ -3699,6 +3699,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         // Future developer should ensure not filters involving direct mapping of unnested
         // column should not be pushed to base but should onluy appear in the post filter
         ImmutableList.of(
+            new Object[]{"a"},
             new Object[]{""}
         )
     );
