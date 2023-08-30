@@ -128,8 +128,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      Sequence<ResultRow> process = initAndMergeGroupByResults(groupByQuery, runner, responseContext);
-      return process;
+      return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
     };
   }
 
