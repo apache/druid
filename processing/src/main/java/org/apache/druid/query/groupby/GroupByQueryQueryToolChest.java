@@ -128,7 +128,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
+      Sequence<ResultRow> process = initAndMergeGroupByResults(groupByQuery, runner, responseContext);
+      return GroupByQueryRunnerFactory.wrapSummaryRowIfNeeded(groupByQuery, process);
     };
   }
 
@@ -175,13 +176,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       ResponseContext context
   )
   {
-    Sequence<ResultRow> process;
     if (isNestedQueryPushDown(query)) {
-      process = mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
-    } else {
-      process = mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
+      return mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
     }
-    return GroupByQueryRunnerFactory.wrapSummaryRowIfNeeded(query, process);
+    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(
