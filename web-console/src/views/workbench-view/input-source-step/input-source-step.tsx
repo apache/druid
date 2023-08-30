@@ -27,8 +27,10 @@ import {
   RadioGroup,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { QueryResult } from '@druid-toolkit/query';
+import { SqlColumnDeclaration } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type { QueryResult } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 
 import { AutoForm, ExternalLink } from '../../../components';
@@ -38,7 +40,7 @@ import {
   externalConfigToTableExpression,
   getIngestionImage,
   getIngestionTitle,
-  guessInputFormat,
+  guessSimpleInputFormat,
   INPUT_SOURCE_FIELDS,
   PLACEHOLDER_TIMESTAMP_SPEC,
 } from '../../../druid-models';
@@ -60,7 +62,7 @@ import './input-source-step.scss';
 
 function resultToInputFormat(result: QueryResult): InputFormat {
   if (!result.rows.length) throw new Error('No data returned from sample query');
-  return guessInputFormat(result.rows.map((r: any) => r[0]));
+  return guessSimpleInputFormat(result.rows.map((r: any) => r[0]));
 }
 
 const BOGUS_LIST_DELIMITER = '56616469-6de2-9da4-efb8-8f416e6e6965'; // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
@@ -128,7 +130,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         );
 
         if (!sampleLines.length) throw new Error('No data returned from sampler');
-        guessedInputFormat = guessInputFormat(sampleLines);
+        guessedInputFormat = guessSimpleInputFormat(sampleLines);
       } else {
         const tableExpression = externalConfigToTableExpression({
           inputSource,
@@ -138,7 +140,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             listDelimiter: BOGUS_LIST_DELIMITER,
             columns: ['raw'],
           },
-          signature: [{ name: 'raw', type: 'string' }],
+          signature: [SqlColumnDeclaration.create('raw', 'VARCHAR')],
         });
 
         const result = extractResult(

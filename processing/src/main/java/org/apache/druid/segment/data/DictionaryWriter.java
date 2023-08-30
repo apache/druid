@@ -34,4 +34,6 @@ public interface DictionaryWriter<T> extends Serializer
 
   @Nullable
   T get(int dictId) throws IOException;
+
+  int getCardinality();
 }

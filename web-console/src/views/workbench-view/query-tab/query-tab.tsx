@@ -19,10 +19,11 @@
 import { Button, Code, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { QueryResult } from '@druid-toolkit/query';
+import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
 import classNames from 'classnames';
-import type { QueryResult } from 'druid-query-toolkit';
-import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
@@ -81,7 +82,7 @@ export interface QueryTabProps {
   queryEngines: DruidEngine[];
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -95,7 +96,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     queryEngines,
     runMoreMenu,
     clusterCapacity,
-    goToIngestion,
+    goToTask,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -274,7 +275,24 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   }
 
   const handleRun = usePermanentCallback(async (preview: boolean) => {
-    if (!query.isValid()) return;
+    const queryIssue = query.getIssue();
+    if (queryIssue) {
+      const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
+
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        timeout: 90000,
+        message: queryIssue,
+        action: position
+          ? {
+              text: 'Go to issue',
+              onClick: () => moveToPosition(position),
+            }
+          : undefined,
+      });
+      return;
+    }
 
     if (query.getEffectiveEngine() !== 'sql-msq-task') {
       WorkbenchHistory.addQueryToHistory(query);
@@ -312,8 +330,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const queryPrefixes = query.getPrefixQueries();
   const extractedCtes = query.extractCteHelpers();
 
-  const onUserCancel = () => {
-    queryManager.cancelCurrent();
+  const onUserCancel = (message?: string) => {
+    queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
   };
 
@@ -345,7 +363,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 onDetails={onDetails}
                 queryEngines={queryEngines}
                 clusterCapacity={clusterCapacity}
-                goToIngestion={goToIngestion}
+                goToTask={goToTask}
               />
             ))}
             <div className={classNames('main-query', queryPrefixes.length ? 'multi' : 'single')}>
@@ -462,7 +480,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                     execution={execution}
                     onErrorClick={() => onDetails(statsTaskId!, 'error')}
                     onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
-                    goToIngestion={goToIngestion}
+                    goToTask={goToTask}
                   />
                 )}
               </div>
@@ -484,7 +502,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               <ExecutionProgressPane
                 execution={executionState.intermediate}
                 intermediateError={executionState.intermediateError}
-                goToIngestion={goToIngestion}
+                goToTask={goToTask}
                 onCancel={onUserCancel}
                 allowLiveReportsPane
               />

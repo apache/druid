@@ -20,13 +20,13 @@
 package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
 import org.apache.druid.indexing.kinesis.test.TestModifiedKinesisIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.hamcrest.CoreMatchers;
@@ -38,6 +38,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 
 public class KinesisIndexTaskTuningConfigTest
 {
@@ -46,7 +47,7 @@ public class KinesisIndexTaskTuningConfigTest
   public KinesisIndexTaskTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KinesisIndexingServiceModule().getJacksonModules());
+    mapper.registerModules(new KinesisIndexingServiceModule().getJacksonModules());
   }
 
   @Rule
@@ -73,9 +74,9 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertFalse(config.isReportParseExceptions());
-    Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getRecordBufferSizeConfigured());
     Assert.assertEquals(10000, config.getRecordBufferSizeOrDefault(1_000_000_000, false));
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
@@ -149,8 +150,8 @@ public class KinesisIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        new IndexSpec(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         true,
         5L,
         true,
@@ -210,8 +211,8 @@ public class KinesisIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        new IndexSpec(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         true,
         5L,
         true,
@@ -296,14 +297,12 @@ public class KinesisIndexTaskTuningConfigTest
         100L,
         new Period("PT3S"),
         4,
-        new IndexSpec(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         true,
         5L,
         true,
         false,
-        null,
-        null,
         null,
         null,
         null,
@@ -333,7 +332,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertNull(copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, copy.getIndexSpec());
     Assert.assertTrue(copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(1000, (int) copy.getRecordBufferSizeConfigured());
@@ -351,7 +350,12 @@ public class KinesisIndexTaskTuningConfigTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(KinesisIndexTaskTuningConfig.class)
-        .usingGetClass()
-        .verify();
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }

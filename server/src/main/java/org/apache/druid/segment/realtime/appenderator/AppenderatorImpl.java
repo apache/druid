@@ -187,6 +187,7 @@ public class AppenderatorImpl implements Appenderator
    */
   private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
+  
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *

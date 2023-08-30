@@ -19,17 +19,20 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Uncollect;
-import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -56,16 +59,24 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
    * {@link org.apache.calcite.rex.RexFieldAccess}.
    */
   private final RexNode inputRexNode;
+  private final Filter unnestFilter;
 
   private DruidUnnestRel(
       final RelOptCluster cluster,
       final RelTraitSet traits,
       final RexNode inputRexNode,
+      final Filter unnestFilter,
       final PlannerContext plannerContext
   )
   {
     super(cluster, traits, plannerContext);
     this.inputRexNode = inputRexNode;
+    this.unnestFilter = unnestFilter;
+  }
+
+  public Filter getUnnestFilter()
+  {
+    return unnestFilter;
   }
 
   public static DruidUnnestRel create(
@@ -83,6 +94,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
         cluster,
         traits,
         unnestRexNode,
+        null,
         plannerContext
     );
   }
@@ -100,6 +112,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
           getCluster(),
           getTraitSet(),
           newInputRexNode,
+          unnestFilter,
           getPlannerContext()
       );
     }
@@ -125,6 +138,11 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
     throw new UnsupportedOperationException();
   }
 
+  public DruidUnnestRel withFilter(Filter f)
+  {
+    return new DruidUnnestRel(getCluster(), getTraitSet(), inputRexNode, f, getPlannerContext());
+  }
+
   /**
    * Returns a new rel with a new input. The output type is unchanged.
    */
@@ -134,6 +152,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
         getCluster(),
         getTraitSet(),
         newInputRexNode,
+        unnestFilter,
         getPlannerContext()
     );
   }
@@ -160,6 +179,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
         inputRexNode,
+        unnestFilter,
         getPlannerContext()
     );
   }
@@ -167,7 +187,7 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return pw.item("expr", inputRexNode);
+    return pw.item("expr", inputRexNode).item("filter", unnestFilter);
   }
 
   @Override
@@ -180,12 +200,17 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   protected RelDataType deriveRowType()
   {
     return Uncollect.deriveUncollectRowType(
-        LogicalProject.create(
-            LogicalValues.createOneRow(getCluster()),
-            Collections.singletonList(inputRexNode),
-            Collections.singletonList(FIELD_NAME)
+        LogicalValues.createEmpty(
+            getCluster(),
+            RexUtil.createStructType(
+                getCluster().getTypeFactory(),
+                ImmutableList.of(inputRexNode),
+                null,
+                SqlValidatorUtil.F_SUGGESTER
+            )
         ),
-        false
+        false,
+        Collections.emptyList()
     );
   }
 }

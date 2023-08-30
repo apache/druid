@@ -30,13 +30,10 @@ import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
@@ -64,7 +61,7 @@ public class MSQReplaceTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -126,6 +123,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(1, 1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1, 1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -169,6 +171,11 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(1).frames(1),
                          1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(1),
+                         1, 0
                      )
                      .verifyResults();
   }
@@ -306,23 +313,25 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(4).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(4),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
   @Test
   public void testReplaceIncorrectSyntax()
   {
-    testIngestQuery().setSql("REPLACE INTO foo1 OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(SqlPlanningException.class),
-                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
-                         )
-                     )
-                     .verifyPlanningErrors();
+    testIngestQuery()
+        .setSql("REPLACE INTO foo1 OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(invalidSqlContains(
+            "Incorrect syntax near the keyword 'OVERWRITE'"
+        ))
+        .verifyPlanningErrors();
   }
 
   @Test
@@ -373,6 +382,11 @@ public class MSQReplaceTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().rows(6).frames(1),
                          1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
                      )
                      .verifyResults();
   }
@@ -430,6 +444,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(3, 3).frames(1, 1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -484,6 +503,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(2).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(2),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -533,6 +557,11 @@ public class MSQReplaceTest extends MSQTestBase
                              .with().rows(2).frames(1),
                          1, 0, "input0"
                      )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(2),
+                         1, 0
+                     )
                      .verifyResults();
   }
 
@@ -546,10 +575,8 @@ public class MSQReplaceTest extends MSQTestBase
                              + "LIMIT 50"
                              + "PARTITIONED BY MONTH")
                      .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
                      ))
                      .verifyPlanningErrors();
   }
@@ -564,10 +591,8 @@ public class MSQReplaceTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have an OFFSET"
                      ))
                      .setQueryContext(context)
                      .verifyPlanningErrors();
@@ -643,7 +668,7 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertOnFoo1Range()
+  public void testReplaceOnFoo1Range()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -694,6 +719,23 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .verifyResults();
+  }
+
+  @Test
+  public void testReplaceWithClusteredByDescendingThrowsException()
+  {
+    // Add a DESC clustered by column, which should not be allowed
+    testIngestQuery().setSql(" REPLACE INTO foobar "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, m1, m2 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL TIME "
+                             + "CLUSTERED BY m2, m1 DESC"
+                             )
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlIs("Invalid CLUSTERED BY clause [`m1` DESC]: cannot sort in descending order.")
+                     )
+                     .verifyPlanningErrors();
   }
 
   @Test

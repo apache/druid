@@ -29,6 +29,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import { MenuCheckbox, MenuTristate } from '../../../components';
@@ -54,7 +55,7 @@ import {
   getUseCache,
   summarizeIndexSpec,
 } from '../../../druid-models';
-import { deepGet, pluralIfNeeded, tickIcon } from '../../../utils';
+import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 
 import './run-panel.scss';
@@ -107,6 +108,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const maxParseExceptions = getMaxParseExceptions(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
+  const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
+  const selectDestination = queryContext.selectDestination ?? 'taskReport';
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -186,6 +189,12 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
 
     return items;
   }
+
+  const overloadWarning =
+    query.unlimited &&
+    (queryEngine === 'sql-native' ||
+      (queryEngine === 'sql-msq-task' && selectDestination === 'taskReport'));
+  const intent = overloadWarning ? Intent.WARNING : undefined;
 
   const effectiveEngine = query.getEffectiveEngine();
   return (
@@ -303,14 +312,53 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       }
                     />
                     <MenuItem
-                      icon={IconNames.TH_DERIVED}
-                      text="Edit index spec"
-                      label={summarizeIndexSpec(indexSpec)}
-                      shouldDismissPopover={false}
-                      onClick={() => {
-                        setIndexSpecDialogSpec(indexSpec || {});
-                      }}
-                    />
+                      icon={IconNames.INNER_JOIN}
+                      text="Join algorithm"
+                      label={sqlJoinAlgorithm}
+                    >
+                      {['broadcast', 'sortMerge'].map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(sqlJoinAlgorithm === o)}
+                          text={o}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext(deepSet(queryContext, 'sqlJoinAlgorithm', o))
+                          }
+                        />
+                      ))}
+                    </MenuItem>
+                    <MenuItem
+                      icon={IconNames.MANUALLY_ENTERED_DATA}
+                      text="SELECT destination"
+                      label={selectDestination}
+                      intent={intent}
+                    >
+                      {['taskReport', 'durableStorage'].map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(selectDestination === o)}
+                          text={o}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext(deepSet(queryContext, 'selectDestination', o))
+                          }
+                        />
+                      ))}
+                      <MenuDivider />
+                      <MenuCheckbox
+                        checked={selectDestination === 'taskReport' ? !query.unlimited : false}
+                        intent={intent}
+                        disabled={selectDestination !== 'taskReport'}
+                        text="Limit SELECT results in taskReport"
+                        labelElement={
+                          query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
+                        }
+                        onChange={() => {
+                          onQueryChange(query.toggleUnlimited());
+                        }}
+                      />
+                    </MenuItem>
                     <MenuCheckbox
                       checked={durableShuffleStorage}
                       text="Durable shuffle storage"
@@ -319,6 +367,15 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           changeDurableShuffleStorage(queryContext, !durableShuffleStorage),
                         )
                       }
+                    />
+                    <MenuItem
+                      icon={IconNames.TH_DERIVED}
+                      text="Edit index spec"
+                      label={summarizeIndexSpec(indexSpec)}
+                      shouldDismissPopover={false}
+                      onClick={() => {
+                        setIndexSpecDialogSpec(indexSpec || {});
+                      }}
                     />
                   </>
                 ) : (
@@ -353,24 +410,26 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     }
                   />
                 )}
-                <MenuCheckbox
-                  checked={!query.unlimited}
-                  intent={query.unlimited ? Intent.WARNING : undefined}
-                  text="Limit inline results"
-                  labelElement={
-                    query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
-                  }
-                  onChange={() => {
-                    onQueryChange(query.toggleUnlimited());
-                  }}
-                />
+                {effectiveEngine === 'sql-native' && (
+                  <MenuCheckbox
+                    checked={!query.unlimited}
+                    intent={query.unlimited ? Intent.WARNING : undefined}
+                    text="Limit inline results"
+                    labelElement={
+                      query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
+                    }
+                    onChange={() => {
+                      onQueryChange(query.toggleUnlimited());
+                    }}
+                  />
+                )}
               </Menu>
             }
           >
             <Button
               text={`Engine: ${queryEngine || `auto (${effectiveEngine})`}`}
               rightIcon={IconNames.CARET_DOWN}
-              intent={query.unlimited ? Intent.WARNING : undefined}
+              intent={intent}
             />
           </Popover2>
           {effectiveEngine === 'sql-msq-task' && (

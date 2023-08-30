@@ -47,6 +47,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -57,20 +58,17 @@ public class DetermineHashedPartitionsJobTest
 {
   private HadoopDruidIndexerConfig indexerConfig;
   private int expectedNumTimeBuckets;
-  private int[] expectedNumOfShards;
+  private ArrayList<Integer> expectedNumOfShards;
   private int errorMargin;
 
   @Parameterized.Parameters(name = "File={0}, TargetPartitionSize={1}, Interval={2}, ErrorMargin={3}, NumTimeBuckets={4}, NumShards={5}, SegmentGranularity={6}")
   public static Collection<?> data()
   {
-    int[] first = new int[1];
-    Arrays.fill(first, 13);
-    int[] second = new int[6];
-    Arrays.fill(second, 1);
-    int[] third = new int[6];
-    Arrays.fill(third, 13);
-    third[2] = 12;
-    third[5] = 11;
+    ArrayList<Integer> first = makeListOf(1, 13);
+    ArrayList<Integer> second = makeListOf(6, 1);
+    ArrayList<Integer> third = makeListOf(6, 13);
+    third.set(2, 12);
+    third.set(5, 11);
 
     return Arrays.asList(
         new Object[][]{
@@ -144,7 +142,7 @@ public class DetermineHashedPartitionsJobTest
       String interval,
       int errorMargin,
       int expectedNumTimeBuckets,
-      int[] expectedNumOfShards,
+      ArrayList<Integer> expectedNumOfShards,
       Granularity segmentGranularity,
       @Nullable HashPartitionFunction partitionFunction
   )
@@ -233,7 +231,8 @@ public class DetermineHashedPartitionsJobTest
             null,
             null,
             null,
-            null
+            null,
+            1
         )
     );
     this.indexerConfig = new HadoopDruidIndexerConfig(ingestionSpec);
@@ -254,7 +253,7 @@ public class DetermineHashedPartitionsJobTest
     int i = 0;
     for (Map.Entry<Long, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {
       Assert.assertEquals(
-          expectedNumOfShards[i++],
+          expectedNumOfShards.get(i++),
           entry.getValue().size(),
           errorMargin
       );
@@ -263,5 +262,14 @@ public class DetermineHashedPartitionsJobTest
         Assert.assertEquals(expectedFunction, hashShardSpec.getPartitionFunction());
       }
     }
+  }
+
+  private static ArrayList<Integer> makeListOf(int capacity, int value)
+  {
+    ArrayList<Integer> retVal = new ArrayList<>();
+    for (int i = 0; i < capacity; ++i) {
+      retVal.add(value);
+    }
+    return retVal;
   }
 }

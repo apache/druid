@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
@@ -49,6 +50,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   private final Set<DataSegment> published = Sets.newConcurrentHashSet();
   private final Set<DataSegment> nuked = Sets.newConcurrentHashSet();
   private final List<DataSegment> unusedSegments;
+  private int deleteSegmentsCount = 0;
 
   public TestIndexerMetadataStorageCoordinator()
   {
@@ -106,6 +108,22 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     synchronized (unusedSegments) {
       return ImmutableList.copyOf(unusedSegments);
+    }
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval, @Nullable Integer limit)
+  {
+    synchronized (unusedSegments) {
+      Stream<DataSegment> resultStream = unusedSegments.stream();
+
+      resultStream = resultStream.filter(ds -> !nuked.contains(ds));
+
+      if (limit != null) {
+        resultStream = resultStream.limit(limit);
+      }
+
+      return ImmutableList.copyOf(resultStream.iterator());
     }
   }
 
@@ -201,6 +219,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public void deleteSegments(Set<DataSegment> segments)
   {
+    deleteSegmentsCount++;
     nuked.addAll(segments);
   }
 
@@ -208,6 +227,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public void updateSegmentMetadata(Set<DataSegment> segments)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public DataSegment retrieveUsedSegmentForId(final String id)
+  {
+    return null;
   }
 
   public Set<DataSegment> getPublished()
@@ -218,6 +243,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public Set<DataSegment> getNuked()
   {
     return ImmutableSet.copyOf(nuked);
+  }
+
+  public int getDeleteSegmentsCount()
+  {
+    return deleteSegmentsCount;
   }
 
   public void setUnusedSegments(List<DataSegment> newUnusedSegments)

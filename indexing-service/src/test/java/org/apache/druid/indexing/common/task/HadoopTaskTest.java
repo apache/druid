@@ -26,6 +26,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
@@ -106,23 +107,13 @@ public class HadoopTaskTest
       }
     };
     final TaskToolbox toolbox = EasyMock.createStrictMock(TaskToolbox.class);
-    EasyMock.expect(toolbox.getConfig()).andReturn(new TaskConfig(
-        temporaryFolder.newFolder().toString(),
-        null,
-        null,
-        null,
-        ImmutableList.of("something:hadoop:1"),
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    )).once();
+    EasyMock.expect(toolbox.getConfig()).andReturn(
+        new TaskConfigBuilder()
+            .setBaseDir(temporaryFolder.newFolder().toString())
+            .setDefaultHadoopCoordinates(ImmutableList.of("something:hadoop:1"))
+            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+            .build()
+    ).once();
     EasyMock.replay(toolbox);
 
     final ClassLoader classLoader = task.buildClassLoader(toolbox);

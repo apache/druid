@@ -1,6 +1,7 @@
 ---
 id: data-formats
-title: "Data formats"
+title: Source input formats
+sidebar_label: Source input formats
 ---
 
 <!--
@@ -27,7 +28,7 @@ We welcome any contributions to new formats.
 
 This page lists all default and core extension data formats supported by Druid.
 For additional data formats supported with community extensions,
-please see our [community extensions list](../development/extensions.md#community-extensions).
+please see our [community extensions list](../configuration/extensions.md#community-extensions).
 
 ## Formatting data
 
@@ -150,7 +151,7 @@ Configure the TSV `inputFormat` to load TSV data as follows:
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
- For example:
+For example:
 
 ```json
 "ioConfig": {
@@ -160,72 +161,6 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
     "delimiter":"|"
   },
   ...
-}
-```
-
-### Kafka
-
-Configure the Kafka `inputFormat` to load complete kafka records including header, key, and value.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `type` | String | Set value to `kafka`. | yes |
-| `headerLabelPrefix` | String | Custom label prefix for all the header columns. | no (default = "kafka.header.") |
-| `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
-| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
-| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
-| `keyFormat` | [InputFormat](#input-format) | Any existing `inputFormat` used to parse the Kafka key. It only processes the first entry of the input format. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
-| `valueFormat` | [InputFormat](#input-format) | `valueFormat` can be any existing `inputFormat` to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
-
-For example:
-
-```
-"ioConfig": {
-  "inputFormat": {
-      "type": "kafka",
-      "headerLabelPrefix": "kafka.header.",
-      "timestampColumnName": "kafka.timestamp",
-      "keyColumnName": "kafka.key",
-      "headerFormat":
-      {
-        "type": "string"
-      },
-      "keyFormat":
-      {
-        "type": "json"
-      },
-      "valueFormat":
-      {
-        "type": "json"
-      }
-  },
-  ...
-}
-```
-
-Note the following behaviors:
-
-- If there are conflicts between column names, Druid uses the column names from the payload and ignores the column name from the header or key. This behavior makes it easier to migrate to the the Kafka `inputFormat` from another Kafka ingestion spec without losing data.
-- The Kafka input format fundamentally blends information from the header, key, and value objects from a Kafka record to create a row in Druid. It extracts individual records from the value. Then it augments each value with the corresponding key or header columns.
-- The Kafka input format by default exposes Kafka timestamp `timestampColumnName` to make it available for use as the primary timestamp column. Alternatively you can choose timestamp column from either the key or value payload.
-
-For example, the following `timestampSpec` uses the default Kafka timestamp from the Kafka record:
-
-```json
-"timestampSpec":
-{
-    "column": "kafka.timestamp",
-    "format": "millis"
-}
-```
-
-If you are using "kafka.header." as the prefix for Kafka header columns and there is a timestamp field in the header, the header timestamp serves as the primary timestamp column. For example:
-
-```json
-"timestampSpec":
-{
-    "column": "kafka.header.timestamp",
-    "format": "millis"
 }
 ```
 
@@ -604,7 +539,88 @@ For example:
 }
 ```
 
-### FlattenSpec
+### Kafka
+
+`kafka` is a special input format that wraps a regular input format (which goes in `valueFormat`) and allows you
+to parse the Kafka metadata (timestamp, headers, and key) that is part of Kafka messages.
+It should only be used when ingesting from Apache Kafka. 
+
+Configure the Kafka `inputFormat` as follows:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `type` | String | Set value to `kafka`. | yes |
+| `valueFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
+| `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
+| `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
+| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
+| `keyFormat` | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
+| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
+
+The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
+
+If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
+This ensures that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.  
+
+Here is a minimal example that only augments the parsed payload with the Kafka timestamp column:
+
+```
+"ioConfig": {
+  "inputFormat": {
+    "type": "kafka",
+    "valueFormat": {
+      "type": "json"
+    }
+  },
+  ...
+}
+```
+
+Here is a complete example:
+
+```
+"ioConfig": {
+  "inputFormat": {
+    "type": "kafka",
+    "valueFormat": {
+      "type": "json"
+    }
+    "timestampColumnName": "kafka.timestamp",
+    "headerFormat": {
+      "type": "string",
+      "encoding": "UTF-8"
+    },
+    "headerColumnPrefix": "kafka.header.",
+    "keyFormat": {
+      "type": "tsv",
+      "findColumnsFromHeader": false,
+      "columns": ["x"]
+    },
+    "keyColumnName": "kafka.key",
+  },
+  ...
+}
+```
+
+If you want to use `kafka.timestamp` as Druid's primary timestamp (`__time`), specify it as the value for `column` in the `timestampSpec`:
+
+```json
+"timestampSpec": {
+  "column": "kafka.timestamp",
+  "format": "millis"
+}
+```
+
+Similarly, if you want to use a timestamp extracted from the Kafka header:
+
+```json
+"timestampSpec": {
+  "column": "kafka.header.myTimestampHeader",
+  "format": "millis"
+}
+```
+
+## FlattenSpec
 
 You can use the `flattenSpec` object to flatten nested data, as an alternative to the Druid [nested columns](../querying/nested-columns.md) feature, and for nested input formats unsupported by the feature. It is an object within the `inputFormat` object.
 
@@ -635,7 +651,7 @@ After Druid reads the input data records, it applies the flattenSpec before appl
 
 Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`, and `parquet`.
 
-#### Field flattening specifications
+### Field flattening specifications
 
 Each entry in the `fields` list can have the following components:
 
@@ -646,7 +662,7 @@ Each entry in the `fields` list can have the following components:
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
 | nodes | For `tree` only. Multiple-expression field for accessing the field while flattening, representing the hierarchy of field names to read. For other types, this parameter must not be provided. | none (required for type `tree`) |
 
-#### Notes on flattening
+### Notes on flattening
 
 - For convenience, when defining a root-level field, it is possible to define only the field name, as a string, instead of a JSON object. For example, `{"name": "baz", "type": "root"}` is equivalent to `"baz"`.
 - Enabling `useFieldDiscovery` will only automatically detect "simple" fields at the root level that correspond to data types that Druid supports. This includes strings, numbers, and lists of strings or numbers. Other types will not be automatically detected, and must be specified explicitly in the `fields` list.
@@ -675,7 +691,7 @@ and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.
 Consider using the [input format](#input-format) instead for these types of ingestion.
 
 This section lists all default and core extension parsers.
-For community extension parsers, please see our [community extensions list](../development/extensions.md#community-extensions).
+For community extension parsers, please see our [community extensions list](../configuration/extensions.md#community-extensions).
 
 ### String Parser
 

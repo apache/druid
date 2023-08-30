@@ -51,7 +51,7 @@ import java.util.List;
 public class AzureStorageDruidModule implements DruidModule
 {
 
-  static final String SCHEME = "azure";
+  public static final String SCHEME = "azure";
   public static final String
       STORAGE_CONNECTION_STRING_WITH_KEY = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s";
   public static final String
@@ -106,7 +106,6 @@ public class AzureStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
     binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
-    binder.bind(AzureCloudBlobHolderToCloudObjectLocationConverter.class).in(LazySingleton.class);
     binder.install(new FactoryModuleBuilder()
                        .build(AzureByteSourceFactory.class));
     binder.install(new FactoryModuleBuilder()

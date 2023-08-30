@@ -558,8 +558,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
   {
     final List<DataSegment> unusedSegments = new ArrayList<>();
-    final SegmentTimeline timeline =
-        SegmentTimeline.forSegments(Collections.emptyIterator());
+    final SegmentTimeline timeline = new SegmentTimeline();
 
     connector.inReadOnlyTransaction(
         (handle, status) -> {
@@ -575,7 +574,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));

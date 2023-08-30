@@ -23,8 +23,15 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 162;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 167;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
+
+const initialFunctionDocs = {
+  TABLE: [['external', convertMarkdownToHtml('Defines a logical table from an external.')]],
+  EXTERN: [
+    ['inputSource, inputFormat, rowSignature?', convertMarkdownToHtml('Reads external data')],
+  ],
+};
 
 function hasHtmlTags(str) {
   return /<(a|br|span|div|p|code)\/?>/.test(str);
@@ -60,14 +67,15 @@ const readDoc = async () => {
     await fs.readFile('../docs/querying/sql-data-types.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-array-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
-    await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-operators.md', 'utf-8')
   ].join('\n');
 
   const lines = data.split('\n');
 
-  const functionDocs = {};
+  const functionDocs = initialFunctionDocs;
   const dataTypeDocs = {};
   for (let line of lines) {
     const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);

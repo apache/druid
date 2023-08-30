@@ -41,6 +41,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistin
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestBySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.LiteralSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.StringSqlAggregator;
@@ -68,6 +69,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConve
 import org.apache.druid.sql.calcite.expression.builtin.ArrayPrependOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayQuantileOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CaseOperatorConversion;
@@ -99,12 +101,14 @@ import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -159,9 +163,11 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new SumSqlAggregator())
                    .add(new SumZeroSqlAggregator())
                    .add(new GroupingSqlAggregator())
+                   .add(new LiteralSqlAggregator())
                    .add(new ArraySqlAggregator())
                    .add(new ArrayConcatSqlAggregator())
-                   .add(new StringSqlAggregator())
+                   .add(StringSqlAggregator.STRING_AGG)
+                   .add(StringSqlAggregator.LISTAGG)
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.AND))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.OR))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.XOR))
@@ -199,6 +205,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new PositionOperatorConversion())
                    .add(new RegexpExtractOperatorConversion())
                    .add(new RegexpLikeOperatorConversion())
+                   .add(new RegexpReplaceOperatorConversion())
                    .add(new RTrimOperatorConversion())
                    .add(new ParseLongOperatorConversion())
                    .add(new StringFormatOperatorConversion())
@@ -244,6 +251,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArraySliceOperatorConversion())
                    .add(new ArrayToStringOperatorConversion())
                    .add(new StringToArrayOperatorConversion())
+                   .add(new ArrayToMultiValueStringOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> MULTIVALUE_STRING_OPERATOR_CONVERSIONS =
@@ -322,6 +330,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueVarcharOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayBigIntOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
@@ -390,6 +401,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
+                   .add(new SearchOperatorConversion())
                    .add(new RoundOperatorConversion())
                    .addAll(TIME_OPERATOR_CONVERSIONS)
                    .addAll(STRING_OPERATOR_CONVERSIONS)
@@ -459,23 +471,13 @@ public class DruidOperatorTable implements SqlOperatorTable
   @Nullable
   public SqlAggregator lookupAggregator(final SqlAggFunction aggFunction)
   {
-    final SqlAggregator sqlAggregator = aggregators.get(OperatorKey.of(aggFunction));
-    if (sqlAggregator != null && sqlAggregator.calciteFunction().equals(aggFunction)) {
-      return sqlAggregator;
-    } else {
-      return null;
-    }
+    return aggregators.get(OperatorKey.of(aggFunction));
   }
 
   @Nullable
   public SqlOperatorConversion lookupOperatorConversion(final SqlOperator operator)
   {
-    final SqlOperatorConversion operatorConversion = operatorConversions.get(OperatorKey.of(operator));
-    if (operatorConversion != null && operatorConversion.calciteOperator().equals(operator)) {
-      return operatorConversion;
-    } else {
-      return null;
-    }
+    return operatorConversions.get(OperatorKey.of(operator));
   }
 
   @Override
@@ -523,10 +525,22 @@ public class DruidOperatorTable implements SqlOperatorTable
     return retVal;
   }
 
+  /**
+   * Checks if a given SqlSyntax value represents a valid function syntax. Treats anything other
+   * than prefix/suffix/binary syntax as function syntax.
+   *
+   * @param syntax The SqlSyntax value to be checked.
+   *
+   * @return {@code true} if the syntax is valid for a function, {@code false} otherwise.
+   */
+  public static boolean isFunctionSyntax(final SqlSyntax syntax)
+  {
+    return syntax != SqlSyntax.PREFIX && syntax != SqlSyntax.BINARY && syntax != SqlSyntax.POSTFIX;
+  }
+
   private static SqlSyntax normalizeSyntax(final SqlSyntax syntax)
   {
-    // Treat anything other than prefix/suffix/binary syntax as function syntax.
-    if (syntax == SqlSyntax.PREFIX || syntax == SqlSyntax.BINARY || syntax == SqlSyntax.POSTFIX) {
+    if (!DruidOperatorTable.isFunctionSyntax(syntax)) {
       return syntax;
     } else {
       return SqlSyntax.FUNCTION;

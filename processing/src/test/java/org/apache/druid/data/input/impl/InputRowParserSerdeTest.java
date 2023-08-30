@@ -233,7 +233,6 @@ public class InputRowParserSerdeTest
         "hey0barx",
         "metA",
         "missing",
-        "timestamp",
         "foo.bar1",
         "blah",
         "newmet",

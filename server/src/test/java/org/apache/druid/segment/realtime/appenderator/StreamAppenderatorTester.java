@@ -158,11 +158,6 @@ public class StreamAppenderatorTester implements AutoCloseable
         objectMapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
 

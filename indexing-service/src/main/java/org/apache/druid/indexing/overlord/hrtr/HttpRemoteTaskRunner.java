@@ -68,6 +68,7 @@ import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -565,13 +566,26 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private Worker toWorker(DiscoveryDruidNode node)
   {
+    final WorkerNodeService workerNodeService = node.getService(WorkerNodeService.DISCOVERY_SERVICE_KEY, WorkerNodeService.class);
+    if (workerNodeService == null) {
+      // this shouldn't typically happen, but just in case it does, make a dummy worker to allow the callbacks to
+      // continue since addWorker/removeWorker only need worker.getHost()
+      return new Worker(
+          node.getDruidNode().getServiceScheme(),
+          node.getDruidNode().getHostAndPortToUse(),
+          null,
+          0,
+          "",
+          WorkerConfig.DEFAULT_CATEGORY
+      );
+    }
     return new Worker(
         node.getDruidNode().getServiceScheme(),
         node.getDruidNode().getHostAndPortToUse(),
-        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getIp(),
-        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getCapacity(),
-        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getVersion(),
-        ((WorkerNodeService) node.getServices().get(WorkerNodeService.DISCOVERY_SERVICE_KEY)).getCategory()
+        workerNodeService.getIp(),
+        workerNodeService.getCapacity(),
+        workerNodeService.getVersion(),
+        workerNodeService.getCategory()
     );
   }
 
@@ -777,7 +791,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final Set<Map.Entry<String, WorkerHolder>> workerEntrySet = ImmutableSet.copyOf(workers.entrySet());
     for (Map.Entry<String, WorkerHolder> e : workerEntrySet) {
       WorkerHolder workerHolder = e.getValue();
-      if (!workerHolder.getUnderlyingSyncer().isOK()) {
+      if (workerHolder.getUnderlyingSyncer().needsReset()) {
         synchronized (workers) {
           // check again that server is still there and only then reset.
           if (workers.containsKey(e.getKey())) {
@@ -908,27 +922,35 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxLazyWorkers)
   {
+    // skip the lock and bail early if we should not mark any workers lazy (e.g. number
+    // of current workers is at or below the minNumWorkers of autoscaler config)
+    if (lazyWorkers.size() >= maxLazyWorkers) {
+      return getLazyWorkers();
+    }
+
+    // Search for new workers to mark lazy.
+    // Status lock is used to prevent any tasks being assigned to workers while we mark them lazy
     synchronized (statusLock) {
       for (Map.Entry<String, WorkerHolder> worker : workers.entrySet()) {
+        if (lazyWorkers.size() >= maxLazyWorkers) {
+          break;
+        }
         final WorkerHolder workerHolder = worker.getValue();
         try {
           if (isWorkerOkForMarkingLazy(workerHolder.getWorker()) && isLazyWorker.apply(workerHolder.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", workerHolder.getWorker().getHost());
             lazyWorkers.put(worker.getKey(), workerHolder);
-            if (lazyWorkers.size() == maxWorkers) {
-              // only mark excess workers as lazy and allow their cleanup
-              break;
-            }
           }
         }
         catch (Exception e) {
           throw new RuntimeException(e);
         }
       }
-      return getLazyWorkers();
     }
+
+    return getLazyWorkers();
   }
 
   private boolean isWorkerOkForMarkingLazy(Worker worker)
@@ -1410,11 +1432,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
+  @SuppressWarnings("GuardedBy") // Read on tasks is safe
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    synchronized (statusLock) {
-      return ImmutableList.copyOf(tasks.values());
-    }
+    return ImmutableList.copyOf(tasks.values());
   }
 
   @SuppressWarnings("GuardedBy") // Read on tasks is safe

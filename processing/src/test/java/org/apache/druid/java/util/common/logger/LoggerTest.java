@@ -128,6 +128,13 @@ public class LoggerTest
     Assert.assertEquals(expected, msgCount.getValue());
   }
 
+  @Test
+  public void testGetName()
+  {
+    String expected = "org.apache.druid.java.util.common.logger.LoggerTest";
+    Assert.assertEquals(expected, log.getName());
+  }
+
   private Logger.LogFunction getLogToListFunction(List<String> messages)
   {
     return (msg, format) -> messages.add(StringUtils.format(msg, format));

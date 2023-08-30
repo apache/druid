@@ -135,7 +135,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   {
     // Register, but don't unregister at the end of this test, because many other tests out there expect this to exist
     // even though they don't explicitly register it.
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,

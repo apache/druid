@@ -74,4 +74,17 @@ public class SegmentAllocateRequest
   {
     return rowInterval;
   }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentAllocateRequest{" +
+           "taskId=" + task.getId() +
+           ", queryGranularity=" + action.getQueryGranularity() +
+           ", segmentGranularity=" + action.getPreferredSegmentGranularity() +
+           ", maxAttempts=" + maxAttempts +
+           ", rowInterval=" + rowInterval +
+           ", attempts=" + attempts +
+           '}';
+  }
 }

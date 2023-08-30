@@ -38,6 +38,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,16 +48,18 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -160,11 +163,16 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       rightDataSource = rightQuery.getDataSource();
     }
 
-    final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
+
+    final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
+        leftSignature,
+        rightSignature,
+        findExistingJoinPrefixes(leftDataSource, rightDataSource)
+    );
 
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         prefixSignaturePair.rhs,
-        getPlannerContext().getExprMacroTable(),
+        getPlannerContext().getExpressionParser(),
         getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
     );
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
@@ -191,10 +199,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             leftDataSource,
             rightDataSource,
             prefixSignaturePair.lhs,
-            condition.getExpression(),
+            JoinConditionAnalysis.forExpression(
+                condition.getExpression(),
+                getPlannerContext().parseExpression(condition.getExpression()),
+                prefixSignaturePair.lhs
+            ),
             toDruidJoinType(joinRel.getJoinType()),
             getDimFilter(getPlannerContext(), leftSignature, leftFilter),
-            getPlannerContext().getExprMacroTable(),
             getPlannerContext().getJoinableFactoryWrapper()
         ),
         prefixSignaturePair.rhs,
@@ -257,12 +268,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     } else {
       throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
     }
-  }
-
-  @Override
-  public List<RexNode> getChildExps()
-  {
-    return ImmutableList.of(joinRel.getCondition());
   }
 
   @Override
@@ -353,7 +358,10 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw new UnsupportedSQLQueryException("Cannot handle joinType '%s'", calciteJoinType);
+        throw InvalidSqlInput.exception(
+            "Cannot handle joinType [%s]",
+            calciteJoinType
+        );
     }
   }
 
@@ -380,13 +388,29 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
              && DruidRels.druidTableIfLeafRel(right).filter(table -> table.getDataSource().isGlobal()).isPresent());
   }
 
+  static Set<String> findExistingJoinPrefixes(DataSource... dataSources)
+  {
+    final ArrayList<DataSource> copy = new ArrayList<>(Arrays.asList(dataSources));
+
+    Set<String> prefixes = new HashSet<>();
+    while (!copy.isEmpty()) {
+      DataSource current = copy.remove(0);
+      copy.addAll(current.getChildren());
+      if (current instanceof JoinDataSource) {
+        JoinDataSource joiner = (JoinDataSource) current;
+        prefixes.add(joiner.getRightPrefix());
+      }
+    }
+    return prefixes;
+  }
   /**
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
   static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
-      final RowSignature rightSignature
+      final RowSignature rightSignature,
+      final Set<String> prefixes
   )
   {
     final RowSignature.Builder signatureBuilder = RowSignature.builder();
@@ -395,8 +419,17 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       signatureBuilder.add(column, leftSignature.getColumnType(column).orElse(null));
     }
 
-    // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
-    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getColumnNames()) + "0.";
+    StringBuilder base = new StringBuilder("j");
+    // the prefixes collection contains all known join prefixes, which might be in use for nested queries but not
+    // present in the top level row signatures
+    // loop until we are sure we got a new prefix
+    String maybePrefix;
+    do {
+      // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
+      maybePrefix = Calcites.findUnusedPrefixForDigits(base.toString(), leftSignature.getColumnNames()) + "0.";
+      base.insert(0, "_");
+    } while (prefixes.contains(maybePrefix));
+    final String rightPrefix = maybePrefix;
 
     for (final String column : rightSignature.getColumnNames()) {
       signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column).orElse(null));

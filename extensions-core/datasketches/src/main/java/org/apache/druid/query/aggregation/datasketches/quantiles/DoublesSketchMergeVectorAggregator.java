@@ -58,7 +58,7 @@ public class DoublesSketchMergeVectorAggregator implements VectorAggregator
     for (int i = startRow; i < endRow; i++) {
       final DoublesSketch sketch = (DoublesSketch) vector[i];
       if (sketch != null) {
-        union.update(sketch);
+        union.union(sketch);
       }
     }
   }
@@ -80,7 +80,7 @@ public class DoublesSketchMergeVectorAggregator implements VectorAggregator
       if (sketch != null) {
         final int position = positions[i] + positionOffset;
         final DoublesUnion union = helper.getSketchAtPosition(buf, position);
-        union.update(sketch);
+        union.union(sketch);
       }
     }
   }

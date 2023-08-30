@@ -34,7 +34,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
@@ -165,7 +164,6 @@ public class SqlModule implements Module
         final ServiceEmitter emitter,
         final RequestLogger requestLogger,
         final QueryScheduler queryScheduler,
-        final AuthConfig authConfig,
         final Supplier<DefaultQueryConfig> defaultQueryConfig,
         final SqlLifecycleManager sqlLifecycleManager
     )
@@ -176,7 +174,6 @@ public class SqlModule implements Module
           emitter,
           requestLogger,
           queryScheduler,
-          authConfig,
           defaultQueryConfig.get(),
           sqlLifecycleManager
       );

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Revised Integration Tests shared workflow
+name: "Revised ITs shared workflow"
 on:
   workflow_call:
     inputs:
@@ -42,10 +42,32 @@ on:
         required: false
         type: string
         default: com.mysql.jdbc.Driver
+      DRUID_CLOUD_BUCKET:
+        required: false
+        type: string
+      DRUID_CLOUD_PATH:
+        required: false
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+      AWS_ACCESS_KEY_ID:
+        required: false
+        type: string
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+        type: string
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
+  DRUID_CLOUD_BUCKET: ${{ inputs.DRUID_CLOUD_BUCKET }}
+  DRUID_CLOUD_PATH: ${{ inputs.DRUID_CLOUD_PATH }}
+  AWS_REGION: ${{ inputs.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  DOCKER_CLIENT_TIMEOUT: 120
+  COMPOSE_HTTP_TIMEOUT: 120
 
 jobs:
   test: # GitHub job that runs a given revised/new IT against retrieved cached druid docker image
@@ -56,7 +78,8 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup java
-        run: export JAVA_HOME=$JAVA_HOME_${{ inputs.build_jdk }}_X64
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ inputs.build_jdk }}_X64" >> $GITHUB_ENV
 
       - name: Restore Maven repository
         id: maven-restore
@@ -96,6 +119,12 @@ jobs:
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ inputs.build_jdk }}
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+
+      - name: Stop and remove docker containers
+        run: |
+          echo "Force stopping all containers and pruning"
+          docker ps -aq --filter "label=druid-int-test=true" | xargs -r docker rm -f
+          docker system prune -af --volumes
 
       - name: Load docker image
         run: |

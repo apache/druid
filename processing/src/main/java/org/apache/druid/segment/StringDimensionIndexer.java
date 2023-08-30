@@ -85,6 +85,11 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     final int oldDictSize = dimLookup.size();
     final long oldDictSizeInBytes = useMaxMemoryEstimates ? 0 : dimLookup.sizeInBytes();
 
+    // expressions which operate on multi-value string inputs as arrays might spit out arrays, coerce to list
+    if (dimValues instanceof Object[]) {
+      dimValues = Arrays.asList((Object[]) dimValues);
+    }
+
     if (dimValues == null) {
       final int nullId = dimLookup.getId(null);
       encodedDimensionValues = nullId == DimensionDictionary.ABSENT_VALUE_ID ? new int[]{dimLookup.add(null)} : new int[]{nullId};

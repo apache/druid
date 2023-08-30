@@ -19,13 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -35,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -43,83 +40,26 @@ import java.util.TreeSet;
  */
 public class DruidCluster
 {
-  /** This static factory method must be called only from inside DruidClusterBuilder in tests. */
-  @VisibleForTesting
-  static DruidCluster createDruidClusterFromBuilderInTest(
-      @Nullable Set<ServerHolder> realtimes,
-      Map<String, Iterable<ServerHolder>> historicals,
-      @Nullable Set<ServerHolder> brokers
-  )
-  {
-    return new DruidCluster(realtimes, historicals, brokers);
-  }
+  public static final DruidCluster EMPTY = builder().build();
 
   private final Set<ServerHolder> realtimes;
   private final Map<String, NavigableSet<ServerHolder>> historicals;
   private final Set<ServerHolder> brokers;
-
-  public DruidCluster()
-  {
-    this.realtimes = new HashSet<>();
-    this.historicals = new HashMap<>();
-    this.brokers = new HashSet<>();
-  }
+  private final List<ServerHolder> allServers;
 
   private DruidCluster(
-      @Nullable Set<ServerHolder> realtimes,
-      Map<String, Iterable<ServerHolder>> historicals,
-      @Nullable Set<ServerHolder> brokers
+      Set<ServerHolder> realtimes,
+      Map<String, Set<ServerHolder>> historicals,
+      Set<ServerHolder> brokers
   )
   {
-    this.realtimes = realtimes == null ? new HashSet<>() : new HashSet<>(realtimes);
+    this.realtimes = Collections.unmodifiableSet(realtimes);
     this.historicals = CollectionUtils.mapValues(
         historicals,
-        holders -> CollectionUtils.newTreeSet(Comparator.reverseOrder(), holders)
+        holders -> CollectionUtils.newTreeSet(Comparator.naturalOrder(), holders)
     );
-    this.brokers = brokers == null ? new HashSet<>() : new HashSet<>(brokers);
-  }
-
-  public void add(ServerHolder serverHolder)
-  {
-    switch (serverHolder.getServer().getType()) {
-      case HISTORICAL:
-        addHistorical(serverHolder);
-        break;
-      case REALTIME:
-        addRealtime(serverHolder);
-        break;
-      case BRIDGE:
-        addHistorical(serverHolder);
-        break;
-      case INDEXER_EXECUTOR:
-        addRealtime(serverHolder);
-        break;
-      case BROKER:
-        addBroker(serverHolder);
-        break;
-      default:
-        throw new IAE("unknown server type[%s]", serverHolder.getServer().getType());
-    }
-  }
-
-  private void addRealtime(ServerHolder serverHolder)
-  {
-    realtimes.add(serverHolder);
-  }
-
-  private void addHistorical(ServerHolder serverHolder)
-  {
-    final ImmutableDruidServer server = serverHolder.getServer();
-    final NavigableSet<ServerHolder> tierServers = historicals.computeIfAbsent(
-        server.getTier(),
-        k -> new TreeSet<>(Collections.reverseOrder())
-    );
-    tierServers.add(serverHolder);
-  }
-
-  private void addBroker(ServerHolder serverHolder)
-  {
-    brokers.add(serverHolder);
+    this.brokers = Collections.unmodifiableSet(brokers);
+    this.allServers = initAllServers();
   }
 
   public Set<ServerHolder> getRealtimes()
@@ -131,7 +71,6 @@ public class DruidCluster
   {
     return historicals;
   }
-
 
   public Set<ServerHolder> getBrokers()
   {
@@ -148,7 +87,12 @@ public class DruidCluster
     return historicals.get(tier);
   }
 
-  public Collection<ServerHolder> getAllServers()
+  public List<ServerHolder> getAllServers()
+  {
+    return allServers;
+  }
+
+  private List<ServerHolder> initAllServers()
   {
     final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
     final int realtimeSize = realtimes.size();
@@ -160,39 +104,71 @@ public class DruidCluster
     return allServers;
   }
 
-  public Iterable<NavigableSet<ServerHolder>> getSortedHistoricalsByTier()
-  {
-    return historicals.values();
-  }
-
   public boolean isEmpty()
   {
     return historicals.isEmpty() && realtimes.isEmpty() && brokers.isEmpty();
   }
 
-  public boolean hasHistoricals()
+  public static Builder builder()
   {
-    return !historicals.isEmpty();
+    return new Builder();
   }
 
-  public boolean hasRealtimes()
+  public static class Builder
   {
-    return !realtimes.isEmpty();
-  }
+    private final Set<ServerHolder> realtimes = new HashSet<>();
+    private final Map<String, Set<ServerHolder>> historicals = new HashMap<>();
+    private final Set<ServerHolder> brokers = new HashSet<>();
 
-  public boolean hasBrokers()
-  {
-    return !brokers.isEmpty();
-  }
-
-  public boolean hasTier(String tier)
-  {
-    NavigableSet<ServerHolder> historicalServers = historicals.get(tier);
-    boolean historicalsHasTier = (historicalServers != null) && !historicalServers.isEmpty();
-    if (historicalsHasTier) {
-      return true;
+    public Builder add(ServerHolder serverHolder)
+    {
+      switch (serverHolder.getServer().getType()) {
+        case BRIDGE:
+        case HISTORICAL:
+          addHistorical(serverHolder);
+          break;
+        case REALTIME:
+        case INDEXER_EXECUTOR:
+          realtimes.add(serverHolder);
+          break;
+        case BROKER:
+          brokers.add(serverHolder);
+          break;
+        default:
+          throw new IAE("unknown server type[%s]", serverHolder.getServer().getType());
+      }
+      return this;
     }
 
-    return false;
+    public Builder addRealtimes(ServerHolder... realtimeServers)
+    {
+      realtimes.addAll(Arrays.asList(realtimeServers));
+      return this;
+    }
+
+    public Builder addBrokers(ServerHolder... brokers)
+    {
+      this.brokers.addAll(Arrays.asList(brokers));
+      return this;
+    }
+
+    public Builder addTier(String tier, ServerHolder... historicals)
+    {
+      this.historicals.computeIfAbsent(tier, t -> new HashSet<>())
+                      .addAll(Arrays.asList(historicals));
+      return this;
+    }
+
+    private void addHistorical(ServerHolder serverHolder)
+    {
+      final String tier = serverHolder.getServer().getTier();
+      historicals.computeIfAbsent(tier, t -> new HashSet<>()).add(serverHolder);
+    }
+
+    public DruidCluster build()
+    {
+      return new DruidCluster(realtimes, historicals, brokers);
+    }
   }
+
 }

@@ -48,7 +48,9 @@ public interface SplitHintSpec
    * Returns an iterator of splits. A split has a list of files of the type {@link T}.
    *
    * @param inputIterator           that returns input files.
-   * @param inputAttributeExtractor to create {@link InputFileAttribute} for each input file.
+   * @param inputAttributeExtractor to create {@link InputFileAttribute} for each input file. This may involve a
+   *                                network call, so implementations of SplitHintSpec should use it only if needed,
+   *                                and reuse results if appropriate.
    */
   <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor);
 }

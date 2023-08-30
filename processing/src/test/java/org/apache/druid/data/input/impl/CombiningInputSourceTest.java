@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -42,8 +43,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -64,6 +68,24 @@ public class CombiningInputSourceTest
     final byte[] json = mapper.writeValueAsBytes(combiningInputSource);
     final CombiningInputSource fromJson = (CombiningInputSource) mapper.readValue(json, InputSource.class);
     Assert.assertEquals(combiningInputSource, fromJson);
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class, TestUriInputSource.class));
+    final TestFileInputSource fileSource = new TestFileInputSource(ImmutableList.of(new File("myFile").getAbsoluteFile()));
+    final TestUriInputSource uriInputSource = new TestUriInputSource(
+        ImmutableList.of(URI.create("http://test.com/http-test")));
+    final CombiningInputSource combiningInputSource = new CombiningInputSource(ImmutableList.of(
+        fileSource,
+        uriInputSource
+    ));
+    Set<String> expectedTypes = new HashSet<>();
+    expectedTypes.addAll(fileSource.getTypes());
+    expectedTypes.addAll(uriInputSource.getTypes());
+    Assert.assertEquals(expectedTypes, combiningInputSource.getTypes());
   }
 
   @Test
@@ -201,6 +223,13 @@ public class CombiningInputSourceTest
       files = fileList;
     }
 
+    @JsonIgnore
+    @Override
+    public Set<String> getTypes()
+    {
+      return Collections.singleton("testFile");
+    }
+
     @JsonProperty
     public List<File> getFiles()
     {
@@ -259,6 +288,13 @@ public class CombiningInputSourceTest
     private TestUriInputSource(@JsonProperty("uris") List<URI> uriList)
     {
       uris = uriList;
+    }
+
+    @JsonIgnore
+    @Override
+    public Set<String> getTypes()
+    {
+      return Collections.singleton("testUri");
     }
 
     @JsonProperty

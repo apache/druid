@@ -22,8 +22,6 @@ package org.apache.druid.math.expr;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 
-import javax.annotation.Nullable;
-
 /**
  * Like {@link org.apache.druid.common.config.NullHandling}, except for expressions processing configs
  */
@@ -43,33 +41,23 @@ public class ExpressionProcessing
   /**
    * Many unit tests do not setup modules for this value to be injected, this method provides a manual way to initialize
    * {@link #INSTANCE}
-   * @param allowNestedArrays
    */
   @VisibleForTesting
-  public static void initializeForTests(@Nullable Boolean allowNestedArrays)
+  public static void initializeForTests()
   {
-    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays, null, null, null);
+    INSTANCE = new ExpressionProcessingConfig(null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForStrictBooleansTests(boolean useStrict)
   {
-    INSTANCE = new ExpressionProcessingConfig(null, useStrict, null, null);
+    INSTANCE = new ExpressionProcessingConfig(useStrict, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
-  }
-
-  /**
-   * [['is expression support for'],['nested arrays'],['enabled?']]
-   */
-  public static boolean allowNestedArrays()
-  {
-    checkInitialized();
-    return INSTANCE.allowNestedArrays();
+    INSTANCE = new ExpressionProcessingConfig(null, null, true);
   }
 
   /**

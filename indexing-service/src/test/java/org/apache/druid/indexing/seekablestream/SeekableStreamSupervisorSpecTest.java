@@ -448,18 +448,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       }
 
       @Override
-      public boolean getChatAsync()
-      {
-        return false;
-      }
-
-      @Override
-      public Integer getChatThreads()
-      {
-        return 1;
-      }
-
-      @Override
       public Long getChatRetries()
       {
         return 1L;
@@ -878,6 +866,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     )
     {
@@ -932,7 +921,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
-        new IdleConfig(true, null)
+        new IdleConfig(true, null),
+        null
     )
     {
     };
@@ -1098,6 +1088,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
           null,
+          null,
           null
       )
       {
@@ -1116,6 +1107,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
+          null,
           null,
           null
       )

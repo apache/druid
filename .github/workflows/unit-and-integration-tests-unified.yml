@@ -13,31 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Unit & Integration tests CI
+name: "Unit & Integration tests CI"
 on:
   push:
     paths-ignore:
-      - 'docs/**'
+      - '**/*.md'
       - 'dev/**'
+      - 'docs/**'
+      - 'examples/**/jupyter-notebooks/**'
       - 'helm/**'
       - 'web-console/**'
-      - '**/*.md'
+      - 'website/**'
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
   pull_request:
     paths-ignore:
-      - 'docs/**'
+      - '**/*.md'
       - 'dev/**'
+      - 'docs/**'
+      - 'examples/**/jupyter-notebooks/**'
       - 'helm/**'
       - 'web-console/**'
-      - '**/*.md'
+      - 'website/**'
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
 env:
@@ -46,7 +52,7 @@ env:
 
 jobs:
   build:
-    name: build (jdk${{ matrix.jdk }})
+    name: "build (jdk${{ matrix.jdk }})"
     strategy:
       fail-fast: false
       matrix:
@@ -56,8 +62,9 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Setup java
-        run: export JAVA_HOME=$JAVA_HOME_${{ matrix.jdk }}_X64
+      - name: setup jdk${{ matrix.jdk }}
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ matrix.jdk }}_X64" >> $GITHUB_ENV
 
       - name: Cache Maven m2 repository
         id: maven
@@ -105,7 +112,7 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [ 11, 17 ]
-    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
+    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
     with:
@@ -117,7 +124,7 @@ jobs:
       fail-fast: false
       matrix:
         sql_compatibility: [ false, true ]
-    name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
+    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
@@ -126,8 +133,10 @@ jobs:
 
   standard-its:
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml

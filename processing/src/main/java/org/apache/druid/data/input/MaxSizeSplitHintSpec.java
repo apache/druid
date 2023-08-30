@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
@@ -98,10 +97,6 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   @Override
   public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor)
   {
-    final Iterator<T> nonEmptyFileOnlyIterator = Iterators.filter(
-        inputIterator,
-        input -> inputAttributeExtractor.apply(input).getSize() > 0
-    );
     return new Iterator<List<T>>()
     {
       private final long maxSplitSizeBytes = maxSplitSize.getBytes();
@@ -110,7 +105,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
       @Override
       public boolean hasNext()
       {
-        return peeking != null || nonEmptyFileOnlyIterator.hasNext();
+        return peeking != null || inputIterator.hasNext();
       }
 
       @Override
@@ -121,9 +116,9 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
         }
         final List<T> current = new ArrayList<>();
         long splitSize = 0;
-        while (splitSize < maxSplitSizeBytes && (peeking != null || nonEmptyFileOnlyIterator.hasNext())) {
+        while (splitSize < maxSplitSizeBytes && (peeking != null || inputIterator.hasNext())) {
           if (peeking == null) {
-            peeking = nonEmptyFileOnlyIterator.next();
+            peeking = inputIterator.next();
           }
           final long size = inputAttributeExtractor.apply(peeking).getSize();
           if (current.isEmpty() // each split should have at least one file even if the file is larger than maxSplitSize

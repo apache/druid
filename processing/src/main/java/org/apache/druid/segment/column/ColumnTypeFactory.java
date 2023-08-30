@@ -149,16 +149,6 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
   @Override
   public ColumnType ofArray(ColumnType elementType)
   {
-    if (elementType.isPrimitive()) {
-      switch (elementType.getType()) {
-        case STRING:
-          return ColumnType.STRING_ARRAY;
-        case DOUBLE:
-          return ColumnType.DOUBLE_ARRAY;
-        case LONG:
-          return ColumnType.LONG_ARRAY;
-      }
-    }
     // i guess this is potentially unbounded if we ever support arbitrarily deep nested arrays
     return INTERNER.intern(new ColumnType(ValueType.ARRAY, null, elementType));
   }
@@ -166,9 +156,6 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
   @Override
   public ColumnType ofComplex(@Nullable String complexTypeName)
   {
-    if (complexTypeName == null) {
-      return ColumnType.UNKNOWN_COMPLEX;
-    }
     return INTERNER.intern(new ColumnType(ValueType.COMPLEX, complexTypeName, null));
   }
 }

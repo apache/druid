@@ -103,6 +103,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of `needle` within `haystack`, with indexes starting from 1. The search will begin at `fromIndex`, or 1 if `fromIndex` is not specified. If `needle` is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
+|`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
@@ -248,6 +249,19 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`DS_RANK(expr, value)`|Returns an approximation to the rank of a given value that is the fraction of the distribution less than that value from a quantiles sketch. `expr` must return a quantiles sketch.|
 |`DS_QUANTILE_SUMMARY(expr)`|Returns a string summary of a quantiles sketch, useful for debugging. `expr` must return a quantiles sketch.|
 
+### Tuple sketch functions
+
+The following functions operate on [tuple sketches](../development/extensions-core/datasketches-tuple.md).
+The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use the following functions.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`|Computes approximate sums of the values contained within a [Tuple sketch](../development/extensions-core/datasketches-tuple.md#estimated-metrics-values-for-each-column-of-arrayofdoublessketch) column which contains an array of double values as its Summary Object.
+|`DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`|Returns an intersection of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`|Returns a set difference of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`|Returns a union of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+
+
 ## Other scalar functions
 
 |Function|Notes|
@@ -257,6 +271,6 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`NVL(expr, expr-for-null)`|Returns `expr-for-null` if `expr` is null (or empty string for string type).|
+|`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|
 |`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details. See the [`BLOOM_FILTER` function](sql-aggregations.md) for computing Bloom filters.|
 

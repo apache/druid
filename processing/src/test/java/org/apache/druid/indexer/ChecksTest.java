@@ -105,10 +105,7 @@ public class ChecksTest
         new Property<>("p4", Collections.emptyList())
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage(
-        "At most one of [Property{name='p1', value=null}, Property{name='p2', value=2}, Property{name='p3', value=3}, "
-        + "Property{name='p4', value=[]}] must be present"
-    );
+    exception.expectMessage("At most one of properties[[p1, p2, p3, p4]] must be present");
     Checks.checkOneNotNullOrEmpty(properties);
   }
 
@@ -122,10 +119,7 @@ public class ChecksTest
         new Property<>("p4", Lists.newArrayList(1, 2))
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage(
-        "At most one of [Property{name='p1', value=null}, Property{name='p2', value=2}, Property{name='p3', value=null}, "
-        + "Property{name='p4', value=[1, 2]}] must be present"
-    );
+    exception.expectMessage("At most one of properties[[p1, p2, p3, p4]] must be present");
     Checks.checkOneNotNullOrEmpty(properties);
   }
 
@@ -139,10 +133,7 @@ public class ChecksTest
         new Property<>("p4", null)
     );
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage(
-        "At least one of [Property{name='p1', value=null}, Property{name='p2', value=null}, "
-        + "Property{name='p3', value=null}, Property{name='p4', value=null}] must be present"
-    );
+    exception.expectMessage("At least one of properties[[p1, p2, p3, p4]] must be present");
     Checks.checkOneNotNullOrEmpty(properties);
   }
 }

@@ -128,7 +128,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   @After
   public void teardown()
   {
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   @AfterClass
@@ -140,6 +140,10 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testOneSingleValuedStringColumn()
   {
+    if (testName.contains("incrementalAutoTypes")) {
+      // dim 3 is mixed type in auto incrementalIndex, so presents as complex<json>
+      return;
+    }
     assertFilterMatches(edf("dim3 == ''"), ImmutableList.of("0"));
     assertFilterMatches(edf("dim3 == '1'"), ImmutableList.of("3", "4", "6"));
     assertFilterMatches(edf("dim3 == 'a'"), ImmutableList.of("7"));
@@ -162,6 +166,10 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testOneMultiValuedStringColumn()
   {
+    // auto type columns ingest arrays instead of mvds, bail out
+    if (isAutoSchema()) {
+      return;
+    }
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatchesSkipVectorize(edf("dim4 == ''"), ImmutableList.of("1", "2", "6", "7", "8"));
     } else {
@@ -248,6 +256,10 @@ public class ExpressionFilterTest extends BaseFilterTest
       assertFilterMatches(edf("dim2 == dim3"), ImmutableList.of("2", "5", "8"));
     }
 
+    // auto type columns ingest arrays instead of mvds
+    if (isAutoSchema()) {
+      return;
+    }
     // String vs. multi-value string
     assertFilterMatchesSkipVectorize(edf("dim0 == dim4"), ImmutableList.of("3", "4", "5"));
   }

@@ -108,7 +108,8 @@ public class CastOperatorConversion implements SqlOperatorConversion
         // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
         typeCastExpression = operandExpression.map(
             Function.identity(),
-            expression -> StringUtils.format("CAST(%s, '%s')", expression, toExpressionType.asTypeString())
+            expression -> StringUtils.format("CAST(%s, '%s')", expression, toExpressionType.asTypeString()),
+            toDruidType
         );
       }
 
@@ -117,7 +118,7 @@ public class CastOperatorConversion implements SqlOperatorConversion
         return TimeFloorOperatorConversion.applyTimestampFloor(
             typeCastExpression,
             new PeriodGranularity(Period.days(1), null, plannerContext.getTimeZone()),
-            plannerContext.getExprMacroTable()
+            plannerContext
         );
       } else {
         return typeCastExpression;
@@ -147,7 +148,7 @@ public class CastOperatorConversion implements SqlOperatorConversion
       return TimeFloorOperatorConversion.applyTimestampFloor(
           timestampExpression,
           new PeriodGranularity(Period.days(1), null, plannerContext.getTimeZone()),
-          plannerContext.getExprMacroTable()
+          plannerContext
       );
     } else if (toType == SqlTypeName.TIMESTAMP) {
       return timestampExpression;

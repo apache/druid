@@ -53,12 +53,13 @@ SqlNode DruidSqlReplaceEof() :
       partitionedBy = PartitionGranularity()
     ]
     [
-      <CLUSTERED> <BY>
-      clusteredBy = ClusterItems()
+      clusteredBy = ClusteredBy()
     ]
     {
         if (clusteredBy != null && partitionedBy.lhs == null) {
-          throw new ParseException("CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause");
+          throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+          );
         }
     }
     // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
@@ -81,7 +82,7 @@ SqlNode ReplaceTimeQuery() :
       <ALL> { replaceQuery = SqlLiteral.createCharString("ALL", getPos()); }
     |
       // We parse all types of conditions and throw an exception if it is not supported to keep the parsing simple
-      replaceQuery = WhereOpt()
+      replaceQuery = Where()
     )
     {
       return replaceQuery;

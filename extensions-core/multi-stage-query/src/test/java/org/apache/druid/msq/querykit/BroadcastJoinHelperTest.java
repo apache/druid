@@ -48,7 +48,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
@@ -132,7 +131,6 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
         sideStageChannelNumberMap,
         channels,
         channelReaders,
-        new JoinableFactoryWrapper(joinableFactory),
         25_000_000L // High enough memory limit that we won't hit it
     );
 
@@ -222,7 +220,6 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
         sideStageChannelNumberMap,
         channels,
         channelReaders,
-        new JoinableFactoryWrapper(joinableFactory),
         100_000 // Low memory limit; we will hit this
     );
 

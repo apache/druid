@@ -27,8 +27,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
 import org.apache.druid.java.util.common.Intervals;
@@ -91,23 +91,10 @@ public class ShuffleResourceTest
       }
 
     };
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     final OverlordClient overlordClient = new NoopOverlordClient()
     {
       @Override
@@ -120,8 +107,7 @@ public class ShuffleResourceTest
         return Futures.immediateFuture(result);
       }
     };
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }

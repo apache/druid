@@ -24,12 +24,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -52,8 +52,8 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
   @Test
   public void testStringColumnWithNullValueSetIndex() throws IOException
   {
-    DictionaryEncodedStringIndexSupplier indexSupplier = makeStringWithNullsSupplier();
-    StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+    StringUtf8ColumnIndexSupplier<?> indexSupplier = makeStringWithNullsSupplier();
+    StringValueSetIndexes valueSetIndex = indexSupplier.as(StringValueSetIndexes.class);
     Assert.assertNotNull(valueSetIndex);
 
     // 10 rows
@@ -102,7 +102,7 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     checkBitmap(bitmap);
   }
 
-  private DictionaryEncodedStringIndexSupplier makeStringWithNullsSupplier() throws IOException
+  private StringUtf8ColumnIndexSupplier<?> makeStringWithNullsSupplier() throws IOException
   {
     ByteBuffer stringBuffer = ByteBuffer.allocate(1 << 12);
     ByteBuffer byteBuffer = ByteBuffer.allocate(1 << 12);
@@ -164,10 +164,9 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
-    return new DictionaryEncodedStringIndexSupplier(
+    return new StringUtf8ColumnIndexSupplier<>(
         roaringFactory.getBitmapFactory(),
-        GenericIndexed.read(stringBuffer, GenericIndexed.STRING_STRATEGY),
-        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY),
+        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY)::singleThreaded,
         bitmaps,
         null
     );

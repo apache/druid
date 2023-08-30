@@ -41,6 +41,7 @@ import java.util.List;
 public class DelimitedInputFormat extends FlatTextInputFormat
 {
   public static final String TYPE_KEY = "tsv";
+
   private static final String DEFAULT_DELIMITER = "\t";
 
   @JsonCreator

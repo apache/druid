@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
@@ -36,8 +37,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Iterator;
 
 /**
  * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that it is not visible
@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
  */
 public class LocalFileStorageConnector implements StorageConnector
 {
+  private static final Logger log = new Logger(LocalFileStorageConnector.class);
 
   private final File basePath;
 
@@ -91,9 +92,9 @@ public class LocalFileStorageConnector implements StorageConnector
    * In case the parent directory does not exist, we create the parent dir recursively.
    * Closing of the stream is the responsibility of the caller.
    *
-   * @param path
-   * @return
-   * @throws IOException
+   * @param path path to write contents to.
+   * @return OutputStream which can be used by callers to write contents.
+   * @throws IOException thrown in case of errors.
    */
   @Override
   public OutputStream write(String path) throws IOException
@@ -104,36 +105,53 @@ public class LocalFileStorageConnector implements StorageConnector
   }
 
   /**
-   * Deletes the file present at the location basePath + path. Throws an excecption in case a dir is encountered.
+   * Deletes the file present at the location basePath + path. Throws an exception in case a dir is encountered.
    *
-   * @param path
-   * @throws IOException
+   * @param path input path
+   * @throws IOException thrown in case of errors.
    */
   @Override
   public void deleteFile(String path) throws IOException
   {
+    log.debug("Deleting file at path: [%s]", path);
     File toDelete = fileWithBasePath(path);
     if (toDelete.isDirectory()) {
       throw new IAE(StringUtils.format(
-          "Found a directory on path[%s]. Please use deleteRecusively to delete dirs", path));
+          "Found a directory on path[%s]. Please use deleteRecursively to delete dirs", path));
     }
     Files.delete(fileWithBasePath(path).toPath());
+  }
+
+  /**
+   * Deletes the files present at each basePath + path. Throws an exception in case a dir is encountered.
+   *
+   * @param paths list of path to delete
+   * @throws IOException thrown in case of errors.
+   */
+  @Override
+  public void deleteFiles(Iterable<String> paths) throws IOException
+  {
+    for (String path : paths) {
+      log.debug("Deleting file at path: [%s]", path);
+      deleteFile(path);
+    }
   }
 
   /**
    * Deletes the files and sub dirs present at the basePath + dirName. Also removes the dirName
    *
    * @param dirName path
-   * @throws IOException
+   * @throws IOException thrown in case of errors.
    */
   @Override
   public void deleteRecursively(String dirName) throws IOException
   {
+    log.debug("Deleting directory at path: [%s]", dirName);
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
   }
 
   @Override
-  public List<String> listDir(String dirName)
+  public Iterator<String> listDir(String dirName)
   {
     File directory = fileWithBasePath(dirName);
     if (!directory.exists()) {
@@ -146,7 +164,7 @@ public class LocalFileStorageConnector implements StorageConnector
     if (files == null) {
       throw new ISE("Unable to fetch the file list from the path [%s]", dirName);
     }
-    return Arrays.stream(files).map(File::getName).collect(Collectors.toList());
+    return Arrays.stream(files).map(File::getName).iterator();
   }
 
   public File getBasePath()

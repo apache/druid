@@ -1950,7 +1950,7 @@ public interface Function extends NamedFunction
         castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
-        throw validationFailed("invalid type %s", y.asString());
+        throw validationFailed("Invalid type [%s]", y.asString());
       }
       return x.castTo(castTo);
     }
@@ -2922,7 +2922,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class MVToArrayFunction implements Function
+  class MultiValueStringToArrayFunction implements Function
   {
     @Override
     public String name()
@@ -2981,6 +2981,67 @@ public interface Function extends NamedFunction
       return ImmutableSet.copyOf(args);
     }
   }
+
+  class ArrayToMultiValueStringFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "array_to_mv";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
+
+      if (expr == null) {
+        throw validationFailed(
+            "argument %s should be an identifier expression. Use array() instead",
+            args.get(0).toString()
+        );
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
+
   class ArrayConstructorFunction implements Function
   {
     @Override
@@ -3054,7 +3115,6 @@ public interface Function extends NamedFunction
       if (arrayType == null) {
         arrayType = ExpressionTypeFactory.getInstance().ofArray(evaluated.type());
       }
-      ExpressionType.checkNestedArrayAllowed(arrayType);
       if (arrayType.getElementType().isNumeric() && evaluated.isNumericNull()) {
         out[i] = null;
       } else if (!evaluated.asArrayType().equals(arrayType)) {

@@ -32,8 +32,8 @@ import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -99,27 +99,13 @@ public class ShuffleDataSegmentPusherTest
   public void setup() throws IOException
   {
     final WorkerConfig workerConfig = new WorkerConfig();
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false,
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     final OverlordClient overlordClient = new NoopOverlordClient();
-    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     if (LOCAL.equals(intermediateDataStore)) {
-      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
+      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {
       localDeepStore = temporaryFolder.newFolder("localStorage");
       intermediaryDataManager = new DeepStorageIntermediaryDataManager(

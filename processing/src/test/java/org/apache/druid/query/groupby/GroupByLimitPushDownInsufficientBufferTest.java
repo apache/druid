@@ -119,11 +119,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         JSON_MAPPER,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -209,7 +204,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -251,7 +246,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);

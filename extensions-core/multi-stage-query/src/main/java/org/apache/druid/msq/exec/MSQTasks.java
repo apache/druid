@@ -33,6 +33,9 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.QueryRuntimeFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -42,6 +45,7 @@ import org.apache.druid.msq.statistics.KeyCollectorSnapshotDeserializerModule;
 import org.apache.druid.msq.statistics.KeyCollectors;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 
 import javax.annotation.Nullable;
@@ -152,7 +156,11 @@ public class MSQTasks
   static StorageConnector makeStorageConnector(final Injector injector)
   {
     try {
-      return injector.getInstance(Key.get(StorageConnector.class, MultiStageQuery.class));
+      StorageConnector storageConnector = injector.getInstance(Key.get(StorageConnector.class, MultiStageQuery.class));
+      if (storageConnector instanceof NilStorageConnector) {
+        throw new Exception("Storage connector not configured.");
+      }
+      return storageConnector;
     }
     catch (Exception e) {
       throw new MSQException(new DurableStorageConfigurationFault(e.toString()));
@@ -162,12 +170,12 @@ public class MSQTasks
   /**
    * Builds an error report from a possible controller error report and a possible worker error report. Both may be
    * null, in which case this function will return a report with {@link UnknownFault}.
-   *
+   * <br/>
    * We only include a single {@link MSQErrorReport} in the task report, because it's important that a query have
    * a single {@link MSQFault} explaining why it failed. To aid debugging
    * in cases where we choose the controller error over the worker error, we'll log the worker error too, even though
    * it doesn't appear in the report.
-   *
+   * <br/>
    * Logic: we prefer the controller exception unless it's {@link WorkerFailedFault}, {@link WorkerRpcFailedFault},
    * or {@link CanceledFault}. In these cases we prefer the worker error report. This ensures we get the best, most
    * useful exception even when the controller cancels worker tasks after a failure. (As tasks are canceled one by
@@ -200,7 +208,10 @@ public class MSQTasks
       // function, and it's best if helper functions run quietly.)
       if (workerErrorReport != null && (controllerErrorReport.getFault() instanceof WorkerFailedFault
                                         || controllerErrorReport.getFault() instanceof WorkerRpcFailedFault
-                                        || controllerErrorReport.getFault() instanceof CanceledFault)) {
+                                        || controllerErrorReport.getFault() instanceof CanceledFault
+                                        || controllerErrorReport.getFault() instanceof TooManyAttemptsForWorker
+                                        || controllerErrorReport.getFault() instanceof TooManyAttemptsForJob)) {
+
         return workerErrorReport;
       } else {
         return controllerErrorReport;
@@ -228,8 +239,8 @@ public class MSQTasks
     logMessage.append(": ").append(MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
 
     if (errorReport.getExceptionStackTrace() != null) {
-      if (errorReport.getFault() instanceof UnknownFault) {
-        // Log full stack trace for unknown faults.
+      if (errorReport.getFault() instanceof UnknownFault || errorReport.getFault() instanceof QueryRuntimeFault) {
+        // Log full stack trace for UnknownFault and QueryRuntimeFault
         logMessage.append('\n').append(errorReport.getExceptionStackTrace());
       } else {
         // Log first line only (error class, message) for known faults, to avoid polluting logs.

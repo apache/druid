@@ -77,7 +77,7 @@ public class TestIndexTask extends IndexTask
                 null,
                 null,
                 new DynamicPartitionsSpec(10000, null),
-                new IndexSpec(),
+                IndexSpec.DEFAULT,
                 null,
                 3,
                 false,

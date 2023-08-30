@@ -45,6 +45,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.ParseExceptionReport;
@@ -2486,7 +2487,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
 
     @Override
-    protected KinesisRecordSupplier newTaskRecordSupplier()
+    protected KinesisRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return localSupplier == null ? recordSupplier : localSupplier;
     }

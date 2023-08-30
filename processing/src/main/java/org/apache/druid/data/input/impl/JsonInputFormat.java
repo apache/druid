@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -40,7 +41,6 @@ import java.util.Objects;
 public class JsonInputFormat extends NestedInputFormat
 {
   public static final String TYPE_KEY = "json";
-
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
   private final boolean keepNullColumns;
@@ -155,6 +155,16 @@ public class JsonInputFormat extends NestedInputFormat
     } else {
       return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
     }
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
+    if (CompressionUtils.Format.GZ == compressionFormat) {
+      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
+    }
+    return size;
   }
 
   /**

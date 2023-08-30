@@ -55,8 +55,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
 
   public ArrayOfDoublesSketchAggregationTest(final GroupByQueryConfig config)
   {
+    ArrayOfDoublesSketchModule.registerSerde();
     DruidModule module = new ArrayOfDoublesSketchModule();
-    module.configure(null);
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     tsHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(module.getJacksonModules(), tempFolder);
@@ -168,8 +168,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
 
     final String expectedSummary = "### HeapArrayOfDoublesCompactSketch SUMMARY: \n"
                                    + "   Estimate                : 40.0\n"
@@ -283,8 +283,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(quantilesObj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) quantilesObj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -369,8 +369,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -471,8 +471,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -574,8 +574,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -681,15 +681,15 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
 
     Object objSketch2 = row.get(7); // quantiles-sketch-with-nulls
     Assert.assertTrue(objSketch2 instanceof DoublesSketch);
     DoublesSketch ds2 = (DoublesSketch) objSketch2;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds2.getN());
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinValue(), 0);
-    Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinItem(), 0);
+    Assert.assertEquals(3.0, ds2.getMaxItem(), 0);
   }
 
   @Test
@@ -776,8 +776,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -864,8 +864,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -951,8 +951,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -1038,8 +1038,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   // Two buckets with statistically significant difference.
@@ -1227,22 +1227,22 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
 
     Object objSketch2 = row.get(9); // quantiles-sketch-with-nulls
     Assert.assertTrue(objSketch2 instanceof DoublesSketch);
     DoublesSketch ds2 = (DoublesSketch) objSketch2;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds2.getN());
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinValue(), 0);
-    Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinItem(), 0);
+    Assert.assertEquals(3.0, ds2.getMaxItem(), 0);
 
     Object objSketch3 = row.get(10); // quantiles-sketch-no-nulls
     Assert.assertTrue(objSketch3 instanceof DoublesSketch);
     DoublesSketch ds3 = (DoublesSketch) objSketch3;
     Assert.assertEquals(40, ds3.getN());
-    Assert.assertEquals(0.0, ds3.getMinValue(), 0);
-    Assert.assertEquals(3.0, ds3.getMaxValue(), 0);
+    Assert.assertEquals(0.0, ds3.getMinItem(), 0);
+    Assert.assertEquals(3.0, ds3.getMaxItem(), 0);
   }
 
 

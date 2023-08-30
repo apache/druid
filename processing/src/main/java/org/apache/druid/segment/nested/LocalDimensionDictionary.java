@@ -25,6 +25,8 @@ public class LocalDimensionDictionary
 {
   private final Int2IntOpenHashMap globalIdToLocalId = new Int2IntOpenHashMap();
 
+  private int nextLocalId = 0;
+
   public LocalDimensionDictionary()
   {
     this.globalIdToLocalId.defaultReturnValue(-1);
@@ -34,8 +36,6 @@ public class LocalDimensionDictionary
   {
     return globalIdToLocalId;
   }
-  
-  private int nextLocalId = 0;
   
   public int add(int originalValue)
   {

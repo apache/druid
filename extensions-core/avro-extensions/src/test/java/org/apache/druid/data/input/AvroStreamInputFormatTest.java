@@ -42,6 +42,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import org.apache.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -102,11 +103,12 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   private static final String EVENT_TYPE = "eventType";
   private static final String ID = "id";
   private static final String SOME_OTHER_ID = "someOtherId";
+  private static final String NESTED_ARRAY_VAL = "nestedArrayVal";
   private static final String IS_VALID = "isValid";
   private static final String TOPIC = "aTopic";
-  static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
+  static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID, NESTED_ARRAY_VAL);
   private static final List<String> DIMENSIONS_SCHEMALESS = Arrays.asList(
-      "nested",
+      NESTED_ARRAY_VAL,
       SOME_OTHER_ID,
       "someIntArray",
       "someFloat",
@@ -136,7 +138,9 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
     flattenSpec = new JSONPathSpec(
       true,
       ImmutableList.of(
-          new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
+          new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong"),
+          new JSONPathFieldSpec(JSONPathFieldType.PATH, "nestedArrayVal", "someRecordArray[?(@.nestedString=='string in record')].nestedString")
+
       )
   );
     for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
@@ -197,6 +201,21 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
         NestedInputFormat.class
     );
     Assert.assertEquals(inputFormat, inputFormat2);
+  }
+
+  @Test
+  public void testMissingAvroBytesDecoderRaisesIAE()
+  {
+    Assert.assertThrows(
+        "avroBytesDecoder is required to decode Avro records",
+        IAE.class,
+        () -> new AvroStreamInputFormat(
+            flattenSpec,
+            null,
+            true,
+            true
+        )
+    );
   }
 
   @Test

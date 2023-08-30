@@ -55,7 +55,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
     PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<>(
         32,
         ordering.onResultOf(
-            (Function<Yielder<T>, T>) input -> input.get()
+            (Function<Yielder<T>, T>) Yielder::get
         )
     );
 
@@ -70,7 +70,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
                   @Override
                   public T accumulate(T accumulated, T in)
                   {
-                    yield();
+                    this.yield();
                     return in;
                   }
                 }

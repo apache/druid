@@ -59,6 +59,14 @@ npm version 0.17.0
 const DRUID_DOCS_VERSION = '0.17.0';
 ```
 
+After this is done, run:
+
+```
+npm i && npm run jest -- -u
+```
+to ensure that any web console tests that include documentation links are updated correctly to ensure that CI will pass on the release branch.
+
+
 The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
 
 ```yaml
@@ -250,7 +258,7 @@ It is also the release managers responsibility for correctly assigning all PRs m
 | [get-milestone-contributors](bin/get-milestone-contributors.py) | lists github users who contributed to a milestone |
 | [get-milestone-prs](bin/get-milestone-prs.py) | lists PRs between tags or commits and the milestone associated with them. |
 | [tag-missing-milestones](bin/tag-missing-milestones.py) | Find pull requests which the milestone is missing and tag them properly. |
-| [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. |
+| [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. Make sure to fetch remote commits before running this command. |
 | [make-linkable-release-notes](bin/make-linkable-release-notes.py) | given input of a version, input markdown file path, and output markdown file path, will rewrite markdown headers of the input file to have embedded links in the release notes style. |
 
 
@@ -278,16 +286,12 @@ must be tagged properly to make this script working. See the above [Release note
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false clean release:clean release:prepare
+$ mvn -Pwebsite-docs -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
 ```
 
 In this example it will create a tag, `druid-0.17.0-rc3`. If this release passes vote then we can add the final `druid-0.17.0` release tag later. 
 We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
-If you want to skip tests, you can do so with following command
 
-```bash
-$ mvn -DreleaseVersion=0.17.0 -DdevelopmentVersion=0.18.0-SNAPSHOT -Dtag=druid-0.17.0-rc3 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
-```
 
 **Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 
@@ -320,30 +324,6 @@ apache-druid-0.17.0-src.tar.gz.asc
 apache-druid-0.17.0-src.tar.gz.sha512
 ```
 
-#### Build artifacts for Hadoop-3
-
-```bash
-$ mvn clean install -Phadoop3,apache-release,dist,rat -DskipTests -Dgpg.keyname=<your GPG key fingerprint>
-```
-
-This should produce the following artifacts:
-
-```plaintext
-apache-druid-0.17.0-bin.tar.gz
-apache-druid-0.17.0-bin.tar.gz.asc
-apache-druid-0.17.0-bin.tar.gz.sha512
-apache-druid-0.17.0-src.tar.gz
-apache-druid-0.17.0-src.tar.gz.asc
-apache-druid-0.17.0-src.tar.gz.sha512
-```
-
-You can ignore the src artifacts as they are the same as the main profile. The binary artifacts should be renamed to include the suffix `hadoop3`. So the final artifacts would be as follows:  
-```plaintext
-apache-druid-0.17.0-hadoop3-bin.tar.gz
-apache-druid-0.17.0-hadoop3-bin.tar.gz.asc
-apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512
-```
-
 Ensure that the GPG key fingerprint used in the `mvn install` command matches your release signing key in https://dist.apache.org/repos/dist/release/druid/KEYS.                                                                                               
  
 ### Verify checksums
@@ -353,8 +333,6 @@ $ diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | cut -d ' ' -f1) <(cat apa
 ...
 $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
 ...
-$ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512 ; echo)
-...
 ```
 
 ### Verify GPG signatures
@@ -363,8 +341,6 @@ $ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <
 $ gpg --verify apache-druid-0.17.0-bin.tar.gz.asc apache-druid-0.17.0-bin.tar.gz
 ...
 $ gpg --verify apache-druid-0.17.0-src.tar.gz.asc apache-druid-0.17.0-src.tar.gz
-...
-$ gpg --verify apache-druid-0.17.0-hadoop3-bin.tar.gz.asc apache-druid-0.17.0-hadoop3-bin.tar.gz
 ...
 ```
 

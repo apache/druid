@@ -301,6 +301,12 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     return strategy.fromByteBuffer(bb, valueSize);
   }
 
+  @Override
+  public int getCardinality()
+  {
+    return numWritten;
+  }
+
   private long getOffset(int index) throws IOException
   {
     if (!requireMultipleFiles) {

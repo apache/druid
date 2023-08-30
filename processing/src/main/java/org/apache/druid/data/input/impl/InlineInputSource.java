@@ -30,9 +30,12 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class InlineInputSource extends AbstractInputSource
@@ -46,6 +49,14 @@ public class InlineInputSource extends AbstractInputSource
   {
     Preconditions.checkArgument(!Strings.isNullOrEmpty(data), "empty data");
     this.data = data;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @JsonProperty

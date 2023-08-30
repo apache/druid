@@ -36,26 +36,29 @@ sidebar_label: "Multi-value string functions"
 
 Druid supports string dimensions containing multiple values.
 This page describes the operations you can perform on multi-value string dimensions using [Druid SQL](./sql.md).
-See [Multi-value dimensions](multi-value-dimensions.md) for more information.
+See [SQL multi-value strings](./sql-data-types.md#multi-value-strings) and native [Multi-value dimensions](multi-value-dimensions.md) for more information.
 
-All "array" references in the multi-value string function documentation can refer to multi-value string columns or
-`ARRAY` literals.
+All array references in the multi-value string function documentation can refer to multi-value string columns or
+`ARRAY` types. These functions are largely identical to the [array functions](./sql-array-functions.md), but use
+`VARCHAR` types and behavior. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY`, and
+`ARRAY` into multi-value strings via `ARRAY_TO_MV`. For additional details about `ARRAY` types, see
+[`ARRAY` data type documentation](./sql-data-types.md#arrays).
 
-|Function|Notes|
+|Function|Description|
 |--------|-----|
-|`ARRAY[expr1, expr2, ...]`|Constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type.|
 |`MV_FILTER_ONLY(expr, arr)`|Filters multi-value `expr` to include only values contained in array `arr`.|
 |`MV_FILTER_NONE(expr, arr)`|Filters multi-value `expr` to include no values contained in array `arr`.|
-|`MV_LENGTH(arr)`|Returns length of array expression.|
-|`MV_OFFSET(arr, long)`|Returns the array element at the 0 based index supplied, or null for an out of range index.|
-|`MV_ORDINAL(arr, long)`|Returns the array element at the 1 based index supplied, or null for an out of range index.|
-|`MV_CONTAINS(arr, expr)`|Returns 1 if the array contains the element specified by `expr`, or contains all elements specified by `expr` if `expr` is an array, else 0.|
-|`MV_OVERLAP(arr1, arr2)`|Returns 1 if arr1 and arr2 have any elements in common, else 0.|
-|`MV_OFFSET_OF(arr, expr)`|Returns the 0 based index of the first occurrence of `expr` in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
-|`MV_ORDINAL_OF(arr, expr)`|Returns the 1 based index of the first occurrence of `expr` in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
+|`MV_LENGTH(arr)`|Returns length of the array expression.|
+|`MV_OFFSET(arr, long)`|Returns the array element at the 0-based index supplied, or null for an out of range index.|
+|`MV_ORDINAL(arr, long)`|Returns the array element at the 1-based index supplied, or null for an out of range index.|
+|`MV_CONTAINS(arr, expr)`|If `expr` is a scalar type, returns 1 if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns 0.|
+|`MV_OVERLAP(arr1, arr2)`|Returns 1 if `arr1` and `arr2` have any elements in common, else 0.|
+|`MV_OFFSET_OF(arr, expr)`|Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.|
+|`MV_ORDINAL_OF(arr, expr)`|Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.|
 |`MV_PREPEND(expr, arr)`|Adds `expr` to `arr` at the beginning, the resulting array type determined by the type of the array.|
 |`MV_APPEND(arr1, expr)`|Appends `expr` to `arr`, the resulting array type determined by the type of the first array.|
-|`MV_CONCAT(arr1, arr2)`|Concatenates 2 arrays, the resulting array type determined by the type of the first array.|
-|`MV_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end.|
+|`MV_CONCAT(arr1, arr2)`|Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
+|`MV_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0-based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or greater than end.|
 |`MV_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
-|`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
+|`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.|
+|`MV_TO_ARRAY(str)`|Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.|

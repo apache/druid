@@ -53,6 +53,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -60,6 +61,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -153,6 +155,15 @@ public class JoinTestHelper
         }
 
         @Override
+        public Supplier<Object> makeArrayProcessor(
+            BaseObjectColumnValueSelector<?> selector,
+            @Nullable ColumnCapabilities columnCapabilities
+        )
+        {
+          return selector::getObject;
+        }
+
+        @Override
         public Supplier<Object> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
         {
           return selector::getObject;
@@ -188,7 +199,7 @@ public class JoinTestHelper
 
   public static IndexBuilder createFactIndexBuilder(final File tmpDir) throws IOException
   {
-    return createFactIndexBuilder(TestHelper.NO_CACHE_COLUMN_CONFIG, tmpDir, -1);
+    return createFactIndexBuilder(ColumnConfig.ALWAYS_USE_INDEXES, tmpDir, -1);
   }
 
   public static IndexBuilder createFactIndexBuilder(

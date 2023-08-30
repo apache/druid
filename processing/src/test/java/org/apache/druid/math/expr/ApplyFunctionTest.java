@@ -48,7 +48,7 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     builder.put("d", new String[] {null});
     builder.put("e", new String[] {null, "foo", "bar"});
     builder.put("f", new String[0]);
-    bindings = InputBindings.withMap(builder.build());
+    bindings = InputBindings.forMap(builder.build());
   }
 
   @Test
