@@ -337,7 +337,7 @@ public class RunRulesTest
     return DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc().minusDays(1))
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(dataSegments)
+        .withUsedSegments(dataSegments)
         .withDatabaseRuleManager(databaseRuleManager);
   }
 
@@ -830,7 +830,7 @@ public class RunRulesTest
 
     stats = runDutyAndGetStats(
         createCoordinatorRuntimeParams(druidCluster)
-            .withUsedSegmentsInTest(overFlowSegment)
+            .withUsedSegments(overFlowSegment)
             .withBalancerStrategy(balancerStrategy)
             .withSegmentAssignerUsing(loadQueueManager)
             .build()
@@ -950,7 +950,7 @@ public class RunRulesTest
                     .build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegmentsInTest(longerUsedSegments)
+        .withUsedSegments(longerUsedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
@@ -1004,7 +1004,7 @@ public class RunRulesTest
     ).build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .withSegmentAssignerUsing(loadQueueManager)
