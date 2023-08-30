@@ -81,7 +81,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       {
         QueryRunner<ResultRow> rowQueryRunner = groupingEngine.mergeRunners(queryProcessingPool, queryRunners);
         Sequence<ResultRow> process = rowQueryRunner.run(queryPlus, responseContext);
-        return wrapSummaryRowIfNeeded((GroupByQuery) queryPlus.getQuery(), process);
+        return process;//wrapSummaryRowIfNeeded((GroupByQuery) queryPlus.getQuery(), process);
 
       }
     };
@@ -117,7 +117,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       Sequence<ResultRow> process = groupingEngine.process(groupByQuery, adapter,
           (GroupByQueryMetrics) queryPlus.getQueryMetrics());
 
-      return wrapSummaryRowIfNeeded(groupByQuery, process);
+      return process;//wrapSummaryRowIfNeeded(groupByQuery, process);
     }
   }
 

@@ -436,6 +436,8 @@ public class GroupingEngine
    */
   public Sequence<ResultRow> applyPostProcessing(Sequence<ResultRow> results, GroupByQuery query)
   {
+    results=GroupByQueryRunnerFactory.wrapSummaryRowIfNeeded(query, results);
+
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.context().getBoolean(CTX_KEY_OUTERMOST, true)) {
       return query.postProcess(results);
