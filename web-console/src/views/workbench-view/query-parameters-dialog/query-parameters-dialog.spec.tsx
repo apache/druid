@@ -16,40 +16,27 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import React from 'react';
 
-.table-cell {
-  padding: $table-cell-v-padding $table-cell-h-padding;
-  white-space: pre;
+import { shallow } from '../../../utils/shallow-renderer';
 
-  &.null,
-  &.empty {
-    font-style: italic;
-  }
+import { QueryParametersDialog } from './query-parameters-dialog';
 
-  &.timestamp {
-    font-weight: bold;
-  }
+describe('QueryParametersDialog', () => {
+  it('matches snapshot', () => {
+    const comp = shallow(
+      <QueryParametersDialog
+        queryParameters={[
+          { type: 'VARCHAR', value: 'Hello world' },
+          { type: 'TIMESTAMP', value: '2022-02-02 01:02:03' },
+          { type: 'BIGINT', value: 42 },
+          { type: 'DOUBLE', value: 1.618 },
+        ]}
+        onQueryParametersChange={() => {}}
+        onClose={() => {}}
+      />,
+    );
 
-  &.truncated {
-    position: relative;
-    width: 100%;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    padding-right: 16px;
-
-    .omitted {
-      margin: 0 0.2em;
-      font-style: italic;
-    }
-
-    .action-icon {
-      position: absolute;
-      top: $table-cell-v-padding;
-      right: $table-cell-h-padding;
-      color: #f5f8fa;
-    }
-  }
-}
+    expect(comp).toMatchSnapshot();
+  });
+});

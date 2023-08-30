@@ -16,40 +16,13 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+@import '../../../variables';
 
-.table-cell {
-  padding: $table-cell-v-padding $table-cell-h-padding;
-  white-space: pre;
-
-  &.null,
-  &.empty {
-    font-style: italic;
-  }
-
-  &.timestamp {
-    font-weight: bold;
-  }
-
-  &.truncated {
+.query-parameters-dialog {
+  .#{$bp-ns}-dialog-body {
     position: relative;
-    width: 100%;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    padding-right: 16px;
-
-    .omitted {
-      margin: 0 0.2em;
-      font-style: italic;
-    }
-
-    .action-icon {
-      position: absolute;
-      top: $table-cell-v-padding;
-      right: $table-cell-h-padding;
-      color: #f5f8fa;
-    }
+    min-height: 50vh;
+    overflow: auto;
+    max-height: 80vh;
   }
 }
