@@ -12981,11 +12981,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            null,
+            NullHandling.replaceWithDefault() ? 0L : null,
             "idxFloat",
-            null,
+            NullHandling.replaceWithDefault() ? 0.0 : null,
             "idxDouble",
-            null
+            NullHandling.replaceWithDefault() ? 0.0 : null
         )
     );
 
@@ -13029,11 +13029,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            null,
+            NullHandling.replaceWithDefault() ? 0L : null,
             "idxFloat",
-            null,
+            NullHandling.replaceWithDefault() ? 0.0 : null,
             "idxDouble",
-            null
+            NullHandling.replaceWithDefault() ? 0.0 : null
         )
     );
 
