@@ -13001,6 +13001,37 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSummaryrowFilteredByHaving()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimFilter(new SelectorDimFilter("placementish", "xxa", null))
+        .setHavingSpec(new GreaterThanHavingSpec("rows", 99L))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index"),
+            new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
+            new DoubleSumAggregatorFactory("idxDouble", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList();
+
+    StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(
+        factory,
+        originalRunner,
+        query,
+        serviceEmitter
+    );
+    serviceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+
+  @Test
   public void testSummaryrowForEmptySubqueryInput()
   {
     GroupByQuery subquery = makeQueryBuilder()
