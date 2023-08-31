@@ -57,7 +57,7 @@ public class StorageNodeModule implements Module
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
-    binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
+    binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
   }
 
   @Provides
