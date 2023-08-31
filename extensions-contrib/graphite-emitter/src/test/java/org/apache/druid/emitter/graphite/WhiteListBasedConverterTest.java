@@ -144,16 +144,16 @@ public class WhiteListBasedConverterTest
                                             .setDimension("status", "some_status")
                                             .setDimension("numDimensions", "1")
                                             .setDimension("segment", "dummy_segment")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("query/segment/time/balabla/more", 10)
+                                            .setCreatedTime(createdTime)
                 .build(serviceName, hostname),
             defaultNamespace + ".query/segment/time/balabla/more"
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "some_data_source")
                                             .setDimension("tier", "_default_tier")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("segment/max", 10)
+                                            .setCreatedTime(createdTime)
                 .build(serviceName, hostname),
             null
         },
@@ -168,8 +168,8 @@ public class WhiteListBasedConverterTest
                                             .setDimension("remoteAddress", "194.0.90.2")
                                             .setDimension("id", "ID")
                                             .setDimension("context", "{context}")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("query/time", 10)
+                                            .setCreatedTime(createdTime)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.groupBy.query/time"
         },
@@ -177,8 +177,8 @@ public class WhiteListBasedConverterTest
             new ServiceMetricEvent.Builder().setDimension("dataSource", "data-source")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("ingest/persists/count", 10)
+                                            .setCreatedTime(createdTime)
                 .build(serviceName, hostname),
             defaultNamespace + ".ingest/persists/count"
         },
@@ -186,8 +186,8 @@ public class WhiteListBasedConverterTest
             new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("jvm/bufferpool/capacity", 10)
+                                            .setCreatedTime(createdTime)
                 .build(serviceName, hostname),
             null
         }
