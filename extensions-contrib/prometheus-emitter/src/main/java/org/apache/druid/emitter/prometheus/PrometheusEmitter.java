@@ -207,6 +207,15 @@ public class PrometheusEmitter implements Emitter
     } else {
       exec.shutdownNow();
       flush();
+
+      if (pushGateway != null && config.isDeleteOnShutdown()) {
+        try {
+          pushGateway.delete(config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
+        }
+        catch (IOException e) {
+          log.error(e, "Unable to delete prometheus metrics from pushGateway");
+        }
+      }
     }
   }
 

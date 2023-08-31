@@ -47,6 +47,7 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 | `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                         | no        | none                                 |
 | `druid.emitter.prometheus.flushPeriod`        | Emit metrics to Pushgateway every `flushPeriod` seconds. Required if `pushgateway` strategy is used.                                                                                                                                   | no        | 15                                   |
 | `druid.emitter.prometheus.extraLabels`        | JSON key-value pairs for additional labels on all metrics. Keys (label names) must match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*`. Example: `{"cluster_name": "druid_cluster1", "env": "staging"}`.                                        | no        | none                                 |
+| `druid.emitter.prometheus.deleteOnShutdown`   | Flag to delete metrics from Pushgateway on shutdown. Works only if `pushgateway` strategy is used.                                                                                                                                     | no        | false                                |
 
 ### Ports for colocated Druid processes
 
