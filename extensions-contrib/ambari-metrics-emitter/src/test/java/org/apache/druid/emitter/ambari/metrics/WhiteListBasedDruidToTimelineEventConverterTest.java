@@ -77,7 +77,8 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
     ServiceMetricEvent event = ServiceMetricEvent
         .builder()
         .setFeed("metrics")
-        .build(createdTime, key, 10)
+        .setCreatedTime(createdTime)
+        .setMetric(key, 10)
         .build(serviceName, hostname);
 
     boolean isIn = defaultWhiteListBasedDruidToTimelineEventConverter.druidEventToTimelineMetric(event) != null;
@@ -118,7 +119,8 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
 
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[] {"g1"})
-        .build(createdTime, "jvm/gc/cpu", 10)
+        .setCreatedTime(createdTime)
+        .setMetric("jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
     TimelineMetric metric = converter.druidEventToTimelineMetric(event);
@@ -136,14 +138,16 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
                                             .setDimension("status", "some_status")
                                             .setDimension("numDimensions", "1")
                                             .setDimension("segment", "dummy_segment")
-                                            .build(createdTime, "query/segment/time/balabla/more", 10)
+                                            .setCreatedTime(createdTime)
+                                            .setMetric("query/segment/time/balabla/more", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".query/segment/time/balabla/more"
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "some_data_source")
                                             .setDimension("tier", "_default_tier")
-                                            .build(createdTime, "segment/max", 10)
+                                            .setCreatedTime(createdTime)
+                                            .setMetric("segment/max", 10)
                 .build(serviceName, hostname),
             null
         },
@@ -158,7 +162,8 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
                                             .setDimension("remoteAddress", "194.0.90.2")
                                             .setDimension("id", "ID")
                                             .setDimension("context", "{context}")
-                                            .build(createdTime, "query/time", 10)
+                                            .setCreatedTime(createdTime)
+                                            .setMetric("query/time", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.groupBy.query/time"
         },
@@ -166,7 +171,8 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
             new ServiceMetricEvent.Builder().setDimension("dataSource", "data-source")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .build(createdTime, "ingest/persists/count", 10)
+                                            .setCreatedTime(createdTime)
+                                            .setMetric("ingest/persists/count", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.ingest/persists/count"
         },
@@ -174,7 +180,8 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
             new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .build(createdTime, "jvm/bufferpool/capacity", 10)
+                                            .setCreatedTime(createdTime)
+                                            .setMetric("jvm/bufferpool/capacity", 10)
                 .build(serviceName, hostname),
             null
         }

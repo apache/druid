@@ -1582,7 +1582,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
                 final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
                 IndexTaskUtils.setTaskDimensions(metricBuilder, taskItem.getTask());
-                emitter.emit(metricBuilder.build(
+                emitter.emit(metricBuilder.setMetric(
                     "task/pending/time",
                     new Duration(taskItem.getCreatedTime(), DateTimes.nowUtc()).getMillis())
                 );
