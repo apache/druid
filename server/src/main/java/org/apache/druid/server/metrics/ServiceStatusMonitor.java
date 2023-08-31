@@ -50,7 +50,7 @@ public class ServiceStatusMonitor extends AbstractMonitor
       heartbeatTagsSupplier.get().forEach(builder::setDimension);
     }
 
-    emitter.emit(builder.setMetric("service/heartbeat", 1));
+    emitter.emit(builder.setMetricAndValue("service/heartbeat", 1));
     return true;
   }
 }

@@ -653,7 +653,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
               .setDimension("groupId", getGroupId())
               .setDimensionIfNotNull(DruidMetrics.TAGS, getContextValue(DruidMetrics.TAGS))
               .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
-              .setMetric("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
+              .setMetricAndValue("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
       );
     }
   }

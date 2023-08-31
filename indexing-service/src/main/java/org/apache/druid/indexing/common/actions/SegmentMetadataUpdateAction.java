@@ -95,7 +95,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
 
     for (DataSegment segment : segments) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/moved/bytes", segment.getSize()));
+      toolbox.getEmitter().emit(metricBuilder.setMetricAndValue("segment/moved/bytes", segment.getSize()));
     }
 
     return null;

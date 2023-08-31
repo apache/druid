@@ -445,7 +445,7 @@ public final class CacheScheduler
               final long tasks = updatesStarted.get();
               serviceEmitter.emit(
                   ServiceMetricEvent.builder()
-                                    .setMetric("namespace/deltaTasksStarted", tasks - priorUpdatesStarted)
+                                    .setMetricAndValue("namespace/deltaTasksStarted", tasks - priorUpdatesStarted)
               );
               priorUpdatesStarted = tasks;
             }

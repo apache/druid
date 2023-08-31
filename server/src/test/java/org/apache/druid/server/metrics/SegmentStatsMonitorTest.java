@@ -200,7 +200,7 @@ public class SegmentStatsMonitorTest
     return new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, DATA_SOURCE)
                                            .setDimension("tier", TIER)
                                            .setDimension("priority", String.valueOf(PRIORITY))
-                                           .setMetric("segment/rowCount/avg", value);
+                                           .setMetricAndValue("segment/rowCount/avg", value);
   }
 
   private ServiceEventBuilder<ServiceMetricEvent> rowCountRangeEvent(String range, Number value)
@@ -209,6 +209,6 @@ public class SegmentStatsMonitorTest
                                            .setDimension("tier", TIER)
                                            .setDimension("priority", String.valueOf(PRIORITY))
                                            .setDimension("range", range)
-                                           .setMetric("segment/rowCount/range/count", value);
+                                           .setMetricAndValue("segment/rowCount/range/count", value);
   }
 }

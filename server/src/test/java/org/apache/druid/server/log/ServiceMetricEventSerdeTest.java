@@ -39,7 +39,7 @@ public class ServiceMetricEventSerdeTest
     Event event = ServiceMetricEvent.builder()
                                     .setFeed("my-feed")
                                     .setCreatedTime(DateTimes.of(timestamp))
-                                    .setMetric("m1", 1)
+                                    .setMetricAndValue("m1", 1)
                                     .build("my-service", "my-host");
 
     String actual = mapper.writeValueAsString(event.toMap());

@@ -245,8 +245,8 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           .setDimension("graceful", "true") // for backward compatibility
           .setDimension("error", String.valueOf(error));
 
-      emitter.emit(metricBuilder.setMetric("task/interrupt/count", 1L));
-      emitter.emit(metricBuilder.setMetric("task/interrupt/elapsed", elapsed));
+      emitter.emit(metricBuilder.setMetricAndValue("task/interrupt/count", 1L));
+      emitter.emit(metricBuilder.setMetricAndValue("task/interrupt/elapsed", elapsed));
     }
 
     // Ok, now interrupt everything.

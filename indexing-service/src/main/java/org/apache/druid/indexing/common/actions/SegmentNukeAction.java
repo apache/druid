@@ -97,7 +97,7 @@ public class SegmentNukeAction implements TaskAction<Void>
 
     for (DataSegment segment : segments) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/nuked/bytes", segment.getSize()));
+      toolbox.getEmitter().emit(metricBuilder.setMetricAndValue("segment/nuked/bytes", segment.getSize()));
     }
 
     return null;

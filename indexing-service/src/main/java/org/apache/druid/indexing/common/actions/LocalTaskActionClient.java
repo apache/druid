@@ -107,7 +107,7 @@ public class LocalTaskActionClient implements TaskActionClient
     if (actionType != null) {
       metricBuilder.setDimension("taskActionType", actionType);
     }
-    toolbox.getEmitter().emit(metricBuilder.setMetric(metric, Math.max(0, time)));
+    toolbox.getEmitter().emit(metricBuilder.setMetricAndValue(metric, Math.max(0, time)));
   }
 
   @Nullable

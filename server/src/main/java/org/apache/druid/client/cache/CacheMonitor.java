@@ -83,21 +83,21 @@ public class CacheMonitor extends AbstractMonitor
   {
     if (cache != null) {
       // Cache stats.
-      emitter.emit(builder.setMetric(StringUtils.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
 
       // Cache populator stats.
-      emitter.emit(builder.setMetric(StringUtils.format("%s/put/ok", metricPrefix), cachePopulatorStats.getNumOk()));
-      emitter.emit(builder.setMetric(StringUtils.format("%s/put/error", metricPrefix), cachePopulatorStats.getNumError()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/put/ok", metricPrefix), cachePopulatorStats.getNumOk()));
+      emitter.emit(builder.setMetricAndValue(StringUtils.format("%s/put/error", metricPrefix), cachePopulatorStats.getNumError()));
       emitter.emit(
-          builder.setMetric(StringUtils.format("%s/put/oversized", metricPrefix), cachePopulatorStats.getNumOversized())
+          builder.setMetricAndValue(StringUtils.format("%s/put/oversized", metricPrefix), cachePopulatorStats.getNumOversized())
       );
     }
   }

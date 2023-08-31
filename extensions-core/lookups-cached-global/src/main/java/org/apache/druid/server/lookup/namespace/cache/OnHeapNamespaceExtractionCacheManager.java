@@ -144,7 +144,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
       }
     }
 
-    serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/numEntries", numEntries));
-    serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/heapSizeInBytes", heapSizeInBytes));
+    serviceEmitter.emit(ServiceMetricEvent.builder().setMetricAndValue("namespace/cache/numEntries", numEntries));
+    serviceEmitter.emit(ServiceMetricEvent.builder().setMetricAndValue("namespace/cache/heapSizeInBytes", heapSizeInBytes));
   }
 }

@@ -227,9 +227,9 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
+      toolbox.getEmitter().emit(metricBuilder.setMetricAndValue("segment/txn/success", 1));
     } else {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
+      toolbox.getEmitter().emit(metricBuilder.setMetricAndValue("segment/txn/failure", 1));
     }
 
     // getSegments() should return an empty set if announceHistoricalSegments() failed
@@ -239,7 +239,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
           DruidMetrics.PARTITIONING_TYPE,
           segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
       );
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
+      toolbox.getEmitter().emit(metricBuilder.setMetricAndValue("segment/added/bytes", segment.getSize()));
       // Emit the segment related metadata using the configured emitters.
       // There is a possibility that some segments' metadata event might get missed if the
       // server crashes after commiting segment but before emitting the event.

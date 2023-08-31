@@ -115,12 +115,12 @@ public class MemcachedCache implements Cache
             for (Map.Entry<String, Long> entry : currentValues.entrySet()) {
               emitter.emit(
                   builder.setDimension("memcached metric", entry.getKey())
-                         .setMetric("query/cache/memcached/total", entry.getValue())
+                         .setMetricAndValue("query/cache/memcached/total", entry.getValue())
               );
               final Long prior = priorValues.get(entry.getKey());
               if (prior != null) {
                 emitter.emit(
-                    builder.setDimension("memcached metric", entry.getKey()).setMetric(
+                    builder.setDimension("memcached metric", entry.getKey()).setMetricAndValue(
                         "query/cache/memcached/delta",
                         entry.getValue() - prior
                     )

@@ -4317,7 +4317,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             .setDimension("noticeType", noticeType)
                             .setDimension("dataSource", dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                            .setMetric("ingest/notices/time", timeInMillis)
+                            .setMetricAndValue("ingest/notices/time", timeInMillis)
       );
     }
     catch (Exception e) {
@@ -4336,7 +4336,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           ServiceMetricEvent.builder()
                             .setDimension("dataSource", dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                            .setMetric("ingest/notices/queueSize", getNoticesQueueSize())
+                            .setMetricAndValue("ingest/notices/queueSize", getNoticesQueueSize())
       );
     }
     catch (Exception e) {
@@ -4394,7 +4394,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                 .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                                 .setDimension(DruidMetrics.PARTITION, entry.getKey())
                                 .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                                .setMetric(
+                                .setMetricAndValue(
                                     StringUtils.format("ingest/%s/partitionLag%s", type, suffix),
                                     entry.getValue()
                                 )
@@ -4405,21 +4405,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                              .setMetric(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
+                              .setMetricAndValue(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                              .setMetric(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
+                              .setMetricAndValue(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                              .setMetric(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
+                              .setMetricAndValue(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
         );
       };
 

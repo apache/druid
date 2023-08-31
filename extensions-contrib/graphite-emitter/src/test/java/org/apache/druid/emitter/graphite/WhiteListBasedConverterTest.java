@@ -81,7 +81,7 @@ public class WhiteListBasedConverterTest
   {
     ServiceMetricEvent event = ServiceMetricEvent
         .builder()
-        .setMetric(key, 10)
+        .setMetricAndValue(key, 10)
         .setCreatedTime(createdTime)
         .build(serviceName, hostname);
 
@@ -126,7 +126,7 @@ public class WhiteListBasedConverterTest
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[]{"g1"})
         .setCreatedTime(createdTime)
-        .setMetric("jvm/gc/cpu", 10)
+        .setMetricAndValue("jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
     GraphiteEvent graphiteEvent = converter.druidEventToGraphite(event);
@@ -145,7 +145,7 @@ public class WhiteListBasedConverterTest
                                             .setDimension("numDimensions", "1")
                                             .setDimension("segment", "dummy_segment")
                                             .setCreatedTime(createdTime)
-                                            .setMetric("query/segment/time/balabla/more", 10)
+                                            .setMetricAndValue("query/segment/time/balabla/more", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".query/segment/time/balabla/more"
         },
@@ -153,7 +153,7 @@ public class WhiteListBasedConverterTest
             new ServiceMetricEvent.Builder().setDimension("dataSource", "some_data_source")
                                             .setDimension("tier", "_default_tier")
                                             .setCreatedTime(createdTime)
-                                            .setMetric("segment/max", 10)
+                                            .setMetricAndValue("segment/max", 10)
                 .build(serviceName, hostname),
             null
         },
@@ -169,7 +169,7 @@ public class WhiteListBasedConverterTest
                                             .setDimension("id", "ID")
                                             .setDimension("context", "{context}")
                                             .setCreatedTime(createdTime)
-                                            .setMetric("query/time", 10)
+                                            .setMetricAndValue("query/time", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.groupBy.query/time"
         },
@@ -178,7 +178,7 @@ public class WhiteListBasedConverterTest
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
                                             .setCreatedTime(createdTime)
-                                            .setMetric("ingest/persists/count", 10)
+                                            .setMetricAndValue("ingest/persists/count", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".ingest/persists/count"
         },
@@ -187,7 +187,7 @@ public class WhiteListBasedConverterTest
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
                                             .setCreatedTime(createdTime)
-                                            .setMetric("jvm/bufferpool/capacity", 10)
+                                            .setMetricAndValue("jvm/bufferpool/capacity", 10)
                 .build(serviceName, hostname),
             null
         }

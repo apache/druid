@@ -495,12 +495,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         final boolean isSynced = serverHolder.syncer.isSyncedSuccessfully();
         serviceEmitter.emit(
-            eventBuilder.setMetric("serverview/sync/healthy", isSynced ? 1 : 0)
+            eventBuilder.setMetricAndValue("serverview/sync/healthy", isSynced ? 1 : 0)
         );
         final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
         if (unstableTimeMillis > 0) {
           serviceEmitter.emit(
-              eventBuilder.setMetric("serverview/sync/unstableTime", unstableTimeMillis)
+              eventBuilder.setMetricAndValue("serverview/sync/unstableTime", unstableTimeMillis)
           );
         }
       });
