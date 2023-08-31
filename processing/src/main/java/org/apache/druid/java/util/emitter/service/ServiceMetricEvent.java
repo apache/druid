@@ -170,6 +170,13 @@ public class ServiceMetricEvent implements Event
 
     public Builder setMetric(String metric, Number value)
     {
+      if (Double.isNaN(value.doubleValue())) {
+        throw new ISE("Value of NaN is not allowed!");
+      }
+      if (Double.isInfinite(value.doubleValue())) {
+        throw new ISE("Value of Infinite is not allowed!");
+      }
+
       this.metric = metric;
       this.value = value;
       return this;
@@ -186,12 +193,6 @@ public class ServiceMetricEvent implements Event
     {
       Preconditions.checkNotNull(metric, "Metric is not set");
       Preconditions.checkNotNull(value, "Value is not set");
-      if (Double.isNaN(value.doubleValue())) {
-        throw new ISE("Value of NaN is not allowed!");
-      }
-      if (Double.isInfinite(value.doubleValue())) {
-        throw new ISE("Value of Infinite is not allowed!");
-      }
 
       return new ServiceMetricEvent(
           createdTime,
