@@ -12974,7 +12974,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = ImmutableList.of(
         makeRow(
             query,
             "2011-04-01",
@@ -13017,7 +13017,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = Arrays.asList();
+    List<ResultRow> expectedResults = ImmutableList.of();
 
     StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(
@@ -13053,7 +13053,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = ImmutableList.of(
         makeRow(
             query,
             "2011-04-01",
@@ -13096,8 +13096,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = Arrays.asList(
-    );
+    List<ResultRow> expectedResults = ImmutableList.of();
 
     StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(
