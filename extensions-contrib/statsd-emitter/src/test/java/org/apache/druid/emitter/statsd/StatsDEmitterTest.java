@@ -50,7 +50,7 @@ public class StatsDEmitterTest
     client.gauge("broker.query.cache.total.hitRate", 54);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
-                     .setMetricAndValue("query/cache/total/hitRate", 0.54)
+                     .setMetric("query/cache/total/hitRate", 0.54)
                      .build("broker", "brokerHost1")
     );
   }
@@ -67,7 +67,7 @@ public class StatsDEmitterTest
     client.gauge("broker.query.cache.total.hitRate", 0.54);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
-                     .setMetricAndValue("query/cache/total/hitRate", 0.54)
+                     .setMetric("query/cache/total/hitRate", 0.54)
                      .build("broker", "brokerHost1")
     );
   }
@@ -93,7 +93,7 @@ public class StatsDEmitterTest
                      .setDimension("remoteAddress", "194.0.90.2")
                      .setDimension("id", "ID")
                      .setDimension("context", "{context}")
-                     .setMetricAndValue("query/time", 10)
+                     .setMetric("query/time", 10)
                      .build("broker", "brokerHost1")
     );
   }
@@ -119,7 +119,7 @@ public class StatsDEmitterTest
                      .setDimension("remoteAddress", "194.0.90.2")
                      .setDimension("id", "ID")
                      .setDimension("context", "{context}")
-                     .setMetricAndValue("query/time", 10)
+                     .setMetric("query/time", 10)
                      .build("broker", "brokerHost1")
     );
   }
@@ -147,7 +147,7 @@ public class StatsDEmitterTest
                      .setDimension("remoteAddress", "194.0.90.2")
                      .setDimension("id", "ID")
                      .setDimension("context", "{context}")
-                     .setMetricAndValue("query/time", 10)
+                     .setMetric("query/time", 10)
                      .build("broker", "brokerHost1")
     );
   }
@@ -164,7 +164,7 @@ public class StatsDEmitterTest
     client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("gcName", "G1 GC")
-                     .setMetricAndValue("jvm/gc/count", 1)
+                     .setMetric("jvm/gc/count", 1)
                      .build("broker", "brokerHost1")
     );
   }
@@ -184,7 +184,7 @@ public class StatsDEmitterTest
     emitter.emit(new ServiceMetricEvent.Builder()
             .setDimension("dataSource", "data-source")
             .setDimension("type", "groupBy")
-            .setMetricAndValue("query/time", 10)
+            .setMetric("query/time", 10)
             .build("druid/broker", "brokerHost1")
     );
   }

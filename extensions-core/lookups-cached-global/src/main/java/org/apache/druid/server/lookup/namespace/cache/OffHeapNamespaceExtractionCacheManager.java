@@ -270,7 +270,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   @Override
   void monitor(ServiceEmitter serviceEmitter)
   {
-    serviceEmitter.emit(ServiceMetricEvent.builder().setMetricAndValue("namespace/cache/count", cacheCount()));
-    serviceEmitter.emit(ServiceMetricEvent.builder().setMetricAndValue("namespace/cache/diskSize", tmpFile.length()));
+    serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/count", cacheCount()));
+    serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/diskSize", tmpFile.length()));
   }
 }

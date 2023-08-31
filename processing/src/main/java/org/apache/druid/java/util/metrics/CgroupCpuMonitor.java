@@ -62,8 +62,8 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
 
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-    emitter.emit(builder.setMetricAndValue("cgroup/cpu/shares", cpuSnapshot.getShares()));
-    emitter.emit(builder.setMetricAndValue(
+    emitter.emit(builder.setMetric("cgroup/cpu/shares", cpuSnapshot.getShares()));
+    emitter.emit(builder.setMetric(
         "cgroup/cpu/cores_quota",
         computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
     ));

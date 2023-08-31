@@ -168,7 +168,7 @@ public class ServiceMetricEvent implements Event
       return userDims.get(dim);
     }
 
-    public Builder setMetricAndValue(String metric, Number value)
+    public Builder setMetric(String metric, Number value)
     {
       this.metric = metric;
       this.value = value;

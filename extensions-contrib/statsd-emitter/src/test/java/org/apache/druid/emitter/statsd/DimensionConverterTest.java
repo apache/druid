@@ -42,7 +42,7 @@ public class DimensionConverterTest
         .setDimension("remoteAddress", "194.0.90.2")
         .setDimension("id", "ID")
         .setDimension("context", "{context}")
-        .setMetricAndValue("query/time", 10)
+        .setMetric("query/time", 10)
         .build("broker", "brokerHost1");
 
     ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();

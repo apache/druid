@@ -67,7 +67,7 @@ public class HttpPostEmitterLoggerStressTest
     Event smallEvent = ServiceMetricEvent.builder()
                                        .setFeed("smallEvents")
                                        .setDimension("test", "hi")
-                                       .setMetricAndValue("metric", 10)
+                                       .setMetric("metric", 10)
                                        .build("qwerty", "asdfgh");
 
     for (int i = 0; i < 1000; i++) {

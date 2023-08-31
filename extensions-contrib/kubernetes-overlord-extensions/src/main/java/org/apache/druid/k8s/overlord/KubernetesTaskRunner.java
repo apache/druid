@@ -227,7 +227,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
         IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
         emitter.emit(
-            metricBuilder.setMetricAndValue(
+            metricBuilder.setMetric(
                 "task/pending/time",
                 new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
             )
