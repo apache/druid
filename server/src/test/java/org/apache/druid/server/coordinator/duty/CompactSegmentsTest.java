@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -62,6 +61,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -105,6 +105,7 @@ import org.mockito.Mockito;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -406,12 +407,12 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, null, ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, null, ImmutableMap.of()));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, null, ImmutableMap.of()));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -2052,20 +2053,9 @@ public class CompactSegmentsTest
         compactionPartitionsSpec = clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec();
       }
 
-      Map<String, Object> transformSpec = null;
-      try {
-        if (clientCompactionTaskQuery.getTransformSpec() != null) {
-          transformSpec = jsonMapper.readValue(
-              jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
-                                                                                       .getFilter(), null)),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
-          );
-        }
-      }
-      catch (JsonProcessingException e) {
-        throw new IAE("Invalid Json payload");
+      TransformSpec transformSpec = null;
+      if (clientCompactionTaskQuery.getTransformSpec() != null) {
+        transformSpec = new TransformSpec(clientCompactionTaskQuery.getTransformSpec().getFilter(), null);
       }
 
       List<Object> metricsSpec = null;
@@ -2087,18 +2077,9 @@ public class CompactSegmentsTest
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
                     clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
-                metricsSpec,
+                Arrays.asList(clientCompactionTaskQuery.getMetricsSpec()),
                 transformSpec,
-                ImmutableMap.of(
-                    "bitmap",
-                    ImmutableMap.of("type", "roaring"),
-                    "dimensionCompression",
-                    "lz4",
-                    "metricCompression",
-                    "lz4",
-                    "longEncoding",
-                    "longs"
-                ),
+                IndexSpec.DEFAULT,
                 ImmutableMap.of()
             ),
             1,

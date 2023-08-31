@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.compact;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -70,7 +69,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
@@ -718,7 +716,6 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsNothingAsSegmentsWasCompactedAndHaveSameSegmentGranularityAndSameTimezone()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -728,13 +725,13 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -750,8 +747,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsNothingAsSegmentsWasCompactedAndHaveSameSegmentGranularityInLastCompactionState()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -761,13 +756,13 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
         )
     );
 
@@ -783,8 +778,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentSegmentGranularity()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -794,13 +787,13 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -826,8 +819,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentSegmentGranularityInLastCompactionState()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -837,13 +828,13 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
         )
     );
 
@@ -869,8 +860,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentTimezone()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -880,7 +869,7 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -921,8 +910,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentOrigin()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -932,7 +919,7 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -972,8 +959,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentRollup()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -986,19 +971,19 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("rollup", "false"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("rollup", "false"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("rollup", "true"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("rollup", "true"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of())
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of())
         )
     );
 
@@ -1032,8 +1017,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentQueryGranularity()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1046,19 +1029,19 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("queryGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("queryGranularity", "day"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("queryGranularity", "minute"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("queryGranularity", "minute"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of())
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of())
         )
     );
 
@@ -1092,8 +1075,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentDimensions()
   {
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1107,25 +1088,25 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))), null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))), null, null, IndexSpec.DEFAULT, null)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))), null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))), null, null, IndexSpec.DEFAULT, null)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, DimensionsSpec.EMPTY, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, DimensionsSpec.EMPTY, null, null, IndexSpec.DEFAULT, null)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -1191,8 +1172,6 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter() throws Exception
   {
     NullHandling.initializeForTests();
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1210,8 +1189,8 @@ public class NewestSegmentFirstPolicyTest
                 partitionsSpec,
                 null,
                 null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null)), new TypeReference<Map<String, Object>>() {}),
-                indexSpec,
+                new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null),
+                IndexSpec.DEFAULT,
                 null
             )
         ),
@@ -1223,8 +1202,8 @@ public class NewestSegmentFirstPolicyTest
                 partitionsSpec,
                 null,
                 null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null)), new TypeReference<Map<String, Object>>() {}),
-                indexSpec,
+                new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null),
+                IndexSpec.DEFAULT,
                 null
             )
         ),
@@ -1236,8 +1215,8 @@ public class NewestSegmentFirstPolicyTest
                 partitionsSpec,
                 null,
                 null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(null, null)), new TypeReference<Map<String, Object>>() {}),
-                indexSpec,
+                new TransformSpec(null, null),
+                IndexSpec.DEFAULT,
                 null
             )
         ),
@@ -1245,7 +1224,7 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -1315,8 +1294,6 @@ public class NewestSegmentFirstPolicyTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
     );
-    // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1333,9 +1310,9 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt")}, new TypeReference<List<Object>>() {}),
+                Collections.singletonList(new CountAggregatorFactory("cnt")),
                 null,
-                indexSpec,
+                IndexSpec.DEFAULT,
                 null
             )
         ),
@@ -1346,9 +1323,9 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}, new TypeReference<List<Object>>() {}),
+                Arrays.asList(new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")),
                 null,
-                indexSpec,
+                IndexSpec.DEFAULT,
                 null
             )
         ),
@@ -1359,9 +1336,9 @@ public class NewestSegmentFirstPolicyTest
             new CompactionState(
                 partitionsSpec,
                 null,
-                mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
+                Collections.emptyList(),
                 null,
-                indexSpec,
+                IndexSpec.DEFAULT,
                 null
             )
         ),
@@ -1369,7 +1346,7 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, null)
         )
     );
 
@@ -1466,7 +1443,6 @@ public class NewestSegmentFirstPolicyTest
   {
     // Different indexSpec as what is set in the auto compaction config
     IndexSpec newIndexSpec = IndexSpec.builder().withBitmapSerdeFactory(new ConciseBitmapSerdeFactory()).build();
-    Map<String, Object> newIndexSpecMap = mapper.convertValue(newIndexSpec, new TypeReference<Map<String, Object>>() {});
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
@@ -1475,7 +1451,7 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, newIndexSpecMap, null)
+            new CompactionState(partitionsSpec, null, null, null, newIndexSpec, null)
         )
     );
 
@@ -1527,7 +1503,7 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 null,
                 null,
-                IndexSpec.DEFAULT.asMap(mapper),
+                IndexSpec.DEFAULT,
                 null
             )
         )

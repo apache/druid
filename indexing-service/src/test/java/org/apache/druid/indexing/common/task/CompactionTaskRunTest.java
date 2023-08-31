@@ -86,6 +86,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -207,16 +208,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     // Expected compaction state to exist after compaction as we store compaction state by default
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedLongSumMetric),
+        ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
         null,
-        IndexSpec.DEFAULT.asMap(mapper),
+        IndexSpec.DEFAULT,
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -373,9 +370,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-            ImmutableList.of(expectedLongSumMetric),
+            ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
             null,
-            compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+            compactionTask.getTuningConfig().getIndexSpec(),
             getObjectMapper().readValue(
                 getObjectMapper().writeValueAsString(
                     new UniformGranularitySpec(
@@ -770,16 +767,15 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedLongSumMetric),
-        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        IndexSpec.DEFAULT.asMap(mapper),
+        ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
+        getObjectMapper().readValue(
+            getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
+            TransformSpec.class
+        ),
+        IndexSpec.DEFAULT,
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(
@@ -831,19 +827,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    Map<String, String> expectedCountMetric = new HashMap<>();
-    expectedCountMetric.put("type", "count");
-    expectedCountMetric.put("name", "cnt");
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
-        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        IndexSpec.DEFAULT.asMap(mapper),
+        ImmutableList.of(
+            new CountAggregatorFactory("cnt"),
+            new LongSumAggregatorFactory("val", "val")
+        ),
+        getObjectMapper().readValue(
+            getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
+            TransformSpec.class
+        ),
+        IndexSpec.DEFAULT,
         mapper.readValue(
             mapper.writeValueAsString(
                 new UniformGranularitySpec(

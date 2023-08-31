@@ -62,6 +62,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -92,7 +93,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -172,17 +172,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
           segment.getShardSpec().getClass()
       );
-      // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -221,17 +216,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new HashedPartitionsSpec(null, 3, null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -270,17 +261,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -329,17 +316,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -383,17 +366,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -432,17 +411,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -484,17 +459,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -566,19 +537,15 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
           segment.getShardSpec().getClass()
       );
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedLongSumMetric),
+          ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
-              Map.class
+              TransformSpec.class
           ),
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(
@@ -624,22 +591,18 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
           segment.getShardSpec().getClass()
       );
-      Map<String, String> expectedCountMetric = new HashMap<>();
-      expectedCountMetric.put("type", "count");
-      expectedCountMetric.put("name", "cnt");
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("fieldName", "val");
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-          ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
+          ImmutableList.of(
+              new CountAggregatorFactory("cnt"),
+              new LongSumAggregatorFactory("val", "val")
+          ),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
-              Map.class
+              TransformSpec.class
           ),
-          compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
+          compactionTask.getTuningConfig().getIndexSpec(),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
                   new UniformGranularitySpec(

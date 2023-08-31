@@ -28,9 +28,15 @@ import org.apache.druid.TestObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -50,9 +56,9 @@ import java.util.Map;
 
 /**
  */
-public class DataSegmentTest
+public class DataSegmentTest extends InitializedNullHandlingTest
 {
-  private static final ObjectMapper MAPPER = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = new TestObjectMapper().registerModules(new AggregatorsModule());
   private static final int TEST_VERSION = 0x9;
 
   private static ShardSpec getShardSpec(final int partitionNum)
@@ -126,9 +132,9 @@ public class DataSegmentTest
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
             ),
-            ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-            ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-            ImmutableMap.of(),
+            ImmutableList.of(new CountAggregatorFactory("count")),
+            new TransformSpec(new SelectorDimFilter("dim1", "foo", null, null), Collections.emptyList()),
+            IndexSpec.DEFAULT,
             ImmutableMap.of()
         ),
         TEST_VERSION,
@@ -193,7 +199,7 @@ public class DataSegmentTest
             null,
             null,
             null,
-            ImmutableMap.of(),
+            null,
             ImmutableMap.of()
         ),
         TEST_VERSION,
@@ -342,9 +348,9 @@ public class DataSegmentTest
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
-        ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-        ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-        Collections.singletonMap("test", "map"),
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        new TransformSpec(new SelectorDimFilter("dim1", "foo", null, null), Collections.emptyList()),
+        IndexSpec.DEFAULT,
         Collections.singletonMap("test2", "map2")
     );
     final DataSegment segment1 = DataSegment.builder()

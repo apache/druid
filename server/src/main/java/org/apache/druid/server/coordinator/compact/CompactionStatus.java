@@ -36,7 +36,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.timeline.CompactionState;
-import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -306,16 +305,13 @@ public class CompactionStatus
         return COMPLETE;
       }
 
-      final List<Object> metricSpecList = lastCompactionState.getMetricsSpec();
-      final AggregatorFactory[] existingMetricsSpec
-          = CollectionUtils.isNullOrEmpty(metricSpecList)
-            ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
+      final List<AggregatorFactory> metricSpecList = lastCompactionState.getMetricsSpec();
 
-      if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
+      if (metricSpecList == null || !Arrays.deepEquals(configuredMetricsSpec, metricSpecList.toArray())) {
         return CompactionStatus.configChanged(
             "metricsSpec",
             Arrays.toString(configuredMetricsSpec),
-            Arrays.toString(existingMetricsSpec)
+            String.valueOf(metricSpecList)
         );
       } else {
         return COMPLETE;

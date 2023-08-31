@@ -71,6 +71,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -285,7 +286,7 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       null,
       null,
-      Collections.singletonMap("test", "map"),
+      IndexSpec.DEFAULT,
       Collections.singletonMap("test2", "map2")
   );
 
