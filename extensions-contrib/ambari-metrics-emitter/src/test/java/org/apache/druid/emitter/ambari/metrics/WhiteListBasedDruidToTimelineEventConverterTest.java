@@ -24,10 +24,8 @@ import junitparams.Parameters;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,14 +35,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedDruidToTimelineEventConverterTest
 {
   private final String prefix = "druid";
   private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter =
       new WhiteListBasedDruidToTimelineEventConverter(prefix, "druid", null, new DefaultObjectMapper());
-  private final DateTime createdTime = DateTimes.nowUtc();
   private final String hostname = "testHost:8080";
   private final String serviceName = "historical";
   private final String defaultNamespace = prefix + "." + serviceName;
@@ -77,7 +73,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
     ServiceMetricEvent event = ServiceMetricEvent
         .builder()
         .setFeed("metrics")
-        .setCreatedTime(createdTime)
         .setMetricAndValue(key, 10)
         .build(serviceName, hostname);
 
@@ -119,7 +114,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
 
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[] {"g1"})
-        .setCreatedTime(createdTime)
         .setMetricAndValue("jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
@@ -138,7 +132,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
                                             .setDimension("status", "some_status")
                                             .setDimension("numDimensions", "1")
                                             .setDimension("segment", "dummy_segment")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("query/segment/time/balabla/more", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".query/segment/time/balabla/more"
@@ -146,7 +139,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "some_data_source")
                                             .setDimension("tier", "_default_tier")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("segment/max", 10)
                 .build(serviceName, hostname),
             null
@@ -162,7 +154,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
                                             .setDimension("remoteAddress", "194.0.90.2")
                                             .setDimension("id", "ID")
                                             .setDimension("context", "{context}")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("query/time", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.groupBy.query/time"
@@ -171,7 +162,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
             new ServiceMetricEvent.Builder().setDimension("dataSource", "data-source")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("ingest/persists/count", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.ingest/persists/count"
@@ -180,7 +170,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
             new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setCreatedTime(createdTime)
                                             .setMetricAndValue("jvm/bufferpool/capacity", 10)
                 .build(serviceName, hostname),
             null
