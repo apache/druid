@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -63,7 +64,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
@@ -519,13 +519,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
       GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
       // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
-      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
-                                      ? null
-                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions());
+      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec();
+      if (dimensionsSpec != null) {
+        dimensionsSpec = new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions());
+      }
       // We only need to store filter since that is the only field auto compaction support
-      TransformSpec transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
-                                          ? null
-                                          : ingestionSpec.getDataSchema().getTransformSpec();
+      TransformSpec transformSpec = ingestionSpec.getDataSchema().getTransformSpec();
+      if (TransformSpec.NONE.equals(transformSpec)) {
+        transformSpec = null;
+      } else {
+        transformSpec = new TransformSpec(transformSpec.getFilter(), Collections.emptyList());
+      }
 
       final CompactionState compactionState = new CompactionState(
           tuningConfig.getPartitionsSpec(),

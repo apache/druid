@@ -1171,7 +1171,7 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter() throws Exception
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter()
   {
     NullHandling.initializeForTests();
     // Same partitionsSpec as what is set in the auto compaction config

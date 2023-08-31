@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -60,7 +61,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Action;
@@ -190,7 +190,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithHashPartitioningMatchCompactionState() throws Exception
+  public void testRunParallelWithHashPartitioningMatchCompactionState()
   {
     allowSegmentFetchesByCompactionTask = true;
 
@@ -230,7 +230,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithRangePartitioning() throws Exception
+  public void testRunParallelWithRangePartitioning()
   {
     allowSegmentFetchesByCompactionTask = true;
 
@@ -270,7 +270,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithRangePartitioningAndNoUpfrontSegmentFetching() throws Exception
+  public void testRunParallelWithRangePartitioningAndNoUpfrontSegmentFetching()
   {
     allowSegmentFetchesByCompactionTask = false;
 
@@ -322,7 +322,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithMultiDimensionRangePartitioning() throws Exception
+  public void testRunParallelWithMultiDimensionRangePartitioning()
   {
     allowSegmentFetchesByCompactionTask = true;
 
@@ -365,7 +365,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithRangePartitioningWithSingleTask() throws Exception
+  public void testRunParallelWithRangePartitioningWithSingleTask()
   {
     allowSegmentFetchesByCompactionTask = true;
 
@@ -405,7 +405,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithMultiDimensionRangePartitioningWithSingleTask() throws Exception
+  public void testRunParallelWithMultiDimensionRangePartitioningWithSingleTask()
   {
     allowSegmentFetchesByCompactionTask = true;
 
