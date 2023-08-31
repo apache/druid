@@ -151,7 +151,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithDynamicPartitioningMatchCompactionState() throws Exception
+  public void testRunParallelWithDynamicPartitioningMatchCompactionState()
   {
     allowSegmentFetchesByCompactionTask = true;
     runIndexTask(null, true);

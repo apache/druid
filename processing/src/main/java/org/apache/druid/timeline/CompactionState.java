@@ -48,8 +48,6 @@ public class CompactionState
   private final DimensionsSpec dimensionsSpec;
   private final TransformSpec transformSpec;
   private final IndexSpec indexSpec;
-  // org.apache.druid.segment.indexing.granularity.GranularitySpec cannot be used here because it's in the
-  // 'server' module which has a dependency on the 'processing' module where this class is.
   private final GranularitySpec granularitySpec;
   private final List<AggregatorFactory> metricsSpec;
 

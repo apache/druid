@@ -527,7 +527,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       TransformSpec transformSpec = ingestionSpec.getDataSchema().getTransformSpec();
       if (TransformSpec.NONE.equals(transformSpec)) {
         transformSpec = null;
-      } else {
+      } else if (transformSpec != null) {
         transformSpec = new TransformSpec(transformSpec.getFilter(), Collections.emptyList());
       }
 
