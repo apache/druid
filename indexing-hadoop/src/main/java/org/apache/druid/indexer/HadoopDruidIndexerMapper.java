@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;

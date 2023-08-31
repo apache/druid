@@ -52,7 +52,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;

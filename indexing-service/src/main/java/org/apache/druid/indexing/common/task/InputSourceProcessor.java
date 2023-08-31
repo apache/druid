@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;

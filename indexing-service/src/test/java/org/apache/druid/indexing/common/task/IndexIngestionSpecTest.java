@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

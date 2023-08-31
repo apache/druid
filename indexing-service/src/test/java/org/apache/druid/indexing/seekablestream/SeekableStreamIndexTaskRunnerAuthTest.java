@@ -35,7 +35,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;

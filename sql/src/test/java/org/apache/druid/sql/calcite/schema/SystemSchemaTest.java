@@ -51,8 +51,10 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -287,7 +289,7 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       null,
       IndexSpec.DEFAULT,
-      Collections.singletonMap("test2", "map2")
+      UniformGranularitySpec.DEFAULT_SPEC
   );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(
@@ -566,7 +568,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new DefaultObjectMapper(), authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentStatusInCluster(publishedCompactedSegment1, true, 2),
         new SegmentStatusInCluster(publishedCompactedSegment2, false, 0),

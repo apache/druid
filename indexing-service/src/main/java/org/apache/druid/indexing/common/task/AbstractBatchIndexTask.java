@@ -63,7 +63,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
@@ -533,7 +533,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           Arrays.asList(ingestionSpec.getDataSchema().getAggregators()),
           transformSpec,
           tuningConfig.getIndexSpec(),
-          granularitySpec.asMap(toolbox.getJsonMapper())
+          granularitySpec
       );
       return segments -> segments
           .stream()

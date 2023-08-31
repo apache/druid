@@ -45,6 +45,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -105,7 +106,6 @@ import org.mockito.Mockito;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -407,12 +407,12 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, null, ImmutableMap.of()));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, null, ImmutableMap.of()));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, UniformGranularitySpec.DEFAULT_SPEC));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, UniformGranularitySpec.DEFAULT_SPEC));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, null, ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, UniformGranularitySpec.DEFAULT_SPEC));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -2058,9 +2058,9 @@ public class CompactSegmentsTest
         transformSpec = new TransformSpec(clientCompactionTaskQuery.getTransformSpec().getFilter(), null);
       }
 
-      List<Object> metricsSpec = null;
+      List<AggregatorFactory> metricsSpec = null;
       if (clientCompactionTaskQuery.getMetricsSpec() != null) {
-        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<List<Object>>() {});
+        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<List<AggregatorFactory>>() {});
       }
 
       for (int i = 0; i < 2; i++) {
@@ -2077,10 +2077,10 @@ public class CompactSegmentsTest
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
                     clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
-                Arrays.asList(clientCompactionTaskQuery.getMetricsSpec()),
+                metricsSpec,
                 transformSpec,
                 IndexSpec.DEFAULT,
-                ImmutableMap.of()
+                UniformGranularitySpec.DEFAULT_SPEC
             ),
             1,
             segmentSize

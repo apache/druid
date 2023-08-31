@@ -45,7 +45,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;

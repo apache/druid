@@ -72,7 +72,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -214,16 +214,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
         ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
         null,
         IndexSpec.DEFAULT,
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    segmentGranularity,
-                    queryGranularity,
-                    true,
-                    intervals
-                )
-            ),
-            Map.class
+        new UniformGranularitySpec(
+            segmentGranularity,
+            queryGranularity,
+            true,
+            intervals
         )
     );
   }
@@ -373,16 +368,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
             ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
             null,
             compactionTask.getTuningConfig().getIndexSpec(),
-            getObjectMapper().readValue(
-                getObjectMapper().writeValueAsString(
-                    new UniformGranularitySpec(
-                        Granularities.HOUR,
-                        Granularities.MINUTE,
-                        true,
-                        ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
-                    )
-                ),
-                Map.class
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                true,
+                ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
             )
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
@@ -776,16 +766,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
             TransformSpec.class
         ),
         IndexSpec.DEFAULT,
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    true,
-                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-                )
-            ),
-            Map.class
+        new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.MINUTE,
+            true,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
         )
     );
     Assert.assertEquals(
@@ -839,16 +824,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
             TransformSpec.class
         ),
         IndexSpec.DEFAULT,
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    true,
-                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-                )
-            ),
-            Map.class
+        new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.MINUTE,
+            true,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
         )
     );
     Assert.assertEquals(

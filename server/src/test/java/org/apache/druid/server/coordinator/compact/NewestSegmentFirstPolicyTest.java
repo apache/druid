@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -78,6 +79,7 @@ public class NewestSegmentFirstPolicyTest
   private static final String DATA_SOURCE = "dataSource";
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
+  private static UniformGranularitySpec DAY = new UniformGranularitySpec(Granularities.DAY, null, null, null);
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(mapper);
 
@@ -756,13 +758,13 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, DAY)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, DAY)
         )
     );
 
@@ -828,13 +830,13 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, DAY)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("segmentGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, DAY)
         )
     );
 
@@ -971,19 +973,19 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("rollup", "false"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, new UniformGranularitySpec(null, null, false, null))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("rollup", "true"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, UniformGranularitySpec.DEFAULT_SPEC)
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of())
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, new UniformGranularitySpec(null, null, false, null))
         )
     );
 
@@ -1029,19 +1031,19 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("queryGranularity", "day"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, new UniformGranularitySpec(null , Granularities.DAY, null, null))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of("queryGranularity", "minute"))
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, new UniformGranularitySpec(null, Granularities.MINUTE, null))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, ImmutableMap.of())
+            new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT, UniformGranularitySpec.DEFAULT_SPEC)
         )
     );
 

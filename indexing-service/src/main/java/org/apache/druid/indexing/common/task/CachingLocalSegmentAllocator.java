@@ -32,7 +32,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;

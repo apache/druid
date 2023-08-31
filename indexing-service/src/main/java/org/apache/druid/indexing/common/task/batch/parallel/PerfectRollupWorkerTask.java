@@ -25,8 +25,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 

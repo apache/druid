@@ -60,7 +60,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Action;
@@ -178,16 +178,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -223,16 +218,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -268,16 +258,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -323,18 +308,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
 
-                      // Umbrella interval for all segments, since CompactionTasks generated a single granularitySpec.
-                      ImmutableList.of(Intervals.of("2014-01-01/2014-01-01T03:00:00"))
-                  )
-              ),
-              Map.class
+              // Umbrella interval for all segments, since CompactionTasks generated a single granularitySpec.
+              ImmutableList.of(Intervals.of("2014-01-01/2014-01-01T03:00:00"))
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -373,16 +353,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -418,16 +393,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -466,16 +436,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
           null,
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -546,16 +511,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               TransformSpec.class
           ),
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
@@ -603,16 +563,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               TransformSpec.class
           ),
           compactionTask.getTuningConfig().getIndexSpec(),
-          getObjectMapper().readValue(
-              getObjectMapper().writeValueAsString(
-                  new UniformGranularitySpec(
-                      Granularities.HOUR,
-                      Granularities.MINUTE,
-                      true,
-                      ImmutableList.of(segment.getInterval())
-                  )
-              ),
-              Map.class
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
           )
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());

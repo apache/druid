@@ -22,13 +22,13 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -50,7 +50,7 @@ public class CompactionState
   private final IndexSpec indexSpec;
   // org.apache.druid.segment.indexing.granularity.GranularitySpec cannot be used here because it's in the
   // 'server' module which has a dependency on the 'processing' module where this class is.
-  private final Map<String, Object> granularitySpec;
+  private final GranularitySpec granularitySpec;
   private final List<AggregatorFactory> metricsSpec;
 
   @JsonCreator
@@ -60,7 +60,7 @@ public class CompactionState
       @JsonProperty("metricsSpec") List<AggregatorFactory> metricsSpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
-      @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
+      @JsonProperty("granularitySpec") GranularitySpec granularitySpec
   )
   {
     this.partitionsSpec = partitionsSpec;
@@ -102,7 +102,7 @@ public class CompactionState
   }
 
   @JsonProperty
-  public Map<String, Object> getGranularitySpec()
+  public GranularitySpec getGranularitySpec()
   {
     return granularitySpec;
   }

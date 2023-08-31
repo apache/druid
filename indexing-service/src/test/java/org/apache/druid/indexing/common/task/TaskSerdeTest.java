@@ -49,7 +49,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.partition.NoneShardSpec;

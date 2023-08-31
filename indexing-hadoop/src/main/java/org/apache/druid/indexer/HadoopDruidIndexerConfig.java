@@ -51,7 +51,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;

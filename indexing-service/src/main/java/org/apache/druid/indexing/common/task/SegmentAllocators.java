@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
 import javax.annotation.Nullable;

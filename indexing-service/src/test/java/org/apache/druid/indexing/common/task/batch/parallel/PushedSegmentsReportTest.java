@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.junit.Test;
 
 public class PushedSegmentsReportTest
@@ -27,6 +29,13 @@ public class PushedSegmentsReportTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(PushedSegmentsReport.class).usingGetClass().verify();
+    EqualsVerifier.forClass(PushedSegmentsReport.class)
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withLongEncoding(CompressionFactory.LongEncodingStrategy.AUTO).build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }

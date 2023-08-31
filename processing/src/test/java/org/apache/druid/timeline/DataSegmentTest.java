@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.AggregatorsModule;
@@ -135,7 +136,7 @@ public class DataSegmentTest extends InitializedNullHandlingTest
             ImmutableList.of(new CountAggregatorFactory("count")),
             new TransformSpec(new SelectorDimFilter("dim1", "foo", null, null), Collections.emptyList()),
             IndexSpec.DEFAULT,
-            ImmutableMap.of()
+            null
         ),
         TEST_VERSION,
         1
@@ -199,8 +200,8 @@ public class DataSegmentTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null,
-            ImmutableMap.of()
+            IndexSpec.DEFAULT,
+            UniformGranularitySpec.DEFAULT_SPEC
         ),
         TEST_VERSION,
         1
@@ -351,7 +352,7 @@ public class DataSegmentTest extends InitializedNullHandlingTest
         ImmutableList.of(new CountAggregatorFactory("count")),
         new TransformSpec(new SelectorDimFilter("dim1", "foo", null, null), Collections.emptyList()),
         IndexSpec.DEFAULT,
-        Collections.singletonMap("test2", "map2")
+        null
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
