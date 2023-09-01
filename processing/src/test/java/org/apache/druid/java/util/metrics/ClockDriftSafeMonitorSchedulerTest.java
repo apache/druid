@@ -20,6 +20,9 @@
 package org.apache.druid.java.util.metrics;
 
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+
 import com.google.common.collect.ImmutableList;
 import io.timeandspace.cronscheduler.CronScheduler;
 import io.timeandspace.cronscheduler.CronTask;
@@ -29,7 +32,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -136,7 +138,7 @@ public class ClockDriftSafeMonitorSchedulerTest
             ((Callable<Boolean>) originalArgument).call();
             return CompletableFuture.completedFuture(Boolean.TRUE);
           }
-        }).when(executor).submit(ArgumentMatchers.any(Callable.class));
+        }).when(executor).submit(any(Callable.class));
 
         cronTaskRunner.submit(() -> {
           while (scheduleCount < 2) {
@@ -148,8 +150,8 @@ public class ClockDriftSafeMonitorSchedulerTest
         });
         return createDummyFuture();
       }
-    }).when(cronScheduler).scheduleAtFixedRate(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
+    }).when(cronScheduler)
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
 
     Monitor monitor = Mockito.mock(Monitor.class);
 
@@ -167,11 +169,10 @@ public class ClockDriftSafeMonitorSchedulerTest
     latch.await(5, TimeUnit.SECONDS);
 
     Mockito.verify(monitor, Mockito.times(1)).start();
-    Mockito.verify(cronScheduler, Mockito.times(1)).scheduleAtFixedRate(ArgumentMatchers.anyLong(),
-        ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
-    Mockito.verify(executor, Mockito.times(2)).submit(ArgumentMatchers.any(Callable.class));
-    Mockito.verify(monitor, Mockito.times(2)).monitor(ArgumentMatchers.any());
+    Mockito.verify(cronScheduler, Mockito.times(1))
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
+    Mockito.verify(executor, Mockito.times(2)).submit(any(Callable.class));
+    Mockito.verify(monitor, Mockito.times(2)).monitor(any());
     scheduler.stop();
   }
 
@@ -200,7 +201,7 @@ public class ClockDriftSafeMonitorSchedulerTest
             ((Callable<Boolean>) originalArgument).call();
             return CompletableFuture.completedFuture(Boolean.FALSE);
           }
-        }).when(executor).submit(ArgumentMatchers.any(Callable.class));
+        }).when(executor).submit(any(Callable.class));
 
         cronTaskRunner.submit(() -> {
           while (scheduleCount < 2) {
@@ -212,8 +213,8 @@ public class ClockDriftSafeMonitorSchedulerTest
         });
         return createDummyFuture();
       }
-    }).when(cronScheduler).scheduleAtFixedRate(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
+    }).when(cronScheduler)
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
 
     Monitor monitor = Mockito.mock(Monitor.class);
 
@@ -232,13 +233,9 @@ public class ClockDriftSafeMonitorSchedulerTest
 
     Mockito.verify(monitor, Mockito.times(1)).start();
     Mockito.verify(cronScheduler, Mockito.times(1))
-        .scheduleAtFixedRate(
-            ArgumentMatchers.anyLong(),
-            ArgumentMatchers.anyLong(),
-            ArgumentMatchers.any(),
-            ArgumentMatchers.any(CronTask.class));
-    Mockito.verify(executor, Mockito.times(1)).submit(ArgumentMatchers.any(Callable.class));
-    Mockito.verify(monitor, Mockito.times(2)).monitor(ArgumentMatchers.any());
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
+    Mockito.verify(executor, Mockito.times(1)).submit(any(Callable.class));
+    Mockito.verify(monitor, Mockito.times(2)).monitor(any());
     Mockito.verify(monitor, Mockito.times(1)).stop();
     scheduler.stop();
   }
@@ -248,7 +245,7 @@ public class ClockDriftSafeMonitorSchedulerTest
   {
     ExecutorService executor = Mockito.mock(ExecutorService.class);
     Monitor monitor = Mockito.mock(Monitor.class);
-    Mockito.when(monitor.monitor(ArgumentMatchers.any(ServiceEmitter.class)))
+    Mockito.when(monitor.monitor(any(ServiceEmitter.class)))
            .thenThrow(new RuntimeException("Test throwing exception while monitoring"));
 
     DruidMonitorSchedulerConfig config = Mockito.mock(DruidMonitorSchedulerConfig.class);
@@ -275,7 +272,7 @@ public class ClockDriftSafeMonitorSchedulerTest
             monitorResultHolder.set(continueMonitor);
             return CompletableFuture.completedFuture(continueMonitor);
           }
-        }).when(executor).submit(ArgumentMatchers.any(Callable.class));
+        }).when(executor).submit(any(Callable.class));
 
         cronTaskRunner.submit(() -> {
           task.run(123L);
@@ -284,9 +281,8 @@ public class ClockDriftSafeMonitorSchedulerTest
         });
         return createDummyFuture();
       }
-    }).when(cronScheduler).scheduleAtFixedRate(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
-
+    }).when(cronScheduler)
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
         config,
@@ -299,11 +295,10 @@ public class ClockDriftSafeMonitorSchedulerTest
     latch.await(5, TimeUnit.SECONDS);
 
     Mockito.verify(monitor, Mockito.times(1)).start();
-    Mockito.verify(cronScheduler, Mockito.times(1)).scheduleAtFixedRate(ArgumentMatchers.anyLong(),
-        ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
-    Mockito.verify(executor, Mockito.times(1)).submit(ArgumentMatchers.any(Callable.class));
-    Mockito.verify(monitor, Mockito.times(1)).monitor(ArgumentMatchers.any());
+    Mockito.verify(cronScheduler, Mockito.times(1))
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
+    Mockito.verify(executor, Mockito.times(1)).submit(any(Callable.class));
+    Mockito.verify(monitor, Mockito.times(1)).monitor(any());
     Assert.assertTrue(monitorResultHolder.get());
     scheduler.stop();
   }
@@ -326,7 +321,7 @@ public class ClockDriftSafeMonitorSchedulerTest
         final Object originalArgument = (invocation.getArguments())[3];
         CronTask task = ((CronTask) originalArgument);
 
-        Mockito.when(executor.submit(ArgumentMatchers.any(Callable.class)))
+        Mockito.when(executor.submit(any(Callable.class)))
                .thenThrow(new RuntimeException("Test throwing exception while scheduling"));
         cronTaskRunner.submit(() -> {
           task.run(123L);
@@ -335,9 +330,8 @@ public class ClockDriftSafeMonitorSchedulerTest
         });
         return createDummyFuture();
       }
-    }).when(cronScheduler).scheduleAtFixedRate(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
-
+    }).when(cronScheduler)
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
         config,
@@ -350,10 +344,9 @@ public class ClockDriftSafeMonitorSchedulerTest
     latch.await(5, TimeUnit.SECONDS);
 
     Mockito.verify(monitor, Mockito.times(1)).start();
-    Mockito.verify(cronScheduler, Mockito.times(1)).scheduleAtFixedRate(ArgumentMatchers.anyLong(),
-        ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
-    Mockito.verify(executor, Mockito.times(1)).submit(ArgumentMatchers.any(Callable.class));
+    Mockito.verify(cronScheduler, Mockito.times(1))
+        .scheduleAtFixedRate(anyLong(), anyLong(), any(), any(CronTask.class));
+    Mockito.verify(executor, Mockito.times(1)).submit(any(Callable.class));
     scheduler.stop();
   }
 
