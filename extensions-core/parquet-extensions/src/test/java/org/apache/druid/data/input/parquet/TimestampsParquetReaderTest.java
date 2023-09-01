@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
@@ -84,15 +86,21 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
     );
     List<InputRowListPlusRawValues> sampledAsString = sampleAllRows(readerAsString);
     List<InputRowListPlusRawValues> sampledAsDate = sampleAllRows(readerAsDate);
-    final String expectedJson = "{\n"
+    final String expectedJsonString = "{\n"
                                       + "  \"date_as_string\" : \"2017-06-18\",\n"
                                       + "  \"timestamp_as_timestamp\" : 1497702471815,\n"
                                       + "  \"timestamp_as_string\" : \"2017-06-17 14:27:51.815\",\n"
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
+
+    ObjectMapper obj = new ObjectMapper();
+    JsonNode expectedJson = obj.readTree(expectedJsonString);
+
+    JsonNode sampledAsStringJson = obj.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
+    JsonNode sampledAsDateJson = obj.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
+    Assert.assertEquals(expectedJson, sampledAsStringJson);
+    Assert.assertEquals(expectedJson, sampledAsDateJson);
   }
 
   @Test
