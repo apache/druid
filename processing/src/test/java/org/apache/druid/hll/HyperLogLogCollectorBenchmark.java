@@ -159,12 +159,12 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
         final int size = sizes[i];
 
         HyperLogLogCollector.makeCollector(
-            buf.duplicate().position(0).limit(
+            (ByteBuffer) buf.duplicate().position(0).limit(
                 HyperLogLogCollector.getLatestNumBytesForDenseStorage()
             )
         ).fold(
             HyperLogLogCollector.makeCollector(
-                chunk.duplicate().limit(pos + size).position(pos)
+                (ByteBuffer) chunk.duplicate().limit(pos + size).position(pos)
             )
         );
       }
