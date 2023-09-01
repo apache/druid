@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.OutputStream;
 

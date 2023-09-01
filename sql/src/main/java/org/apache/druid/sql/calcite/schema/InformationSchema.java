@@ -377,7 +377,7 @@ public class InformationSchema extends AbstractSchema
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                           table.getRowType(typeFactory),
+                                          table.getRowType(typeFactory),
                                           typeFactory
                                       );
                                     }

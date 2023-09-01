@@ -163,7 +163,8 @@ public abstract class IngestHandler extends QueryHandler
       throw InvalidSqlInput.exception(
           "Operation [%s] cannot be run with a target column list, given [%s (%s)]",
           operationName(),
-          insert.getTargetTable(), insert.getTargetColumnList()
+          insert.getTargetTable(),
+          insert.getTargetColumnList()
       );
     }
 

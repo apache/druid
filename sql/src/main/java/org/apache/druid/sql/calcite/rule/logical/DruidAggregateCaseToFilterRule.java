@@ -204,8 +204,10 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
     // latter is present.
     final RexNode filter;
     if (aggregateCall.filterArg >= 0) {
-      filter = rexBuilder.makeCall(SqlStdOperatorTable.AND,
-                                   project.getProjects().get(aggregateCall.filterArg), filterFromCase
+      filter = rexBuilder.makeCall(
+          SqlStdOperatorTable.AND,
+          project.getProjects().get(aggregateCall.filterArg),
+          filterFromCase
       );
     } else {
       filter = filterFromCase;
@@ -222,10 +224,16 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
           && RexLiteral.isNullLiteral(arg2)) {
         newProjects.add(arg1);
         newProjects.add(filter);
-        return AggregateCall.create(SqlStdOperatorTable.COUNT, true, false,
-                                    false, ImmutableList.of(newProjects.size() - 2),
-                                    newProjects.size() - 1, RelCollations.EMPTY,
-                                    aggregateCall.getType(), aggregateCall.getName()
+        return AggregateCall.create(
+            SqlStdOperatorTable.COUNT,
+            true,
+            false,
+            false,
+            ImmutableList.of(newProjects.size() - 2),
+            newProjects.size() - 1,
+            RelCollations.EMPTY,
+            aggregateCall.getType(),
+            aggregateCall.getName()
         );
       }
       newProjects.add(rexNode);
@@ -263,10 +271,15 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
         && !RexLiteral.isNullLiteral(arg1)
         && RexLiteral.isNullLiteral(arg2)) {
       newProjects.add(filter);
-      return AggregateCall.create(SqlStdOperatorTable.COUNT, false, false,
-                                  false, ImmutableList.of(), newProjects.size() - 1,
-                                  RelCollations.EMPTY, aggregateCall.getType(),
-                                  aggregateCall.getName()
+      return AggregateCall.create(SqlStdOperatorTable.COUNT,
+              false,
+              false,
+              false,
+              ImmutableList.of(),
+              newProjects.size() - 1,
+              RelCollations.EMPTY,
+              aggregateCall.getType(),
+              aggregateCall.getName()
       );
     } else if (kind == SqlKind.SUM // Case B
                && isIntLiteral(arg1) && RexLiteral.intValue(arg1) == 1
@@ -277,9 +290,16 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
       final RelDataType dataType =
           typeFactory.createTypeWithNullability(
               typeFactory.createSqlType(SqlTypeName.BIGINT), false);
-      return AggregateCall.create(SqlStdOperatorTable.COUNT, false, false,
-                                  false, ImmutableList.of(), newProjects.size() - 1,
-                                  RelCollations.EMPTY, dataType, aggregateCall.getName()
+      return AggregateCall.create(
+          SqlStdOperatorTable.COUNT,
+          false,
+          false,
+          false,
+          ImmutableList.of(),
+          newProjects.size() - 1,
+          RelCollations.EMPTY,
+          dataType,
+          aggregateCall.getName()
       );
     } else if ((RexLiteral.isNullLiteral(arg2) // Case A1
                 && aggregateCall.getAggregation().allowsFilter())
@@ -288,10 +308,16 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
                    && RexLiteral.intValue(arg2) == 0)) {
       newProjects.add(arg1);
       newProjects.add(filter);
-      return AggregateCall.create(aggregateCall.getAggregation(), false,
-                                  false, false, ImmutableList.of(newProjects.size() - 2),
-                                  newProjects.size() - 1, RelCollations.EMPTY,
-                                  aggregateCall.getType(), aggregateCall.getName()
+      return AggregateCall.create(
+          aggregateCall.getAggregation(),
+          false,
+          false,
+          false,
+          ImmutableList.of(newProjects.size() - 2),
+          newProjects.size() - 1,
+          RelCollations.EMPTY,
+          aggregateCall.getType(),
+          aggregateCall.getName()
       );
     } else {
       newProjects.add(rexNode);

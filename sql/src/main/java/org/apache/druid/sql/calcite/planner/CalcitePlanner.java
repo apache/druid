@@ -330,8 +330,11 @@ public class CalcitePlanner implements Planner, ViewExpander
         @Nullable List<String> viewPath
     )
     {
-      return CalcitePlanner.this.expandView(rowType, queryString, schemaPath,
-                                            viewPath
+      return CalcitePlanner.this.expandView(
+          rowType,
+          queryString,
+          schemaPath,
+          viewPath
       );
     }
   }

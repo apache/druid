@@ -2916,7 +2916,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "_j0.unnest",
                               "\"dimMultivalEnumerated\"",
                               ColumnType.STRING
-                          ), null
+                          ),
+                          null
                       ),
                       expressionVirtualColumn(
                           "__j0.unnest",
@@ -3112,7 +3113,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
     testQuery(
         sql,
-        QUERY_CONTEXT_UNNEST, expectedQuerySqlCom,
+        QUERY_CONTEXT_UNNEST,
+        expectedQuerySqlCom,
         ImmutableList.of(
             new Object[]{"27", "Baz", "Baz", "World"},
             new Object[]{"27", "Baz", "Baz", "World"},

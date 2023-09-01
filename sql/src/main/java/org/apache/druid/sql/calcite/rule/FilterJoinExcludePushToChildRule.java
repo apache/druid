@@ -226,8 +226,11 @@ public abstract class FilterJoinExcludePushToChildRule<C extends FilterJoinRule.
 
     // create a FilterRel on top of the join if needed
     relBuilder.filter(
-        RexUtil.fixUp(rexBuilder, aboveFilters,
-                      RelOptUtil.getFieldTypeList(relBuilder.peek().getRowType())));
+        RexUtil.fixUp(
+            rexBuilder,
+            aboveFilters,
+            RelOptUtil.getFieldTypeList(relBuilder.peek().getRowType())
+        ));
     call.transformTo(relBuilder.build());
   }
 

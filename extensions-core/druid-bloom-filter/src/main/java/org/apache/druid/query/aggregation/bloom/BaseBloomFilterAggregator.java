@@ -25,6 +25,7 @@ import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 /**
