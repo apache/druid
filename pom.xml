@@ -1376,7 +1376,7 @@
                     <dependency>
                         <groupId>hu.rxd</groupId>
                         <artifactId>checkstyle-plugins</artifactId>
-                        <version>0.0.3.dirty</version>
+                        <version>0.0.3-2-gca65563.dirty</version>
                     </dependency>
                 </dependencies>
                 <executions>

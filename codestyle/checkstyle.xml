@@ -53,7 +53,7 @@
     </module>
 
     <module name="hu.rxd.checkstyle.FunctionArgsAlignmentRule">
-      <property name="ignore" value="of,mapOf,orderedMap,makeSelectResults,makeListOfPairs,mapMatcher"/>
+      <property name="exclude" value="of,mapOf,makeMap,orderedMap,makeSelectResults,makeListOfPairs,mapMatcher,makeRow,createExpectedRow,createExpected,assertEquals,checkArgument"/>
     </module>
 
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
