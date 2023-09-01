@@ -3015,7 +3015,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "_j0.unnest",
                               "\"dimMultivalEnumerated\"",
                               ColumnType.STRING
-                          ), equality("_j0.unnest", "Hello", ColumnType.STRING)
+                          ),
+                          equality("_j0.unnest", "Hello", ColumnType.STRING)
                       ),
                       expressionVirtualColumn(
                           "__j0.unnest",
