@@ -146,15 +146,13 @@ public class NativeIO
     catch (UnsatisfiedLinkError ule) {
       // if JNA is unavailable just skipping Direct I/O
       // instance of this class will act like normal RandomAccessFile
-      log.warn(ule, "Unsatisfied Link error: posix_fadvise failed on file descriptor [%d], offset [%d]",
-          fd, offset);
+      log.warn(ule, "Unsatisfied Link error: posix_fadvise failed on file descriptor [%d], offset [%d]", fd, offset);
       fadvisePossible = false;
     }
     catch (Exception e) {
       // This is best effort anyway so lets just log that there was an
       // exception and forget
-      log.warn(e, "Unknown exception: posix_fadvise failed on file descriptor [%d], offset [%d]",
-          fd, offset);
+      log.warn(e, "Unknown exception: posix_fadvise failed on file descriptor [%d], offset [%d]", fd, offset);
     }
   }
 

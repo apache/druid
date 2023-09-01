@@ -159,12 +159,12 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
         final int size = sizes[i];
 
         HyperLogLogCollector.makeCollector(
-            (ByteBuffer) buf.duplicate().position(0).limit(
+            buf.duplicate().position(0).limit(
                 HyperLogLogCollector.getLatestNumBytesForDenseStorage()
             )
         ).fold(
             HyperLogLogCollector.makeCollector(
-                (ByteBuffer) chunk.duplicate().limit(pos + size).position(pos)
+                chunk.duplicate().limit(pos + size).position(pos)
             )
         );
       }
@@ -196,17 +196,19 @@ class ByteBuffers
 
   private static long lookupAddressOffset(MethodHandles.Lookup lookup) throws Throwable
   {
-    MethodHandle objectFieldOffset = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "objectFieldOffset",
-                                                        MethodType.methodType(long.class, Field.class)
-    );
+    MethodHandle objectFieldOffset = lookup.findVirtual(
+        UnsafeUtils.theUnsafeClass(),
+        "objectFieldOffset",
+        MethodType.methodType(long.class, Field.class));
     return (long) objectFieldOffset.bindTo(UnsafeUtils.theUnsafe()).invoke(Buffer.class.getDeclaredField("address"));
   }
 
   private static MethodHandle lookupGetLong(MethodHandles.Lookup lookup) throws Throwable
   {
-    MethodHandle getLong = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "getLong",
-                                              MethodType.methodType(long.class, Object.class, long.class)
-    );
+    MethodHandle getLong = lookup.findVirtual(
+        UnsafeUtils.theUnsafeClass(),
+        "getLong",
+        MethodType.methodType(long.class, Object.class, long.class));
     return getLong.bindTo(UnsafeUtils.theUnsafe());
   }
 
