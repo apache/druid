@@ -21,8 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.Objects;
 

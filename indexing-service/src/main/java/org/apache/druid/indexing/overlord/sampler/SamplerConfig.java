@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.sampler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
@@ -57,7 +58,7 @@ public class SamplerConfig
    * The maximum number of rows to return in a response. The actual number of returned rows may be less if:
    *   - The sampled source contains fewer rows
    *   - {@link SamplerConfig#timeoutMs} elapses before this value is reached
-   *   - {@link org.apache.druid.segment.indexing.granularity.GranularitySpec#isRollup()} is true and input rows get
+   *   - {@link GranularitySpec#isRollup()} is true and input rows get
    *     rolled-up into fewer indexed rows.
    *   - The incremental index performing the sampling reaches {@link SamplerConfig#getMaxBytesInMemory()} before this
    *     value is reached

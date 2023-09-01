@@ -49,6 +49,7 @@ import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -307,6 +308,7 @@ public class SegmentGeneratorFrameProcessorFactory
         return IndexSpec.builder()
                         // Dimensions don't support NONE, so use UNCOMPRESSED
                         .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                        .withStringDictionaryEncoding(new StringEncodingStrategy.Utf8())
                         // NONE is more efficient than UNCOMPRESSED
                         .withMetricCompression(CompressionStrategy.NONE)
                         .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)

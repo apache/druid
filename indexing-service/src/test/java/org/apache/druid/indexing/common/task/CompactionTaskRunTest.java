@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
@@ -38,6 +37,7 @@ import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -72,7 +72,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -86,6 +85,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -115,10 +115,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -203,30 +201,21 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Granularity segmentGranularity,
       Granularity queryGranularity,
       List<Interval> intervals
-  ) throws JsonProcessingException
+  )
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     // Expected compaction state to exist after compaction as we store compaction state by default
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedLongSumMetric),
+        ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
         null,
-        IndexSpec.DEFAULT.asMap(mapper),
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    segmentGranularity,
-                    queryGranularity,
-                    true,
-                    intervals
-                )
-            ),
-            Map.class
+        IndexSpec.DEFAULT,
+        new UniformGranularitySpec(
+            segmentGranularity,
+            queryGranularity,
+            true,
+            intervals
         )
     );
   }
@@ -366,26 +355,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
             interval,
             segments.get(segmentIdx).getInterval()
         );
-        Map<String, String> expectedLongSumMetric = new HashMap<>();
-        expectedLongSumMetric.put("type", "longSum");
-        expectedLongSumMetric.put("name", "val");
-        expectedLongSumMetric.put("fieldName", "val");
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-            ImmutableList.of(expectedLongSumMetric),
+            ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
             null,
-            compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
-            getObjectMapper().readValue(
-                getObjectMapper().writeValueAsString(
-                    new UniformGranularitySpec(
-                        Granularities.HOUR,
-                        Granularities.MINUTE,
-                        true,
-                        ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
-                    )
-                ),
-                Map.class
+            compactionTask.getTuningConfig().getIndexSpec(),
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                true,
+                ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
             )
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
@@ -770,26 +750,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedLongSumMetric),
-        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        IndexSpec.DEFAULT.asMap(mapper),
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    true,
-                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-                )
-            ),
-            Map.class
+        ImmutableList.of(new LongSumAggregatorFactory("val", "val")),
+        getObjectMapper().readValue(
+            getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
+            TransformSpec.class
+        ),
+        IndexSpec.DEFAULT,
+        new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.MINUTE,
+            true,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
         )
     );
     Assert.assertEquals(
@@ -831,29 +805,23 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     ObjectMapper mapper = new DefaultObjectMapper();
-    Map<String, String> expectedCountMetric = new HashMap<>();
-    expectedCountMetric.put("type", "count");
-    expectedCountMetric.put("name", "cnt");
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
-        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        IndexSpec.DEFAULT.asMap(mapper),
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    true,
-                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-                )
-            ),
-            Map.class
+        ImmutableList.of(
+            new CountAggregatorFactory("cnt"),
+            new LongSumAggregatorFactory("val", "val")
+        ),
+        getObjectMapper().readValue(
+            getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
+            TransformSpec.class
+        ),
+        IndexSpec.DEFAULT,
+        new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.MINUTE,
+            true,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
         )
     );
     Assert.assertEquals(
