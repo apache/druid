@@ -173,7 +173,11 @@ public class NativeIO
       int ret_code = sync_file_range(fd, offset, nbytes, flags);
       if (ret_code != 0) {
         log.warn("failed on syncing fd [%d], offset [%d], bytes [%d], ret_code [%d], errno [%d]",
-            fd, offset, nbytes, ret_code, Native.getLastError());
+            fd,
+            offset,
+            nbytes,
+            ret_code,
+            Native.getLastError());
         return;
       }
     }
