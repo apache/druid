@@ -1946,4 +1946,26 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()),
         ImmutableList.of(new Object[] {0L}));
   }
+
+  @Test
+  public void testAggregateFilterInTheAbsenceOfProjection2()
+  {
+    cannotVectorize();
+    testQuery(
+        "select cityName from druid.wikipedia "
+        + "where channel like '#min%' and cityName is not null and cityName != 'some'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of());
+  }
 }
