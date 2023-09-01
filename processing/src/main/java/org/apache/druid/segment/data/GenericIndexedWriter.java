@@ -207,7 +207,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     while (numBytesToPutInFile > 0) {
       int bytesRead = is.read(buffer, 0, Math.min(buffer.length, Ints.saturatedCast(numBytesToPutInFile)));
       if (bytesRead != -1) {
-        smooshChannel.write(holderBuffer.clear().limit(bytesRead));
+        smooshChannel.write((ByteBuffer) holderBuffer.clear().limit(bytesRead));
         numBytesToPutInFile -= bytesRead;
       } else {
         throw new ISE("Could not write [%d] bytes into smooshChannel.", numBytesToPutInFile);
