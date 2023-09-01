@@ -73,7 +73,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     cronTaskRunner.shutdownNow();
     mocks.close();
   }
-  
+
   @Test
   public void testFindMonitor()
   {
@@ -89,7 +89,7 @@ public class ClockDriftSafeMonitorSchedulerTest
 
     final Monitor1 monitor1 = new Monitor1();
     final Monitor2 monitor2 = new Monitor2();
-    
+
     ExecutorService executor = Mockito.mock(ExecutorService.class);
 
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
@@ -109,7 +109,7 @@ public class ClockDriftSafeMonitorSchedulerTest
 
     Assert.assertFalse(scheduler.findMonitor(Monitor3.class).isPresent());
   }
-  
+
   @Test
   public void testStart_RepeatScheduling() throws InterruptedException
   {
@@ -174,7 +174,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     Mockito.verify(monitor, Mockito.times(2)).monitor(ArgumentMatchers.any());
     scheduler.stop();
   }
-  
+
   @Test
   public void testStart_RepeatAndStopScheduling() throws InterruptedException
   {
@@ -231,15 +231,18 @@ public class ClockDriftSafeMonitorSchedulerTest
     latch.await(5, TimeUnit.SECONDS);
 
     Mockito.verify(monitor, Mockito.times(1)).start();
-    Mockito.verify(cronScheduler, Mockito.times(1)).scheduleAtFixedRate(ArgumentMatchers.anyLong(),
-        ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
+    Mockito.verify(cronScheduler, Mockito.times(1))
+        .scheduleAtFixedRate(
+            ArgumentMatchers.anyLong(),
+            ArgumentMatchers.anyLong(),
+            ArgumentMatchers.any(),
+            ArgumentMatchers.any(CronTask.class));
     Mockito.verify(executor, Mockito.times(1)).submit(ArgumentMatchers.any(Callable.class));
     Mockito.verify(monitor, Mockito.times(2)).monitor(ArgumentMatchers.any());
     Mockito.verify(monitor, Mockito.times(1)).stop();
     scheduler.stop();
   }
-  
+
   @Test
   public void testStart_UnexpectedExceptionWhileMonitoring() throws InterruptedException
   {
@@ -284,7 +287,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     }).when(cronScheduler).scheduleAtFixedRate(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
 
-    
+
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
         config,
         Mockito.mock(ServiceEmitter.class),
@@ -304,7 +307,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     Assert.assertTrue(monitorResultHolder.get());
     scheduler.stop();
   }
-  
+
   @Test
   public void testStart_UnexpectedExceptionWhileScheduling() throws InterruptedException
   {
@@ -335,7 +338,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     }).when(cronScheduler).scheduleAtFixedRate(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
 
-    
+
     final MonitorScheduler scheduler = new ClockDriftSafeMonitorScheduler(
         config,
         Mockito.mock(ServiceEmitter.class),
@@ -353,7 +356,7 @@ public class ClockDriftSafeMonitorSchedulerTest
     Mockito.verify(executor, Mockito.times(1)).submit(ArgumentMatchers.any(Callable.class));
     scheduler.stop();
   }
-  
+
   private Future createDummyFuture()
   {
     Future<?> future = new Future()
@@ -393,8 +396,8 @@ public class ClockDriftSafeMonitorSchedulerTest
 
     return future;
   }
-  
-  
+
+
   private static class NoopMonitor implements Monitor
   {
     @Override
