@@ -24,12 +24,11 @@
     "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
 
 <module name="Checker">
-<!--
   <module name="Header">
     <property name="headerFile" value="${checkstyle.header.file}"/>
     <property name="fileExtensions" value="java"/>
   </module>
--->
+
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
@@ -231,7 +230,6 @@
 
     <!-- See https://github.com/checkstyle/checkstyle/issues/5510 and the ImportOrder suppression in
          checkstyle-suppressions.xml -->
-<!--
     <module name="ImportOrder">
       <property name="groups" value="*,javax,java"/>
       <property name="ordered" value="true"/>
@@ -239,7 +237,7 @@
       <property name="option" value="bottom"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
--->
+
     <module name="Regexp">
       <property name="format" value="instanceof\s+(ObjectColumnSelector|LongColumnSelector|FloatColumnSelector|DoubleColumnSelector)"/>
       <property name="illegalPattern" value="true"/>
