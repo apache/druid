@@ -55,10 +55,12 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
                                                        .frames();
 
     final File file = temporaryFolder.newFile();
-    final FrameFileWriter fileWriter = FrameFileWriter.open(Files.newByteChannel(
-        file.toPath(),
-        StandardOpenOption.WRITE
-    ), null, ByteTracker.unboundedTracker());
+    final FrameFileWriter fileWriter = FrameFileWriter.open(
+        Files.newByteChannel(
+            file.toPath(),
+            StandardOpenOption.WRITE),
+        null,
+        ByteTracker.unboundedTracker());
 
     frames.forEach(frame -> {
       try {

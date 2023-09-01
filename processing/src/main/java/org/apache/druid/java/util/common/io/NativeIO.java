@@ -190,8 +190,7 @@ public class NativeIO
       syncFileRangePossible = false;
     }
     catch (Exception e) {
-      log.warn(e, "Unknown exception: sync_file_range failed on fd [%d], offset [%d], bytes [%d]",
-          fd, offset, nbytes);
+      log.warn(e, "Unknown exception: sync_file_range failed on fd [%d], offset [%d], bytes [%d]", fd, offset, nbytes);
       syncFileRangePossible = false;
     }
   }
@@ -226,7 +225,10 @@ public class NativeIO
           trySyncFileRange(fd, offset, numBytes, SYNC_FILE_RANGE_WRITE);
           if (offset > 0) {
             // This does a blocking write-and-wait on any old ranges
-            trySyncFileRange(fd, lastOffset, lastBytes,
+            trySyncFileRange(
+                fd,
+                lastOffset,
+                lastBytes,
                 SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
             // Remove the old range from the cache
             trySkipCache(fd, lastOffset, lastBytes);

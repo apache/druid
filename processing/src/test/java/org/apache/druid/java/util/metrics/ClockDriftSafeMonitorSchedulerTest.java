@@ -19,10 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-
 import com.google.common.collect.ImmutableList;
 import io.timeandspace.cronscheduler.CronScheduler;
 import io.timeandspace.cronscheduler.CronTask;
@@ -47,6 +43,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 
 public class ClockDriftSafeMonitorSchedulerTest
 {

@@ -70,10 +70,12 @@ public class SerializablePairLongStringComplexMetricSerdeTest
   public void testLargeString() throws Exception
   {
     // single entry spans more than one block in underlying storage
-    assertExpected(ImmutableList.of(new SerializablePairLongString(
-        100L,
-        randomStringUtils.randomAlphanumeric(2 * 1024 * 1024)
-    )), 2097182, 2103140);
+    assertExpected(
+        ImmutableList.of(new SerializablePairLongString(
+            100L,
+            randomStringUtils.randomAlphanumeric(2 * 1024 * 1024))),
+        2097182,
+        2103140);
   }
 
   @Test

@@ -602,7 +602,7 @@ public class CompressionUtilsTest
       }
     };
 
-    Assert.assertEquals((long) (EXPECTED.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
+    Assert.assertEquals(EXPECTED.length * 3, CompressionUtils.gunzip(inputStreamFactory, testFile).size());
 
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
@@ -712,7 +712,8 @@ public class CompressionUtilsTest
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
     Assert.assertFalse(gzFile.exists());
     CompressionUtils.gzip(
-        Files.asByteSource(testFile), new ByteSink()
+        Files.asByteSource(testFile),
+        new ByteSink()
         {
           @Override
           public OutputStream openStream() throws IOException
@@ -730,7 +731,8 @@ public class CompressionUtilsTest
               }
             };
           }
-        }, Predicates.alwaysTrue()
+        },
+        Predicates.alwaysTrue()
     );
     Assert.assertTrue(gzFile.exists());
     try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), "file.gz")) {
