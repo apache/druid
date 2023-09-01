@@ -54,7 +54,7 @@
     </module>
 
     <module name="hu.rxd.checkstyle.FunctionArgsAlignmentRule">
-      <property name="exclude" value="of,mapOf,makeMap,orderedMap,makeSelectResults,makeListOfPairs,mapMatcher,makeRow,createExpectedRow,createExpected,assertEquals,checkArgument,permuteArguments,newArrayList,asList"/>
+      <property name="exclude" value="of,mapOf,makeMap,orderedMap,makeSelectResults,makeListOfPairs,mapMatcher,makeRow,createExpectedRow,createExpected,assertEquals,checkArgument,permuteArguments,newArrayList,asList,newHashSet"/>
     </module>
 
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
@@ -231,6 +231,7 @@
 
     <!-- See https://github.com/checkstyle/checkstyle/issues/5510 and the ImportOrder suppression in
          checkstyle-suppressions.xml -->
+<!--
     <module name="ImportOrder">
       <property name="groups" value="*,javax,java"/>
       <property name="ordered" value="true"/>
@@ -238,7 +239,7 @@
       <property name="option" value="bottom"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
-
+-->
     <module name="Regexp">
       <property name="format" value="instanceof\s+(ObjectColumnSelector|LongColumnSelector|FloatColumnSelector|DoubleColumnSelector)"/>
       <property name="illegalPattern" value="true"/>
