@@ -52,6 +52,10 @@
       <property name="tokens" value="INTERFACE_DEF,ENUM_DEF,METHOD_DEF"/>
     </module>
 
+    <module name="hu.rxd.checkstyle.FunctionArgsAlignmentRule">
+      <property name="ignore" value="of,mapOf,orderedMap,makeSelectResults,makeListOfPairs,mapMatcher"/>
+    </module>
+
     <!-- See http://checkstyle.sourceforge.net/checks.html for examples -->
 
     <!--<module name="LineLength">-->

@@ -1373,6 +1373,11 @@
                         <artifactId>checkstyle</artifactId>
                         <version>8.21</version>
                     </dependency>
+                    <dependency>
+                        <groupId>hu.rxd</groupId>
+                        <artifactId>checkstyle-plugins</artifactId>
+                        <version>0.0.3.dirty</version>
+                    </dependency>
                 </dependencies>
                 <executions>
                     <execution>
