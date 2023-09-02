@@ -29,8 +29,8 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Set;
-import java.util.TreeMap;
 
 public class S3DataSegmentPusherConfigTest
 {
@@ -44,8 +44,8 @@ public class S3DataSegmentPusherConfigTest
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
 
-    TreeMap<String, String> expected = JSON_MAPPER.readValue(jsonConfig, TreeMap.class);
-    TreeMap<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), TreeMap.class);
+    LinkedHashMap<String, String> expected = JSON_MAPPER.readValue(jsonConfig, LinkedHashMap.class);
+    LinkedHashMap<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), LinkedHashMap.class);
 
     Assert.assertEquals(expected, actual);
   }
