@@ -30,6 +30,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class S3DataSegmentPusherConfigTest
 {
@@ -42,7 +43,11 @@ public class S3DataSegmentPusherConfigTest
                         + "\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false}";
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
-    Assert.assertEquals(jsonConfig, JSON_MAPPER.writeValueAsString(config));
+
+    TreeMap<String, String> expected = JSON_MAPPER.readValue(jsonConfig, TreeMap.class);
+    TreeMap<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), TreeMap.class);
+
+    Assert.assertEquals(expected, actual);
   }
 
   @Test
