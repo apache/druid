@@ -42,6 +42,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -50,27 +51,28 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 {
   private static final Map<String, Object> REPLACE_CONTEXT = ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "REPLACE");
   private static final Map<String, Object> APPEND_CONTEXT = ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "APPEND");
+  private static final WorkerConfig WORKER_CONFIG = new WorkerConfig().setCapacity(10);
 
   private TaskQueue taskQueue;
+  private TaskRunner taskRunner;
   private TaskActionClient taskActionClient;
-
-  private static final WorkerConfig WORKER_CONFIG = new WorkerConfig().setCapacity(10);
+  private final List<Task> runningTasks = new ArrayList<>();
 
   @Before
   public void setup()
@@ -79,7 +81,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final TaskActionClientFactory taskActionClientFactory = createActionClientFactory();
     taskActionClient = taskActionClientFactory.create(NoopTask.create());
     final TaskToolboxFactory toolboxFactory = new TestTaskToolboxFactory(taskConfig, taskActionClientFactory);
-    final TaskRunner taskRunner = new ThreadingTaskRunner(
+    taskRunner = new ThreadingTaskRunner(
         toolboxFactory,
         taskConfig,
         WORKER_CONFIG,
@@ -99,8 +101,37 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         taskActionClientFactory,
         getLockbox(),
         new NoopServiceEmitter()
-    );
+    )
+    {
+      @Override
+      public boolean add(Task task) throws EntryExistsException
+      {
+        boolean added = super.add(task);
+        if (added) {
+          runningTasks.add(task);
+        }
+        return added;
+      }
+    };
+    runningTasks.clear();
     taskQueue.start();
+  }
+
+  @After
+  public void tearDown()
+  {
+    for (Task task : runningTasks) {
+      if (task instanceof AppendTask) {
+        AppendTask appendTask = (AppendTask) task;
+        appendTask.markReady();
+        appendTask.beginPublish();
+        appendTask.completeSegmentAllocation();
+      } else if (task instanceof ReplaceTask) {
+        ReplaceTask replaceTask = (ReplaceTask) task;
+        replaceTask.markReady();
+        replaceTask.beginPublish();
+      }
+    }
   }
 
   @Test
@@ -108,7 +139,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     CommandExecutingTask replaceTask0 = new CommandExecutingTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         REPLACE_CONTEXT,
@@ -126,7 +157,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     CommandExecutingTask appendTask0 = new CommandExecutingTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         APPEND_CONTEXT,
@@ -148,7 +179,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     CommandExecutingTask replaceTask1 = new CommandExecutingTask(
         "replace1",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         REPLACE_CONTEXT,
@@ -166,7 +197,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     CommandExecutingTask replaceTask2 = new CommandExecutingTask(
         "replace2",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         REPLACE_CONTEXT,
@@ -225,7 +256,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null,
@@ -234,7 +265,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null
@@ -242,7 +273,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     ReplaceTask replaceTask1 = new ReplaceTask(
         "replace1",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null,
@@ -251,7 +282,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     ReplaceTask replaceTask2 = new ReplaceTask(
         "replace2",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null,
@@ -301,7 +332,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -310,7 +341,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -345,7 +376,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -354,7 +385,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -390,7 +421,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -399,7 +430,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -408,7 +439,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     taskQueue.add(replaceTask0);
     replaceTask0.markReady();
     replaceTask0.awaitReadyComplete();
-
 
     taskQueue.add(appendTask0);
     appendTask0.markReady();
@@ -437,7 +467,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -446,7 +476,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -481,7 +511,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -490,7 +520,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -527,7 +557,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -536,7 +566,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -566,13 +596,12 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   }
 
 
-
   @Test
   public void testRRAA_monthlyReplaceDailyAppend() throws Exception
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null,
@@ -581,7 +610,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -616,7 +645,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null,
@@ -625,7 +654,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -661,7 +690,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null,
@@ -670,7 +699,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -708,7 +737,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null,
@@ -717,7 +746,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -752,7 +781,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null,
@@ -761,7 +790,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -798,7 +827,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null,
@@ -807,7 +836,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -837,13 +866,12 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   }
 
 
-
   @Test
   public void testRRAA_dailyReplaceMonthlyAppend() throws Exception
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -852,7 +880,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null
@@ -887,7 +915,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -896,7 +924,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null
@@ -932,7 +960,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -941,7 +969,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null
@@ -979,7 +1007,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -988,7 +1016,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null
@@ -1023,7 +1051,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -1032,7 +1060,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null
@@ -1069,7 +1097,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null,
@@ -1078,7 +1106,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.MONTH,
         null
@@ -1112,7 +1140,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null,
@@ -1121,7 +1149,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null
@@ -1129,7 +1157,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask1 = new AppendTask(
         "append1",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null
@@ -1172,7 +1200,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     ReplaceTask replaceTask0 = new ReplaceTask(
         "replace0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023/2024"),
         Granularities.YEAR,
         null,
@@ -1181,7 +1209,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask0 = new AppendTask(
         "append0",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-01-01/2023-02-01"),
         Granularities.DAY,
         null
@@ -1189,7 +1217,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask1 = new AppendTask(
         "append1",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-07-01/2024-01-01"),
         Granularities.QUARTER,
         null
@@ -1197,7 +1225,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     AppendTask appendTask2 = new AppendTask(
         "append2",
-        "DS",
+        DS.WIKI,
         Intervals.of("2023-12-01/2024-01-01"),
         Granularities.MONTH,
         null
@@ -1280,23 +1308,28 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private void verifySegmentCount(int expectedTotal, int expectedVisible) throws Exception
   {
     Collection<DataSegment> allUsed = taskActionClient.submit(
-        new RetrieveUsedSegmentsAction("DS", null, ImmutableList.of(Intervals.ETERNITY), Segments.INCLUDING_OVERSHADOWED)
-    );
-    System.out.println("All used segments: " + allUsed.size());
-    System.out.println(new TreeSet<>(allUsed.stream().map(s -> s.getId().toString()).collect(Collectors.toSet())));
-    Collection<DataSegment> visibleUsed = taskActionClient.submit(
-        new RetrieveUsedSegmentsAction("DS", null, ImmutableList.of(Intervals.ETERNITY), Segments.ONLY_VISIBLE)
+        new RetrieveUsedSegmentsAction(
+            DS.WIKI,
+            null,
+            ImmutableList.of(Intervals.ETERNITY),
+            Segments.INCLUDING_OVERSHADOWED
+        )
     );
     Assert.assertEquals(expectedTotal, allUsed.size());
-    System.out.println("All visible segments: " + visibleUsed.size());
-    System.out.println(new TreeSet<>(visibleUsed.stream().map(s -> s.getId().toString()).collect(Collectors.toSet())));
+
+    Collection<DataSegment> visibleUsed = taskActionClient.submit(
+        new RetrieveUsedSegmentsAction(
+            DS.WIKI,
+            null,
+            ImmutableList.of(Intervals.ETERNITY),
+            Segments.ONLY_VISIBLE
+        )
+    );
     Assert.assertEquals(expectedVisible, visibleUsed.size());
   }
 
   private class TestTaskToolboxFactory extends TaskToolboxFactory
   {
-    private final TaskConfig taskConfig;
-
     public TestTaskToolboxFactory(TaskConfig taskConfig, TaskActionClientFactory taskActionClientFactory)
     {
       super(
@@ -1339,26 +1372,17 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
           null,
           null
       );
-      this.taskConfig = taskConfig;
     }
-
-    @Override
-    public TaskToolbox build(Task task)
-    {
-      return build(taskConfig, task);
-    }
-
-    @Override
-    public TaskToolbox build(Function<TaskConfig, TaskConfig> decoratorFn, Task task)
-    {
-      return build(decoratorFn.apply(taskConfig), task);
-    }
-
 
     @Override
     public TaskToolbox build(TaskConfig config, Task task)
     {
       return createTaskToolbox(config, task);
     }
+  }
+
+  private static class DS
+  {
+    static final String WIKI = "wiki";
   }
 }

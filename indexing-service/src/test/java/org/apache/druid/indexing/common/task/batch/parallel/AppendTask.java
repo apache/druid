@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -57,6 +58,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A test Task which mimics an appending task by having similar interactions with the overlord.
@@ -156,10 +158,12 @@ public class AppendTask extends AbstractTask
 
     runLatch.await();
 
-    if (publishSegments(toolbox, convertPendingSegments(pendingSegments))) {
+    SegmentPublishResult publishResult = publishSegments(toolbox, convertPendingSegments(pendingSegments));
+    if (publishResult.isSuccess()) {
       return TaskStatus.success(getId());
+    } else {
+      return TaskStatus.failure(getId(), publishResult.getErrorMsg());
     }
-    return TaskStatus.failure(getId(), "Failed to append segments");
   }
 
   @Override
@@ -226,7 +230,7 @@ public class AppendTask extends AbstractTask
     return segments;
   }
 
-  private boolean publishSegments(TaskToolbox toolbox, Set<DataSegment> newSegments)
+  private SegmentPublishResult publishSegments(TaskToolbox toolbox, Set<DataSegment> newSegments)
       throws Exception
   {
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
@@ -238,7 +242,7 @@ public class AppendTask extends AbstractTask
         newSegments,
         Function.identity(),
         null
-    ).isSuccess();
+    );
   }
 
   @Override

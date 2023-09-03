@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -169,10 +170,12 @@ public class ReplaceTask extends AbstractTask
     runLatch.await();
 
     final Set<DataSegment> newSegments = createSegments();
-    if (publishSegments(toolbox, oldSegments, newSegments)) {
+    final SegmentPublishResult publishResult = publishSegments(toolbox, oldSegments, newSegments);
+    if (publishResult.isSuccess()) {
       return TaskStatus.success(getId());
+    } else {
+      return TaskStatus.failure(getId(), publishResult.getErrorMsg());
     }
-    return TaskStatus.failure(getId(), "Failed to replace segments");
   }
 
   @Override
@@ -207,7 +210,7 @@ public class ReplaceTask extends AbstractTask
     return newSegments;
   }
 
-  private boolean publishSegments(TaskToolbox toolbox, Set<DataSegment> oldSegments, Set<DataSegment> newSegments)
+  private SegmentPublishResult publishSegments(TaskToolbox toolbox, Set<DataSegment> oldSegments, Set<DataSegment> newSegments)
       throws Exception
   {
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
@@ -219,7 +222,7 @@ public class ReplaceTask extends AbstractTask
         newSegments,
         Function.identity(),
         null
-    ).isSuccess();
+    );
   }
 
   @Override

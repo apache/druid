@@ -1817,8 +1817,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final PreparedBatch batch = handle.prepareBatch(
         StringUtils.format(
-            "INSERT INTO %1$s (id, group_id, segment_id, lock_version)"
-            + " VALUES (:id, :group_id, :segment_id, :lock_version)",
+            "INSERT INTO %1$s (group_id, segment_id, lock_version)"
+            + " VALUES (:group_id, :segment_id, :lock_version)",
             dbTables.getSegmentVersionsTable()
         )
     );
@@ -1855,6 +1855,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private List<DataSegment> retrieveSegmentsById(Handle handle, Set<String> segmentIds)
   {
+    if (segmentIds.isEmpty()) {
+      return Collections.emptyList();
+    }
+
     final String segmentIdCsv = segmentIds.stream()
                                           .map(id -> "'" + id + "'")
                                           .collect(Collectors.joining(","));
@@ -1904,9 +1908,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
+    final String sql = StringUtils.format(
+        "SELECT segment_id, lock_version FROM %1$s WHERE group_id = :group_id",
+        dbTables.getSegmentVersionsTable()
+    );
+
     final String groupId = replaceLocks.iterator().next().getGroupId();
     ResultIterator<Pair<String, String>> resultIterator = handle
-        .createQuery("SELECT segment_id, lock_version FROM %2$s where group_id = :group_id")
+        .createQuery(sql)
         .bind("group_id", groupId)
         .map(
             (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
