@@ -58,7 +58,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * A test Task which mimics an appending task by having similar interactions with the overlord.
