@@ -25,8 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -45,35 +43,32 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.DatasourceSchema;
-import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable.SegmentTableView;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-
-
 
 /**
  * This class polls the Coordinator in background to keep the latest published segments.
  * Provides {@link #getSegmentMetadata()} for others to get segments in metadata store.
  *
- * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
- * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
- * fact, this class polls the data from {@link SegmentsMetadataManager} object in the memory of the
+ * This class polls the data from {@link SegmentsMetadataManager} object in the memory of the
  * currently leading Coordinator via HTTP queries.
  */
 @ManageLifecycle
@@ -92,11 +87,16 @@ public class BrokerSegmentMetadataView
 
   private final boolean useSegmentMetadataCache;
 
+  private final boolean includeRealtimeSegments;
+
+  private final boolean pollDsSchema;
+
   /**
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
    * sys.segments queries return the segments in sorted order based on segmentId.
    *
-   * Volatile since this reference is reassigned in {@code poll()} and then read in {@code getPublishedSegments()}
+   * Volatile since this reference is reassigned in {@code pollSegmentMetadata()}
+   * and then read in {@code getSegmentMetadata()}
    * from other threads.
    */
   @MonotonicNonNull
@@ -129,21 +129,25 @@ public class BrokerSegmentMetadataView
       final PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder,
       final BrokerServerView brokerServerView,
       final BrokerSegmentMetadataCache segmentMetadataCache
-      )
+  )
   {
-    Preconditions.checkNotNull(config, "SegmentMetadataCacheConfig");
+    Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
     this.druidLeaderClient = druidLeaderClient;
     this.objectMapper = objectMapper;
     this.coordinatorClient = coordinatorClient;
     this.segmentWatcherConfig = segmentWatcherConfig;
+
     this.isMetadataSegmentCacheEnabled = config.isMetadataSegmentCacheEnable();
+    this.useSegmentMetadataCache = config.isSegmentMetadataCacheEnabled();
+    this.includeRealtimeSegments = !useSegmentMetadataCache;
+    this.pollDsSchema = !useSegmentMetadataCache;
+
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
-    this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+    this.scheduledExec = Execs.scheduledSingleThreaded("SegmentMetadataView-Cache--%d");
     this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
                                                     .expireAfterAccess(10, TimeUnit.MINUTES)
                                                     .build();
     this.physicalDatasourceMetadataBuilder = physicalDatasourceMetadataBuilder;
-    this.useSegmentMetadataCache = config.isUseSegmentMetadataCache();
     this.brokerServerView = brokerServerView;
     this.segmentMetadataCache = segmentMetadataCache;
   }
@@ -155,7 +159,7 @@ public class BrokerSegmentMetadataView
       throw new ISE("can't start.");
     }
     try {
-      if (isMetadataSegmentCacheEnabled || !useSegmentMetadataCache) {
+      if (isMetadataSegmentCacheEnabled || pollDsSchema) {
         scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
       }
       lifecycleLock.started();
@@ -174,10 +178,148 @@ public class BrokerSegmentMetadataView
       throw new ISE("can't stop.");
     }
     log.info("MetadataSegmentView is stopping.");
-    if (isMetadataSegmentCacheEnabled) {
+    if (isMetadataSegmentCacheEnabled || pollDsSchema) {
       scheduledExec.shutdown();
     }
     log.info("MetadataSegmentView Stopped.");
+  }
+
+  protected DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
+  {
+    if (useSegmentMetadataCache) {
+      return segmentMetadataCache.getPhysicalDatasourceMetadata(name);
+    }
+    return datasourceSchemaMap.get(name);
+  }
+
+  protected Set<String> getDatasourceNames()
+  {
+    if (useSegmentMetadataCache) {
+      return segmentMetadataCache.getDatasourceNames();
+    }
+    return datasourceSchemaMap.keySet();
+  }
+
+  protected Iterator<SegmentTableView> getSegmentTableView() {
+    if (useSegmentMetadataCache) {
+      return getSegmentTableViewFromCoordinatorAndSmc();
+    }
+    return getSegmentTableViewFromCoordinator();
+  }
+
+  private Iterator<SegmentTableView> getSegmentTableViewFromCoordinatorAndSmc()
+  {
+    final ImmutableSortedSet<SegmentStatusInCluster> publishedSegments = getSegmentMetadata();
+    final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataMap = segmentMetadataCache.getSegmentMetadataSnapshot();
+
+    final List<SegmentTableView> segmentsTableView = new ArrayList<>();
+
+    Set<SegmentId> seenSegments = new HashSet<>();
+    for (SegmentStatusInCluster segmentStatusInCluster : publishedSegments)
+    {
+      DataSegment segment = segmentStatusInCluster.getDataSegment();
+      SegmentId segmentId = segment.getId();
+      AvailableSegmentMetadata availableSegmentMetadata = availableSegmentMetadataMap.get(segmentId);
+
+      long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
+      if (availableSegmentMetadata != null) {
+        numReplicas = availableSegmentMetadata.getNumReplicas();
+        numRows = availableSegmentMetadata.getNumRows();
+        isAvailable = 1L;
+        isRealtime = availableSegmentMetadata.isRealtime();
+      }
+
+      SegmentTableView segmentTableView = new SegmentTableView(
+          segment,
+          isAvailable,
+          isRealtime,
+          numReplicas,
+          numRows,
+          segmentStatusInCluster.getReplicationFactor(),
+          segmentStatusInCluster.isOvershadowed(),
+          true
+      );
+      seenSegments.add(segmentId);
+      segmentsTableView.add((segmentTableView));
+    }
+
+    for (Map.Entry<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataEntry : availableSegmentMetadataMap.entrySet())
+    {
+      if (seenSegments.contains(availableSegmentMetadataEntry.getKey())) {
+        continue;
+      }
+      AvailableSegmentMetadata availableSegmentMetadata = availableSegmentMetadataEntry.getValue();
+      SegmentTableView segmentTableView = new SegmentTableView(
+          availableSegmentMetadata.getSegment(),
+          1L,
+          availableSegmentMetadata.isRealtime(),
+          availableSegmentMetadata.getNumReplicas(),
+          availableSegmentMetadata.getNumRows(),
+          null,
+          false,
+          false
+      );
+      segmentsTableView.add(segmentTableView);
+    }
+
+    return segmentsTableView.iterator();
+  }
+
+  private Iterator<SegmentTableView> getSegmentTableViewFromCoordinator()
+  {
+    final ImmutableSortedSet<SegmentStatusInCluster> allSegments = getSegmentMetadata();
+    final Map<SegmentId, ServerSelector> brokerSegmentMetadata = brokerServerView.getSegmentMetadata();
+
+    final List<SegmentTableView> segmentsTableView = new ArrayList<>();
+
+    for (SegmentStatusInCluster segmentStatusInCluster : allSegments) {
+      SegmentId segmentId = segmentStatusInCluster.getDataSegment().getId();
+      ServerSelector serverSelector = brokerSegmentMetadata.get(segmentId);
+      long numReplicas = 0L, isAvailable = 0L, numRows = 0L;
+      if (null != serverSelector) {
+        numReplicas = serverSelector.getAllServers().size();
+        isAvailable = 1L;
+      }
+      if (null != segmentStatusInCluster.getNumRows())
+      {
+        numRows = segmentStatusInCluster.getNumRows();
+      }
+
+      SegmentTableView segmentTableView = new SegmentTableView(
+          segmentStatusInCluster.getDataSegment(),
+          isAvailable,
+          segmentStatusInCluster.isRealtime(),
+          numReplicas,
+          numRows,
+          segmentStatusInCluster.getReplicationFactor(),
+          segmentStatusInCluster.isOvershadowed(),
+          segmentStatusInCluster.isPublished()
+      );
+      segmentsTableView.add(segmentTableView);
+    }
+
+    return segmentsTableView.iterator();
+  }
+
+  private void pollDatasourceSchema()
+  {
+    log.info("Polling datasource schema from coordinator.");
+
+    Set<String> watchedDatasources = segmentWatcherConfig.getWatchedDataSources();
+
+    Map<String, DatasourceTable.PhysicalDatasourceMetadata> physicalDatasourceMetadataMap = new HashMap<>();
+
+    List<DatasourceSchema> datasourceSchemas = FutureUtils.getUnchecked(
+        coordinatorClient.fetchDatasourceSchema(watchedDatasources), true);
+
+    for (DatasourceSchema datasourceSchema : datasourceSchemas) {
+      physicalDatasourceMetadataMap.put(
+          datasourceSchema.getDatasource(),
+          physicalDatasourceMetadataBuilder.build(datasourceSchema.getDatasource(), datasourceSchema.getRowSignature())
+      );
+    }
+
+    this.datasourceSchemaMap = physicalDatasourceMetadataMap;
   }
 
   private void pollSegmentMetadata()
@@ -186,6 +328,16 @@ public class BrokerSegmentMetadataView
 
     segmentMetadata = fetchSegmentMetadata();
     segmentMetadataCachePopulated.countDown();
+  }
+
+  ImmutableSortedSet<SegmentStatusInCluster> getSegmentMetadata()
+  {
+    if (isMetadataSegmentCacheEnabled) {
+      Uninterruptibles.awaitUninterruptibly(segmentMetadataCachePopulated);
+      return segmentMetadata;
+    } else {
+      return fetchSegmentMetadata();
+    }
   }
 
   private ImmutableSortedSet<SegmentStatusInCluster> fetchSegmentMetadata()
@@ -216,118 +368,26 @@ public class BrokerSegmentMetadataView
     return builder.build();
   }
 
-  private void pollDatasourceSchema()
-  {
-    log.info("Polling datasource schema from coordinator.");
-    Set<String> datasources = useSegmentMetadataCache ? segmentMetadataCache.getDatasourceNames() : brokerServerView.getDatasourceNames();
-
-    Map<String, DatasourceTable.PhysicalDatasourceMetadata> physicalDatasourceMetadataMap = new HashMap<>();
-
-    for (List<String> partition : Iterables.partition(datasources, 100)) {
-      // retain watched datasources
-      List<DatasourceSchema> datasourceSchemas = FutureUtils.getUnchecked(coordinatorClient.fetchDatasourceSchema(
-          partition), true);
-
-      for (DatasourceSchema datasourceSchema : datasourceSchemas) {
-        physicalDatasourceMetadataMap.put(
-            datasourceSchema.getDatasource(),
-            physicalDatasourceMetadataBuilder.build(datasourceSchema.getDatasource(), datasourceSchema.getRowSignature()));
-      }
-    }
-
-    this.datasourceSchemaMap = physicalDatasourceMetadataMap;
-  }
-
-  ImmutableSortedSet<SegmentStatusInCluster> getSegmentMetadata()
-  {
-    if (isMetadataSegmentCacheEnabled) {
-      Uninterruptibles.awaitUninterruptibly(segmentMetadataCachePopulated);
-      return segmentMetadata;
-    } else {
-      return fetchSegmentMetadata();
-    }
-  }
-
-  protected SystemSchema.SegmentsTable.SegmentTableView getSegmentTableView() {
-    ImmutableSortedSet<SegmentStatusInCluster> allSegmentMetadata = getSegmentMetadata();
-
-    log.info("logging polled segments from coordinator %s", allSegmentMetadata);
-    final ImmutableSortedSet.Builder<SegmentStatusInCluster> publishedSegmentBuilder = ImmutableSortedSet.naturalOrder();
-
-    Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataMap;
-
-    if (useSegmentMetadataCache) {
-      availableSegmentMetadataMap = segmentMetadataCache.getSegmentMetadataSnapshot();
-
-      for (SegmentStatusInCluster segmentStatusInCluster : allSegmentMetadata) {
-        if (segmentStatusInCluster.isPublished()) {
-          publishedSegmentBuilder.add(segmentStatusInCluster);
-        }
-      }
-    } else {
-      // build available segment metadata map by combining stuff from brokerServerView and numRows from data returned from coordinator
-      availableSegmentMetadataMap = new HashMap<>();
-      Map<SegmentId, ServerSelector> brokerSegmentMetadata = brokerServerView.getSegmentMetadata();
-      // only look at watched ds, confirm if brokerServerView is also looking for watched ds
-      for (SegmentStatusInCluster segmentStatusInCluster : allSegmentMetadata) {
-        if (segmentStatusInCluster.isPublished()) {
-          publishedSegmentBuilder.add(segmentStatusInCluster);
-        }
-        SegmentId segmentId = segmentStatusInCluster.getDataSegment().getId();
-        if (!brokerSegmentMetadata.containsKey(segmentId)) {
-          // log and count ignored segments
-          continue;
-        }
-        ServerSelector serverSelector = brokerSegmentMetadata.get(segmentId);
-
-        AvailableSegmentMetadata availableSegmentMetadata =
-            AvailableSegmentMetadata.builder(
-                                        segmentStatusInCluster.getDataSegment(),
-                                        segmentStatusInCluster.isRealtime(),
-                                        Sets.newHashSet(serverSelector.getAllServers()),
-                                        null,
-                                        segmentStatusInCluster.getNumRows() == null ? -1 : segmentStatusInCluster.getNumRows()
-                                    )
-                                    .build();
-
-        availableSegmentMetadataMap.put(segmentId, availableSegmentMetadata);
-
-      }
-    }
-
-    log.info("Logging Segment table view. availableSmMap [%s], published segments [%s]", availableSegmentMetadataMap, publishedSegmentBuilder);
-    return new SystemSchema.SegmentsTable.SegmentTableView(availableSegmentMetadataMap, publishedSegmentBuilder.build());
-  }
-
-  protected DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
-  {
-    return useSegmentMetadataCache ? segmentMetadataCache.getPhysicalDatasourceMetadata(name) : datasourceSchemaMap.get(name);
-  }
-
-  protected Set<String> getDatasourceNames()
-  {
-    return useSegmentMetadataCache ? segmentMetadataCache.getDatasourceNames() : datasourceSchemaMap.keySet();
-  }
-
   // Note that coordinator must be up to get segments
   private JsonParserIterator<SegmentStatusInCluster> querySegmentMetadata(
       Set<String> watchedDataSources
   )
   {
-    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus";
+    final StringBuilder queryBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus");
+    if (includeRealtimeSegments) {
+      queryBuilder.append("&includeRealtimeSegments");
+    }
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(
           "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
-      final StringBuilder sb = new StringBuilder();
       for (String ds : watchedDataSources) {
-        sb.append("datasources=").append(ds).append("&");
+        queryBuilder.append("&datasources=").append(ds).append("&");
       }
-      sb.setLength(sb.length() - 1);
-      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
+      queryBuilder.setLength(queryBuilder.length() - 1);
     }
 
     return SystemSchema.getThingsFromLeaderNode(
-        query,
+        queryBuilder.toString(),
         new TypeReference<SegmentStatusInCluster>()
         {
         },
@@ -347,7 +407,7 @@ public class BrokerSegmentMetadataView
         if (isMetadataSegmentCacheEnabled) {
           pollSegmentMetadata();
         }
-        if (!useSegmentMetadataCache) {
+        if (pollDsSchema) {
           pollDatasourceSchema();
         }
         final long pollEndTime = System.nanoTime();

@@ -19,10 +19,8 @@
 
 package org.apache.druid.client.selector;
 
-import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
-import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -222,6 +220,12 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public SegmentLoadInfo toSegmentLoadInfo()
   {
     List<DruidServerMetadata> allServers = getAllServers();
-    return new SegmentLoadInfo(segment.get(), Sets.newConcurrentHashSet(allServers));
+    SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(segment.get());
+
+    for (DruidServerMetadata druidServerMetadata : allServers) {
+      segmentLoadInfo.addServer(druidServerMetadata);
+    }
+
+    return segmentLoadInfo;
   }
 }

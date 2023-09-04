@@ -26,17 +26,16 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.segment.metadata.DatasourceSchema;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.segment.metadata.DatasourceSchema;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -111,10 +110,13 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<List<DatasourceSchema>> fetchDatasourceSchema(List<String> datasources)
+  public ListenableFuture<List<DatasourceSchema>> fetchDatasourceSchema(Set<String> datasources)
   {
     final String path = "/druid/coordinator/v1/metadata/datasourceSchema";
-
+    if (null == datasources)
+    {
+      datasources = new HashSet<>();
+    }
     return FutureUtils.transform(
         client.asyncRequest(
             new RequestBuilder(HttpMethod.POST, path)

@@ -19,9 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -40,7 +38,7 @@ public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
   private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
-  private static final String SEGMENT_METADATA_CACHE_DISABLED = "druid.sql.planner.disableSegmentMetadataCache";
+  private static final String SEGMENT_METADATA_CACHE_ENABLED = "druid.sql.planner.segmentMetadataCacheEnabled";
   static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
 
   private final Properties properties;
@@ -62,7 +60,7 @@ public class DruidCalciteSchemaModule implements Module
           .in(Scopes.SINGLETON);
 
     // BrokerSegmentMetadataCache needs to listen to changes for incoming segments
-    if (!isSegmentMetadataCacheDisabled()) {
+    if (isSegmentMetadataCacheEnabled()) {
       LifecycleModule.register(binder, BrokerSegmentMetadataCache.class);
     }
     binder.bind(DruidSchema.class).in(Scopes.SINGLETON);
@@ -85,8 +83,8 @@ public class DruidCalciteSchemaModule implements Module
     return rootSchema;
   }
 
-  private boolean isSegmentMetadataCacheDisabled()
+  private boolean isSegmentMetadataCacheEnabled()
   {
-    return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_DISABLED));
+    return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_ENABLED, "true"));
   }
 }

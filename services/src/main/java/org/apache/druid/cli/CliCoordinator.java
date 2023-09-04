@@ -37,12 +37,13 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
-import org.apache.druid.client.Alpha;
+import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.HttpServerInventoryViewResource;
+import org.apache.druid.client.CoordinatorInventoryView;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.TimelineAwareCoordinatorServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
@@ -192,12 +193,6 @@ public class CliCoordinator extends ServerRunnable
     List<Module> modules = new ArrayList<>();
 
     modules.add(JettyHttpClientModule.global());
-    modules.add(new LegacyBrokerParallelMergeConfigModule());
-    modules.add(new QueryRunnerFactoryModule());
-    modules.add(new SegmentWranglerModule());
-    modules.add(new QueryableModule());
-    modules.add(new BrokerProcessingModule());
-    modules.add(new JoinableFactoryModule());
 
     modules.add(
         new Module()
@@ -215,8 +210,6 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
-            binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
-
             JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
@@ -227,19 +220,19 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.balancer.cachingCost",
                 CachingCostBalancerStrategyConfig.class
             );
-            JsonConfigProvider.bind(binder, "druid.coordinator.segment", SegmentMetadataCacheConfig.class);
-            JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
-            JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
-            JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {
               binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
+            }
+
+            if (isSegmentMetadataCacheEnabled()) {
+              binder.install(new SegmentMetadataCacheModule());
+            } else {
+              binder.bind(CoordinatorInventoryView.class).to(CoordinatorServerView.class).in(LazySingleton.class);
+              LifecycleModule.register(binder, CoordinatorServerView.class);
             }
 
             binder.bind(SegmentsMetadataManager.class)
@@ -255,16 +248,11 @@ public class CliCoordinator extends ServerRunnable
                   .in(ManageLifecycle.class);
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
-            binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
-            binder.bind(Alpha.class);
-            binder.bind(TimelineServerView.class).to(Alpha.class).in(LazySingleton.class);
+
             binder.bind(DruidCoordinator.class);
 
-            LifecycleModule.register(binder, Alpha.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
-
-            LifecycleModule.register(binder, SegmentMetadataCache.class);
 
             binder.bind(JettyServerInitializer.class)
                   .to(CoordinatorJettyServerInitializer.class);
@@ -528,6 +516,35 @@ public class CliCoordinator extends ServerRunnable
 
         return heartbeatTags;
       };
+    }
+  }
+
+  private static class SegmentMetadataCacheModule implements Module
+  {
+    @Override
+    public void configure(Binder binder)
+    {
+      binder.install(new LegacyBrokerParallelMergeConfigModule());
+      binder.install(new QueryRunnerFactoryModule());
+      binder.install(new SegmentWranglerModule());
+      binder.install(new QueryableModule());
+      binder.install(new BrokerProcessingModule());
+      binder.install(new JoinableFactoryModule());
+
+      JsonConfigProvider.bind(binder, "druid.coordinator.segment", SegmentMetadataCacheConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
+      JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
+      JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
+      JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
+      JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
+
+      binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
+      binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
+      binder.bind(TimelineAwareCoordinatorServerView.class).in(LazySingleton.class);
+      binder.bind(CoordinatorInventoryView.class).to(TimelineAwareCoordinatorServerView.class).in(LazySingleton.class);
+      binder.bind(TimelineServerView.class).to(TimelineAwareCoordinatorServerView.class).in(LazySingleton.class);
+      LifecycleModule.register(binder, TimelineAwareCoordinatorServerView.class);
+      LifecycleModule.register(binder, SegmentMetadataCache.class);
     }
   }
 }

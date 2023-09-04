@@ -440,4 +440,24 @@ public class BrokerServerView implements TimelineServerView
   {
     return timelines.keySet();
   }
+
+  Object getLock()
+  {
+    return lock;
+  }
+
+  Map<String, VersionedIntervalTimeline<String, ServerSelector>> getTimelines()
+  {
+    return timelines;
+  }
+
+  Map<SegmentId, ServerSelector> getSelectors()
+  {
+    return selectors;
+  }
+
+  ConcurrentMap<String, QueryableDruidServer> getClients()
+  {
+    return clients;
+  }
 }

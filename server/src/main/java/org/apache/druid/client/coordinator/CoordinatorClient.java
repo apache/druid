@@ -48,7 +48,7 @@ public interface CoordinatorClient
    */
   ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals);
 
-  ListenableFuture<List<DatasourceSchema>> fetchDatasourceSchema(List<String> datasources);
+  ListenableFuture<List<DatasourceSchema>> fetchDatasourceSchema(Set<String> datasources);
 
   /**
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy

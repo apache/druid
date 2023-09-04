@@ -30,12 +30,12 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
-import org.apache.druid.client.Alpha;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.CoordinatorInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
@@ -102,7 +102,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
   private static final long DEFAULT_LOADSTATUS_INTERVAL_OFFSET = 14 * 24 * 60 * 60 * 1000;
 
-  private final Alpha serverInventoryView;
+  private final CoordinatorInventoryView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
   private final OverlordClient overlordClient;
@@ -111,7 +111,7 @@ public class DataSourcesResource
 
   @Inject
   public DataSourcesResource(
-      Alpha serverInventoryView,
+      CoordinatorInventoryView serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
@@ -487,13 +487,13 @@ public class DataSourcesResource
 
   private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments)
   {
-    Set<SegmentId> loadedSegmentIds = serverInventoryView.getLoadedSegmentIds();
+    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
     int numPublishedSegments = 0;
     int numUnavailableSegments = 0;
     int numLoadedSegments = 0;
     for (DataSegment segment : segments) {
       numPublishedSegments++;
-      if (!loadedSegmentIds.contains(segment.getId())) {
+      if (!segmentLoadInfos.containsKey(segment.getId())) {
         numUnavailableSegments++;
       } else {
         numLoadedSegments++;
@@ -820,7 +820,7 @@ public class DataSourcesResource
       @QueryParam("partial") final boolean partial
   )
   {
-    TimelineLookup<String, ServerSelector> timeline = serverInventoryView.getTimeline(
+    TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
@@ -833,19 +833,19 @@ public class DataSourcesResource
   }
 
   private Iterable<ImmutableSegmentLoadInfo> prepareServedSegmentsInInterval(
-      TimelineLookup<String, ServerSelector> dataSourceServingTimeline,
+      TimelineLookup<String, SegmentLoadInfo> dataSourceServingTimeline,
       Interval interval
   )
   {
-    Iterable<TimelineObjectHolder<String, ServerSelector>> lookup =
+    Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup =
         dataSourceServingTimeline.lookupWithIncompletePartitions(interval);
     return FunctionalIterable
         .create(lookup)
         .transformCat(
-            (TimelineObjectHolder<String, ServerSelector> input) ->
+            (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
                 Iterables.transform(
                     input.getObject(),
-                    (PartitionChunk<ServerSelector> chunk) -> chunk.getObject().toImmutableSegmentLoadInfo()
+                    (PartitionChunk<SegmentLoadInfo> chunk) -> chunk.getObject().toImmutableSegmentLoadInfo()
                 )
         );
   }
@@ -885,7 +885,7 @@ public class DataSourcesResource
         return Response.ok(true).build();
       }
 
-      TimelineLookup<String, ServerSelector> timeline = serverInventoryView.getTimeline(
+      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
           new TableDataSource(dataSourceName)
       );
       if (timeline == null) {

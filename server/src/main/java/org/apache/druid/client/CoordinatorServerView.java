@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
  * ServerView of coordinator for the state of segments being loaded in the cluster.
  */
 @ManageLifecycle
-public class CoordinatorServerView implements CoordinatorServerViewInterface
+public class CoordinatorServerView implements CoordinatorInventoryView
 {
   private static final Logger log = new Logger(CoordinatorServerView.class);
 

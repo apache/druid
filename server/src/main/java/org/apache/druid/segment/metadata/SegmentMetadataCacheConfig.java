@@ -7,10 +7,8 @@ public class SegmentMetadataCacheConfig
 {
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
-
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
-
   @JsonProperty
   private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
       new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();

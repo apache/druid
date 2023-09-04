@@ -6,13 +6,13 @@ import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 {
   @JsonProperty
-  private boolean metadataSegmentCacheEnable = false;
+  private boolean metadataSegmentCacheEnable = true;
 
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
 
   @JsonProperty
-  private boolean useSegmentMetadataCache = false;
+  private boolean segmentMetadataCacheEnabled = false;
 
   public boolean isMetadataSegmentCacheEnable()
   {
@@ -24,8 +24,8 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
-  public boolean isUseSegmentMetadataCache()
+  public boolean isSegmentMetadataCacheEnabled()
   {
-    return useSegmentMetadataCache;
+    return segmentMetadataCacheEnabled;
   }
 }
