@@ -35,10 +35,10 @@ import com.google.inject.Inject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -409,7 +409,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult commitReplaceSegments(
       final Set<DataSegment> replaceSegments,
-      final Set<TaskLockInfo> locksHeldByReplaceTask
+      final Set<ReplaceTaskLock> locksHeldByReplaceTask
   )
   {
     verifySegmentsToCommit(replaceSegments);
@@ -437,7 +437,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult commitAppendSegments(
       final Set<DataSegment> appendSegments,
-      final Map<DataSegment, TaskLockInfo> appendSegmentToReplaceLock
+      final Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
   )
   {
     verifySegmentsToCommit(appendSegments);
@@ -1661,7 +1661,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private Set<DataSegment> getSegmentsToUpgradeOnReplace(
       final Handle handle,
       final Set<DataSegment> replaceSegments,
-      final Set<TaskLockInfo> locksHeldByReplaceTask
+      final Set<ReplaceTaskLock> locksHeldByReplaceTask
   )
   {
     // For each replace interval, find the number of core partitions and total partitions
@@ -1808,7 +1808,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    */
   private void insertSegmentLockVersions(
       Handle handle,
-      Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+      Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
   )
   {
     if (segmentToReplaceLock.isEmpty()) {
@@ -1817,22 +1817,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final PreparedBatch batch = handle.prepareBatch(
         StringUtils.format(
-            "INSERT INTO %1$s (group_id, segment_id, lock_version)"
-            + " VALUES (:group_id, :segment_id, :lock_version)",
+            "INSERT INTO %1$s (task_id, segment_id, lock_version)"
+            + " VALUES (:task_id, :segment_id, :lock_version)",
             dbTables.getSegmentVersionsTable()
         )
     );
 
-    final List<List<Map.Entry<DataSegment, TaskLockInfo>>> partitions = Lists.partition(
+    final List<List<Map.Entry<DataSegment, ReplaceTaskLock>>> partitions = Lists.partition(
         new ArrayList<>(segmentToReplaceLock.entrySet()),
         MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
     );
-    for (List<Map.Entry<DataSegment, TaskLockInfo>> partition : partitions) {
-      for (Map.Entry<DataSegment, TaskLockInfo> entry : partition) {
+    for (List<Map.Entry<DataSegment, ReplaceTaskLock>> partition : partitions) {
+      for (Map.Entry<DataSegment, ReplaceTaskLock> entry : partition) {
         DataSegment segment = entry.getKey();
-        TaskLockInfo lock = entry.getValue();
+        ReplaceTaskLock lock = entry.getValue();
         batch.add()
-             .bind("group_id", lock.getGroupId())
+             .bind("task_id", lock.getSupervisorTaskId())
              .bind("segment_id", segment.getId().toString())
              .bind("lock_version", lock.getVersion());
       }
@@ -1901,7 +1901,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @VisibleForTesting
   Map<String, String> getAppendSegmentsCommittedDuringTask(
       Handle handle,
-      Set<TaskLockInfo> replaceLocks
+      Set<ReplaceTaskLock> replaceLocks
   )
   {
     if (CollectionUtils.isNullOrEmpty(replaceLocks)) {
@@ -1909,14 +1909,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String sql = StringUtils.format(
-        "SELECT segment_id, lock_version FROM %1$s WHERE group_id = :group_id",
+        "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
         dbTables.getSegmentVersionsTable()
     );
 
-    final String groupId = replaceLocks.iterator().next().getGroupId();
+    final String groupId = replaceLocks.iterator().next().getSupervisorTaskId();
     ResultIterator<Pair<String, String>> resultIterator = handle
         .createQuery(sql)
-        .bind("group_id", groupId)
+        .bind("task_id", groupId)
         .map(
             (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
         )

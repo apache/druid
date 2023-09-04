@@ -25,8 +25,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
+import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -81,7 +81,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     final String datasource = task.getDataSource();
-    final Map<DataSegment, TaskLockInfo> segmentToReplaceLock
+    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
 
     final SegmentPublishResult retVal;

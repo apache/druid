@@ -348,7 +348,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
-                + "  group_id VARCHAR(255) NOT NULL,\n"
+                + "  task_id VARCHAR(255) NOT NULL,\n"
                 + "  segment_id VARCHAR(255) NOT NULL,\n"
                 + "  lock_version VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
@@ -356,7 +356,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 tableName, getSerialType()
             ),
             StringUtils.format(
-                "CREATE INDEX idx_%1$s_group_lock_version ON %1$s(group_id, lock_version)",
+                "CREATE INDEX idx_%1$s_task ON %1$s(task_id)",
                 tableName
             )
         )

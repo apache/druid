@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
+import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
@@ -85,8 +85,8 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     // Find the active replace locks held only by this task
-    final Set<TaskLockInfo> replaceLocksForTask
-        = TaskLocks.findReplaceLocksHeldByTask(task, toolbox.getTaskLockbox());
+    final Set<ReplaceTaskLock> replaceLocksForTask
+        = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
     final SegmentPublishResult retVal;
     try {

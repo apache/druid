@@ -27,10 +27,10 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
+import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -464,14 +464,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  private Map<String, String> getAppendedSegmentIds(Set<TaskLockInfo> replaceLocks)
+  private Map<String, String> getAppendedSegmentIds(Set<ReplaceTaskLock> replaceLocks)
   {
     return derbyConnector.retryWithHandle(
         handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, replaceLocks)
     );
   }
 
-  private Boolean insertIntoSegmentVersionsTable(Map<DataSegment, TaskLockInfo> segmentToTaskLockMap)
+  private Boolean insertIntoSegmentVersionsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap)
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentVersionsTable();
     return derbyConnector.retryWithHandle(
@@ -479,17 +479,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
                   StringUtils.format(
-                      "INSERT INTO %1$s (group_id, segment_id, lock_version) "
-                      + "VALUES (:group_id, :segment_id, :lock_version)",
+                      "INSERT INTO %1$s (task_id, segment_id, lock_version) "
+                      + "VALUES (:task_id, :segment_id, :lock_version)",
                       table
                   )
               )
           );
-          for (Map.Entry<DataSegment, TaskLockInfo> entry : segmentToTaskLockMap.entrySet()) {
+          for (Map.Entry<DataSegment, ReplaceTaskLock> entry : segmentToTaskLockMap.entrySet()) {
             final DataSegment segment = entry.getKey();
-            final TaskLockInfo lock = entry.getValue();
+            final ReplaceTaskLock lock = entry.getValue();
             preparedBatch.add()
-                         .bind("group_id", lock.getGroupId())
+                         .bind("task_id", lock.getSupervisorTaskId())
                          .bind("segment_id", segment.getId().toString())
                          .bind("lock_version", lock.getVersion());
           }
@@ -667,8 +667,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final Set<DataSegment> allSegments = new HashSet<>();
     final Set<String> segmentIdsToBeCarriedForward = new HashSet<>();
-    final TaskLockInfo lock = new TaskLockInfo("g1", Intervals.of("2023-01-01/2023-01-03"), "2024-01-01");
-    final Map<DataSegment, TaskLockInfo> segmentLockMap = new HashMap<>();
+    final ReplaceTaskLock lock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-01-03"), "2024-01-01");
+    final Map<DataSegment, ReplaceTaskLock> segmentLockMap = new HashMap<>();
 
     for (int i = 0; i < 10; i++) {
       final DataSegment segment = new DataSegment(
@@ -726,7 +726,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(retrieveUsedSegmentIds())
     );
 
-    final Set<TaskLockInfo> replaceLocks = Collections.singleton(lock);
+    final Set<ReplaceTaskLock> replaceLocks = Collections.singleton(lock);
     final Map<String, String> segmentLockMetadata = getAppendedSegmentIds(replaceLocks);
     Assert.assertEquals(segmentIdsToBeCarriedForward, segmentLockMetadata.keySet());
 
@@ -738,9 +738,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testCommitReplaceSegments()
   {
-    final TaskLockInfo replaceLock = new TaskLockInfo("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
-    final Map<DataSegment, TaskLockInfo> appendedSegmentToReplaceLockMap = new HashMap<>();
+    final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
           "foo",

@@ -26,7 +26,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskLockInfo;
+import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
@@ -43,7 +43,6 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 public class TaskLocks
 {
@@ -125,7 +124,7 @@ public class TaskLocks
    * @return Map from segment to REPLACE lock that completely covers it. The map
    * does not contain an entry for segments that have no covering REPLACE lock.
    */
-  public static Map<DataSegment, TaskLockInfo> findReplaceLocksCoveringSegments(
+  public static Map<DataSegment, ReplaceTaskLock> findReplaceLocksCoveringSegments(
       final String datasource,
       final TaskLockbox taskLockbox,
       final Set<DataSegment> segments
@@ -139,16 +138,12 @@ public class TaskLocks
         ).add(segment)
     );
 
-    final Set<TaskLockInfo> replaceLocks = taskLockbox.getAllReplaceLocksForDatasource(datasource)
-                                                      .stream()
-                                                      .map(TaskLocks::toLockInfo)
-                                                      .collect(Collectors.toSet());
-
-    final Map<DataSegment, TaskLockInfo> segmentToReplaceLock = new HashMap<>();
+    final Set<ReplaceTaskLock> replaceLocks = taskLockbox.getAllReplaceLocksForDatasource(datasource);
+    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock = new HashMap<>();
 
     intervalToSegments.forEach((interval, segmentsInInterval) -> {
       // For each interval, find the lock that covers it, if any
-      for (TaskLockInfo lock : replaceLocks) {
+      for (ReplaceTaskLock lock : replaceLocks) {
         if (lock.getInterval().contains(interval)) {
           segmentsInInterval.forEach(s -> segmentToReplaceLock.put(s, lock));
           return;
@@ -157,24 +152,6 @@ public class TaskLocks
     });
 
     return segmentToReplaceLock;
-  }
-
-  /**
-   * Finds the active locks of type {@link TaskLockType#REPLACE} held by this task.
-   */
-  public static Set<TaskLockInfo> findReplaceLocksHeldByTask(Task task, TaskLockbox taskLockbox)
-  {
-    return taskLockbox
-        .findLocksForTask(task)
-        .stream()
-        .filter(taskLock -> !taskLock.isRevoked() && TaskLockType.REPLACE.equals(taskLock.getType()))
-        .map(TaskLocks::toLockInfo)
-        .collect(Collectors.toSet());
-  }
-
-  public static TaskLockInfo toLockInfo(TaskLock taskLock)
-  {
-    return new TaskLockInfo(taskLock.getGroupId(), taskLock.getInterval(), taskLock.getVersion());
   }
 
   public static List<TaskLock> findLocksForSegments(

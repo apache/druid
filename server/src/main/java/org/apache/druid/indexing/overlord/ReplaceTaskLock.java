@@ -23,22 +23,28 @@ import org.joda.time.Interval;
 
 import java.util.Objects;
 
-public class TaskLockInfo
+/**
+ * Details of a REPLACE lock held by a batch supervisor task.
+ * <p>
+ * Replace locks are always held by the supervisor task, i.e. ParallelIndexSupervisorTask
+ * in case of native batch ingestion and ControllerTask in case of MSQ ingestion.
+ */
+public class ReplaceTaskLock
 {
-  private final String groupId;
+  private final String supervisorTaskId;
   private final Interval interval;
   private final String version;
 
-  public TaskLockInfo(String groupId, Interval interval, String version)
+  public ReplaceTaskLock(String supervisorTaskId, Interval interval, String version)
   {
-    this.groupId = groupId;
+    this.supervisorTaskId = supervisorTaskId;
     this.interval = interval;
     this.version = version;
   }
 
-  public String getGroupId()
+  public String getSupervisorTaskId()
   {
-    return groupId;
+    return supervisorTaskId;
   }
 
   public Interval getInterval()
@@ -60,8 +66,8 @@ public class TaskLockInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TaskLockInfo that = (TaskLockInfo) o;
-    return Objects.equals(groupId, that.groupId)
+    ReplaceTaskLock that = (ReplaceTaskLock) o;
+    return Objects.equals(supervisorTaskId, that.supervisorTaskId)
            && Objects.equals(interval, that.interval)
            && Objects.equals(version, that.version);
   }
@@ -69,6 +75,6 @@ public class TaskLockInfo
   @Override
   public int hashCode()
   {
-    return Objects.hash(groupId, interval, version);
+    return Objects.hash(supervisorTaskId, interval, version);
   }
 }

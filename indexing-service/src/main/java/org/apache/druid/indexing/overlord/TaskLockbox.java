@@ -887,6 +887,71 @@ public class TaskLockbox
   }
 
   /**
+   * Finds the active non-revoked REPLACE locks held by the given task.
+   */
+  public Set<ReplaceTaskLock> findReplaceLocksForTask(Task task)
+  {
+    giant.lock();
+    try {
+      return getNonRevokedReplaceLocks(findLockPossesForTask(task), task.getDataSource());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Finds all the active non-revoked REPLACE locks for the given datasource.
+   */
+  public Set<ReplaceTaskLock> getAllReplaceLocksForDatasource(String datasource)
+  {
+    giant.lock();
+    try {
+      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> activeLocks = running.get(datasource);
+      if (activeLocks == null) {
+        return ImmutableSet.of();
+      }
+
+      List<TaskLockPosse> lockPosses
+          = activeLocks.values()
+                       .stream()
+                       .flatMap(map -> map.values().stream())
+                       .flatMap(Collection::stream)
+                       .collect(Collectors.toList());
+      return getNonRevokedReplaceLocks(lockPosses, datasource);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  private Set<ReplaceTaskLock> getNonRevokedReplaceLocks(List<TaskLockPosse> posses, String datasource)
+  {
+    final Set<ReplaceTaskLock> replaceLocks = new HashSet<>();
+    for (TaskLockPosse posse : posses) {
+      final TaskLock lock = posse.getTaskLock();
+      if (lock.isRevoked() || !TaskLockType.REPLACE.equals(posse.getTaskLock().getType())) {
+        continue;
+      }
+
+      // Replace locks are always held by the supervisor task
+      if (posse.taskIds.size() > 1) {
+        throw new ISE(
+            "Replace lock[%s] for datasource[%s] is held by multiple tasks[%s]",
+            lock, datasource, posse.taskIds
+        );
+      }
+
+      String supervisorTaskId = posse.taskIds.iterator().next();
+      replaceLocks.add(
+          new ReplaceTaskLock(supervisorTaskId, lock.getInterval(), lock.getVersion())
+      );
+    }
+
+    return replaceLocks;
+  }
+
+  /**
    * Gets a List of Intervals locked by higher priority tasks for each datasource.
    * Here, Segment Locks are being treated the same as Time Chunk Locks i.e.
    * a Task with a Segment Lock is assumed to lock a whole Interval and not just
@@ -1240,27 +1305,6 @@ public class TaskLockbox
   Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>>> getAllLocks()
   {
     return running;
-  }
-
-  public Set<TaskLock> getAllReplaceLocksForDatasource(final String datasource)
-  {
-    giant.lock();
-    try {
-      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> activeLocks = running.get(datasource);
-      if (activeLocks == null) {
-        return ImmutableSet.of();
-      }
-      return activeLocks.values()
-                        .stream()
-                        .flatMap(map -> map.values().stream())
-                        .flatMap(Collection::stream)
-                        .map(TaskLockPosse::getTaskLock)
-                        .filter(taskLock -> !taskLock.isRevoked() && taskLock.getType().equals(TaskLockType.REPLACE))
-                        .collect(Collectors.toSet());
-    }
-    finally {
-      giant.unlock();
-    }
   }
 
 
