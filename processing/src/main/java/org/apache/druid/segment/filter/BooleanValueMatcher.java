@@ -20,6 +20,8 @@
 package org.apache.druid.segment.filter;
 
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
 */
@@ -32,5 +34,27 @@ public final class BooleanValueMatcher
 
   private BooleanValueMatcher()
   {
+  }
+  final static ValueMatcher nullMatcher = new ValueMatcher() {
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+    }
+
+    @Override
+    public X3Val matches()
+    {
+      return X3Val.Null;
+    }
+
+  };
+
+  public static ValueMatcher of(X3Val null1)
+  {
+    if(null1==X3Val.Null) {
+      return nullMatcher;
+    }
+   return of(null1==X3Val.True);
   }
 }

@@ -232,7 +232,10 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
           return new ValueMatcher()
           {
             @Override
-            public boolean matches()
+            public X3Val matches() {
+    return X3Val.dodgy2Val(matches1());
+            }
+            public boolean matches1()
             {
               updateCurrentValues();
 
@@ -265,7 +268,10 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
           return new ValueMatcher()
           {
             @Override
-            public boolean matches()
+            public X3Val matches() {
+    return X3Val.dodgy2Val(matches1());
+            }
+            public boolean matches1()
             {
               updateCurrentValues();
 

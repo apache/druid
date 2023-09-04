@@ -198,14 +198,14 @@ public final class FilteredOffset extends Offset
           int iterOffset = -1;
 
           @Override
-          public boolean matches()
+          public X3Val matches()
           {
             int currentOffset = offset.getOffset();
             while (iterOffset < currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
 
-            return iterOffset == currentOffset;
+            return X3Val.dodgy2Val( iterOffset == currentOffset);
           }
 
           @Override

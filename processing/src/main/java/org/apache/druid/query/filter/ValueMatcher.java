@@ -71,6 +71,14 @@ public static X3Val dodgy2Val(boolean matchNull)
 {
   return from2Val(matchNull);
 }
+
+public X3Val ex(X3Val matches)
+{
+  if(matches.ordinal()<ordinal()) {
+    return matches;
+  }
+  return this;
+}
   }
   @CalledFromHotLoop
   X3Val matches();

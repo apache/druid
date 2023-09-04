@@ -77,7 +77,10 @@ public class SingleScanTimeDimensionSelector implements DimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches() {
+return X3Val.dodgy2Val(matches1());
+      }
+      public boolean matches1()
       {
         return Objects.equals(lookupName(getDimensionValueIndex()), value);
       }
@@ -96,7 +99,10 @@ public class SingleScanTimeDimensionSelector implements DimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches() {
+return X3Val.dodgy2Val(matches1());
+      }
+      public boolean matches1()
       {
         return predicate.apply(lookupName(getDimensionValueIndex()));
       }

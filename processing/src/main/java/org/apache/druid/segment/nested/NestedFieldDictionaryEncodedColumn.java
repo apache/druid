@@ -32,6 +32,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -396,9 +397,9 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
             return new ValueMatcher()
             {
               @Override
-              public boolean matches()
+              public X3Val matches()
               {
-                return getRowValue() == valueId;
+                return X3Val.dodgy2Val( getRowValue() == valueId);
               }
 
               @Override
@@ -408,7 +409,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               }
             };
           } else {
-            return BooleanValueMatcher.of(false);
+            return BooleanValueMatcher.of(X3Val.Null);
           }
         } else {
           // Employ caching BitSet optimization
@@ -426,19 +427,19 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
         return new ValueMatcher()
         {
           @Override
-          public boolean matches()
+          public X3Val matches()
           {
             final int id = getRowValue();
 
             if (checkedIds.get(id)) {
-              return matchingIds.get(id);
+              return X3Val.dodgy2Val( matchingIds.get(id));
             } else {
               final boolean matches = predicate.apply(lookupName(id));
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
               }
-              return matches;
+              return X3Val.dodgy2Val( matches);
             }
           }
 

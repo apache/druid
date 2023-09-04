@@ -26,6 +26,7 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -133,7 +134,10 @@ public class ValueMatchers
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches() {
+return X3Val.dodgy2Val(matches1());
+      }
+      public boolean matches1()
       {
         if (selector.isNull()) {
           return false;
@@ -163,13 +167,13 @@ public class ValueMatchers
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches()
       {
         if (selector.isNull()) {
-          return false;
+          return X3Val.Null;
         }
-        return selector.getLong() == value;
-      }
+        return X3Val.from2Val(selector.getLong() == value);
+            }
 
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
@@ -267,12 +271,12 @@ public class ValueMatchers
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches()
       {
         if (selector.isNull()) {
-          return false;
+          return X3Val.Null;
         }
-        return Double.doubleToLongBits(selector.getDouble()) == matchValLongBits;
+        return X3Val.from2Val(Double.doubleToLongBits(selector.getDouble()) == matchValLongBits);
       }
 
       @Override

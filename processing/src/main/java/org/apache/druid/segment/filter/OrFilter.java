@@ -227,14 +227,16 @@ public class OrFilter implements BooleanFilter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches()
       {
+        X3Val match = X3Val.False;
         for (ValueMatcher matcher : baseMatchers) {
-          if (matcher.matches()) {
-            return true;
+          match=match.ex(matcher.matches());
+          if (match==X3Val.False) {
+            return X3Val.False;
           }
         }
-        return false;
+        return match;
       }
 
       @Override
