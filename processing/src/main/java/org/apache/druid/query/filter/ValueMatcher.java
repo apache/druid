@@ -34,7 +34,15 @@ public interface ValueMatcher extends HotLoopCallee
   enum MatchLevel {
     True,
     Null,
-    False
+    False;
+
+    public MatchLevel weaken(MatchLevel matches)
+    {
+      if (matches.ordinal() > ordinal()) {
+        return matches;
+      }
+      return this;
+    }
   }
   @CalledFromHotLoop
   MatchLevel matches();

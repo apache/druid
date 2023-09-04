@@ -256,14 +256,16 @@ public class AndFilter implements BooleanFilter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public MatchLevel matches()
       {
+        MatchLevel match = MatchLevel.True;
         for (ValueMatcher matcher : baseMatchers) {
-          if (!matcher.matches()) {
-            return false;
+          match = match.weaken(matcher.matches());
+          if (match == MatchLevel.False) {
+            return match;
           }
         }
-        return true;
+        return match;
       }
 
       @Override
