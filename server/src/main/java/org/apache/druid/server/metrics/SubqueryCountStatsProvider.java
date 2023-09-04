@@ -21,65 +21,113 @@ package org.apache.druid.server.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Collects the metrics corresponding to the subqueries and their materialization.
+ */
 public class SubqueryCountStatsProvider
 {
 
-  private final AtomicLong successfulSubqueriesWithRowBasedLimit = new AtomicLong();
-  private final AtomicLong successfulSubqueriesWithByteBasedLimit = new AtomicLong();
-  private final AtomicLong subqueriesFallingBackToRowBasedLimit = new AtomicLong();
+  private final AtomicLong successfulSubqueriesWithRowLimit = new AtomicLong();
+  private final AtomicLong successfulSubqueriesWithByteLimit = new AtomicLong();
+  private final AtomicLong subqueriesFallingBackToRowLimit = new AtomicLong();
   private final AtomicLong subqueriesFallingBackDueToUnsufficientTypeInfo = new AtomicLong();
+  private final AtomicLong subqueriesFallingBackDueToUnknownReason = new AtomicLong();
+  private final AtomicLong queriesExceedingRowLimit = new AtomicLong();
+  private final AtomicLong queriesExceedingByteLimit = new AtomicLong();
 
   /**
-   * @return Count of subqueries where the results are materialized as rows {@code List<Object>}
+   * @return Count of subqueries where the results are materialized as rows i.e. {@code List<Object>}
    */
-  public long subqueriesWithRowBasedLimit()
+  public long subqueriesWithRowLimit()
   {
-    return successfulSubqueriesWithRowBasedLimit.get();
+    return successfulSubqueriesWithRowLimit.get();
   }
 
   /**
    * @return Count of subqueries where the results are materialized as {@link org.apache.druid.frame.Frame}
    */
-  public long subqueriesWithByteBasedLimit()
+  public long subqueriesWithByteLimit()
   {
-    return successfulSubqueriesWithByteBasedLimit.get();
+    return successfulSubqueriesWithByteLimit.get();
   }
 
   /**
-   * @return Count of subqueries where the results are materialized as
+   * @return Count of subqueries where the results are
    */
-  public long subqueriesFallingBackToRowBasedLimit()
+  public long subqueriesFallingBackToRowLimit()
   {
-    return subqueriesFallingBackToRowBasedLimit.get();
+    return subqueriesFallingBackToRowLimit.get();
   }
 
   /**
-   * @return Subset of subqueries that are falling back, which fall back due to insufficient type information in the
+   * @return Count of the subset of subqueries that are falling back due to insufficient type information in the
    * {@link org.apache.druid.segment.column.RowSignature}. This is expected to be the most common and already known
-   * cause of fallback, therefore this is added as a separate metric, so that we can know
+   * cause of fallback, therefore this is added as a separate metric
    */
   public long subqueriesFallingBackDueToUnsufficientTypeInfo()
   {
     return subqueriesFallingBackDueToUnsufficientTypeInfo.get();
   }
 
-  public void incrementSubqueriesWithRowBasedLimit()
+  /**
+   * @return Count of the subset of subqueries that are falling back due to insufficient an unknown error. This can be due to a
+   * few known reasons like columnar frames not supporting the array types right now, or due to unknown errors while
+   * performing the materialization
+   */
+  public long subqueriesFallingBackDueUnknownReason()
   {
-    successfulSubqueriesWithRowBasedLimit.incrementAndGet();
+    return subqueriesFallingBackDueToUnknownReason.get();
   }
 
-  public void incrementSubqueriesWithByteBasedLimit()
+  /**
+   * @return Number of queries that fail due to their subqueries exceeding the prescribed row limit
+   */
+  public long queriesExceedingRowLimit()
   {
-    successfulSubqueriesWithByteBasedLimit.incrementAndGet();
+    return queriesExceedingRowLimit.get();
   }
 
-  public void incrementSubqueriesFallingBackToRowBasedLimit()
+  /**
+   * @return Number of subqueries that fail due to their subqueries exceeding the prescribed byte limit
+   */
+  public long queriesExceedingByteLimit()
   {
-    subqueriesFallingBackToRowBasedLimit.incrementAndGet();
+    return queriesExceedingByteLimit.get();
+  }
+
+
+  public void incrementSubqueriesWithRowLimit()
+  {
+    successfulSubqueriesWithRowLimit.incrementAndGet();
+  }
+
+  public void incrementSubqueriesWithByteLimit()
+  {
+    successfulSubqueriesWithByteLimit.incrementAndGet();
+  }
+
+  public void incrementSubqueriesFallingBackToRowLimit()
+  {
+    subqueriesFallingBackToRowLimit.incrementAndGet();
   }
 
   public void incrementSubqueriesFallingBackDueToUnsufficientTypeInfo()
   {
     subqueriesFallingBackDueToUnsufficientTypeInfo.incrementAndGet();
+  }
+
+  public void incrementSubqueriesFallingBackDueToUnknownReason()
+  {
+    subqueriesFallingBackDueToUnknownReason.incrementAndGet();
+  }
+
+  public void incrementQueriesExceedingRowLimit()
+  {
+    queriesExceedingRowLimit.incrementAndGet();
+  }
+
+  public void incrementQueriesExceedingByteLimit()
+  {
+    queriesExceedingByteLimit.incrementAndGet();
   }
 }

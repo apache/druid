@@ -20,15 +20,22 @@
 package org.apache.druid.server;
 
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
-public class SubqueryGuardrailUtils
+/**
+ * Aids the {@link ClientQuerySegmentWalker} compute the available heap size per query for materializing the inline
+ * results from the subqueries
+ */
+public class SubqueryGuardrailHelper
 {
   private static final double SUBQUERY_MEMORY_BYTES_FRACTION = 0.5;
-  private static final Logger log = new Logger(SubqueryGuardrailUtils.class);
+  private static final Logger log = new Logger(SubqueryGuardrailHelper.class);
 
 
   public static final String UNLIMITED_LIMIT_VALUE = "unlimited";
@@ -38,13 +45,27 @@ public class SubqueryGuardrailUtils
 
   private final long autoLimitBytes;
 
-  public SubqueryGuardrailUtils(
+  public SubqueryGuardrailHelper(
       final LookupExtractorFactoryContainerProvider lookupManager,
       final long maxMemoryInJvm,
       final int brokerNumHttpConnections
   )
   {
+    final DateTime start = DateTimes.nowUtc();
     autoLimitBytes = computeLimitBytesForAuto(lookupManager, maxMemoryInJvm, brokerNumHttpConnections);
+    final long startupTimeMs = new Interval(start, DateTimes.nowUtc()).toDurationMillis();
+
+    log.info("Took [%d] ms to initialize the SubqueryGuardrailHelper.", startupTimeMs);
+
+    if (startupTimeMs >= 10_000) {
+      log.warn("Took more than 10 seconds to initialize the SubqueryGuardrailHelper. "
+               + "This happens when the lookup sizes are very large. "
+               + "Consider lowering the size of the lookups to reduce the initialization time."
+      );
+    }
+
+    log.info("Each query has a memory limit of [%d] bytes to materialize its subqueries' results if auto "
+             + "limit is used", autoLimitBytes);
   }
 
   public long convertSubqueryLimitStringToLong(final String maxSubqueryLimit)
@@ -82,6 +103,13 @@ public class SubqueryGuardrailUtils
    * for the subquery inlining by getting a fraction of the total heap space in JVM, removing the size of the lookups,
    * and dividing it by the maximum concurrent queries that can run. Maximum concurrent queries that Druid can
    * run is usually limited by its broker's http threadpool size
+   *
+   * Consider a JVM running locally with 4 GB heap size, 20 Broker threads and 100 MB space required by the lookups.
+   * Each query under 'auto' would then get 97.5 MB to materialize the results. Considering the default of 100,000 rows
+   * and each row consuming 300 - 700 bytes of heap space, the subqueries would approximately consume between 30 MB to
+   * 70 MB of data, which looks approximately equivalent to what we reserved with auto. This would wildly vary as we have
+   * larger rows, but that's where the "auto" factor of subquery bytes come into play, where we would estimate by size
+   * the number of rows that can be materialized based on the memory they consume.
    */
   private static long computeLimitBytesForAuto(
       final LookupExtractorFactoryContainerProvider lookupManager,

@@ -108,7 +108,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServerConfig serverConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
-  private final SubqueryGuardrailUtils subqueryGuardrailUtils;
+  private final SubqueryGuardrailHelper subqueryGuardrailHelper;
   private final SubqueryCountStatsProvider subqueryStatsProvider;
 
   public ClientQuerySegmentWalker(
@@ -137,7 +137,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
-    this.subqueryGuardrailUtils = new SubqueryGuardrailUtils(
+    this.subqueryGuardrailHelper = new SubqueryGuardrailHelper(
         lookupManager,
         Runtime.getRuntime().maxMemory(),
         httpClientConfig.getNumConnections()
@@ -199,7 +199,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
     final String maxSubqueryMemoryString = query.context()
                                                 .getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
-    final long maxSubqueryMemory = subqueryGuardrailUtils.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
+    final long maxSubqueryMemory = subqueryGuardrailHelper.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
     final boolean useNestedForUnknownTypeInSubquery = query.context()
                                                            .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
 
@@ -678,22 +678,25 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     switch (ClientQuerySegmentWalkerUtils.getLimitType(memoryLimit, cannotMaterializeToFrames.get())) {
       case ROW_LIMIT:
         if (limitAccumulator.get() >= rowLimitToUse) {
+          subqueryStatsProvider.incrementQueriesExceedingRowLimit();
           throw ResourceLimitExceededException.withMessage(
               "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
               rowLimitToUse
           );
         }
-        subqueryStatsProvider.incrementSubqueriesWithRowBasedLimit();
+        subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
             query,
             results,
             toolChest,
             limitAccumulator,
-            limit
+            limit,
+            subqueryStatsProvider
         );
         break;
       case MEMORY_LIMIT:
         if (memoryLimitAccumulator.get() >= memoryLimit) {
+          subqueryStatsProvider.incrementQueriesExceedingByteLimit();
           throw ResourceLimitExceededException.withMessage(
               "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
               memoryLimit
@@ -712,23 +715,25 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         if (!maybeDataSource.isPresent()) {
           cannotMaterializeToFrames.set(true);
           // Check if the previous row limit accumulator has exceeded the memory results
-          if (memoryLimitAccumulator.get() >= memoryLimit) {
+          if (limitAccumulator.get() >= rowLimitToUse) {
+            subqueryStatsProvider.incrementQueriesExceedingRowLimit();
             throw ResourceLimitExceededException.withMessage(
-                "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
-                memoryLimit
+                "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
+                rowLimitToUse
             );
           }
-          subqueryStatsProvider.incrementSubqueriesWithRowBasedLimit();
-          subqueryStatsProvider.incrementSubqueriesFallingBackToRowBasedLimit();
+          subqueryStatsProvider.incrementSubqueriesWithRowLimit();
+          subqueryStatsProvider.incrementSubqueriesFallingBackToRowLimit();
           dataSource = materializeResultsAsArray(
               query,
               results,
               toolChest,
               limitAccumulator,
-              limit
+              limit,
+              subqueryStatsProvider
           );
         } else {
-          subqueryStatsProvider.incrementSubqueriesWithByteBasedLimit();
+          subqueryStatsProvider.incrementSubqueriesWithByteLimit();
           dataSource = maybeDataSource.get();
         }
         break;
@@ -769,6 +774,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       return Optional.empty();
     }
     catch (Exception e) {
+      subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnknownReason();
       log.debug(e, "Unable to materialize the results as frames due to an unhandleable exception "
                    + "while conversion. Defaulting to materializing the results as rows");
       return Optional.empty();
@@ -785,6 +791,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         frame -> {
           limitAccumulator.addAndGet(frame.getFrame().numRows());
           if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
+            subqueryStatsProvider.incrementQueriesExceedingByteLimit();
             throw ResourceLimitExceededException.withMessage(
                 "Subquery generated results beyond maximum[%d] bytes",
                 memoryLimit
@@ -805,7 +812,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
-      final int limit
+      final int limit,
+      final SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
@@ -817,6 +825,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         resultList,
         (acc, in) -> {
           if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {
+            subqueryStatsProvider.incrementQueriesExceedingRowLimit();
             throw ResourceLimitExceededException.withMessage(
                 "Subquery generated results beyond maximum[%d] rows",
                 rowLimitToUse

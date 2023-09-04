@@ -28,8 +28,21 @@ import org.apache.druid.java.util.metrics.KeyedDiff;
 
 import java.util.Map;
 
+/**
+ * Monitors and emits the metrics corresponding to the subqueries and their materialization.
+ */
 public class SubqueryCountStatsMonitor extends AbstractMonitor
 {
+
+  private static final String KEY = "subqueryCountStats";
+
+  private static final String ROW_LIMIT_COUNT = "subquery/rowLimit/count";
+  private static final String BYTE_LIMIT_COUNT = "subquery/byteLimit/count";
+  private static final String FALLBACK_COUNT = "subquery/fallback/count";
+  private static final String INSUFFICIENT_TYPE_COUNT = "subquery/fallback/insufficientType/count";
+  private static final String UNKNOWN_REASON_COUNT = "subquery/fallback/unknownReason/count";
+  private static final String ROW_LIMIT_EXCEEDED_COUNT = "query/rowLimit/exceeded/count";
+  private static final String BYTE_LIMIT_EXCEEDED_COUNT = "query/byteLimit/exceeded/count";
 
   private final KeyedDiff keyedDiff = new KeyedDiff();
   private final SubqueryCountStatsProvider statsProvider;
@@ -44,18 +57,24 @@ public class SubqueryCountStatsMonitor extends AbstractMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    final long subqueriesWithRowBasedLimit = statsProvider.subqueriesWithRowBasedLimit();
-    final long subqueriesWithByteBasedLimit = statsProvider.subqueriesWithByteBasedLimit();
-    final long subqueriesFallingBackToRowBasedLimit = statsProvider.subqueriesFallingBackToRowBasedLimit();
+    final long subqueriesWithRowBasedLimit = statsProvider.subqueriesWithRowLimit();
+    final long subqueriesWithByteBasedLimit = statsProvider.subqueriesWithByteLimit();
+    final long subqueriesFallingBackToRowBasedLimit = statsProvider.subqueriesFallingBackToRowLimit();
     final long subqueriesFallingBackDueToUnsufficientTypeInfo = statsProvider.subqueriesFallingBackDueToUnsufficientTypeInfo();
+    final long subqueriesFallingBackDueToUnknownReason = statsProvider.subqueriesFallingBackDueUnknownReason();
+    final long queriesExceedingRowLimit = statsProvider.queriesExceedingRowLimit();
+    final long queriesExceedingByteLimit = statsProvider.queriesExceedingByteLimit();
 
     Map<String, Long> diff = keyedDiff.to(
-        "subqueryCountStats",
+        KEY,
         ImmutableMap.of(
-            "subquery/rowLimit/count", subqueriesWithRowBasedLimit,
-            "subquery/byteLimit/count", subqueriesWithByteBasedLimit,
-            "subquery/fallback/count", subqueriesFallingBackToRowBasedLimit,
-            "subquery/fallback/insufficientType/count", subqueriesFallingBackDueToUnsufficientTypeInfo
+            ROW_LIMIT_COUNT, subqueriesWithRowBasedLimit,
+            BYTE_LIMIT_COUNT, subqueriesWithByteBasedLimit,
+            FALLBACK_COUNT, subqueriesFallingBackToRowBasedLimit,
+            INSUFFICIENT_TYPE_COUNT, subqueriesFallingBackDueToUnsufficientTypeInfo,
+            UNKNOWN_REASON_COUNT, subqueriesFallingBackDueToUnknownReason,
+            ROW_LIMIT_EXCEEDED_COUNT, queriesExceedingRowLimit,
+            BYTE_LIMIT_EXCEEDED_COUNT, queriesExceedingByteLimit
         )
     );
 
