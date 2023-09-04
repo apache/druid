@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
@@ -318,7 +319,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           continue;
         }
 
-        if (!matcher.matches()) {
+        if (matcher.matches() != X3Val.True) {
           rowsToSkip.set(theId);
         }
       }

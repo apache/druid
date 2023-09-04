@@ -28,7 +28,7 @@ import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
-import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionSelector;
@@ -353,12 +353,12 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       AssertassertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     }
   }
-  private void AssertassertFalse(MatchLevel matches)
+  private void AssertassertFalse(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
   }
 
-  private void AssertassertTrue(MatchLevel matches)
+  private void AssertassertTrue(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
   }

@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
-import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -321,12 +321,12 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
       offset.increment();
     }
   }
-  private void AssertassertFalse(MatchLevel matches)
+  private void AssertassertFalse(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
   }
 
-  private void AssertassertTrue(MatchLevel matches)
+  private void AssertassertTrue(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
   }

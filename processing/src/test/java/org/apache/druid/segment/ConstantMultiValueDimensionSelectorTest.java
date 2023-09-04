@@ -23,7 +23,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -156,13 +156,13 @@ public class ConstantMultiValueDimensionSelectorTest extends InitializedNullHand
     assertMatchFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
   }
 
-  public static void assertMatchFalse(MatchLevel matches)
+  public static void assertMatchFalse(X3Val matches)
   {
-    Assert.assertEquals(MatchLevel.False, matches);
+    Assert.assertEquals(X3Val.False, matches);
   }
 
-  public static void assertMatchTrue(MatchLevel matches)
+  public static void assertMatchTrue(X3Val matches)
   {
-    Assert.assertEquals(MatchLevel.True, matches);
+    Assert.assertEquals(X3Val.True, matches);
   }
 }

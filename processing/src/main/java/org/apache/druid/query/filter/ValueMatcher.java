@@ -31,19 +31,32 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface ValueMatcher extends HotLoopCallee
 {
-  enum MatchLevel {
+  enum X3Val {
     True,
     Null,
     False;
 
-    public MatchLevel weaken(MatchLevel matches)
+    public X3Val weaken(X3Val matches)
     {
       if (matches.ordinal() > ordinal()) {
         return matches;
       }
       return this;
     }
+
+    public X3Val negate()
+    {
+      switch (this)
+      {
+      case True:
+        return False;
+      case False:
+        return True;
+      default:
+        return Null;
+      }
+    }
   }
   @CalledFromHotLoop
-  MatchLevel matches();
+  X3Val matches();
 }

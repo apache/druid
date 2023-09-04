@@ -93,9 +93,9 @@ public class NotFilter implements Filter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches()
       {
-        return !baseMatcher.matches();
+        return baseMatcher.matches().negate();
       }
 
       @Override

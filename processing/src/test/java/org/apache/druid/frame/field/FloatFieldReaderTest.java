@@ -23,7 +23,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
@@ -144,12 +144,12 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  private void AssertassertFalse(MatchLevel matches)
+  private void AssertassertFalse(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
   }
 
-  private void AssertassertTrue(MatchLevel matches)
+  private void AssertassertTrue(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
   }

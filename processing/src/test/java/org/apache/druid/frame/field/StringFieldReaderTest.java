@@ -27,7 +27,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
@@ -240,12 +240,12 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     AssertassertFalse(readSelector.makeValueMatcher("baz"::equals).matches());
   }
 
-  private void AssertassertFalse(MatchLevel matches)
+  private void AssertassertFalse(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
   }
 
-  private void AssertassertTrue(MatchLevel matches)
+  private void AssertassertTrue(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
   }

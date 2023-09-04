@@ -29,7 +29,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
-import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
@@ -276,12 +276,12 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     Assert.assertSame("inFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
   }
 
-  private void AssertassertFalse(MatchLevel matches)
+  private void AssertassertFalse(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
   }
 
-  private void AssertassertTrue(MatchLevel matches)
+  private void AssertassertTrue(X3Val matches)
   {
     ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
   }

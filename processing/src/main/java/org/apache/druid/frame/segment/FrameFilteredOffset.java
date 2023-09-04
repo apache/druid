@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.SimpleSettableOffset;
@@ -74,7 +75,7 @@ public class FrameFilteredOffset extends SimpleSettableOffset
     final int oldOffset = baseOffset.getOffset();
     baseOffset.setCurrentOffset(currentOffset);
 
-    if (baseOffset.withinBounds() && !filterMatcher.matches()) {
+    if (baseOffset.withinBounds() && filterMatcher.matches() != X3Val.True) {
       // Offset does not match filter. Invalid; reset to old position and throw an error.
       baseOffset.setCurrentOffset(oldOffset);
       throw new ISE("Invalid offset");
@@ -91,7 +92,7 @@ public class FrameFilteredOffset extends SimpleSettableOffset
   private void incrementIfNeededOnCreationOrReset()
   {
     if (baseOffset.withinBounds()) {
-      if (!filterMatcher.matches()) {
+      if (filterMatcher.matches() != X3Val.True) {
         increment();
         // increment() returns early if it detects the current Thread is interrupted. It will leave this
         // FilteredOffset in an illegal state, because it may point to an offset that should be filtered. So must
