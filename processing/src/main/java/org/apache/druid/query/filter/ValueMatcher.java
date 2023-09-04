@@ -66,6 +66,11 @@ public static    X3Val from2Val(boolean v)
   }
 
     }
+
+public static X3Val dodgy2Val(boolean matchNull)
+{
+  return from2Val(matchNull);
+}
   }
   @CalledFromHotLoop
   X3Val matches();

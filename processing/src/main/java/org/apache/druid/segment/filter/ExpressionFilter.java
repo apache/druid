@@ -147,7 +147,7 @@ public class ExpressionFilter implements Filter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches()
       {
         final ExprEval eval = selector.getObject();
 
@@ -156,27 +156,28 @@ public class ExpressionFilter implements Filter
             case LONG:
               final Object[] lResult = eval.asArray();
               if (lResult == null) {
-                return false;
+                return X3Val.False;
               }
 
-              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o));
+
+              return X3Val.dodgy2Val(Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o)));
             case STRING:
               final Object[] sResult = eval.asArray();
               if (sResult == null) {
-                return false;
+                return X3Val.False;
               }
 
-              return Arrays.stream(sResult).anyMatch(o -> Evals.asBoolean((String) o));
+              return X3Val.dodgy2Val(Arrays.stream(sResult).anyMatch(o -> Evals.asBoolean((String) o)));
             case DOUBLE:
               final Object[] dResult = eval.asArray();
               if (dResult == null) {
-                return false;
+                return X3Val.False;
               }
 
-              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
+              return X3Val.dodgy2Val(Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o)));
           }
         }
-        return eval.asBoolean();
+        return X3Val.dodgy2Val(eval.asBoolean());
       }
 
       @Override

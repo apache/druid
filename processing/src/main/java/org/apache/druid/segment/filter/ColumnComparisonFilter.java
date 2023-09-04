@@ -95,11 +95,12 @@ public class ColumnComparisonFilter implements Filter
           // Compare the new values to the values we already got.
           for (int j = 0; j < i; j++) {
             if (!overlap(values[i], values[j])) {
-              return false;
+              // FIXME: not sure if there is a Null case here or not
+              return X3Val.False;
             }
           }
         }
-        return true;
+        return X3Val.True;
       }
 
       @Override
