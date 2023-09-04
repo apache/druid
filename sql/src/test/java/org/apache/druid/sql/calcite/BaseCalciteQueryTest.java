@@ -59,6 +59,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -482,6 +483,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         null,
         StringComparators.NUMERIC
     );
+  }
+
+  public static DimFilter like(
+      final String fieldName,
+      final String pattern)
+  {
+    return new LikeDimFilter(fieldName, pattern, null, null);
   }
 
   public static DimFilter range(

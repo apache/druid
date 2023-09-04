@@ -405,7 +405,7 @@ public class QueryTestRunner
           expectedQueries.size(),
           recordedQueries.size()
       );
-      if(false) {
+      if(true) {
         for (int i = 0; i < expectedQueries.size(); i++) {
           Assert.assertEquals(
               StringUtils.format("query #%d: %s", i + 1, builder.sql),

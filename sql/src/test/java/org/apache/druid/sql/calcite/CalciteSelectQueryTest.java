@@ -1948,22 +1948,27 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAggregateFilterInTheAbsenceOfProjection2()
+  public void testNotEqFiltersNull()
   {
     cannotVectorize();
     testQuery(
         "select cityName from druid.wikipedia "
-        + "where channel like '#min%' and cityName is not null and cityName != 'some'",
+            + "where channel like '#min%' and cityName is not null and cityName != 'some'",
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                .dataSource(InlineDataSource.fromIterable(
-                    ImmutableList.of(),
-                    RowSignature.builder().add("$f1", ColumnType.LONG).build()))
+            Druids.newScanQueryBuilder()
+                .dataSource(
+"wikipedia")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .aggregators(aggregators(
-                    new FilteredAggregatorFactory(
-                        new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
+                .filters(
+                    and(
+                        like("channel","#min%"),
+//                        notNull("cityName"),
+                        not(equality("cityName", "some",ColumnType.STRING))
+                    )
+                )
+                .columns("cityName")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()),
         ImmutableList.of());
