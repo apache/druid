@@ -346,7 +346,7 @@ public class ValueMatchers
   }
 
   /**
-   * If {@link #toBooleanIfPossible} would return nonnull, this returns a {@link BooleanValueMatcher} that always
+   * If {@link #toBooleanIfPossible} would return non-null, this returns a {@link BooleanValueMatcher} that always
    * returns that value. Otherwise, this returns null.
    *
    * @param selector          string selector

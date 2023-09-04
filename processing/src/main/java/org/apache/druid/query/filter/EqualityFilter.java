@@ -229,7 +229,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
+    if (true || !Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
       return null;
     }
 
