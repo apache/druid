@@ -116,16 +116,16 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
 
       for (DataSegment segment : retVal.getSegments()) {
         final String partitionType = segment.getShardSpec() == null ? null : segment.getShardSpec().getType();
         metricBuilder.setDimension(DruidMetrics.PARTITIONING_TYPE, partitionType);
         metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-        toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
+        toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
       }
     } else {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
     }
 
     return retVal;
