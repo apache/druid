@@ -130,7 +130,7 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Task task = new NoopTask("id", "id", "datasource", 0, 0, null, null);
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
@@ -162,7 +162,7 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Task task = new NoopTask("id", "id", "datasource", 0, 0, null, null);
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
 
@@ -207,7 +207,7 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Task task = new NoopTask("id", "id", "datasource", 0, 0, null, null);
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
@@ -316,7 +316,6 @@ public class PodTemplateTaskAdapterTest
         "data_source",
         0,
         0,
-        null,
         null
     );
 

@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.ResourceAction;
 
@@ -43,24 +42,9 @@ import java.util.UUID;
 public class NoopTask extends AbstractTask
 {
   private static final int DEFAULT_RUN_TIME = 2500;
-  private static final int DEFAULT_IS_READY_TIME = 0;
-  private static final IsReadyResult DEFAULT_IS_READY_RESULT = IsReadyResult.YES;
-
-  enum IsReadyResult
-  {
-    YES,
-    NO,
-    EXCEPTION
-  }
 
   @JsonIgnore
   private final long runTime;
-
-  @JsonIgnore
-  private final long isReadyTime;
-
-  @JsonIgnore
-  private final IsReadyResult isReadyResult;
 
   @JsonCreator
   public NoopTask(
@@ -69,7 +53,6 @@ public class NoopTask extends AbstractTask
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("runTime") long runTimeMillis,
       @JsonProperty("isReadyTime") long isReadyTime,
-      @JsonProperty("isReadyResult") String isReadyResult,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -82,10 +65,6 @@ public class NoopTask extends AbstractTask
     );
 
     this.runTime = (runTimeMillis == 0) ? DEFAULT_RUN_TIME : runTimeMillis;
-    this.isReadyTime = (isReadyTime == 0) ? DEFAULT_IS_READY_TIME : isReadyTime;
-    this.isReadyResult = (isReadyResult == null)
-                         ? DEFAULT_IS_READY_RESULT
-                         : IsReadyResult.valueOf(StringUtils.toUpperCase(isReadyResult));
   }
 
   @Override
@@ -108,31 +87,10 @@ public class NoopTask extends AbstractTask
     return runTime;
   }
 
-  @JsonProperty
-  public long getIsReadyTime()
-  {
-    return isReadyTime;
-  }
-
-  @JsonProperty
-  public IsReadyResult getIsReadyResult()
-  {
-    return isReadyResult;
-  }
-
   @Override
   public boolean isReady(TaskActionClient taskActionClient)
   {
-    switch (isReadyResult) {
-      case YES:
-        return true;
-      case NO:
-        return false;
-      case EXCEPTION:
-        throw new ISE("Not ready. Never will be ready. Go away!");
-      default:
-        throw new AssertionError("#notreached");
-    }
+    return true;
   }
 
   @Override
@@ -160,13 +118,13 @@ public class NoopTask extends AbstractTask
 
   public static NoopTask forDatasource(String datasource)
   {
-    return new NoopTask(null, null, datasource, 0, 0, null, null);
+    return new NoopTask(null, null, datasource, 0, 0, null);
   }
 
-  public static NoopTask withPriority(int priority)
+  public static NoopTask ofPriority(int priority)
   {
     final Map<String, Object> context = new HashMap<>();
     context.put(Tasks.PRIORITY_KEY, priority);
-    return new NoopTask(null, null, null, 0, 0, null, context);
+    return new NoopTask(null, null, null, 0, 0, context);
   }
 }

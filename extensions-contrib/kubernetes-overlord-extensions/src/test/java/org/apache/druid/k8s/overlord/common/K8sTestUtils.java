@@ -126,6 +126,6 @@ public class K8sTestUtils
 
   public static NoopTask createTask(String id, int priority)
   {
-    return new NoopTask(id, null, null, 0, 0, null, Collections.singletonMap(Tasks.PRIORITY_KEY, priority));
+    return new NoopTask(id, null, null, 0, 0, Collections.singletonMap(Tasks.PRIORITY_KEY, priority));
   }
 }

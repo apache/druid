@@ -189,9 +189,9 @@ public class OverlordTest
 
     // Add two tasks with conflicting locks
     // The bad task (The one with a lexicographically larger name) must be failed
-    Task badTask = new NoopTask(badTaskId, badTaskId, "datasource", 10_000, 0, null, null);
+    Task badTask = new NoopTask(badTaskId, badTaskId, "datasource", 10_000, 0, null);
     TaskLock badLock = new TimeChunkLock(null, badTaskId, "datasource", Intervals.ETERNITY, "version1", 50);
-    Task goodTask = new NoopTask(goodTaskId, goodTaskId, "datasource", 0, 0, null, null);
+    Task goodTask = new NoopTask(goodTaskId, goodTaskId, "datasource", 0, 0, null);
     TaskLock goodLock = new TimeChunkLock(null, goodTaskId, "datasource", Intervals.ETERNITY, "version0", 50);
     taskStorage.insert(goodTask, TaskStatus.running(goodTaskId));
     taskStorage.insert(badTask, TaskStatus.running(badTaskId));

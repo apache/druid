@@ -154,7 +154,7 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
-    NoopTask task = new NoopTask(null, null, null, 500L, 0, null, null);
+    NoopTask task = new NoopTask(null, null, null, 500L, 0, null);
     Assert.assertEquals(
         TaskState.SUCCESS,
         runner.run(task).get().getStatusCode()
@@ -164,7 +164,7 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testGetQueryRunner() throws ExecutionException, InterruptedException
   {
-    runner.run(new NoopTask(null, null, "foo", 500L, 0, null, null)).get().getStatusCode();
+    runner.run(new NoopTask(null, null, "foo", 500L, 0, null)).get().getStatusCode();
 
     final QueryRunner<ScanResultValue> queryRunner =
         Druids.newScanQueryBuilder()
@@ -180,7 +180,7 @@ public class SingleTaskBackgroundRunnerTest
   public void testStop() throws ExecutionException, InterruptedException, TimeoutException
   {
     final ListenableFuture<TaskStatus> future = runner.run(
-        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null, null) // infinite task
+        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null) // infinite task
     );
     runner.stop();
     Assert.assertEquals(
@@ -306,7 +306,6 @@ public class SingleTaskBackgroundRunnerTest
             "datasource",
             10000, // 10 sec
             0,
-            null,
             null
         )
     );

@@ -216,7 +216,7 @@ public class TaskQueueScaleTest
 
   private NoopTask createTestTask(long runtimeMillis)
   {
-    return new NoopTask(null, null, DATASOURCE, runtimeMillis, 0, null, Collections.emptyMap());
+    return new NoopTask(null, null, DATASOURCE, runtimeMillis, 0, Collections.emptyMap());
   }
 
   private static class TestTaskRunner implements TaskRunner
