@@ -130,15 +130,15 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
 
     // Value matcher tests.
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(readSelector.makeValueMatcher("0").matches());
-      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher("0"::equals).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
+      AssertassertTrue(readSelector.makeValueMatcher("0").matches());
+      AssertassertFalse(readSelector.makeValueMatcher((String) null).matches());
+      AssertassertTrue(readSelector.makeValueMatcher("0"::equals).matches());
+      AssertassertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
     } else {
-      Assert.assertFalse(readSelector.makeValueMatcher("0").matches());
-      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher("0"::equals).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
+      AssertassertFalse(readSelector.makeValueMatcher("0").matches());
+      AssertassertTrue(readSelector.makeValueMatcher((String) null).matches());
+      AssertassertFalse(readSelector.makeValueMatcher("0"::equals).matches());
+      AssertassertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
     }
   }
 
@@ -163,10 +163,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    AssertassertTrue(readSelector.makeValueMatcher("5").matches());
+    AssertassertFalse(readSelector.makeValueMatcher("2").matches());
+    AssertassertTrue(readSelector.makeValueMatcher("5"::equals).matches());
+    AssertassertFalse(readSelector.makeValueMatcher("2"::equals).matches());
   }
 
   @Test
@@ -194,10 +194,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    AssertassertTrue(readSelector.makeValueMatcher("5").matches());
+    AssertassertFalse(readSelector.makeValueMatcher("2").matches());
+    AssertassertTrue(readSelector.makeValueMatcher("5"::equals).matches());
+    AssertassertFalse(readSelector.makeValueMatcher("2"::equals).matches());
   }
 
   private void writeToMemory(final Long value)

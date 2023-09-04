@@ -31,6 +31,11 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface ValueMatcher extends HotLoopCallee
 {
+  enum MatchLevel {
+    True,
+    Null,
+    False
+  }
   @CalledFromHotLoop
-  boolean matches();
+  MatchLevel matches();
 }
