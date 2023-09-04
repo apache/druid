@@ -370,11 +370,15 @@ public class MemcachedCache implements Cache
         // Create the client in TLS mode
         connectionFactoryBuilder.setSSLContext(sslContext);
       }
-      if(Objects.equals(config.getClientMode(), "dynamic")) {
+      if("dynamic".equals(config.getClientMode())) {
         connectionFactoryBuilder.setClientMode(ClientMode.Dynamic);
+        connectionFactoryBuilder.setHostnameForTlsVerification(config.getHosts().split(",")[0]);
       }
       else {
         connectionFactoryBuilder.setClientMode(ClientMode.Static);
+      }
+      if(config.skipTlsHostnameVerification()) {
+        connectionFactoryBuilder.setSkipTlsHostnameVerification(true);
       }
       final ConnectionFactory connectionFactory = connectionFactoryBuilder.build();
       final List<InetSocketAddress> hosts = AddrUtil.getAddresses(config.getHosts());

@@ -234,7 +234,18 @@ public class MemcachedCacheTest
         return "localhost:9999";
       }
     };
-    MemcachedCache.create(config);
+    // Static Mode
+    Assert.assertEquals(config.getClientMode(),"static");
+    MemcachedCache client = new MemcachedCache(
+            Suppliers.ofInstance(
+                    StupidResourceHolder.create(new MockMemcachedClient())
+            ),
+            config,
+            NOOP_MONITOR
+    );
+    Assert.assertNull(client.get(new Cache.NamedKey("a", HI)));
+    put(client, "a", HI, 1);
+    Assert.assertEquals(1, get(client, "a", HI));
   }
 
   @Test
