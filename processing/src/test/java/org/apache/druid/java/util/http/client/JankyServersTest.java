@@ -296,6 +296,78 @@ public class JankyServersTest
     }
   }
 
+  @Test
+  public void testHttpConnectionRefused() throws Throwable
+  {
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+
+      // Need to select a port that isn't being listened to. This approach finds an unused port in a racey way.
+      // Hopefully it works most of the time.
+      final ServerSocket sock = new ServerSocket(0);
+      final int port = sock.getLocalPort();
+      sock.close();
+
+      final ListenableFuture<StatusResponseHolder> response = client
+          .go(
+              new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", port))),
+              StatusResponseHandler.getInstance()
+          );
+
+      Throwable e = null;
+      try {
+        response.get();
+      }
+      catch (ExecutionException e1) {
+        e = e1.getCause();
+        e1.printStackTrace();
+      }
+
+      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+    }
+    finally {
+      lifecycle.stop();
+    }
+  }
+
+  @Test
+  public void testHttpsConnectionRefused() throws Throwable
+  {
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+
+      // Need to select a port that isn't being listened to. This approach finds an unused port in a racey way.
+      // Hopefully it works most of the time.
+      final ServerSocket sock = new ServerSocket(0);
+      final int port = sock.getLocalPort();
+      sock.close();
+
+      final ListenableFuture<StatusResponseHolder> response = client
+          .go(
+              new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", port))),
+              StatusResponseHandler.getInstance()
+          );
+
+      Throwable e = null;
+      try {
+        response.get();
+      }
+      catch (ExecutionException e1) {
+        e = e1.getCause();
+        e1.printStackTrace();
+      }
+
+      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+    }
+    finally {
+      lifecycle.stop();
+    }
+  }
+
   public boolean isChannelClosedException(Throwable e)
   {
     return e instanceof ChannelException ||

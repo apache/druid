@@ -67,7 +67,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     if (counts != null) {
       counts.forEach((k, v) -> {
         builder.setDimension("dataSource", k);
-        emitter.emit(builder.build(key, v));
+        emitter.emit(builder.setMetric(key, v));
       });
     }
   }
@@ -82,7 +82,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     dimensionValues.forEach(
         (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
     );
-    emitter.emit(eventBuilder.build(stat.getMetricName(), value));
+    emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
   }
 
 }

@@ -224,16 +224,20 @@ export async function getTaskExecution(
     execution = execution.updateWithTaskPayload(taskPayload);
   }
 
-  // Still have to pull the destination page info from the async status
+  // Still have to pull the destination page info from the async status, do this in a best effort way since the statements API may have permission errors
   if (execution.status === 'SUCCESS' && !execution.destinationPages) {
-    const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
-      {
-        cancelToken,
-      },
-    );
+    try {
+      const statusResp = await Api.instance.get<AsyncStatusResponse>(
+        `/druid/v2/sql/statements/${encodedId}`,
+        {
+          cancelToken,
+        },
+      );
 
-    execution = execution.updateWithAsyncStatus(statusResp.data);
+      execution = execution.updateWithAsyncStatus(statusResp.data);
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
   }
 
   if (execution.hasPotentiallyStuckStage()) {

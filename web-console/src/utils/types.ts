@@ -89,6 +89,9 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<IPPREFIX>':
       return IconNames.IP_ADDRESS;
 
+    case 'COMPLEX<SERIALIZABLEPAIRLONGSTRING>':
+      return IconNames.DOUBLE_CHEVRON_RIGHT;
+
     case 'NULL':
       return IconNames.CIRCLE;
 

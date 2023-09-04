@@ -48,9 +48,9 @@ public class CollectSegmentAndServerStatsTest
     DruidCoordinatorRuntimeParams runtimeParams =
         DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc())
                                      .withDruidCluster(DruidCluster.EMPTY)
-                                     .withUsedSegmentsInTest()
+                                     .withUsedSegments()
                                      .withBalancerStrategy(new RandomBalancerStrategy())
-                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
                                      .build();
 
     Mockito.when(mockTaskMaster.getAllPeons())

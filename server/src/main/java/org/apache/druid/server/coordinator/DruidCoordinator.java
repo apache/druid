@@ -736,7 +736,7 @@ public class DruidCoordinator
       dimensionValues.forEach(
           (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
       );
-      emitter.emit(eventBuilder.build(stat.getMetricName(), value));
+      emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
     }
 
     Duration getPeriod()
