@@ -26,7 +26,7 @@ spec:
         druid.task.group.id: "id"
         druid.task.datasource: "datasource"
       annotations:
-        task: "H4sIAAAAAAAAAEVOuQ4CIRD9l6kpVhObbY0xtrs2liOMSoKAHEZC+HeHrEczmXfmVUjFE4xgnfMgQCv++Qi4Bpf94QcVJpxdDrKbO4gLEBCyPeo70+vNMHBDnAhVWag/nihmkzh72s0cuuhANxfZYrMxAqSziV6s18aN9CkfK+ATtcGzNjqVfZ/0HRTokblEbdGjZBHGVWtvT9WXlc8AAAA="
+        task: "H4sIAAAAAAAAAEWOSwsCMQyE/0vOPayCl15FxOuuF4+xDVKobe1DLKX/3ZT1cQn5JplhGuQaCCQ47wMIMJp3HgJu0Zdw+qHGjIsvUY3nAWkFAbG4s7mzvN1NEyekmVDXVfrzTKnYzN7LYWGT8i7Ti7l1TqBPmGyATzQWr8aaXI+jwrdApEcxkfQeAyo+gtz0/gb/zBGKvwAAAA=="
         tls.enabled: "false"
         task.id: "id"
         task.type: "noop"

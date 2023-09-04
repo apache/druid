@@ -231,7 +231,7 @@ public class TaskMonitorTest
 
     TestTask(String id, long runTime, boolean shouldFail, boolean throwUnknownTypeIdError)
     {
-      super(id, null, "testDataSource", runTime, 0, null, null, null);
+      super(id, null, "testDataSource", runTime, 0, null, null);
       this.shouldFail = shouldFail;
       this.throwUnknownTypeIdError = throwUnknownTypeIdError;
     }

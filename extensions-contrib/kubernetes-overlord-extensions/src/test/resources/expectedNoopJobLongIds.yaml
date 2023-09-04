@@ -26,7 +26,7 @@ spec:
         druid.task.group.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
         druid.task.datasource: "data_source"
       annotations:
-        task: "H4sIAAAAAAAAAMVQu07EMBD8F9fJae0QIblFCNHepeEay4kNLOezjR9AFOXf2XBIVNQnbbEzs6/ZhZU5WiaZDyGyhqGhXEdsMedqjTqhc+oTTxitQd2pcH4Lox8nxQGgBU4xAMif2BF1VAJE10Lf8pv/hH7gtxI6CXwnBBxp60sKNT5eZbXRRR9CTdP2hA2ofEENS9UPeCZe9AD0mry32swX6g/vba6uUPPT/YGanjHZ15CpxFfnGjYFX+wX6ctKE+3vcLkw/aHR6REdlvlh838N98m+VzrY3OmoJzqESb6u3yiWc3MUAgAA"
+        task: "H4sIAAAAAAAAAMVQTU/DMAz9Lzmvk5NSIeWKEOK69cIukdtEyCxrQj6Aqup/x2VInDhPege/Zz0/24soc3RCiymEKHaCLNcYqaGcq7PmTN6bTzpTdJawNeHyFoZpGI0EgAYkowfQP9izdDIKVNtA18i7/xpdL+81tBrkXik4ceprCjU+3yTaYsFjqGncnrARk69sJ1KderqwrjoAfk0+OLTzVfrjB5erL2x+eTyyaQxTcV/Ml5UnuN9hehH4geRxIE9lftruvcW1yb1XSs4+YMSRFxFarus3tanhTwQCAAA="
         tls.enabled: "false"
         task.id: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
         task.type: "noop"

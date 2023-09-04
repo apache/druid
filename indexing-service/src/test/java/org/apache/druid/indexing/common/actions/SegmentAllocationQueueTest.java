@@ -358,7 +358,7 @@ public class SegmentAllocationQueueTest
 
   private Task createTask(String datasource, String groupId)
   {
-    Task task = new NoopTask(null, groupId, datasource, 0, 0, null, null, null);
+    Task task = new NoopTask(null, groupId, datasource, 0, 0, null, null);
     taskActionTestKit.getTaskLockbox().add(task);
     return task;
   }

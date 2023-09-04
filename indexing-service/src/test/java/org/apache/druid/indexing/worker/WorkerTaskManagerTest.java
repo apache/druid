@@ -295,7 +295,7 @@ public class WorkerTaskManagerTest
   @Test(timeout = 30_000L)
   public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
   {
-    Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    Task task = new NoopTask("id", null, null, 100, 0, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
@@ -444,7 +444,7 @@ public class WorkerTaskManagerTest
 
   private NoopTask createNoopTask(String id)
   {
-    return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, null, 100, 0, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 
   /**
@@ -456,7 +456,7 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    final Task task = new NoopTask("id", null, null, 100, 0, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
 
     // Scheduled scheduleCompletedTasksCleanup will not run, because initialDelay is 1 minute, which is longer than
     // the 30-second timeout of this test case.

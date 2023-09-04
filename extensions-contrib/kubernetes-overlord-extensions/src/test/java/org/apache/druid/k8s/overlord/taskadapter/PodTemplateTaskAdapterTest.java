@@ -130,16 +130,7 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
@@ -171,17 +162,7 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
-
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
 
@@ -226,17 +207,7 @@ public class PodTemplateTaskAdapterTest
         props
     );
 
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
-
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
@@ -316,7 +287,7 @@ public class PodTemplateTaskAdapterTest
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
     Task actual = adapter.toTask(job);
-    Task expected = NoopTask.create("id", 1);
+    Task expected = K8sTaskAdapterTest.createTask("id", 1);
 
     Assertions.assertEquals(expected, actual);
   }
@@ -345,7 +316,6 @@ public class PodTemplateTaskAdapterTest
         "data_source",
         0,
         0,
-        null,
         null,
         null
     );
@@ -406,7 +376,7 @@ public class PodTemplateTaskAdapterTest
     expectedAnnotations.remove(DruidK8sConstants.TASK);
     expected.getSpec().getTemplate().getMetadata().setAnnotations(expectedAnnotations);
 
-    Assertions.assertEquals(actual, expected);
+    Assertions.assertEquals(expected, actual);
     Assertions.assertEquals(
         Base64Compression.decompressBase64(actualTaskAnnotation),
         Base64Compression.decompressBase64(expectedTaskAnnotation)

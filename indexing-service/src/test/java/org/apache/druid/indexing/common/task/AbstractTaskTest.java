@@ -90,7 +90,7 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null)
     {
       @Nullable
       @Override
@@ -138,7 +138,7 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null)
     {
       @Nullable
       @Override
@@ -182,7 +182,7 @@ public class AbstractTaskTest
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null)
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
