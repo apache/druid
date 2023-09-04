@@ -454,8 +454,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       case HEAP_TASK_STORAGE: {
         taskStorage = new HeapMemoryTaskStorage(
             new TaskStorageConfig(null)
-            {
-            }
         );
         break;
       }
@@ -481,9 +479,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         break;
       }
 
-      default: {
+      default:
         throw new RE("Unknown task storage type [%s]", taskStorageType);
-      }
     }
     tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
     return taskStorage;
@@ -705,7 +702,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIndexTask() throws Exception
+  public void testIndexTask()
   {
     final Task indexTask = new IndexTask(
         null,
