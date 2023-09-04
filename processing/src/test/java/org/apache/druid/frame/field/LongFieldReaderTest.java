@@ -23,8 +23,10 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -140,6 +142,16 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
       AssertassertFalse(readSelector.makeValueMatcher("0"::equals).matches());
       AssertassertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
     }
+  }
+
+  private void AssertassertFalse(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
+  }
+
+  private void AssertassertTrue(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
   }
 
   @Test

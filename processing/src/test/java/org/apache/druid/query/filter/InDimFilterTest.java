@@ -29,6 +29,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -239,15 +241,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
 
     // This would throw an exception without InDimFilter's null-checking lambda wrapping.
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
 
     row.put("dim", "foo");
     // Now it should match.
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
 
     row.put("dim", "fox");
     // Now it *shouldn't* match.
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -273,6 +275,17 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);
     Assert.assertSame("inFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
   }
+
+  private void AssertassertFalse(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
+  }
+
+  private void AssertassertTrue(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
+  }
+
 
   @Test
   public void testUsesStringSetIndex()

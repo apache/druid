@@ -37,10 +37,12 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
+import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
@@ -723,10 +725,10 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
                                        .get(rowNumber));
       Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(rowNumber));
 
-      Assert.assertTrue(dimSelector.makeValueMatcher(theString).matches());
-      Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
-      Assert.assertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
-      Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+      AssertassertTrue(dimSelector.makeValueMatcher(theString).matches());
+      AssertassertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
+      AssertassertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
+      AssertassertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     } else {
       Assert.assertNull(valueSelector.getObject());
       Assert.assertTrue(path, valueSelector.isNull());
@@ -748,12 +750,22 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
                                        .computeBitmapResult(resultFactory)
                                        .get(rowNumber));
 
-      Assert.assertTrue(dimSelector.makeValueMatcher((String) null).matches());
-      Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
-      Assert.assertTrue(dimSelector.makeValueMatcher(x -> x == null).matches());
-      Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+      AssertassertTrue(dimSelector.makeValueMatcher((String) null).matches());
+      AssertassertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
+      AssertassertTrue(dimSelector.makeValueMatcher(x -> x == null).matches());
+      AssertassertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     }
   }
+  private void AssertassertFalse(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
+  }
+
+  private void AssertassertTrue(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
+  }
+
 
   static class SettableSelector extends ObjectColumnSelector<StructuredData>
   {

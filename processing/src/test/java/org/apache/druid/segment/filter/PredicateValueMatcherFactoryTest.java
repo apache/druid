@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
+import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnType;
@@ -53,15 +55,27 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   public void testDimensionProcessorSingleValuedDimensionMatchingValue()
   {
     final ValueMatcher matcher = forSelector("0").makeDimensionProcessor(DimensionSelector.constant("0"), false);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
   public void testDimensionProcessorSingleValuedDimensionNotMatchingValue()
   {
     final ValueMatcher matcher = forSelector("1").makeDimensionProcessor(DimensionSelector.constant("0"), false);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
+
+  private void AssertassertFalse(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
+  }
+
+  private void AssertassertTrue(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
+  }
+
+
 
   @Test
   public void testDimensionProcessorMultiValuedDimensionMatchingValue()
@@ -81,7 +95,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     final ValueMatcher matcher = forSelector("v2")
         .makeDimensionProcessor(columnSupplier.get().makeDimensionSelector(new SimpleAscendingOffset(1), null), true);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -102,7 +116,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     final ValueMatcher matcher = forSelector("v3")
         .makeDimensionProcessor(columnSupplier.get().makeDimensionSelector(new SimpleAscendingOffset(1), null), true);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -115,7 +129,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2.f").makeFloatProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -128,7 +142,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5.f").makeFloatProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -141,7 +155,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2.").makeDoubleProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -154,7 +168,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5.").makeDoubleProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -167,7 +181,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2").makeLongProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -180,7 +194,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5").makeLongProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -193,7 +207,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -207,9 +221,9 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
     if (NullHandling.sqlCompatible()) {
-      Assert.assertFalse(matcher.matches());
+      AssertassertFalse(matcher.matches());
     } else {
-      Assert.assertTrue(matcher.matches());
+      AssertassertTrue(matcher.matches());
     }
   }
 
@@ -223,7 +237,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -236,7 +250,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -249,7 +263,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -262,7 +276,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -275,7 +289,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.f").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -288,7 +302,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.f").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -301,7 +315,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.d").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -314,7 +328,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.d").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -327,7 +341,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -340,7 +354,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -353,7 +367,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -366,7 +380,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -379,7 +393,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -392,7 +406,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("false").makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -405,7 +419,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("false").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   @Test
@@ -419,7 +433,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     columnValueSelector.advance();
     final String base64Encoded = StringUtils.encodeBase64String(StringUtils.toUtf8("var"));
     final ValueMatcher matcher = forSelector(base64Encoded).makeComplexProcessor(columnValueSelector);
-    Assert.assertTrue(matcher.matches());
+    AssertassertTrue(matcher.matches());
   }
 
   @Test
@@ -432,7 +446,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
-    Assert.assertFalse(matcher.matches());
+    AssertassertFalse(matcher.matches());
   }
 
   private static PredicateValueMatcherFactory forSelector(@Nullable String value)

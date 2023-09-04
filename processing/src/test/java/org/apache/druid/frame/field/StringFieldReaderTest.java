@@ -27,8 +27,10 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.ValueMatcher.MatchLevel;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -232,11 +234,22 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("bar").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("baz").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("bar"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("baz"::equals).matches());
+    AssertassertTrue(readSelector.makeValueMatcher("bar").matches());
+    AssertassertFalse(readSelector.makeValueMatcher("baz").matches());
+    AssertassertTrue(readSelector.makeValueMatcher("bar"::equals).matches());
+    AssertassertFalse(readSelector.makeValueMatcher("baz"::equals).matches());
   }
+
+  private void AssertassertFalse(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
+  }
+
+  private void AssertassertTrue(MatchLevel matches)
+  {
+    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
+  }
+
 
   @Test
   public void test_makeDimensionSelector_multiString_withExtractionFn()
@@ -264,10 +277,10 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("ar").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("bar").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("ar"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("bar"::equals).matches());
+    AssertassertTrue(readSelector.makeValueMatcher("ar").matches());
+    AssertassertFalse(readSelector.makeValueMatcher("bar").matches());
+    AssertassertTrue(readSelector.makeValueMatcher("ar"::equals).matches());
+    AssertassertFalse(readSelector.makeValueMatcher("bar"::equals).matches());
   }
 
   private void writeToMemory(@Nullable final List<String> values)
