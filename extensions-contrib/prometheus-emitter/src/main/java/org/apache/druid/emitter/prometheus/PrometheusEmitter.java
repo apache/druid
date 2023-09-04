@@ -208,7 +208,7 @@ public class PrometheusEmitter implements Emitter
       exec.shutdownNow();
       flush();
 
-      if (pushGateway != null && config.isDeleteOnShutdown()) {
+      if (pushGateway != null && config.isPushGatewayDeleteOnShutdown()) {
         try {
           pushGateway.delete(config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
         }

@@ -71,7 +71,7 @@ public class PrometheusEmitterConfig
   private final Map<String, String> extraLabels;
 
   @JsonProperty
-  private final boolean deleteOnShutdown;
+  private final boolean pushGatewayDeleteOnShutdown;
 
   @JsonCreator
   public PrometheusEmitterConfig(
@@ -84,7 +84,7 @@ public class PrometheusEmitterConfig
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
       @JsonProperty("flushPeriod") Integer flushPeriod,
       @JsonProperty("extraLabels") @Nullable Map<String, String> extraLabels,
-      @JsonProperty("deleteOnShutdown") boolean deleteOnShutdown
+      @JsonProperty("pushGatewayDeleteOnShutdown") @Nullable Boolean pushGatewayDeleteOnShutdown
   )
   {
     this.strategy = strategy != null ? strategy : Strategy.exporter;
@@ -107,7 +107,7 @@ public class PrometheusEmitterConfig
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
     this.extraLabels = extraLabels != null ? extraLabels : Collections.emptyMap();
-    this.deleteOnShutdown = deleteOnShutdown;
+    this.pushGatewayDeleteOnShutdown = pushGatewayDeleteOnShutdown != null && pushGatewayDeleteOnShutdown;
     // Validate label names early to prevent Prometheus exceptions later.
     for (String key : this.extraLabels.keySet()) {
       if (!PATTERN.matcher(key).matches()) {
@@ -170,9 +170,9 @@ public class PrometheusEmitterConfig
     return extraLabels;
   }
 
-  public boolean isDeleteOnShutdown()
+  public boolean isPushGatewayDeleteOnShutdown()
   {
-    return deleteOnShutdown;
+    return pushGatewayDeleteOnShutdown;
   }
 
   public enum Strategy
