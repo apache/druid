@@ -57,7 +57,7 @@ public class FrameFilteredOffset extends SimpleSettableOffset
   {
     while (!Thread.currentThread().isInterrupted()) {
       baseOffset.increment();
-      if (!baseOffset.withinBounds() || filterMatcher.matches()) {
+      if (!baseOffset.withinBounds() || filterMatcher.matchesT()) {
         return;
       }
     }

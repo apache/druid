@@ -78,7 +78,7 @@ public final class FilteredOffset extends Offset
   {
     while (!Thread.currentThread().isInterrupted()) {
       baseOffset.increment();
-      if (!baseOffset.withinBounds() || filterMatcher.matches()) {
+      if (!baseOffset.withinBounds() || filterMatcher.matches()== X3Val.True) {
         return;
       }
     }

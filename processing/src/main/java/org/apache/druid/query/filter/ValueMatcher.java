@@ -56,7 +56,20 @@ public interface ValueMatcher extends HotLoopCallee
         return Null;
       }
     }
+
+public static    X3Val from2Val(boolean v)
+    {
+  if(v) {
+    return True;
+  } else {
+    return False;
+  }
+
+    }
   }
   @CalledFromHotLoop
   X3Val matches();
+  default boolean matchesT() {
+    return matches() == X3Val.True;
+  }
 }

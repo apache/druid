@@ -22,6 +22,7 @@ package org.apache.druid.segment.join;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumns;
@@ -72,7 +73,7 @@ public class PostJoinCursor implements Cursor
   private void advanceToMatch()
   {
     if (valueMatcher != null) {
-      while (!isDone() && !valueMatcher.matches()) {
+      while (!isDone() && valueMatcher.matches()!=X3Val.True) {
         baseCursor.advanceUninterruptibly();
       }
     }

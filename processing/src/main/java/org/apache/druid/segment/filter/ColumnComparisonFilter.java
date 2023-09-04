@@ -85,7 +85,7 @@ public class ColumnComparisonFilter implements Filter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public X3Val matches()
       {
         // Keep all values to compare against each other.
         String[][] values = new String[valueGetters.size()][];
