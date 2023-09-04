@@ -48,7 +48,6 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
@@ -355,7 +354,7 @@ class K8sTaskAdapterTest
                                        node,
                                        jsonMapper
         );
-    NoopTask task = createTask("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,
@@ -428,8 +427,4 @@ class K8sTaskAdapterTest
     assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
 
-  static NoopTask createTask(String id, int priority)
-  {
-    return new NoopTask(id, null, null, 0, 0, null, Collections.singletonMap(Tasks.PRIORITY_KEY, priority));
-  }
 }

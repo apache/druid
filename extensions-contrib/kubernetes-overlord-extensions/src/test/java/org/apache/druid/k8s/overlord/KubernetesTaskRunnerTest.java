@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
@@ -70,6 +71,8 @@ import static org.junit.Assert.assertTrue;
 @SuppressWarnings("DoNotMock")
 public class KubernetesTaskRunnerTest extends EasyMockSupport
 {
+  private static final String ID = "id";
+
   @Mock private HttpClient httpClient;
   @Mock private TaskAdapter taskAdapter;
   @Mock private KubernetesPeonClient peonClient;
@@ -79,7 +82,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   private KubernetesTaskRunnerConfig config;
   private KubernetesTaskRunner runner;
   private Task task;
-  private String taskId;
 
   @Before
   public void setup()
@@ -88,8 +90,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .withCapacity(1)
         .build();
 
-    task = NoopTask.create();
-    taskId = task.getId();
+    task = K8sTestUtils.createTask(ID, 0);
 
     runner = new KubernetesTaskRunner(
         taskAdapter,
@@ -133,7 +134,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(taskId)
+        .withName(ID)
         .endMetadata()
         .build();
 
@@ -170,7 +171,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(taskId)
+        .withName(ID)
         .endMetadata()
         .build();
 
@@ -283,7 +284,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(taskId)
+        .withName(ID)
         .endMetadata()
         .build();
 
@@ -320,7 +321,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(taskId)
+        .withName(ID)
         .endMetadata()
         .build();
 
@@ -367,7 +368,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_getRunningTasks()
   {
-    Task pendingTask = NoopTask.create();
+    Task pendingTask = K8sTestUtils.createTask("pending-id", 0);
     KubernetesWorkItem pendingWorkItem = new KubernetesWorkItem(pendingTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -377,7 +378,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(pendingTask.getId(), pendingWorkItem);
 
-    Task runningTask = NoopTask.create();
+    Task runningTask = K8sTestUtils.createTask("running-id", 0);
     KubernetesWorkItem runningWorkItem = new KubernetesWorkItem(runningTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -396,7 +397,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_getPendingTasks()
   {
-    Task pendingTask = NoopTask.create();
+    Task pendingTask = K8sTestUtils.createTask("pending-id", 0);
     KubernetesWorkItem pendingWorkItem = new KubernetesWorkItem(pendingTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -406,7 +407,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(pendingTask.getId(), pendingWorkItem);
 
-    Task runningTask = NoopTask.create();
+    Task runningTask = K8sTestUtils.createTask("running-id", 0);
     KubernetesWorkItem runningWorkItem = new KubernetesWorkItem(runningTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()

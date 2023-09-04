@@ -287,7 +287,7 @@ public class PodTemplateTaskAdapterTest
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
     Task actual = adapter.toTask(job);
-    Task expected = K8sTaskAdapterTest.createTask("id", 1);
+    Task expected = K8sTestUtils.createTask("id", 1);
 
     Assertions.assertEquals(expected, actual);
   }
