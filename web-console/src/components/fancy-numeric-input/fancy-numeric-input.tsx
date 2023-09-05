@@ -80,6 +80,7 @@ export interface FancyNumericInputProps {
   minorStepSize?: number;
   stepSize?: number;
   majorStepSize?: number;
+  arbitraryPrecision?: boolean;
 }
 
 export const FancyNumericInput = React.memo(function FancyNumericInput(
@@ -103,6 +104,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
 
     min,
     max,
+    arbitraryPrecision,
   } = props;
 
   const stepSize = props.stepSize || 1;
@@ -110,8 +112,11 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
   const majorStepSize = props.majorStepSize || stepSize * 10;
 
   function roundAndClamp(n: number): number {
-    const inv = 1 / minorStepSize;
-    return clamp(Math.floor(n * inv) / inv, min, max);
+    if (!arbitraryPrecision) {
+      const inv = 1 / minorStepSize;
+      n = Math.floor(n * inv) / inv;
+    }
+    return clamp(n, min, max);
   }
 
   const effectiveValue = value ?? defaultValue;

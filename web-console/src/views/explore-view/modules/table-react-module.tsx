@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import type { SqlOrderByExpression } from '@druid-toolkit/query';
+import type { SqlColumn, SqlOrderByExpression } from '@druid-toolkit/query';
 import {
   C,
   F,
   SqlCase,
-  SqlColumn,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
@@ -80,22 +79,24 @@ function nullableColumn(column: ExpressionMeta) {
 }
 
 function nvl(ex: SqlExpression): SqlExpression {
-  return SqlFunction.simple('NVL', [ex, NULL_REPLACEMENT]);
+  return SqlFunction.simple('NVL', [ex.cast('VARCHAR'), NULL_REPLACEMENT]);
 }
 
-function nullif(ex: SqlExpression): SqlExpression {
-  return SqlFunction.simple('NULLIF', [ex, NULL_REPLACEMENT]);
+function joinEquals(c1: SqlColumn, c2: SqlColumn, nullable: boolean): SqlExpression {
+  return c1.applyIf(nullable, nvl).equal(c2.applyIf(nullable, nvl));
 }
 
 function toGroupByExpression(
   splitColumn: ExpressionMeta,
-  nvlIfNeeded: boolean,
   timeBucket: string,
+  compareShiftDuration?: string,
 ) {
   const { expression, sqlType, name } = splitColumn;
   return expression
-    .applyIf(sqlType === 'TIMESTAMP', e => SqlFunction.simple('TIME_FLOOR', [e, timeBucket]))
-    .applyIf(nvlIfNeeded && nullableColumn(splitColumn), nvl)
+    .applyIf(sqlType === 'TIMESTAMP' && compareShiftDuration, e =>
+      F.timeShift(e, compareShiftDuration!, 1),
+    )
+    .applyIf(sqlType === 'TIMESTAMP', e => F.timeFloor(e, timeBucket))
     .as(name);
 }
 
@@ -141,16 +142,6 @@ function toShowColumnExpression(
   }
 
   return ex.as(showColumn.name);
-}
-
-function shiftTime(ex: SqlQuery, period: string): SqlQuery {
-  return ex.walk(q => {
-    if (q instanceof SqlColumn && q.getName() === '__time') {
-      return SqlFunction.simple('TIME_SHIFT', [q, period, 1]);
-    } else {
-      return q;
-    }
-  }) as SqlQuery;
 }
 
 interface QueryAndHints {
@@ -327,7 +318,7 @@ function TableModule(props: TableModuleProps) {
 
     const mainQuery = getInitQuery(table, where)
       .applyForEach(splitColumns, (q, splitColumn) =>
-        q.addSelect(toGroupByExpression(splitColumn, hasCompare, timeBucket), {
+        q.addSelect(toGroupByExpression(splitColumn, timeBucket), {
           addToGroupBy: 'end',
         }),
       )
@@ -381,26 +372,20 @@ function TableModule(props: TableModuleProps) {
                 `compare${i}`,
                 getInitQuery(table, where)
                   .applyForEach(splitColumns, (q, splitColumn) =>
-                    q.addSelect(toGroupByExpression(splitColumn, true, timeBucket), {
+                    q.addSelect(toGroupByExpression(splitColumn, timeBucket, comparePeriod), {
                       addToGroupBy: 'end',
                     }),
                   )
                   .applyForEach(metrics, (q, metric) =>
                     q.addSelect(metric.expression.as(metric.name)),
-                  )
-                  .apply(q => shiftTime(q, comparePeriod)),
+                  ),
               ),
             ),
           ),
         )
         .changeSelectExpressions(
           splitColumns
-            .map(splitColumn =>
-              main
-                .column(splitColumn.name)
-                .applyIf(nullableColumn(splitColumn), nullif)
-                .as(splitColumn.name),
-            )
+            .map(splitColumn => main.column(splitColumn.name).as(splitColumn.name))
             .concat(
               showColumns.map(showColumn => main.column(showColumn.name).as(showColumn.name)),
               metrics.map(metric => main.column(metric.name).as(metric.name)),
@@ -432,7 +417,11 @@ function TableModule(props: TableModuleProps) {
             T(`compare${i}`),
             SqlExpression.and(
               ...splitColumns.map(splitColumn =>
-                main.column(splitColumn.name).equal(T(`compare${i}`).column(splitColumn.name)),
+                joinEquals(
+                  main.column(splitColumn.name),
+                  T(`compare${i}`).column(splitColumn.name),
+                  nullableColumn(splitColumn),
+                ),
               ),
             ),
           ),
