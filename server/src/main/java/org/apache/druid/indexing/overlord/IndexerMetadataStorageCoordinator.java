@@ -352,12 +352,16 @@ public interface IndexerMetadataStorageCoordinator
   void deleteSegments(Set<DataSegment> segments);
 
   /**
-   * Retrieve the segment for a given id from the metadata store. Return null if no such used segment exists
+   * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
+   * <br>
+   * If includeUnused is set, this also returns unused segments. Unused segments could be deleted by a kill task at any
+   * time and might lead to unexpected behaviour. This option exists mainly to provide a consistent view of the metadata,
+   * for example, in calls from MSQ controller and worker and would generally not be requrired.
    *
    * @param id The segment id
    *
-   * @return DataSegment corresponding to given id
+   * @return DataSegment used segment corresponding to given id
    */
-  DataSegment retrieveUsedSegmentForId(String id);
+  DataSegment retrieveSegmentForId(String id, boolean includeUnused);
 
 }

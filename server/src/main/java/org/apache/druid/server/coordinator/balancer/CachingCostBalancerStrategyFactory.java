@@ -44,7 +44,7 @@ import java.util.concurrent.RejectedExecutionException;
  * and will be removed in future releases.
  */
 @Deprecated
-public class CachingCostBalancerStrategyFactory implements BalancerStrategyFactory
+public class CachingCostBalancerStrategyFactory extends BalancerStrategyFactory
 {
   private static final EmittingLogger LOG = new EmittingLogger(CachingCostBalancerStrategyFactory.class);
 
@@ -128,8 +128,9 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   }
 
   @Override
-  public BalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(int numBalancerThreads)
   {
+    final ListeningExecutorService exec = getOrCreateBalancerExecutor(numBalancerThreads);
     LOG.warn(
         "'cachingCost' balancer strategy has been deprecated as it can lead to"
         + " unbalanced clusters. Use 'cost' strategy instead."

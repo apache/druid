@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
@@ -333,9 +333,9 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("ts", "millis", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("middle"),
-                new NestedDataDimensionSchema("list"),
-                new NestedDataDimensionSchema("map")
+                new AutoTypeColumnSchema("middle"),
+                new AutoTypeColumnSchema("list"),
+                new AutoTypeColumnSchema("map")
             )
         ),
         inputFormat,
@@ -542,8 +542,8 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("a"),
-                new NestedDataDimensionSchema("b")
+                new AutoTypeColumnSchema("a"),
+                new AutoTypeColumnSchema("b")
             )
         ),
         inputFormat,
@@ -608,11 +608,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("a"),
-                new NestedDataDimensionSchema("b"),
-                new NestedDataDimensionSchema("c"),
-                new NestedDataDimensionSchema("d"),
-                new NestedDataDimensionSchema("t_d_0")
+                new AutoTypeColumnSchema("a"),
+                new AutoTypeColumnSchema("b"),
+                new AutoTypeColumnSchema("c"),
+                new AutoTypeColumnSchema("d"),
+                new AutoTypeColumnSchema("t_d_0")
             )
         ),
         inputFormat,

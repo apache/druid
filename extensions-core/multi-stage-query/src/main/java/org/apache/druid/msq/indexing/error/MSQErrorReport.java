@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
@@ -31,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.statistics.TooManyBucketsException;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -79,11 +81,22 @@ public class MSQErrorReport
       final Throwable e
   )
   {
+    return fromException(taskId, host, stageNumber, e, null);
+  }
+
+  public static MSQErrorReport fromException(
+      final String taskId,
+      @Nullable final String host,
+      @Nullable final Integer stageNumber,
+      final Throwable e,
+      @Nullable final ColumnMappings columnMappings
+  )
+  {
     return new MSQErrorReport(
         taskId,
         host,
         stageNumber,
-        getFaultFromException(e),
+        getFaultFromException(e, columnMappings),
         Throwables.getStackTraceAsString(e)
     );
   }
@@ -159,12 +172,17 @@ public class MSQErrorReport
            '}';
   }
 
+  public static MSQFault getFaultFromException(@Nullable final Throwable e)
+  {
+    return getFaultFromException(e, null);
+  }
+
   /**
    * Magical code that extracts a useful fault from an exception, even if that exception is not necessarily a
    * {@link MSQException}. This method walks through the causal chain, and also "knows" about various exception
    * types thrown by other Druid code.
    */
-  public static MSQFault getFaultFromException(@Nullable final Throwable e)
+  public static MSQFault getFaultFromException(@Nullable final Throwable e, @Nullable final ColumnMappings columnMappings)
   {
     // Unwrap exception wrappers to find an underlying fault. The assumption here is that the topmost recognizable
     // exception should be used to generate the fault code for the entire report.
@@ -195,10 +213,21 @@ public class MSQErrorReport
         return new RowTooLargeFault(((FrameRowTooLargeException) cause).getMaxFrameSize());
       } else if (cause instanceof InvalidNullByteException) {
         InvalidNullByteException invalidNullByteException = (InvalidNullByteException) cause;
+        String columnName = invalidNullByteException.getColumn();
+        if (columnMappings != null) {
+          IntList outputColumnsForQueryColumn = columnMappings.getOutputColumnsForQueryColumn(columnName);
+
+          // outputColumnsForQueryColumn.size should always be 1 due to hasUniqueOutputColumnNames check that is done
+          if (outputColumnsForQueryColumn.size() >= 1) {
+            int outputColumn = outputColumnsForQueryColumn.getInt(0);
+            columnName = columnMappings.getOutputColumnName(outputColumn);
+          }
+        }
+
         return new InvalidNullByteFault(
             invalidNullByteException.getSource(),
             invalidNullByteException.getRowNumber(),
-            invalidNullByteException.getColumn(),
+            columnName,
             invalidNullByteException.getValue(),
             invalidNullByteException.getPosition()
         );

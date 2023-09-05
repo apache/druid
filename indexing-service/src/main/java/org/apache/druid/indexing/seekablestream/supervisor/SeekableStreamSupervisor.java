@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.error.DruidException;
@@ -691,8 +692,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
         final Map<PartitionIdType, SequenceOffsetType> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
-        taskGroup.addNewCheckpoint(newCheckpoint);
-        log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
+        if (MapUtils.isNotEmpty(newCheckpoint)) {
+          taskGroup.addNewCheckpoint(newCheckpoint);
+          log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
+        } else {
+          log.warn("New checkpoint is null for taskGroup [%s]", taskGroupId);
+        }
       }
     }
 
@@ -1356,7 +1361,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     groupId,
                     taskId,
                     currentStats
-                )
+                ),
+                MoreExecutors.directExecutor()
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1374,7 +1380,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       groupId,
                       taskId,
                       currentStats
-                  )
+                  ),
+                  MoreExecutors.directExecutor()
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1428,7 +1435,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     groupId,
                     taskId,
                     taskErrors
-                )
+                ),
+                MoreExecutors.directExecutor()
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1446,7 +1454,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       groupId,
                       taskId,
                       taskErrors
-                  )
+                  ),
+                  MoreExecutors.directExecutor()
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -2488,7 +2497,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             return null;
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -3207,7 +3217,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   {
                     return null;
                   }
-                }
+                },
+                MoreExecutors.directExecutor()
             );
           }
 
@@ -3425,7 +3436,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             log.warn("All tasks in group [%d] failed to publish, killing all tasks for these partitions", groupId);
           } else {
             log.makeAlert(
-                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]!",
+                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]! "
+                + "Check metrics and logs to see if the creation, publish or handoff"
+                + " of any segment is taking longer than usual.",
                 group.taskIds(),
                 groupId,
                 ioConfig.getCompletionTimeout()
@@ -3944,7 +3957,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               return null;
-            }
+            },
+            MoreExecutors.directExecutor()
         )
     ).collect(Collectors.toList());
 
@@ -4308,7 +4322,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             .setDimension("noticeType", noticeType)
                             .setDimension("dataSource", dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                            .build("ingest/notices/time", timeInMillis)
+                            .setMetric("ingest/notices/time", timeInMillis)
       );
     }
     catch (Exception e) {
@@ -4327,7 +4341,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           ServiceMetricEvent.builder()
                             .setDimension("dataSource", dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                            .build("ingest/notices/queueSize", getNoticesQueueSize())
+                            .setMetric("ingest/notices/queueSize", getNoticesQueueSize())
       );
     }
     catch (Exception e) {
@@ -4385,7 +4399,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                 .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                                 .setDimension(DruidMetrics.PARTITION, entry.getKey())
                                 .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                                .build(
+                                .setMetric(
                                     StringUtils.format("ingest/%s/partitionLag%s", type, suffix),
                                     entry.getValue()
                                 )
@@ -4396,21 +4410,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
+                              .setMetric(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
+                              .setMetric(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
-                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
+                              .setMetric(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
         );
       };
 

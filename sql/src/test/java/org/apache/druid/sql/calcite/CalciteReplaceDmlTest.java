@@ -440,8 +440,9 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(invalidSqlContains(
-            "Incorrect syntax near the keyword 'OVERWRITE' at line 1, column 18."
+        .expectValidationError(invalidSqlIs(
+            "Missing time chunk information in OVERWRITE clause for REPLACE. "
+            + "Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
         ))
         .verify();
   }

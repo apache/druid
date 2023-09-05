@@ -137,7 +137,6 @@ public class KubernetesPeonLifecycle
     }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
-      shutdown();
       throw e;
     }
     finally {
@@ -168,10 +167,9 @@ public class KubernetesPeonLifecycle
     finally {
       try {
         saveLogs();
-        shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Task [%s] cleanup failed", taskId);
+        log.warn(e, "Log processing failed for task [%s]", taskId);
       }
 
       stopTask();
@@ -188,7 +186,7 @@ public class KubernetesPeonLifecycle
    */
   protected void shutdown()
   {
-    if (State.PENDING.equals(state.get()) || State.RUNNING.equals(state.get())) {
+    if (State.PENDING.equals(state.get()) || State.RUNNING.equals(state.get()) || State.STOPPED.equals(state.get())) {
       kubernetesClient.deletePeonJob(taskId);
     }
   }
@@ -223,7 +221,7 @@ public class KubernetesPeonLifecycle
    */
   protected TaskLocation getTaskLocation()
   {
-    if (!State.RUNNING.equals(state.get())) {
+    if (State.PENDING.equals(state.get()) || State.NOT_STARTED.equals(state.get())) {
       log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
@@ -251,7 +249,6 @@ public class KubernetesPeonLifecycle
           Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
           pod.getMetadata() != null ? pod.getMetadata().getName() : ""
       );
-      log.info("K8s task %s is running at location %s", taskId.getOriginalTaskId(), taskLocation);
     }
 
     return taskLocation;
