@@ -17,34 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.last;
+package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class StringLastVectorAggregator implements VectorAggregator
+public class StringFirstVectorAggregator implements VectorAggregator
 {
   private static final SerializablePairLongString INIT = new SerializablePairLongString(
-      DateTimes.MIN.getMillis(),
+      DateTimes.MAX.getMillis(),
       null
   );
   private final VectorValueSelector timeSelector;
   private final VectorObjectSelector valueSelector;
   private final int maxStringBytes;
-  protected long lastTime;
 
-  public StringLastVectorAggregator(
-      @Nullable final VectorValueSelector timeSelector,
-      final VectorObjectSelector valueSelector,
-      final int maxStringBytes
+
+  public StringFirstVectorAggregator(
+      BaseLongVectorValueSelector timeSelector,
+      VectorObjectSelector valueSelector,
+      int maxStringBytes
   )
   {
     this.timeSelector = timeSelector;
@@ -64,31 +64,29 @@ public class StringLastVectorAggregator implements VectorAggregator
     if (timeSelector == null) {
       return;
     }
-    long[] times = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
-
-    lastTime = buf.getLong(position);
+    final long[] times = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    long firstTime = buf.getLong(position);
     int index;
-    for (int i = endRow - 1; i >= startRow; i--) {
-      if (objectsWhichMightBeStrings[i] == null) {
+    for (int i = startRow; i < endRow; i++) {
+      if (times[i] > firstTime) {
         continue;
       }
-      if (times[i] <= lastTime) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
         continue;
       }
       index = i;
       final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
       if (foldNeeded) {
-        // Less efficient code path when folding is a possibility (we must read the value selector first just in case
-        // it's a foldable object).
         final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
             timeSelector,
             valueSelector,
             index
         );
         if (inPair != null) {
-          final long lastTime = buf.getLong(position);
-          if (inPair.lhs >= lastTime) {
+          firstTime = buf.getLong(position);
+          if (inPair.lhs < firstTime) {
             StringFirstLastUtils.writePair(
                 buf,
                 position,
@@ -99,10 +97,9 @@ public class StringLastVectorAggregator implements VectorAggregator
         }
       } else {
         final long time = times[index];
-
-        if (time >= lastTime) {
+        if (time < firstTime) {
           final String value = DimensionHandlerUtils.convertObjectToString(objectsWhichMightBeStrings[index]);
-          lastTime = time;
+          firstTime = time;
           StringFirstLastUtils.writePair(
               buf,
               position,
@@ -116,19 +113,11 @@ public class StringLastVectorAggregator implements VectorAggregator
   }
 
   @Override
-  public void aggregate(
-      ByteBuffer buf,
-      int numRows,
-      int[] positions,
-      @Nullable int[] rows,
-      int positionOffset
-  )
+  public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
-    if (timeSelector == null) {
-      return;
-    }
-    long[] timeVector = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     // iterate once over the object vector to find first non null element and
     // determine if the type is Pair or not
@@ -143,10 +132,13 @@ public class StringLastVectorAggregator implements VectorAggregator
     }
 
     for (int i = 0; i < numRows; i++) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
+      }
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      long lastTime = buf.getLong(position);
-      if (timeVector[row] >= lastTime) {
+      long firstTime = buf.getLong(position);
+      if (timeVector[row] < firstTime) {
         if (foldNeeded) {
           final SerializablePairLongString inPair = StringFirstLastUtils.readPairFromVectorSelectorsAtIndex(
               timeSelector,
@@ -154,7 +146,7 @@ public class StringLastVectorAggregator implements VectorAggregator
               row
           );
           if (inPair != null) {
-            if (inPair.lhs >= lastTime) {
+            if (inPair.lhs < firstTime) {
               StringFirstLastUtils.writePair(
                   buf,
                   position,
@@ -165,16 +157,17 @@ public class StringLastVectorAggregator implements VectorAggregator
           }
         } else {
           final String value = DimensionHandlerUtils.convertObjectToString(objectsWhichMightBeStrings[row]);
-          lastTime = timeVector[row];
+          firstTime = timeVector[row];
           StringFirstLastUtils.writePair(
               buf,
               position,
-              new SerializablePairLongString(lastTime, value),
+              new SerializablePairLongString(firstTime, value),
               maxStringBytes
           );
         }
       }
     }
+
   }
 
   @Nullable
@@ -190,4 +183,3 @@ public class StringLastVectorAggregator implements VectorAggregator
     // nothing to close
   }
 }
-
