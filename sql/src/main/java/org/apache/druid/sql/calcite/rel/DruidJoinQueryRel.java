@@ -38,6 +38,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,13 +48,13 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -171,7 +172,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         prefixSignaturePair.rhs,
-        getPlannerContext().getExprMacroTable(),
+        getPlannerContext().getExpressionParser(),
         getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
     );
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
@@ -198,10 +199,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             leftDataSource,
             rightDataSource,
             prefixSignaturePair.lhs,
-            condition.getExpression(),
+            JoinConditionAnalysis.forExpression(
+                condition.getExpression(),
+                getPlannerContext().parseExpression(condition.getExpression()),
+                prefixSignaturePair.lhs
+            ),
             toDruidJoinType(joinRel.getJoinType()),
             getDimFilter(getPlannerContext(), leftSignature, leftFilter),
-            getPlannerContext().getExprMacroTable(),
             getPlannerContext().getJoinableFactoryWrapper()
         ),
         prefixSignaturePair.rhs,
@@ -264,12 +268,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     } else {
       throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
     }
-  }
-
-  @Override
-  public List<RexNode> getChildExps()
-  {
-    return ImmutableList.of(joinRel.getCondition());
   }
 
   @Override
@@ -360,7 +358,10 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw new UnsupportedSQLQueryException("Cannot handle joinType '%s'", calciteJoinType);
+        throw InvalidSqlInput.exception(
+            "Cannot handle joinType [%s]",
+            calciteJoinType
+        );
     }
   }
 

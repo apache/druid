@@ -27,10 +27,10 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
@@ -150,19 +150,14 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
-    if (indexer instanceof NestedDataColumnIndexer) {
-      NestedDataColumnIndexer nestedDataColumnIndexer = (NestedDataColumnIndexer) indexer;
-
-      return new NestedColumnMergable(
-          nestedDataColumnIndexer.getSortedValueLookups(),
-          nestedDataColumnIndexer.getFieldTypeInfo()
-      );
-    }
     if (indexer instanceof AutoTypeColumnIndexer) {
       AutoTypeColumnIndexer autoIndexer = (AutoTypeColumnIndexer) indexer;
       return new NestedColumnMergable(
           autoIndexer.getSortedValueLookups(),
-          autoIndexer.getFieldTypeInfo()
+          autoIndexer.getFieldTypeInfo(),
+          autoIndexer.getLogicalType().equals(ColumnType.NESTED_DATA),
+          autoIndexer.isConstant(),
+          autoIndexer.getConstantValue()
       );
     }
     return null;

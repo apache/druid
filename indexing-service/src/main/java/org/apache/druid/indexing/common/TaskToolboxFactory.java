@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -245,8 +246,11 @@ public class TaskToolboxFactory
         .chatHandlerProvider(chatHandlerProvider)
         .rowIngestionMetersFactory(rowIngestionMetersFactory)
         .appenderatorsManager(appenderatorsManager)
-        .overlordClient(overlordClient)
-        .coordinatorClient(coordinatorClient)
+        // Most tasks are written in such a way that if an Overlord or Coordinator RPC fails, the task fails.
+        // Set the retry policy to "about an hour", so tasks are resilient to brief Coordinator/Overlord problems.
+        // Calls will still eventually fail if problems persist.
+        .overlordClient(overlordClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()))
+        .coordinatorClient(coordinatorClient.withRetryPolicy(StandardRetryPolicy.aboutAnHour()))
         .supervisorTaskClientProvider(supervisorTaskClientProvider)
         .shuffleClient(shuffleClient)
         .taskLogPusher(taskLogPusher)

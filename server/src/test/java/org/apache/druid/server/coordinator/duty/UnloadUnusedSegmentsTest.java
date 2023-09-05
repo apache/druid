@@ -29,15 +29,16 @@ import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.CoordinatorStats;
-import org.apache.druid.server.coordinator.DruidClusterBuilder;
+import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -50,7 +51,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -61,24 +61,19 @@ public class UnloadUnusedSegmentsTest
   private ImmutableDruidServer historicalServerTier2;
   private ImmutableDruidServer brokerServer;
   private ImmutableDruidServer indexerServer;
-  private LoadQueuePeonTester historicalPeon;
-  private LoadQueuePeonTester historicalTier2Peon;
-  private LoadQueuePeonTester brokerPeon;
-  private LoadQueuePeonTester indexerPeon;
+  private TestLoadQueuePeon historicalPeon;
+  private TestLoadQueuePeon historicalTier2Peon;
+  private TestLoadQueuePeon brokerPeon;
+  private TestLoadQueuePeon indexerPeon;
   private DataSegment segment1;
   private DataSegment segment2;
-  private DataSegment broadcastSegment;
-  private DataSegment realtimeOnlySegment;
   private List<DataSegment> segments;
   private List<DataSegment> segmentsForRealtime;
-  private ImmutableDruidDataSource dataSource1;
-  private ImmutableDruidDataSource dataSource2;
-  private ImmutableDruidDataSource dataSource2ForRealtime;
-  private ImmutableDruidDataSource broadcastDatasource;
   private List<ImmutableDruidDataSource> dataSources;
   private List<ImmutableDruidDataSource> dataSourcesForRealtime;
-  private Set<String> broadcastDatasourceNames;
+  private final String broadcastDatasource = "broadcastDatasource";
   private MetadataRuleManager databaseRuleManager;
+  private SegmentLoadQueueManager loadQueueManager;
 
   @Before
   public void setUp()
@@ -88,9 +83,8 @@ public class UnloadUnusedSegmentsTest
     historicalServerTier2 = EasyMock.createMock(ImmutableDruidServer.class);
     brokerServer = EasyMock.createMock(ImmutableDruidServer.class);
     indexerServer = EasyMock.createMock(ImmutableDruidServer.class);
-    segment1 = EasyMock.createMock(DataSegment.class);
-    segment2 = EasyMock.createMock(DataSegment.class);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
@@ -99,9 +93,9 @@ public class UnloadUnusedSegmentsTest
         "datasource1",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         NoneShardSpec.instance(),
         0,
         11L
@@ -110,31 +104,31 @@ public class UnloadUnusedSegmentsTest
         "datasource2",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         NoneShardSpec.instance(),
         0,
         7L
     );
-    realtimeOnlySegment = new DataSegment(
+    final DataSegment realtimeOnlySegment = new DataSegment(
         "datasource2",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         NoneShardSpec.instance(),
         0,
         7L
     );
-    broadcastSegment = new DataSegment(
-        "broadcastDatasource",
+    final DataSegment broadcastSegment = new DataSegment(
+        broadcastDatasource,
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         NoneShardSpec.instance(),
         0,
         7L
@@ -149,24 +143,23 @@ public class UnloadUnusedSegmentsTest
     segmentsForRealtime.add(realtimeOnlySegment);
     segmentsForRealtime.add(broadcastSegment);
 
-    historicalPeon = new LoadQueuePeonTester();
-    historicalTier2Peon = new LoadQueuePeonTester();
-    brokerPeon = new LoadQueuePeonTester();
-    indexerPeon = new LoadQueuePeonTester();
+    historicalPeon = new TestLoadQueuePeon();
+    historicalTier2Peon = new TestLoadQueuePeon();
+    brokerPeon = new TestLoadQueuePeon();
+    indexerPeon = new TestLoadQueuePeon();
 
-    dataSource1 = new ImmutableDruidDataSource(
+    final ImmutableDruidDataSource dataSource1 = new ImmutableDruidDataSource(
         "datasource1",
         Collections.emptyMap(),
         Collections.singleton(segment1)
     );
-    dataSource2 = new ImmutableDruidDataSource(
+    final ImmutableDruidDataSource dataSource2 = new ImmutableDruidDataSource(
         "datasource2",
         Collections.emptyMap(),
         Collections.singleton(segment2)
     );
 
-    broadcastDatasourceNames = Collections.singleton("broadcastDatasource");
-    broadcastDatasource = new ImmutableDruidDataSource(
+    final ImmutableDruidDataSource broadcastDatasource = new ImmutableDruidDataSource(
         "broadcastDatasource",
         Collections.emptyMap(),
         Collections.singleton(broadcastSegment)
@@ -176,7 +169,7 @@ public class UnloadUnusedSegmentsTest
 
     // This simulates a task that is ingesting to an existing non-broadcast datasource, with unpublished segments,
     // while also having a broadcast segment loaded.
-    dataSource2ForRealtime = new ImmutableDruidDataSource(
+    final ImmutableDruidDataSource dataSource2ForRealtime = new ImmutableDruidDataSource(
         "datasource2",
         Collections.emptyMap(),
         Collections.singleton(realtimeOnlySegment)
@@ -249,11 +242,11 @@ public class UnloadUnusedSegmentsTest
     // will not appear in the coordinator's view of used segments.
     Set<DataSegment> usedSegments = ImmutableSet.of(segment2);
 
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(
-            DruidClusterBuilder
-                .newBuilder()
+            DruidCluster
+                .builder()
                 .addTier(
                     DruidServer.DEFAULT_TIER,
                     new ServerHolder(historicalServer, historicalPeon, false)
@@ -262,33 +255,24 @@ public class UnloadUnusedSegmentsTest
                     "tier2",
                     new ServerHolder(historicalServerTier2, historicalTier2Peon, false)
                 )
-                .withBrokers(
-                    new ServerHolder(brokerServer, brokerPeon, false)
-                )
-                .withRealtimes(
-                    new ServerHolder(indexerServer, indexerPeon, false)
-                )
+                .addBrokers(new ServerHolder(brokerServer, brokerPeon, false))
+                .addRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
                 .build()
         )
-        .withLoadManagementPeons(
-            ImmutableMap.of(
-                "historical", historicalPeon,
-                "historicalTier2", historicalTier2Peon,
-                "broker", brokerPeon,
-                "indexer", indexerPeon
-            )
-        )
-        .withUsedSegmentsInTest(usedSegments)
-        .withBroadcastDatasources(broadcastDatasourceNames)
+        .withUsedSegments(usedSegments)
+        .withBroadcastDatasources(Collections.singleton(broadcastDatasource))
         .withDatabaseRuleManager(databaseRuleManager)
         .build();
 
-    params = new UnloadUnusedSegments().run(params);
-    CoordinatorStats stats = params.getCoordinatorStats();
+    params = new UnloadUnusedSegments(loadQueueManager).run(params);
+    CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer
-    Assert.assertEquals(5, stats.getTieredStat("unneededCount", DruidServer.DEFAULT_TIER));
-    Assert.assertEquals(2, stats.getTieredStat("unneededCount", "tier2"));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, segment1.getDataSource()));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", segment1.getDataSource()));
+
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, broadcastDatasource));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", broadcastDatasource));
   }
 
   private static void mockDruidServer(
@@ -321,14 +305,6 @@ public class UnloadUnusedSegmentsTest
 
   private static void mockCoordinator(DruidCoordinator coordinator)
   {
-    coordinator.moveSegment(
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject(),
-        EasyMock.anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
   }
 
@@ -340,7 +316,8 @@ public class UnloadUnusedSegmentsTest
                 ImmutableMap.of(
                     DruidServer.DEFAULT_TIER, 1,
                     "tier2", 1
-                )
+                ),
+                null
             )
         )).anyTimes();
 
@@ -350,7 +327,8 @@ public class UnloadUnusedSegmentsTest
                 ImmutableMap.of(
                     DruidServer.DEFAULT_TIER, 1,
                     "tier2", 1
-                )
+                ),
+                null
             )
         )).anyTimes();
 

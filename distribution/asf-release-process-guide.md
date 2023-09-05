@@ -258,7 +258,7 @@ It is also the release managers responsibility for correctly assigning all PRs m
 | [get-milestone-contributors](bin/get-milestone-contributors.py) | lists github users who contributed to a milestone |
 | [get-milestone-prs](bin/get-milestone-prs.py) | lists PRs between tags or commits and the milestone associated with them. |
 | [tag-missing-milestones](bin/tag-missing-milestones.py) | Find pull requests which the milestone is missing and tag them properly. |
-| [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. |
+| [find-missing-backports](bin/find-missing-backports.py) | Find PRs which have been back-ported to one release branch but not another. Useful if a bug fix release based on the previous release is required during a release cycle. Make sure to fetch remote commits before running this command. |
 | [make-linkable-release-notes](bin/make-linkable-release-notes.py) | given input of a version, input markdown file path, and output markdown file path, will rewrite markdown headers of the input file to have embedded links in the release notes style. |
 
 
@@ -370,20 +370,37 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 
 ### Update druid.staged.apache.org
 
+This repo is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
+
+For more thorough instructions and a description of what the `do_all_things` script does, see the [`druid-website-src` README](https://github.com/apache/druid-website-src)
+
 1. Pull https://github.com/apache/druid-website and https://github.com/apache/druid-website-src. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
-2. From druid-website, checkout branch `asf-staging`.
+2. From `druid-website`, checkout branch `asf-staging`.
 
-3. From druid-website-src, create a release branch from `master` and run `./release.sh 0.17.0 0.17.0`, replacing `0.17.0` where the first argument is the release version and 2nd argument is commit-ish. This script will:
-
-* checkout the tag of the Druid release version
-* build the docs for that version into druid-website-src
-* build druid-website-src into druid-website
-* stage druid-website-src and druid-website repositories to git.
-
-4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch, such as `0.17.0-docs`. 
+3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-docs`.
+   1. Update the version list in `static/js/version`.js with the version you're releasing and the release date. The highest release version goes in position 0. 
+   1. In `scripts`, run: 
    
-5. Make another PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
+   ```python
+   # Include `--skip-install` if you already have Docusaurus 2 installed in druid-website-src. 
+   # The script assumes you use `npm`. If you use `yarn`, include `--yarn`.
+
+   python do_all_things.py -v VERSION --source /my/path/to/apache/druid
+   ```
+   
+
+4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. In the changed files, you should see the following:
+  - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files 
+  - In the `docs` directory at the root of the repo, the new Markdown files.
+    
+    All these files should be part of your PR to `druid-website-src`.
+   <br />
+    Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
+
+   
+
+5. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch using the contents of `published_versions` in `druid-website-src`. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
 
 ### Create staged Maven repo
 

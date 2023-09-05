@@ -34,6 +34,8 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -90,7 +92,14 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient();
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false);
+    ServiceEmitter serviceEmitter = new ServiceEmitter("service", "host", null)
+    {
+      @Override
+      public void emit(Event event)
+      {
+      }
+    };
+    peonClient = new KubernetesPeonClient(k8sClient, "default", false, serviceEmitter);
     druidNode = new DruidNode(
         "test",
         null,
@@ -130,7 +139,7 @@ public class DruidPeonClientIntegrationTest
     Job job = adapter.createJobFromPodSpec(podSpec, task, context);
 
     // launch the job and wait to start...
-    peonClient.launchPeonJobAndWaitForStart(job, 1, TimeUnit.MINUTES);
+    peonClient.launchPeonJobAndWaitForStart(job, task, 1, TimeUnit.MINUTES);
 
     // there should be one job that is a k8s peon job that exists
     List<Job> jobs = peonClient.getPeonJobs();
@@ -159,7 +168,7 @@ public class DruidPeonClientIntegrationTest
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected
     Path downloadPath = Paths.get(tempDir.toAbsolutePath().toString(), "task.json");
-    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId);
+    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId.getK8sJobName());
     k8sClient.executeRequest(client -> {
       client.pods()
             .inNamespace("default")

@@ -30,7 +30,7 @@ import java.io.StringReader;
 import static org.junit.Assert.assertEquals;
 
 /**
- * A class containing unit tests for testing implmentations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}
+ * A class containing unit tests for testing implementations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}
  * in custom Druid SqlNode classes, like {@link DruidSqlInsert} and {@link DruidSqlReplace}.
  */
 public class DruidSqlUnparseTest
@@ -40,8 +40,8 @@ public class DruidSqlUnparseTest
   {
     String sqlQuery = "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME";
     String prettySqlQuery = "INSERT INTO \"dst\"\n"
-                     + "(SELECT *\n"
-                     + "    FROM \"foo\") PARTITIONED BY ALL TIME";
+                     + "SELECT *\n"
+                     + "    FROM \"foo\" PARTITIONED BY ALL TIME";
 
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlInsert druidSqlReplace = (DruidSqlInsert) druidSqlParser.DruidSqlInsertEof();
@@ -56,8 +56,8 @@ public class DruidSqlUnparseTest
     String sqlQuery = "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
                             + "OVERWRITE ALL\n"
-                            + "(SELECT *\n"
-                            + "    FROM \"foo\")\n"
+                            + "SELECT *\n"
+                            + "    FROM \"foo\"\n"
                             + "PARTITIONED BY ALL TIME "
                             + "CLUSTERED BY \"dim1\"";
 
@@ -74,13 +74,12 @@ public class DruidSqlUnparseTest
     String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
                             + "OVERWRITE \"__time\" >= TIMESTAMP '2000-01-01 00:00:00' AND \"__time\" < TIMESTAMP '2000-01-02 00:00:00'\n"
-                            + "(SELECT *\n"
-                            + "    FROM \"foo\")\n"
+                            + "SELECT *\n"
+                            + "    FROM \"foo\"\n"
                             + "PARTITIONED BY DAY "
                             + "CLUSTERED BY \"dim1\"";
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
-
     druidSqlReplace.unparse(sqlWriter, 0, 0);
     assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
   }

@@ -29,7 +29,9 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::info
+ You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::
 
 The S3 input source reads objects directly from S3. You can specify either:
 - a list of S3 URI strings
@@ -206,11 +208,15 @@ Properties Object:
 |assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
-> **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+:::info
+ **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+:::
 
 ## Google Cloud Storage input source
 
-> You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::info
+ You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::
 
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
@@ -294,7 +300,9 @@ Google Cloud Storage object:
 
 ## Azure input source
 
-> You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::info
+ You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::
 
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
@@ -375,7 +383,9 @@ The `objects` property is:
 
 ## HDFS input source
 
-> You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::info
+ You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::
 
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
@@ -462,9 +472,11 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-> **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
->
-> The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+:::info
+ **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+
+ The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+:::
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
@@ -690,10 +702,12 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 }
 ```
 
-> Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
-> have ingestion specs that rely on this and cannot rewrite them, set
-> [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
-> to `true` to enable a compatibility mode where the timestampSpec is ignored.
+:::info
+ Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
+ have ingestion specs that rely on this and cannot rewrite them, set
+ [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
+ to `true` to enable a compatibility mode where the timestampSpec is ignored.
+:::
 
 ## SQL input source
 
@@ -793,6 +807,198 @@ The following is an example of a Combining input source spec:
     },
 ...
 ```
+
+## Iceberg input source
+
+:::info
+ To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
+:::
+
+You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
+
+The Iceberg input source cannot be independent as it relies on the existing input sources to read from the data files.
+For example, if the warehouse associated with an Iceberg catalog is on S3, you must also load the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension.
+
+The following is a sample spec for a HDFS warehouse source:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "iceberg",
+        "tableName": "iceberg_table",
+        "namespace": "iceberg_namespace",
+        "icebergCatalog": {
+            "type": "hive",
+            "warehousePath": "hdfs://warehouse/path",
+            "catalogUri": "thrift://hive-metastore.x.com:8970",
+            "catalogProperties": {
+                "hive.metastore.connect.retries": "1",
+                "hive.metastore.execute.setugi": "false",
+                "hive.metastore.kerberos.principal": "KRB_PRINCIPAL",
+                "hive.metastore.sasl.enabled": "true",
+                "metastore.catalog.default": "catalog_test",
+                "hadoop.security.authentication": "kerberos",
+                "hadoop.security.authorization": "true"
+            }
+        },
+        "icebergFilter": {
+            "type": "interval",
+            "filterColumn": "event_time",
+            "intervals": [
+              "2023-05-10T19:00:00.000Z/2023-05-10T20:00:00.000Z"
+            ]
+        },
+        "warehouseSource": {
+            "type": "hdfs"
+        }
+      },
+      "inputFormat": {
+        "type": "parquet"
+      }
+  },
+      ...
+},
+...
+```
+
+The following is a sample spec for a S3 warehouse source:
+
+```json
+...
+        "ioConfig": {
+          "type": "index_parallel",
+          "inputSource": {
+            "type": "iceberg",
+            "tableName": "iceberg_table",
+            "namespace": "iceberg_namespace",
+            "icebergCatalog": {
+              "type": "hive",
+              "warehousePath": "hdfs://warehouse/path",
+              "catalogUri": "thrift://hive-metastore.x.com:8970",
+              "catalogProperties": {
+                "hive.metastore.connect.retries": "1",
+                "hive.metastore.execute.setugi": "false",
+                "hive.metastore.kerberos.principal": "KRB_PRINCIPAL",
+                "hive.metastore.sasl.enabled": "true",
+                "metastore.catalog.default": "default_catalog",
+                "fs.s3a.access.key" : "S3_ACCESS_KEY",
+                "fs.s3a.secret.key" : "S3_SECRET_KEY",
+                "fs.s3a.endpoint" : "S3_API_ENDPOINT"
+              }
+            },
+            "icebergFilter": {
+              "type": "interval",
+              "filterColumn": "event_time",
+              "intervals": [
+                "2023-05-10T19:00:00.000Z/2023-05-10T20:00:00.000Z"
+              ]
+            },
+            "warehouseSource": {
+              "type": "s3",
+              "endpointConfig": {
+                "url": "teststore.aws.com",
+                "signingRegion": "us-west-2a"
+              },
+              "clientConfig": {
+                "protocol": "http",
+                "disableChunkedEncoding": true,
+                "enablePathStyleAccess": true,
+                "forceGlobalBucketAccessEnabled": false
+              },
+              "properties": {
+                "accessKeyId": {
+                  "type": "default",
+                  "password": "foo"
+                },
+                "secretAccessKey": {
+                  "type": "default",
+                  "password": "bar"
+                }
+              },
+            }
+          },
+          "inputFormat": {
+            "type": "parquet"
+          }
+        },
+...
+},
+```
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set the value to `iceberg`.|yes|
+|tableName|The Iceberg table name configured in the catalog.|yes|
+|namespace|The Iceberg namespace associated with the table|yes|
+|icebergFilter|The JSON Object that filters data files within a snapshot|no|
+|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table|yes|
+|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse|yes|
+
+###Catalog Object
+
+The catalog object supports `local` and `hive` catalog types.
+
+The following table lists the properties of a `local` catalog:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `local`.|yes|
+|warehousePath|The location of the warehouse associated with the catalog|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
+
+The following table lists the properties of a `hive` catalog:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `hive`.|yes|
+|warehousePath|The location of the warehouse associated with the catalog|yes|
+|catalogUri|The URI associated with the hive catalog|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
+
+### Iceberg filter object
+
+This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+
+`equals` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `equals`.|yes|
+|filterColumn|The name of the column from the Iceberg table schema to use for filtering.|yes|
+|filterValue|The value to filter on.|yes|
+
+`interval` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `interval`.|yes|
+|filterColumn|The column name from the iceberg table schema based on which filtering needs to happen|yes|
+|intervals|A JSON array containing ISO 8601 interval strings. This defines the time ranges to filter on. The start interval is inclusive and the end interval is exclusive. |yes|
+
+`and` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `and`.|yes|
+|filters|List of iceberg filters that needs to be AND-ed|yes|
+
+`or` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `or`.|yes|
+|filters|List of iceberg filters that needs to be OR-ed|yes|
+
+`not` Filter:
+
+|Property|Description|Required|
+|--------|-----------|---------|
+|type|Set this value to `not`.|yes|
+|filter|The iceberg filter on which logical NOT is applied|yes|
+
+
 
 The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
 Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:

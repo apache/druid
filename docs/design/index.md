@@ -36,6 +36,8 @@ Common application areas for Druid include:
 - Digital marketing/advertising analytics
 - Business intelligence/OLAP
 
+If you are experimenting with a new use case for Druid or have questions about Druid's capabilities and features, join the [Apache Druid Slack](http://apachedruidworkspace.slack.com/) channel. There, you can connect with Druid experts, ask questions, and get help in real time.
+
 ## Key features of Druid
 
 Druid's core architecture combines ideas from data warehouses, timeseries databases, and logsearch systems. Some of

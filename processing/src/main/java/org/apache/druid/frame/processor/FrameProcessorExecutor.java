@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -61,6 +62,7 @@ import java.util.stream.Collectors;
  * If you want single threaded execution, use {@code Execs.singleThreaded()}. It is not a good idea to use this with a
  * same-thread executor like {@code Execs.directExecutor()}, because it will lead to deep call stacks.
  */
+@SuppressWarnings("CheckReturnValue")
 public class FrameProcessorExecutor
 {
   private static final Logger log = new Logger(FrameProcessorExecutor.class);
@@ -286,7 +288,8 @@ public class FrameProcessorExecutor
                   fail(t);
                 }
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
       }
 
@@ -524,7 +527,7 @@ public class FrameProcessorExecutor
       }
 
       // Wait for all running processors to stop running. Then clean them up outside the critical section.
-      while (processorsToCancel.stream().anyMatch(runningProcessors::containsKey)) {
+      while (anyIsRunning(processorsToCancel)) {
         lock.wait();
       }
     }
@@ -604,5 +607,17 @@ public class FrameProcessorExecutor
 
       log.debug(StringUtils.encodeForFormat(sb.toString()));
     }
+  }
+
+  @GuardedBy("lock")
+  private boolean anyIsRunning(Set<FrameProcessor<?>> processors)
+  {
+    for (final FrameProcessor<?> processor : processors) {
+      if (runningProcessors.containsKey(processor)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

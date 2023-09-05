@@ -26,7 +26,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -42,15 +45,33 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 public abstract class BaseVarianceSqlAggregator implements SqlAggregator
 {
+  private static final String VARIANCE_NAME = "VARIANCE";
+  private static final String STDDEV_NAME = "STDDEV";
+
+  private static final SqlAggFunction VARIANCE_SQL_AGG_FUNC_INSTANCE =
+      buildSqlAvgAggFunction(VARIANCE_NAME);
+  private static final SqlAggFunction VARIANCE_POP_SQL_AGG_FUNC_INSTANCE =
+      buildSqlAvgAggFunction(SqlKind.VAR_POP.name());
+  private static final SqlAggFunction VARIANCE_SAMP_SQL_AGG_FUNC_INSTANCE =
+      buildSqlAvgAggFunction(SqlKind.VAR_SAMP.name());
+  private static final SqlAggFunction STDDEV_SQL_AGG_FUNC_INSTANCE =
+      buildSqlAvgAggFunction(STDDEV_NAME);
+  private static final SqlAggFunction STDDEV_POP_SQL_AGG_FUNC_INSTANCE =
+      buildSqlAvgAggFunction(SqlKind.STDDEV_POP.name());
+  private static final SqlAggFunction STDDEV_SAMP_SQL_AGG_FUNC_INSTANCE =
+      buildSqlAvgAggFunction(SqlKind.STDDEV_SAMP.name());
+
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
@@ -104,12 +125,13 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
 
     if (inputType.isNumeric()) {
       inputTypeName = StringUtils.toLowerCase(inputType.getType().name());
+    } else if (inputType.equals(VarianceAggregatorFactory.TYPE)) {
+      inputTypeName = VarianceAggregatorFactory.VARIANCE_TYPE_NAME;
     } else {
       throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType.asTypeString());
     }
 
-
-    if (func == SqlStdOperatorTable.VAR_POP || func == SqlStdOperatorTable.STDDEV_POP) {
+    if (func.getName().equals(SqlKind.VAR_POP.name()) || func.getName().equals(SqlKind.STDDEV_POP.name())) {
       estimator = "population";
     } else {
       estimator = "sample";
@@ -122,9 +144,9 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         inputTypeName
     );
 
-    if (func == SqlStdOperatorTable.STDDEV_POP
-        || func == SqlStdOperatorTable.STDDEV_SAMP
-        || func == SqlStdOperatorTable.STDDEV) {
+    if (func.getName().equals(STDDEV_NAME)
+        || func.getName().equals(SqlKind.STDDEV_POP.name())
+        || func.getName().equals(SqlKind.STDDEV_SAMP.name())) {
       postAggregator = new StandardDeviationPostAggregator(
           name,
           aggregatorFactory.getName(),
@@ -137,21 +159,40 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     );
   }
 
+  /**
+   * Creates a {@link SqlAggFunction} that is the same as {@link org.apache.calcite.sql.fun.SqlAvgAggFunction}
+   * but with an operand type that accepts variance aggregator objects in addition to numeric inputs.
+   */
+  private static SqlAggFunction buildSqlAvgAggFunction(String name)
+  {
+    return OperatorConversions
+        .aggregatorBuilder(name)
+        .returnTypeInference(ReturnTypes.AVG_AGG_FUNCTION)
+        .operandTypeChecker(
+            OperandTypes.or(
+                OperandTypes.NUMERIC,
+                RowSignatures.complexTypeChecker(VarianceAggregatorFactory.TYPE)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.NUMERIC)
+        .build();
+  }
+
   public static class VarPopSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.VAR_POP;
+      return VARIANCE_POP_SQL_AGG_FUNC_INSTANCE;
     }
   }
-  
+
   public static class VarSampSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.VAR_SAMP;
+      return VARIANCE_SAMP_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
@@ -160,7 +201,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.VARIANCE;
+      return VARIANCE_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
@@ -169,7 +210,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.STDDEV_POP;
+      return STDDEV_POP_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
@@ -178,7 +219,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.STDDEV_SAMP;
+      return STDDEV_SAMP_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
@@ -187,7 +228,7 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.STDDEV;
+      return STDDEV_SQL_AGG_FUNC_INSTANCE;
     }
   }
 }

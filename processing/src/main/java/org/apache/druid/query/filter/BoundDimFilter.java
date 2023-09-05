@@ -279,8 +279,12 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     } else if (getUpper() == null) {
       range = isLowerStrict() ? Range.greaterThan(getLower()) : Range.atLeast(getLower());
     } else {
-      range = Range.range(getLower(), isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
-          getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED);
+      range = Range.range(
+          getLower(),
+          isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
+          getUpper(),
+          isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED
+      );
     }
     retSet.add(range);
     return retSet;
@@ -323,7 +327,8 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
         upperStrict,
         extractionFn,
         ordering,
-        filterTuning);
+        filterTuning
+    );
   }
 
   @Override
@@ -358,97 +363,212 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     return builder.appendFilterTuning(filterTuning).build();
   }
 
-  private DruidLongPredicate createLongPredicate()
+  private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
   {
-    boolean hasLowerLongBound;
-    boolean hasUpperLongBound;
-    long lowerLongBound;
-    long upperLongBound;
-    boolean matchesNothing = false;
+    return Suppliers.memoize(() -> {
+      boolean hasLowerLongBound;
+      boolean hasUpperLongBound;
+      long lowerLongBound;
+      long upperLongBound;
+      boolean matchesNothing = false;
 
-    if (hasLowerBound()) {
-      final Long lowerLong = GuavaUtils.tryParseLong(lower);
-      if (lowerLong == null) {
-        BigDecimal lowerBigDecimal = getBigDecimalLowerBoundFromFloatString(lower);
-        if (lowerBigDecimal == null) {
-          // Unparseable values fall before all actual numbers, so all numbers
-          // will match the lower bound.
-          hasLowerLongBound = false;
-          lowerLongBound = 0L;
-        } else {
-          try {
-            lowerLongBound = lowerBigDecimal.longValueExact();
-            hasLowerLongBound = true;
-          }
-          catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+      if (hasLowerBound()) {
+        final Long lowerLong = GuavaUtils.tryParseLong(lower);
+        if (lowerLong == null) {
+          BigDecimal lowerBigDecimal = getBigDecimalLowerBoundFromFloatString(lower);
+          if (lowerBigDecimal == null) {
+            // Unparseable values fall before all actual numbers, so all numbers
+            // will match the lower bound.
             hasLowerLongBound = false;
             lowerLongBound = 0L;
-            if (lowerBigDecimal.compareTo(BigDecimal.ZERO) > 0) {
-              // positive lower bound, > all longs, will match nothing
-              matchesNothing = true;
+          } else {
+            try {
+              lowerLongBound = lowerBigDecimal.longValueExact();
+              hasLowerLongBound = true;
+            }
+            catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
+              hasLowerLongBound = false;
+              lowerLongBound = 0L;
+              if (lowerBigDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                // positive lower bound, > all longs, will match nothing
+                matchesNothing = true;
+              }
             }
           }
+        } else {
+          hasLowerLongBound = true;
+          lowerLongBound = lowerLong;
         }
       } else {
-        hasLowerLongBound = true;
-        lowerLongBound = lowerLong;
+        hasLowerLongBound = false;
+        lowerLongBound = 0L;
       }
-    } else {
-      hasLowerLongBound = false;
-      lowerLongBound = 0L;
-    }
 
-    if (hasUpperBound()) {
-      Long upperLong = GuavaUtils.tryParseLong(upper);
-      if (upperLong == null) {
-        BigDecimal upperBigDecimal = getBigDecimalUpperBoundFromFloatString(upper);
-        if (upperBigDecimal == null) {
+      if (hasUpperBound()) {
+        Long upperLong = GuavaUtils.tryParseLong(upper);
+        if (upperLong == null) {
+          BigDecimal upperBigDecimal = getBigDecimalUpperBoundFromFloatString(upper);
+          if (upperBigDecimal == null) {
+            // Unparseable values fall before all actual numbers, so no numbers
+            // can match the upper bound.
+            matchesNothing = true;
+            hasUpperLongBound = false;
+            upperLongBound = 0L;
+          } else {
+            try {
+              upperLongBound = upperBigDecimal.longValueExact();
+              hasUpperLongBound = true;
+            }
+            catch (ArithmeticException ae) { // the BigDecimal can't be
+              // contained in a long
+              hasUpperLongBound = false;
+              upperLongBound = 0L;
+              if (upperBigDecimal.compareTo(BigDecimal.ZERO) < 0) {
+                // negative upper bound, < all longs, will match nothing
+                matchesNothing = true;
+              }
+            }
+          }
+        } else {
+          hasUpperLongBound = true;
+          upperLongBound = upperLong;
+        }
+      } else {
+        hasUpperLongBound = false;
+        upperLongBound = 0L;
+      }
+
+      if (matchesNothing) {
+        return DruidLongPredicate.ALWAYS_FALSE;
+      } else {
+        final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
+            hasLowerLongBound,
+            lowerStrict,
+            hasUpperLongBound,
+            upperStrict
+        );
+        return RangeFilter.makeLongPredicate(rangeType, lowerLongBound, upperLongBound);
+      }
+    });
+  }
+
+  private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
+  {
+    return Suppliers.memoize(() -> {
+      final boolean hasLowerFloatBound;
+      final boolean hasUpperFloatBound;
+      final float lowerFloatBound;
+      final float upperFloatBound;
+      boolean matchesNothing = false;
+
+      if (hasLowerBound()) {
+        final Float lowerFloat = Floats.tryParse(lower);
+        if (lowerFloat == null) {
+          // Unparseable values fall before all actual numbers, so all numbers
+          // will match the lower bound.
+          hasLowerFloatBound = false;
+          lowerFloatBound = 0L;
+        } else {
+          hasLowerFloatBound = true;
+          lowerFloatBound = lowerFloat;
+        }
+      } else {
+        hasLowerFloatBound = false;
+        lowerFloatBound = 0L;
+      }
+
+      if (hasUpperBound()) {
+        Float upperFloat = Floats.tryParse(upper);
+        if (upperFloat == null) {
           // Unparseable values fall before all actual numbers, so no numbers
           // can match the upper bound.
           matchesNothing = true;
-          hasUpperLongBound = false;
-          upperLongBound = 0L;
+          hasUpperFloatBound = false;
+          upperFloatBound = 0L;
         } else {
-          try {
-            upperLongBound = upperBigDecimal.longValueExact();
-            hasUpperLongBound = true;
-          }
-          catch (ArithmeticException ae) { // the BigDecimal can't be
-                                           // contained in a long
-            hasUpperLongBound = false;
-            upperLongBound = 0L;
-            if (upperBigDecimal.compareTo(BigDecimal.ZERO) < 0) {
-              // negative upper bound, < all longs, will match nothing
-              matchesNothing = true;
-            }
-          }
+          hasUpperFloatBound = true;
+          upperFloatBound = upperFloat;
         }
       } else {
-        hasUpperLongBound = true;
-        upperLongBound = upperLong;
+        hasUpperFloatBound = false;
+        upperFloatBound = 0L;
       }
-    } else {
-      hasUpperLongBound = false;
-      upperLongBound = 0L;
-    }
 
-    if (matchesNothing) {
-      return DruidLongPredicate.ALWAYS_FALSE;
-    } else {
-      return makeLongPredicateFromBounds(
-          hasLowerLongBound,
-          hasUpperLongBound,
-          lowerStrict,
-          upperStrict,
-          lowerLongBound,
-          upperLongBound);
-    }
+
+      if (matchesNothing) {
+        return DruidFloatPredicate.ALWAYS_FALSE;
+      } else {
+
+        final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
+            hasLowerFloatBound,
+            lowerStrict,
+            hasUpperFloatBound,
+            upperStrict
+        );
+        final DruidDoublePredicate doublePredicate = RangeFilter.makeDoublePredicate(
+            rangeType,
+            lowerFloatBound,
+            upperFloatBound
+        );
+        return doublePredicate::applyDouble;
+      }
+    });
   }
 
-  private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
+  private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
   {
-    Supplier<DruidLongPredicate> longPredicate = () -> createLongPredicate();
-    return Suppliers.memoize(longPredicate);
+    return Suppliers.memoize(() -> {
+      final boolean hasLowerBound;
+      final boolean hasUpperBound;
+      final double lowerDoubleBound;
+      final double upperDoubleBound;
+      boolean matchesNothing = false;
+
+      if (hasLowerBound()) {
+        final Double lowerDouble = Doubles.tryParse(lower);
+        if (lowerDouble == null) {
+          // Unparseable values fall before all actual numbers, so all numbers
+          // will match the lower bound.
+          hasLowerBound = false;
+          lowerDoubleBound = 0L;
+        } else {
+          hasLowerBound = true;
+          lowerDoubleBound = lowerDouble;
+        }
+      } else {
+        hasLowerBound = false;
+        lowerDoubleBound = 0L;
+      }
+
+      if (hasUpperBound()) {
+        Double upperDouble = Doubles.tryParse(upper);
+        if (upperDouble == null) {
+          // Unparseable values fall before all actual numbers, so no numbers can
+          // match the upper bound.
+          matchesNothing = true;
+          hasUpperBound = false;
+          upperDoubleBound = 0L;
+        } else {
+          hasUpperBound = true;
+          upperDoubleBound = upperDouble;
+        }
+      } else {
+        hasUpperBound = false;
+        upperDoubleBound = 0L;
+      }
+
+      if (matchesNothing) {
+        return DruidDoublePredicate.ALWAYS_FALSE;
+      } else {
+        final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
+            hasLowerBound,
+            lowerStrict,
+            hasUpperBound,
+            upperStrict
+        );
+        return RangeFilter.makeDoublePredicate(rangeType, lowerDoubleBound, upperDoubleBound);
+      }
+    });
   }
 
   @Nullable
@@ -484,227 +604,6 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
       return convertedBD.setScale(0, RoundingMode.CEILING);
     } else {
       return convertedBD.setScale(0, RoundingMode.FLOOR);
-    }
-  }
-
-  private DruidFloatPredicate createDruidFloatPredicate()
-  {
-    final boolean hasLowerFloatBound;
-    final boolean hasUpperFloatBound;
-    final float lowerFloatBound;
-    final float upperFloatBound;
-    boolean matchesNothing = false;
-
-    if (hasLowerBound()) {
-      final Float lowerFloat = Floats.tryParse(lower);
-      if (lowerFloat == null) {
-        // Unparseable values fall before all actual numbers, so all numbers
-        // will match the lower bound.
-        hasLowerFloatBound = false;
-        lowerFloatBound = 0L;
-      } else {
-        hasLowerFloatBound = true;
-        lowerFloatBound = lowerFloat;
-      }
-    } else {
-      hasLowerFloatBound = false;
-      lowerFloatBound = 0L;
-    }
-
-    if (hasUpperBound()) {
-      Float upperFloat = Floats.tryParse(upper);
-      if (upperFloat == null) {
-        // Unparseable values fall before all actual numbers, so no numbers
-        // can match the upper bound.
-        matchesNothing = true;
-        hasUpperFloatBound = false;
-        upperFloatBound = 0L;
-      } else {
-        hasUpperFloatBound = true;
-        upperFloatBound = upperFloat;
-      }
-    } else {
-      hasUpperFloatBound = false;
-      upperFloatBound = 0L;
-    }
-
-    if (matchesNothing) {
-      return DruidFloatPredicate.ALWAYS_FALSE;
-    } else {
-      return input -> {
-        final DruidDoublePredicate druidDoublePredicate = makeDoublePredicateFromBounds(
-            hasLowerFloatBound,
-            hasUpperFloatBound,
-            lowerStrict,
-            upperStrict,
-            (double) lowerFloatBound,
-            (double) upperFloatBound);
-        return druidDoublePredicate.applyDouble((double) input);
-      };
-    }
-  }
-
-  private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
-  {
-    Supplier<DruidFloatPredicate> floatPredicate = () -> createDruidFloatPredicate();
-    return Suppliers.memoize(floatPredicate);
-  }
-
-  private DruidDoublePredicate createDruidDoublePredicate()
-  {
-    final boolean hasLowerBound;
-    final boolean hasUpperBound;
-    final double lowerDoubleBound;
-    final double upperDoubleBound;
-    boolean matchesNothing = false;
-
-    if (hasLowerBound()) {
-      final Double lowerDouble = Doubles.tryParse(lower);
-      if (lowerDouble == null) {
-        // Unparseable values fall before all actual numbers, so all numbers
-        // will match the lower bound.
-        hasLowerBound = false;
-        lowerDoubleBound = 0L;
-      } else {
-        hasLowerBound = true;
-        lowerDoubleBound = lowerDouble;
-      }
-    } else {
-      hasLowerBound = false;
-      lowerDoubleBound = 0L;
-    }
-
-    if (hasUpperBound()) {
-      Double upperDouble = Doubles.tryParse(upper);
-      if (upperDouble == null) {
-        // Unparseable values fall before all actual numbers, so no numbers can
-        // match the upper bound.
-        matchesNothing = true;
-        hasUpperBound = false;
-        upperDoubleBound = 0L;
-      } else {
-        hasUpperBound = true;
-        upperDoubleBound = upperDouble;
-      }
-    } else {
-      hasUpperBound = false;
-      upperDoubleBound = 0L;
-    }
-
-    if (matchesNothing) {
-      return DruidDoublePredicate.ALWAYS_FALSE;
-    } else {
-      return makeDoublePredicateFromBounds(
-          hasLowerBound,
-          hasUpperBound,
-          lowerStrict,
-          upperStrict,
-          lowerDoubleBound,
-          upperDoubleBound);
-    }
-  }
-
-  private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
-  {
-    Supplier<DruidDoublePredicate> doublePredicate = () -> createDruidDoublePredicate();
-    return Suppliers.memoize(doublePredicate);
-  }
-
-  private static DruidLongPredicate makeLongPredicateFromBounds(
-      final boolean hasLowerLongBound,
-      final boolean hasUpperLongBound,
-      final boolean lowerStrict,
-      final boolean upperStrict,
-      final long lowerLongBound,
-      final long upperLongBound)
-  {
-    if (hasLowerLongBound && hasUpperLongBound) {
-      if (upperStrict && lowerStrict) {
-        return input -> input > lowerLongBound && input < upperLongBound;
-      } else if (lowerStrict) {
-        return input -> input > lowerLongBound && input <= upperLongBound;
-      } else if (upperStrict) {
-        return input -> input >= lowerLongBound && input < upperLongBound;
-      } else {
-        return input -> input >= lowerLongBound && input <= upperLongBound;
-      }
-    } else if (hasUpperLongBound) {
-      if (upperStrict) {
-        return input -> input < upperLongBound;
-      } else {
-        return input -> input <= upperLongBound;
-      }
-    } else if (hasLowerLongBound) {
-      if (lowerStrict) {
-        return input -> input > lowerLongBound;
-      } else {
-        return input -> input >= lowerLongBound;
-      }
-    } else {
-      return DruidLongPredicate.ALWAYS_TRUE;
-    }
-  }
-
-  private static DruidDoublePredicate makeDoublePredicateFromBounds(
-      final boolean hasLowerDoubleBound,
-      final boolean hasUpperDoubleBound,
-      final boolean lowerStrict,
-      final boolean upperStrict,
-      final double lowerDoubleBound,
-      final double upperDoubleBound)
-  {
-    if (hasLowerDoubleBound && hasUpperDoubleBound) {
-      if (upperStrict && lowerStrict) {
-        return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return ((lowerComparing > 0)) && (upperComparing > 0);
-        };
-      } else if (lowerStrict) {
-        return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return (lowerComparing > 0) && (upperComparing >= 0);
-        };
-      } else if (upperStrict) {
-        return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return (lowerComparing >= 0) && (upperComparing > 0);
-        };
-      } else {
-        return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return (lowerComparing >= 0) && (upperComparing >= 0);
-        };
-      }
-    } else if (hasUpperDoubleBound) {
-      if (upperStrict) {
-        return input -> {
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return upperComparing > 0;
-        };
-      } else {
-        return input -> {
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return upperComparing >= 0;
-        };
-      }
-    } else if (hasLowerDoubleBound) {
-      if (lowerStrict) {
-        return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          return lowerComparing > 0;
-        };
-      } else {
-        return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          return lowerComparing >= 0;
-        };
-      }
-    } else {
-      return DruidDoublePredicate.ALWAYS_TRUE;
     }
   }
 }

@@ -98,16 +98,18 @@ public class MSQTestControllerContext implements ControllerContext
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
-    Mockito.when(coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
+    Mockito.when(coordinatorClient.fetchUsedSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.anyList()
                  )
     ).thenAnswer(invocation ->
-                     (injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
-                              .getSegments()
-                              .stream()
-                              .filter(dataSegment -> dataSegment.getDataSource().equals(invocation.getArguments()[0]))
-                              .collect(Collectors.toList())
+                     Futures.immediateFuture(
+                         injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
+                                 .getSegments()
+                                 .stream()
+                                 .filter(dataSegment -> dataSegment.getDataSource()
+                                                                   .equals(invocation.getArguments()[0]))
+                                 .collect(Collectors.toList())
                      )
     );
     this.workerMemoryParameters = workerMemoryParameters;
@@ -154,7 +156,7 @@ public class MSQTestControllerContext implements ControllerContext
           log.error(t, "error running worker task %s", task.getId());
           statusMap.put(task.getId(), TaskStatus.failure(task.getId(), t.getMessage()));
         }
-      });
+      }, MoreExecutors.directExecutor());
 
       return task.getId();
     }

@@ -42,7 +42,8 @@ import java.util.function.Function;
     @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
-    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest")
+    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
+    @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter")
 })
 public interface DataSource
 {
@@ -96,7 +97,7 @@ public interface DataSource
    * query stack. For example, {@link QueryDataSource} must be executed first and substituted with its results.
    *
    * @see DataSourceAnalysis#isConcreteBased() which uses this
-   * @see DataSourceAnalysis#isConcreteTableBased() which uses this
+   * @see DataSourceAnalysis#isConcreteAndTableBased() which uses this
    */
   boolean isConcrete();
 

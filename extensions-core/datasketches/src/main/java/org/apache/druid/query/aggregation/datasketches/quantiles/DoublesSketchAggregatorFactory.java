@@ -209,6 +209,12 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
           }
 
           @Override
+          public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+          {
+            return new NoopDoublesSketchBufferAggregator();
+          }
+
+          @Override
           public VectorAggregator makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
           {
             return new DoublesSketchMergeVectorAggregator(selector, k, getMaxIntermediateSizeWithNulls());
@@ -240,8 +246,12 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public Object combine(final Object lhs, final Object rhs)
   {
     final DoublesUnion union = DoublesUnion.builder().setMaxK(k).build();
-    union.union((DoublesSketch) lhs);
-    union.union((DoublesSketch) rhs);
+    if (lhs != null) {
+      union.union((DoublesSketch) lhs);
+    }
+    if (rhs != null) {
+      union.union((DoublesSketch) rhs);
+    }
     return union.getResultAndReset();
   }
 
@@ -263,7 +273,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       public void fold(final ColumnValueSelector selector)
       {
         final DoublesSketch sketch = (DoublesSketch) selector.getObject();
-        union.union(sketch);
+        if (sketch != null) {
+          union.union(sketch);
+        }
       }
 
       @Nullable
@@ -345,20 +357,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return DoublesSketch.getUpdatableStorageBytes(k, maxStreamLength);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new DoublesSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            k,
-            maxStreamLength,
-            shouldFinalize
-        )
-    );
   }
 
   @Override

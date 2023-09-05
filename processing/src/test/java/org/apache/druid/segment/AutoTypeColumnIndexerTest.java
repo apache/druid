@@ -482,45 +482,36 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
 
     ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap("a"), valueSelector.getObject());
+    DimensionSelector dimensionSelector = cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals("a", valueSelector.getObject());
+    Assert.assertEquals("a", dimensionSelector.getObject());
 
     columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
+    dimensionSelector = cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals(2L, valueSelector.getObject());
     Assert.assertFalse(valueSelector.isNull());
+    Assert.assertEquals("2", dimensionSelector.getObject());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap(3.3), valueSelector.getObject());
+    dimensionSelector = cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals(3.3, valueSelector.getObject());
     Assert.assertFalse(valueSelector.isNull());
+    Assert.assertEquals("3.3", dimensionSelector.getObject());
+
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
+    dimensionSelector = cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
 
     columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
+    dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
   }
 
   @Test
@@ -588,6 +579,145 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertNull(valueSelector.getObject());
+  }
+
+  @Test
+  public void testConstantNull()
+  {
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    EncodedKeyComponent<StructuredData> key;
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
+    Assert.assertEquals(0, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
+
+    Assert.assertEquals(0, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
+    Assert.assertEquals(0, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+
+
+    Assert.assertTrue(indexer.hasNulls);
+    Assert.assertFalse(indexer.hasNestedData);
+    Assert.assertTrue(indexer.isConstant());
+  }
+
+  @Test
+  public void testConstantString()
+  {
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    EncodedKeyComponent<StructuredData> key;
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
+    Assert.assertEquals(166, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
+
+    Assert.assertEquals(52, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
+    Assert.assertEquals(52, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+
+    Assert.assertFalse(indexer.hasNulls);
+    Assert.assertFalse(indexer.hasNestedData);
+    Assert.assertTrue(indexer.isConstant());
+  }
+
+  @Test
+  public void testConstantLong()
+  {
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    EncodedKeyComponent<StructuredData> key;
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
+    Assert.assertEquals(94, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
+
+    Assert.assertEquals(16, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
+    Assert.assertEquals(16, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+
+    Assert.assertFalse(indexer.hasNulls);
+    Assert.assertFalse(indexer.hasNestedData);
+    Assert.assertTrue(indexer.isConstant());
+  }
+
+  @Test
+  public void testConstantEmptyArray()
+  {
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    EncodedKeyComponent<StructuredData> key;
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
+    Assert.assertEquals(54, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
+
+    Assert.assertEquals(8, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
+    Assert.assertEquals(8, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+
+    Assert.assertFalse(indexer.hasNulls);
+    Assert.assertFalse(indexer.hasNestedData);
+    Assert.assertTrue(indexer.isConstant());
+  }
+
+  @Test
+  public void testConstantArray()
+  {
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    EncodedKeyComponent<StructuredData> key;
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
+    Assert.assertEquals(246, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 4, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
+
+    Assert.assertEquals(104, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 4, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
+    Assert.assertEquals(104, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 4, indexer.getCardinality());
+
+    Assert.assertFalse(indexer.hasNulls);
+    Assert.assertFalse(indexer.hasNestedData);
+    Assert.assertTrue(indexer.isConstant());
+  }
+
+  @Test
+  public void testConstantEmptyObject()
+  {
+    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    EncodedKeyComponent<StructuredData> key;
+
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
+    Assert.assertEquals(16, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
+
+    Assert.assertEquals(16, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
+    Assert.assertEquals(16, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+
+    Assert.assertFalse(indexer.hasNulls);
+    Assert.assertTrue(indexer.hasNestedData);
+    Assert.assertTrue(indexer.isConstant());
   }
 
   @Nonnull

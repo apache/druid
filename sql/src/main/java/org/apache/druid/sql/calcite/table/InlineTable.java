@@ -64,7 +64,7 @@ public class InlineTable extends DruidTable
   @Override
   public RelNode toRel(ToRelContext context, RelOptTable table)
   {
-    return LogicalTableScan.create(context.getCluster(), table);
+    return LogicalTableScan.create(context.getCluster(), table, context.getTableHints());
   }
 
   @Override

@@ -47,7 +47,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryPlus;
@@ -60,7 +60,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.HavingSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -349,6 +348,32 @@ public class QuerySchedulerTest
   }
 
   @Test
+  public void testTotalLimitWithQueryQueuing()
+  {
+    ServerConfig serverConfig = new ServerConfig();
+    QueryScheduler queryScheduler = new QueryScheduler(
+        serverConfig.getNumThreads() - 1,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new NoQueryLaningStrategy(),
+        serverConfig
+    );
+    Assert.assertEquals(serverConfig.getNumThreads() - 1, queryScheduler.getTotalAvailableCapacity());
+  }
+
+  @Test
+  public void testTotalLimitWithouQueryQueuing()
+  {
+    ServerConfig serverConfig = new ServerConfig(true);
+    QueryScheduler queryScheduler = new QueryScheduler(
+        serverConfig.getNumThreads() - 1,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new NoQueryLaningStrategy(),
+        serverConfig
+    );
+    Assert.assertEquals(-1, queryScheduler.getTotalAvailableCapacity());
+  }
+
+  @Test
   public void testExplodingWrapperDoesNotLeakLocks()
   {
     scheduler = new ObservableQueryScheduler(
@@ -361,11 +386,6 @@ public class QuerySchedulerTest
     QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig()
         {
-          @Override
-          public String getDefaultStrategy()
-          {
-            return GroupByStrategySelector.STRATEGY_V2;
-          }
 
           @Override
           public String toString()
@@ -743,6 +763,7 @@ public class QuerySchedulerTest
     });
   }
 
+  @SuppressWarnings({"rawtypes", "unchecked"})
   private ListenableFuture<?> makeMergingQueryFuture(
       ListeningExecutorService executorService,
       QueryScheduler scheduler,
@@ -757,14 +778,20 @@ public class QuerySchedulerTest
 
         Assert.assertNotNull(scheduled);
 
-        FluentQueryRunnerBuilder fluentQueryRunnerBuilder = new FluentQueryRunnerBuilder(toolChest);
-        FluentQueryRunnerBuilder.FluentQueryRunner runner = fluentQueryRunnerBuilder.create((queryPlus, responseContext) -> {
-          Sequence<Integer> underlyingSequence = makeSequence(numRows);
-          Sequence<Integer> results = scheduler.run(scheduled, underlyingSequence);
-          return results;
-        });
+        FluentQueryRunner runner = FluentQueryRunner
+            .create(
+                (queryPlus, responseContext) -> {
+                  Sequence<Integer> underlyingSequence = makeSequence(numRows);
+                  Sequence<Integer> results = scheduler.run(scheduled, underlyingSequence);
+                  return (Sequence) results;
+                },
+                toolChest
+            )
+            .applyPreMergeDecoration()
+            .mergeResults()
+            .applyPostMergeDecoration();
 
-        final int actualNumRows = consumeAndCloseSequence(runner.mergeResults().run(QueryPlus.wrap(query)));
+        final int actualNumRows = consumeAndCloseSequence(runner.run(QueryPlus.wrap(query)));
         Assert.assertEquals(actualNumRows, numRows);
       }
       catch (IOException ex) {

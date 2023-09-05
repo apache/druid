@@ -61,7 +61,9 @@ See [Setting up a manual compaction task](#setting-up-manual-compaction) for mor
 During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the segments for the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
 
 You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to replace all existing segments fully contained by the interval. See the suggestion for reindexing with finer granularity under [Implementation considerations](../ingestion/native-batch.md#implementation-considerations) for an example.
-> WARNING: `dropExisting` in `ioConfig` is a beta feature.
+:::info
+ WARNING: `dropExisting` in `ioConfig` is a beta feature.
+:::
 
 If an ingestion task needs to write data to a segment for a time interval locked for compaction, by default the ingestion task supersedes the compaction task and the compaction task fails without finishing. For manual compaction tasks, you can adjust the input spec interval to avoid conflicts between ingestion and compaction. For automatic compaction, you can set the `skipOffsetFromLatest` key to adjust the auto-compaction starting point from the current time to reduce the chance of conflicts between ingestion and compaction.
 Another option is to set the compaction task to higher priority than the ingestion task.
@@ -79,7 +81,9 @@ For example consider two overlapping segments: segment "A" for the interval 01/0
 
 Unless you modify the query granularity in the [`granularitySpec`](#compaction-granularity-spec), Druid retains the query granularity for the compacted segments. If segments have different query granularities before compaction, Druid chooses the finest level of granularity for the resulting compacted segment. For example if a compaction task combines two segments, one with day query granularity and one with minute query granularity, the resulting segment uses minute query granularity.
 
-> In Apache Druid 0.21.0 and prior, Druid sets the granularity for compacted segments to the default granularity of `NONE` regardless of the query granularity of the original segments.
+:::info
+ In Apache Druid 0.21.0 and prior, Druid sets the granularity for compacted segments to the default granularity of `NONE` regardless of the query granularity of the original segments.
+:::
 
 If you configure query granularity in compaction to go from a finer granularity like month to a coarser query granularity like year, then Druid overshadows the original segment with coarser granularity. Because the new segments have a coarser granularity, running a kill task to remove the overshadowed segments for those intervals will cause you to permanently lose the finer granularity data.
 
@@ -130,17 +134,21 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`granularitySpec`|When set, the compaction task uses the specified `granularitySpec` rather than generating one from existing segments. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
 |`context`|[Task context](../ingestion/tasks.md#context)|No|
 
-> Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
+:::info
+ Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
+:::
 
 To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../ingestion/native-batch.md#partitionsspec) or [`numShards`](../ingestion/../ingestion/native-batch.md#tuningconfig).
 
-> You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
+:::info
+ You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
+:::
 
 A compaction task internally generates an `index` or `index_parallel` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [`druid` input source](../ingestion/input-sources.md), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
 
-Compaction tasks fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following items are all set. It is strongly recommended to set all of these items to maximize performance and minimize disk usage of the `compact` task:
+Compaction tasks typically fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to maximize performance and minimize disk usage of the `compact` task:
 
-- [`granularitySpec`](#compaction-granularity-spec). All three values must be set to non-null values: `segmentGranularity`, `queryGranularity`, and `rollup`.
+- [`granularitySpec`](#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
 - [`dimensionsSpec`](#compaction-dimensions-spec)
 - `metricsSpec`
 

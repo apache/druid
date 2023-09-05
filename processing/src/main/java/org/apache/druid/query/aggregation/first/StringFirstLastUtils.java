@@ -27,8 +27,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -79,7 +79,7 @@ public class StringFirstLastUtils
    * index of bounds issues is the responsibility of the caller
    */
   public static SerializablePairLongString readPairFromVectorSelectorsAtIndex(
-      BaseLongVectorValueSelector timeSelector,
+      VectorValueSelector timeSelector,
       VectorObjectSelector valueSelector,
       int index
   )
@@ -120,6 +120,9 @@ public class StringFirstLastUtils
       time = pair.lhs;
       string = pair.rhs;
     } else if (object != null) {
+      if (timeSelector.isNull()) {
+        return null;
+      }
       time = timeSelector.getLong();
       string = DimensionHandlerUtils.convertObjectToString(object);
     } else {
@@ -158,6 +161,7 @@ public class StringFirstLastUtils
 
     Long timeValue = copyBuffer.getLong();
     int stringSizeBytes = copyBuffer.getInt();
+
 
     if (stringSizeBytes >= 0) {
       byte[] valueBytes = new byte[stringSizeBytes];

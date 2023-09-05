@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>27.0.0-SNAPSHOT</version>
+        <version>28.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -299,8 +299,8 @@
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -363,7 +363,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
-            <version>5.5.1</version>
+            <version>5.5.12</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
@@ -398,7 +398,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
-            <version>5.5.1</version>
+            <version>5.5.12</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -554,13 +554,6 @@
 
     <profiles>
         <profile>
-            <id>hadoop2</id>
-            <properties>
-                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
-                <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
-            </properties>
-        </profile>
-        <profile>
             <id>integration-tests</id>
             <properties>
                 <start.hadoop.docker>false</start.hadoop.docker>
@@ -649,6 +642,7 @@
                                 </property>
                             </properties>
                             <argLine>
+                                ${jdk.strong.encapsulation.argLine}
                                 -Xmx128m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8

@@ -29,7 +29,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
@@ -88,8 +87,6 @@ public class CliCustomNodeRole extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(CliCustomNodeRole.SERVICE_NAME);
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(CliCustomNodeRole.PORT);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(CliCustomNodeRole.TLS_PORT);
-
-          binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
           binder.bind(JettyServerInitializer.class).to(CustomJettyServiceInitializer.class).in(LazySingleton.class);
           LifecycleModule.register(binder, Server.class);

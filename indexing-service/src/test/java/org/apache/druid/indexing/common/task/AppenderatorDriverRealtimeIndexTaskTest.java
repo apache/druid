@@ -31,6 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Firehose;
@@ -325,7 +326,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     // handoff would timeout, resulting in exception
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg()
-                            .contains("java.util.concurrent.TimeoutException: Timeout waiting for task."));
+                            .contains("java.util.concurrent.TimeoutException: Waited 100 milliseconds"));
   }
 
   @Test(timeout = 60_000L)
@@ -1524,16 +1525,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       @Override
       public SegmentPublishResult announceHistoricalSegments(
           Set<DataSegment> segments,
-          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
 
-        Assert.assertFalse(
+        Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
-            segmentLatch == null
+            segmentLatch
         );
 
         publishedSegments.addAll(result.getSegments());
@@ -1639,7 +1639,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
-        null,
+        new NoopCoordinatorClient(),
         null,
         null,
         null,

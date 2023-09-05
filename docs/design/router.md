@@ -36,7 +36,7 @@ For basic tuning guidance for the Router process, see [Basic cluster tuning](../
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Router, see [Router API](../api-reference/api-reference.md#router).
+For a list of API endpoints supported by the Router, see [Legacy metadata API reference](../api-reference/legacy-metadata-api.md#datasource-information).
 
 ### Running
 
@@ -134,7 +134,9 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### Routing of SQL queries using strategies
 

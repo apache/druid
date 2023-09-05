@@ -56,7 +56,7 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
@@ -249,7 +249,15 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
-        new TableDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
+        new TableDataSource("test"),
+        new LegacySegmentSpec("2011/2012"),
+        null,
+        null,
+        null,
+        analyses,
+        false,
+        null,
+        null
     );
     return runner.run(QueryPlus.wrap(query)).toList();
   }
@@ -434,7 +442,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
     EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).atLeastOnce();
 
-    StringDictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringDictionaryEncodedColumn.class);
+    StringUtf8DictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringUtf8DictionaryEncodedColumn.class);
     EasyMock.expect(holder.getColumn()).andReturn(dictionaryEncodedColumn).atLeastOnce();
 
     dictionaryEncodedColumn.close();
@@ -534,12 +542,6 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     @Override
     public AggregatorFactory getCombiningFactory()
-    {
-      return null;
-    }
-
-    @Override
-    public List<AggregatorFactory> getRequiredColumns()
     {
       return null;
     }

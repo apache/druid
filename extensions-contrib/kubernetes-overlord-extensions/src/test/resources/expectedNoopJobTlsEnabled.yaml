@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "id"
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
   labels:
     druid.k8s.peons: "true"
     druid.task.id: "id"
@@ -26,7 +26,7 @@ spec:
         druid.task.group.id: "id"
         druid.task.datasource: "datasource"
       annotations:
-        task: "H4sIAAAAAAAAAEVOuQ4CIRD9l6kpVhObbY0xtrs2liOMSoKAHEZC+HeHrEczmXfmVUjFE4xgnfMgQCv++Qi4Bpf94QcVJpxdDrKbO4gLEBCyPeo70+vNMHBDnAhVWag/nihmkzh72s0cuuhANxfZYrMxAqSziV6s18aN9CkfK+ATtcGzNjqVfZ/0HRTokblEbdGjZBHGVWtvT9WXlc8AAAA="
+        task: "H4sIAAAAAAAAAD2MvQ4CIRCE32VqijsTG1qLi7W+wArEbHICrmC8EN7dJf40k/lmJtNQthxgEVPKMGCvXsXgKqnm4x89FTqlKm6MBzw+YCA1nvmm8W4/TQYuxRJeBbZ17cJ3ZhvoSbzShVcu2zLOf9cS7pUl+ANlclrCzr2/AQUK0FqZAAAA"
         tls.enabled: "true"
         task.id: "id"
         task.type: "noop"
@@ -46,5 +46,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: "metadata.annotations['task']"
+            - name: "LOAD_BROADCAST_SEGMENTS"
+              value: "false"
           image: one
           name: primary

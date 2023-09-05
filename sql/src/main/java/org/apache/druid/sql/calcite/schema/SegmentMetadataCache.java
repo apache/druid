@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Interner;
@@ -48,6 +49,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
@@ -88,6 +90,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -393,8 +396,8 @@ public class SegmentMetadataCache
       awaitInitialization();
       final long endMillis = System.currentTimeMillis();
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
-      emitter.emit(ServiceMetricEvent.builder().build(
-          "init/metadatacache/time",
+      emitter.emit(ServiceMetricEvent.builder().setMetric(
+          "metadatacache/init/time",
           endMillis - startMillis
       ));
     }
@@ -707,6 +710,8 @@ public class SegmentMetadataCache
   private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
       throws IOException
   {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+
     if (!segments.stream().allMatch(segmentId -> segmentId.getDataSource().equals(dataSource))) {
       // Sanity check. We definitely expect this to pass.
       throw new ISE("'segments' must all match 'dataSource'!");
@@ -714,7 +719,10 @@ public class SegmentMetadataCache
 
     log.debug("Refreshing metadata for dataSource[%s].", dataSource);
 
-    final long startTime = System.currentTimeMillis();
+    final ServiceMetricEvent.Builder builder =
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
+
+    emitter.emit(builder.setMetric("metadatacache/refresh/count", segments.size()));
 
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
@@ -783,10 +791,14 @@ public class SegmentMetadataCache
       yielder.close();
     }
 
+    long refreshDurationMillis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+
+    emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
+
     log.debug(
         "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
-        System.currentTimeMillis() - startTime,
+        refreshDurationMillis,
         retVal.size(),
         segments.size() - retVal.size()
     );
@@ -920,7 +932,8 @@ public class SegmentMetadataCache
         ),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null // we don't care about merging strategy because merge is false
     );
 
     return queryLifecycleFactory

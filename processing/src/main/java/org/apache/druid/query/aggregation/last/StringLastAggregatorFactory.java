@@ -42,13 +42,12 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -159,7 +158,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
 
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
-    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) selectorFactory.makeValueSelector(
+    VectorValueSelector timeSelector = selectorFactory.makeValueSelector(
         timeColumn);
     if (capabilities != null) {
       return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
@@ -191,12 +190,6 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new StringLastAggregatorFactory(name, name, timeColumn, maxStringBytes);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, timeColumn, maxStringBytes));
   }
 
   @Override

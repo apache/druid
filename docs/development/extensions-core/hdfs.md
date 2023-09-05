@@ -59,7 +59,7 @@ You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/
 Run the below command to install the `hadoop-aws.jar` file under `${DRUID_HOME}/extensions/druid-hdfs-storage` in all nodes.
 
 ```bash
-java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
+${DRUID_HOME}/bin/run-java -classpath "${DRUID_HOME}/lib/*" org.apache.druid.cli.Main tools pull-deps -h "org.apache.hadoop:hadoop-aws:${HADOOP_VERSION}";
 cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar ${DRUID_HOME}/extensions/druid-hdfs-storage/
 ```
 
@@ -112,7 +112,7 @@ example properties. Please follow the instructions at
 [https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
 for more details.
 For more configurations, [GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)
-and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/master/conf/hadoop2/gcs-core-template.xml).
+and [GCS core template](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/src/test/resources/core-site.xml).
 
 ```xml
 <property>
@@ -146,8 +146,6 @@ and [GCS core template](https://github.com/GoogleCloudPlatform/bdutil/blob/maste
   </description>
 </property>
 ```
-
-Tested with Druid 0.17.0, Hadoop 2.8.5 and gcs-connector jar 2.0.0-hadoop2.
 
 ## Reading data from HDFS or Cloud Storage
 

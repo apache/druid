@@ -19,9 +19,9 @@
 import { Icon } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { Column, QueryResult, SqlQuery } from '@druid-toolkit/query';
+import { SqlAlias, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type { Column, QueryResult, SqlQuery } from 'druid-query-toolkit';
-import { SqlAlias, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';

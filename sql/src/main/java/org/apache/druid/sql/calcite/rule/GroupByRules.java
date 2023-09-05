@@ -52,6 +52,7 @@ public class GroupByRules
    *
    * @return translated aggregation, or null if translation failed.
    */
+  @Nullable
   public static Aggregation translateAggregateCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -64,16 +65,21 @@ public class GroupByRules
       final boolean finalizeAggregations
   )
   {
+    if (!call.getCollation().getFieldCollations().isEmpty()) {
+      return null;
+    }
+
     final DimFilter filter;
 
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)
-      if (project == null) {
-        // We need some kind of projection to support filtered aggregations.
-        return null;
-      }
 
-      final RexNode expression = project.getChildExps().get(call.filterArg);
+      final RexNode expression = Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
+            rowSignature,
+            project,
+            call.filterArg);
+
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
           rowSignature,

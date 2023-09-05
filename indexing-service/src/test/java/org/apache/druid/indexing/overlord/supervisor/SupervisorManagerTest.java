@@ -22,7 +22,10 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.easymock.Capture;
@@ -323,6 +326,33 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
     Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testResetSupervisorWithSpecificOffsets()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new TestSupervisorSpec("id1", supervisor1)
+    );
+
+    DataSourceMetadata datasourceMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of("0", "10", "1", "20", "2", "30"),
+            ImmutableSet.of()
+        )
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    supervisor1.resetOffsets(datasourceMetadata);
+    replayAll();
+
+    manager.start();
+    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", datasourceMetadata));
+    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", datasourceMetadata));
 
     verifyAll();
   }

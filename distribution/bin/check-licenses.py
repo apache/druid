@@ -251,7 +251,7 @@ def build_compatible_license_names():
     compatible_licenses['BSD 3-Clause'] = 'BSD-3-Clause License'
     compatible_licenses['BSD-3-Clause'] = 'BSD-3-Clause License'
 
-    compatible_licenses['ICU License'] = 'ICU License'
+    compatible_licenses['Unicode/ICU License'] = 'Unicode/ICU License'
 
     compatible_licenses['SIL Open Font License 1.1'] = 'SIL Open Font License 1.1'
 
@@ -292,6 +292,7 @@ def build_compatible_license_names():
     compatible_licenses['MIT License'] = 'MIT License'
     compatible_licenses['The MIT License (MIT)'] = 'MIT License'
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
+    compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
 
     compatible_licenses['The Go license'] = 'The Go license'
 
@@ -435,7 +436,6 @@ if __name__ == "__main__":
 
         license_yaml = args.license_yaml
         dependency_reports_root = args.dependency_reports_root
-
         check_licenses(license_yaml, dependency_reports_root)
 
     except KeyboardInterrupt:

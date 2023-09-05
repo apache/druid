@@ -22,17 +22,21 @@ package org.apache.druid.metadata;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -41,8 +45,12 @@ import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 public class SQLMetadataConnectorTest
@@ -94,7 +102,7 @@ public class SQLMetadataConnectorTest
           for (String column : Arrays.asList("type", "group_id")) {
             Assert.assertTrue(
                 StringUtils.format("Tasks table column %s was not created!", column),
-                connector.tableContainsColumn(handle, taskTable, column)
+                connector.tableHasColumn(taskTable, column)
             );
           }
 
@@ -105,6 +113,97 @@ public class SQLMetadataConnectorTest
     for (String table : tables) {
       dropTable(table);
     }
+  }
+
+  @Test
+  public void testIndexCreationOnTaskTable()
+  {
+    final String entryType = tablesConfig.getTaskEntryType();
+    String entryTableName = tablesConfig.getEntryTable(entryType);
+    connector.createTaskTables();
+    Set<String> createdIndexSet = connector.getIndexOnTable(entryTableName);
+    Set<String> expectedIndexSet = Sets.newHashSet(
+        StringUtils.format("idx_%1$s_active_created_date", entryTableName),
+        StringUtils.format("idx_%1$s_datasource_active", entryTableName)
+    ).stream().map(StringUtils::toUpperCase).collect(Collectors.toSet());
+
+    for (String expectedIndex : expectedIndexSet) {
+      Assert.assertTrue(
+          StringUtils.format("Failed to find the expected Index %s on entry table", expectedIndex),
+          createdIndexSet.contains(expectedIndex)
+      );
+    }
+    connector.createTaskTables();
+    dropTable(entryTableName);
+  }
+
+  @Test
+  public void testCreateIndexOnNoTable()
+  {
+    String tableName = "noTable";
+    try {
+      connector.createIndex(
+          tableName,
+          "some_string",
+          Lists.newArrayList("a", "b"),
+          new HashSet<>()
+      );
+    }
+    catch (Exception e) {
+      Assert.fail("Index creation should never throw an exception");
+    }
+  }
+
+  @Test
+  public void testGeIndexOnNoTable()
+  {
+    String tableName = "noTable";
+    try {
+      Set<String> res = connector.getIndexOnTable(tableName);
+      Assert.assertEquals(0, res.size());
+    }
+    catch (Exception e) {
+      Assert.fail("getIndexOnTable should never throw an exception");
+    }
+  }
+
+  /**
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_status_last_updated
+   * in the segments table.
+   */
+  @Test
+  public void testAlterSegmentTableAddLastUsed()
+  {
+    connector.createSegmentTable();
+
+    // Drop column used_status_last_updated to bring us in line with pre-upgrade state
+    derbyConnectorRule.getConnector().retryWithHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle)
+          {
+            final Batch batch = handle.createBatch();
+            batch.add(
+                StringUtils.format(
+                    "ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED",
+                    derbyConnectorRule.metadataTablesConfigSupplier()
+                                      .get()
+                                      .getSegmentsTable()
+                                      .toUpperCase(Locale.ENGLISH)
+                )
+            );
+            batch.execute();
+            return null;
+          }
+        }
+    );
+
+    connector.alterSegmentTableAddUsedFlagLastUpdated();
+    connector.tableHasColumn(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+        "USED_STATUS_LAST_UPDATED"
+    );
   }
 
   @Test

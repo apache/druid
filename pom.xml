@@ -24,12 +24,12 @@
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>21</version>
+        <version>25</version>
     </parent>
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>27.0.0-SNAPSHOT</version>
+    <version>28.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -75,46 +75,47 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>5.4.0</apache.curator.version>
-        <apache.kafka.version>3.4.0</apache.kafka.version>
+        <apache.curator.version>5.5.0</apache.curator.version>
+        <apache.kafka.version>3.5.1</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
-        <scala.library.version>2.13.9</scala.library.version>
-        <avatica.version>1.17.0</avatica.version>
-        <avro.version>1.9.2</avro.version>
-        <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
-          updated when upgrading Calcite. Refer to the top-level comments in that file for details.
-          Also, CalcitePlanner is a clone of Calcite's PlannerImpl and may require updates when
-          Calcite is upgrade. -->
-        <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>4.0.0</datasketches.version>
+        <scala.library.version>2.13.11</scala.library.version>
+        <avatica.version>1.23.0</avatica.version>
+        <avro.version>1.11.1</avro.version>
+        <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
+             default_config.fmpp
+          -->
+        <calcite.version>1.35.0</calcite.version>
+        <datasketches.version>4.1.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
-        <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
-        <errorprone.version>2.11.0</errorprone.version>
+        <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
+        <errorprone.version>2.20.0</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>16.0.1</guava.version>
+        <guava.version>31.1-jre</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.48.v20220622</jetty.version>
+        <jetty.version>9.4.51.v20230217</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.10.5.20201202</jackson.version>
+        <jackson.version>2.12.7</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.18.0</log4j.version>
         <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.86.Final</netty4.version>
-        <postgresql.version>42.4.1</postgresql.version>
-        <protobuf.version>3.21.7</protobuf.version>
+        <netty4.version>4.1.94.Final</netty4.version>
+        <postgresql.version>42.6.0</postgresql.version>
+        <protobuf.version>3.24.0</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
-        <hadoop.compile.version>3.3.5</hadoop.compile.version>
+        <jna.version>5.13.0</jna.version>
+        <jna-platform.version>5.13.0</jna-platform.version>
+        <hadoop.compile.version>3.3.6</hadoop.compile.version>
         <mockito.version>4.3.1</mockito.version>
-        <aws.sdk.version>1.12.317</aws.sdk.version>
+        <aws.sdk.version>1.12.497</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
-        <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
+        <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.10</zookeeper.version>
@@ -144,6 +145,8 @@
              ref: https://github.com/mapstruct/mapstruct/pull/1241
              -->
          <jacocoArgLine />
+         <!--  used to enable continuous profiling of jdk17 unit tests in github actions  -->
+         <jfrProfilerArgLine></jfrProfilerArgLine>
     </properties>
 
     <modules>
@@ -218,6 +221,7 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <module>extensions-contrib/druid-iceberg-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -235,7 +239,7 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
-        
+
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
             <id>sigar</id>
@@ -245,7 +249,7 @@
             </snapshots>
         </repository>
     </repositories>
-    
+
     <pluginRepositories>
         <pluginRepository>
             <id>${repoOrgId}</id>
@@ -256,7 +260,6 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
-
     <dependencyManagement>
         <dependencies>
             <!-- Compile Scope -->
@@ -283,7 +286,7 @@
            <dependency>
                <groupId>commons-net</groupId>
                <artifactId>commons-net</artifactId>
-               <version>3.6</version>
+               <version>3.9.0</version>
            </dependency>
           <dependency>
               <groupId>com.github.seancfoley</groupId>
@@ -340,6 +343,36 @@
                         <artifactId>slf4j-api</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>net.minidev</groupId>
+                <artifactId>json-smart</artifactId>
+                <version>2.4.11</version>
+            </dependency>
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>1.33</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-ext-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcutil-jdk15on</artifactId>
+                <version>1.70</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
@@ -417,6 +450,12 @@
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
+                <exclusions>
+                  <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                  </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -452,6 +491,12 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.guava</groupId>
+                        <artifactId>listenablefuture</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -481,22 +526,22 @@
             <dependency>
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
-                <version>55.1</version>
+                <version>73.2</version>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7.11</version>
+                <version>1.7.14</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.21</version>
+                <version>1.23.0</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
                 <artifactId>xz</artifactId>
-                <version>1.8</version>
+                <version>1.9</version>
             </dependency>
             <dependency>
                 <groupId>com.github.luben</groupId>
@@ -518,7 +563,12 @@
             <dependency>
                 <groupId>javax.validation</groupId>
                 <artifactId>validation-api</artifactId>
-                <version>1.1.0.Final</version>
+                <version>2.0.1.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.validation</groupId>
+                <artifactId>jakarta.validation-api</artifactId>
+                <version>2.0.2</version>
             </dependency>
             <dependency>
                 <groupId>jakarta.inject</groupId>
@@ -671,7 +721,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.12.4</version>
+                <version>2.12.5</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -730,17 +780,17 @@
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
-                <version>4.5.1</version>
+                <version>4.5.3</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-coordinator</artifactId>
-                <version>4.5.1</version>
+                <version>4.5.3</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
                 <artifactId>commons-cli</artifactId>
-                <version>1.3.1</version>
+                <version>1.5.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -755,7 +805,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.8.4</version>
+                <version>1.1.10.3</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -883,7 +933,12 @@
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
                 <artifactId>jna</artifactId>
-                <version>4.5.1</version>
+                <version>${jna.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna-platform</artifactId>
+                <version>${jna-platform.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -953,7 +1008,7 @@
             <dependency>
                 <groupId>org.apache.directory.api</groupId>
                 <artifactId>api-util</artifactId>
-                <version>1.0.3</version>
+                <version>2.1.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.datasketches</groupId>
@@ -967,9 +1022,18 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-core</artifactId>
+                <artifactId>calcite-testkit</artifactId>
                 <version>${calcite.version}</version>
-                <type>test-jar</type>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.hamcrest</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1037,7 +1101,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.19.0</version>
+                <version>3.24.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1209,6 +1273,11 @@
             <scope>provided</scope>
           </dependency>
           <dependency>
+            <groupId>org.immutables</groupId>
+            <artifactId>value-annotations</artifactId>
+            <version>2.8.8</version>
+          </dependency>
+          <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>${hadoop.compile.version}</version>
@@ -1239,6 +1308,9 @@
                         <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
                         <exclude>org/apache/druid/guice/http/*</exclude>
 
+                        <!-- Ignore cli tools -->
+                        <exclude>org/apache/druid/cli/UpdateTables*</exclude>
+
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
@@ -1261,7 +1333,8 @@
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
 
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
-                  </excludes>
+                        <exclude>com/fasterxml/jackson/databind/*</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -1291,6 +1364,9 @@
                     <headerLocation>codestyle/LICENSE.txt</headerLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
+                    <excludes>
+                        *com/fasterxml/jackson/databind/*
+                    </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -1323,6 +1399,7 @@
                 </dependencies>
                 <configuration>
                     <excludeFilterFile>codestyle/spotbugs-exclude.xml</excludeFilterFile>
+                    <maxHeap>768</maxHeap>
                 </configuration>
             </plugin>
             <plugin>
@@ -1364,7 +1441,6 @@
                     </bundledSignatures>
                     <signaturesFiles>
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
-                        <signaturesFile>${project.parent.basedir}/codestyle/guava16-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>
@@ -1559,7 +1635,7 @@
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
-                <version>2.7.5</version>
+                <version>2.7.9</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -1580,13 +1656,13 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M7</version>
+                    <version>3.1.2</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
                         <argLine>
                             @{jacocoArgLine}
-                            ${jdk.surefire.argLine}
+                            ${jdk.strong.encapsulation.argLine}
                             -Xmx1500m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1600,6 +1676,7 @@
                             -Ddruid.test.stupidPool.poison=true
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
+                            ${jfrProfilerArgLine}
                         </argLine>
                         <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
                              while its sister plugin, Failsafe, runs the "new" ITs. -->
@@ -1668,7 +1745,7 @@
                 <plugin>
                     <groupId>org.antlr</groupId>
                     <artifactId>antlr4-maven-plugin</artifactId>
-                    <version>4.5.1</version>
+                    <version>4.5.3</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1710,7 +1787,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.1</version>
+                    <version>3.11.0</version>
                     <configuration>
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
@@ -1720,10 +1797,6 @@
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
                 <version>1.11.3</version>
-                <configuration>
-                  <nodeVersion>${node.version}</nodeVersion>
-                  <npmVersion>${npm.version}</npmVersion>
-                </configuration>
               </plugin>
             </plugins>
         </pluginManagement>
@@ -1736,13 +1809,20 @@
                 <jdk>[9,)</jdk>
             </activation>
             <properties>
-                <jdk.surefire.argLine>
-                    <!-- required for DataSketches Memory on Java 11+ -->
+                <jdk.strong.encapsulation.argLine>
+                    <!-- Strong encapsulation parameters -->
+                    <!-- When updating this list, update all four locations: -->
+                    <!--  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES -->
+                    <!--  2) docs/operations/java.md, "Strong encapsulation" section -->
+                    <!--  3) pom.xml, jdk.strong.encapsulation.argLine (here) -->
+                    <!--  4) examples/bin/run-java script -->
+
+                    <!-- required for DataSketches Memory -->
                     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
                     --add-opens=java.base/java.nio=ALL-UNNAMED
                     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
 
                     <!-- required for NativeIO#getfd -->
                     --add-opens=java.base/java.io=ALL-UNNAMED
@@ -1750,10 +1830,12 @@
                     <!-- required for Guice -->
                     --add-opens=java.base/java.lang=ALL-UNNAMED
 
-                    <!-- required for certain EqualsVerifier tests -->
-                    <!-- (not required in production) -->
+                    <!-- required for metrics -->
+                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+
+                    <!-- required for certain EqualsVerifier tests (not required in production) -->
                     --add-opens=java.base/java.util=ALL-UNNAMED
-                </jdk.surefire.argLine>
+                </jdk.strong.encapsulation.argLine>
             </properties>
             <build>
                 <plugins>
@@ -1789,7 +1871,7 @@
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
-                                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:DivZero -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JMockTestWithoutRunWithOrRuleAnnotation -Xep:JavaxInjectOnFinalField -Xep:LockMethodChecker -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:UnlockMethod</arg>
+                                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JavaxInjectOnFinalField -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality</arg>
                                 <!-- Error Prone requires exemptions for Java >= 16, see https://errorprone.info/docs/installation#maven -->
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
@@ -1864,7 +1946,7 @@
                     <plugin>
                         <groupId>org.apache.rat</groupId>
                         <artifactId>apache-rat-plugin</artifactId>
-                        <version>0.12</version>
+                        <version>0.15</version>
                         <executions>
                             <execution>
                                 <phase>verify</phase>
@@ -2014,6 +2096,7 @@
           <id>skip-static-checks</id>
           <properties>
             <animal.sniffer.skip>true</animal.sniffer.skip>
+            <cyclonedx.skip>true</cyclonedx.skip>
             <checkstyle.skip>true</checkstyle.skip>
             <enforcer.skip>true</enforcer.skip>
             <forbiddenapis.skip>true</forbiddenapis.skip>
@@ -2032,18 +2115,5 @@
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
-      <profile>
-        <id>hadoop2</id>
-        <activation>
-          <property>
-            <name>hadoop2.enabled</name>
-            <value>true</value>
-          </property>
-        </activation>
-        <properties>
-          <hadoop.compile.version>2.8.5</hadoop.compile.version>
-          <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
-        </properties>
-      </profile>
     </profiles>
 </project>

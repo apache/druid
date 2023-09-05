@@ -20,13 +20,14 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Coordinator simulation test to verify behaviour of segment balancing.
@@ -61,16 +62,12 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
   private void testBalancingWithAutoSyncInventory(boolean autoSyncInventory)
   {
-    // maxSegmentsToMove = 10, unlimited load queue, no replication
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 0);
-
     // historicals = 2(T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
-                             .withDynamicConfig(dynamicConfig)
                              .withAutoInventorySync(autoSyncInventory)
                              .build();
 
@@ -97,16 +94,12 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testDropDoesNotHappenWhenLoadFails()
   {
-    // maxSegmentsToMove = 10, unlimited load queue, no replication
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 0);
-
     // historicals = 2(T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
-                             .withDynamicConfig(dynamicConfig)
                              .build();
 
     // Put all the segments on histT11
@@ -129,15 +122,11 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testBalancingOfFullyReplicatedSegment()
   {
-    // maxSegmentsToMove = 10, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 10);
-
     // historicals = 2(in T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
-                             .withDynamicConfig(dynamicConfig)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .build();
 
@@ -149,21 +138,13 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
     // Verify that there are segments in the load queue for balancing
     verifyValue(Metric.MOVED_COUNT, 5L);
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filter(DruidMetrics.SERVER, historicalT12.getName()),
-        5
-    );
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
     runCoordinatorCycle();
 
     // Verify that the segments in the load queue are not considered as over-replicated
-    verifyValue("segment/dropped/count", 0L);
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filter(DruidMetrics.SERVER, historicalT12.getName()),
-        5
-    );
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
 
     // Finish and verify balancing
     loadQueuedSegments();
@@ -171,4 +152,118 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(5, historicalT12.getTotalSegments());
     verifyDatasourceIsFullyLoaded(datasource);
   }
+
+  @Test
+  public void testBalancingMovesSegmentsInLoadQueue()
+  {
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: All segments are assigned to the first historical
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 10L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT11), 10L);
+
+    // Run 2: Add new historical, some segments in the queue will be moved
+    addServer(historicalT12);
+    runCoordinatorCycle();
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
+    verifyValue(Metric.CANCELLED_ACTIONS, 5L);
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT11), 5L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 5L);
+
+    // Complete loading the segments
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
+
+  @Test
+  public void testBalancingDoesNotMoveLoadedSegmentsWhenTierIsBusy()
+  {
+    // maxSegmentsToMove = 3, unlimited load queue
+    final CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
+                                .withMaxSegmentsToMove(3)
+                                .withMaxSegmentsInNodeLoadingQueue(0)
+                                .build();
+
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withDynamicConfig(dynamicConfig)
+                             .withSegments(segments)
+                             .withServers(historicalT11)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Pre-load some of the segments on histT11
+    segments.subList(2, segments.size()).forEach(historicalT11::addDataSegment);
+
+    // Run 1: The remaining segments are assigned to histT11
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 2L);
+
+    // Run 2: Add histT12, some loading segments and some loaded segments are moved to it
+    addServer(historicalT12);
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 3L);
+    verifyValue(Metric.CANCELLED_ACTIONS, 2L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 3L);
+
+    // Run 3: No more segments are moved as tier is already busy moving
+    runCoordinatorCycle();
+    verifyNotEmitted(Metric.MOVED_COUNT);
+
+    // Run 4: Load pending segments, more are moved
+    loadQueuedSegments();
+    runCoordinatorCycle();
+    Assert.assertTrue(getValue(Metric.MOVED_COUNT, null).intValue() > 0);
+  }
+
+  @Test(timeout = 60000L)
+  public void testMaxSegmentsAreMovedWhenClusterIsSkewed()
+  {
+    // Add 10 historicals of size 1 TB each
+    final long size1TB = 1_000_000;
+    List<DruidServer> historicals
+        = IntStream.range(0, 10)
+                   .mapToObj(i -> createHistorical(i + 1, Tier.T1, size1TB))
+                   .collect(Collectors.toList());
+
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.KOALA_100X100D)
+                             .withServers(historicals)
+                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: All segments are assigned to the 10 historicals
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
+    verifyValue(Metric.MOVE_SKIPPED, 100L);
+
+    // Run 2: Add 10 more historicals, some segments are moved to them
+    for (int i = 11; i <= 20; ++i) {
+      addServer(createHistorical(i, Tier.T1, size1TB));
+    }
+
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 500L);
+    verifyNotEmitted(Metric.MOVE_SKIPPED);
+  }
+
 }

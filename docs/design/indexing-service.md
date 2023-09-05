@@ -30,7 +30,7 @@ Indexing [tasks](../ingestion/tasks.md) are responsible for creating and [killin
 The indexing service is composed of three main components: [Peons](../design/peons.md) that can run a single task, [MiddleManagers](../design/middlemanager.md) that manage Peons, and an [Overlord](../design/overlord.md) that manages task distribution to MiddleManagers.
 Overlords and MiddleManagers may run on the same process or across multiple processes, while MiddleManagers and Peons always run on the same process.
 
-Tasks are managed using API endpoints on the Overlord service. Please see [Overlord Task API](../api-reference/api-reference.md#tasks) for more information.
+Tasks are managed using API endpoints on the Overlord service. Please see [Tasks API](../api-reference/tasks-api.md) for more information.
 
 ![Indexing Service](../assets/indexing_service.png "Indexing Service")
 

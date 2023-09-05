@@ -124,7 +124,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
     return new JobBuilder()
         .withNewMetadata()
-        .withName(new K8sTaskId(task).getK8sTaskId())
+        .withName(new K8sTaskId(task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .endMetadata()
@@ -224,7 +224,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
                 null,
                 StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK)
-            )).build()).build()
+            )).build()).build(),
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
+            .withValue(Boolean.toString(task.supportsQueries()))
+            .build()
     );
   }
 

@@ -26,7 +26,7 @@ sidebar_label: Task reference
 Tasks do all [ingestion](index.md)-related work in Druid.
 
 For batch ingestion, you will generally submit tasks directly to Druid using the
-[Task APIs](../api-reference/api-reference.md#tasks). For streaming ingestion, tasks are generally submitted for you by a
+[Tasks APIs](../api-reference/tasks-api.md). For streaming ingestion, tasks are generally submitted for you by a
 supervisor.
 
 ## Task API
@@ -34,7 +34,7 @@ supervisor.
 Task APIs are available in two main places:
 
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
-review logs and reports, and more. Refer to the [Tasks API reference page](../api-reference/api-reference.md#tasks) for a
+review logs and reports, and more. Refer to the [Tasks API reference](../api-reference/tasks-api.md) for a
 full list.
 - Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
 running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
@@ -304,7 +304,9 @@ For example, a Kafka indexing task and a compaction task can always write segmen
 The reason for this is because a Kafka indexing task always appends new segments, while a compaction task always overwrites existing segments.
 The segments created with the segment locking have the _same_ major version and a _higher_ minor version.
 
-> The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
+:::info
+ The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
+:::
 
 To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#context).
 Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to use automatically.
@@ -406,7 +408,7 @@ The task then starts creating logs in a local directory of the middle manager (o
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../api-reference/api-reference.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 
@@ -415,11 +417,15 @@ If you don't see the log file in long-term storage, it means either:
 
 You can check the middleManager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
-> If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+:::info
+ If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+:::
 
 You can configure retention periods for logs in milliseconds by setting `druid.indexer.logs.kill` properties in [configuration](../configuration/index.md#task-logging).  The Overlord will then automatically manage task logs in log directories along with entries in task-related metadata storage tables.
 
-> Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store. Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+:::info
+ Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store. Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+:::
 
 ## Configuring task storage sizes
 

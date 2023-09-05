@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,7 +45,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.CoreMatchers;
@@ -81,7 +82,7 @@ public class MSQInsertTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -91,7 +92,6 @@ public class MSQInsertTest extends MSQTestBase
 
   @Parameterized.Parameter(1)
   public Map<String, Object> context;
-
 
   @Test
   public void testInsertOnFoo1()
@@ -174,7 +174,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
                              + "  )\n"
-                             + ") PARTITIONED BY day")
+                             + ")\n"
+                             + "WHERE __time > TIMESTAMP '1999-01-01 00:00:00'\n"
+                             + "PARTITIONED BY day")
                      .setQueryContext(context)
                      .setExpectedResultRows(expectedRows)
                      .setExpectedDataSource("foo1")
@@ -406,6 +408,101 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertOnFoo1WithTimeAggregator()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT MILLIS_TO_TIMESTAMP((SUM(CAST(\"m1\" AS BIGINT)))) AS __time "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1970-01-01/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{21L}
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimeAggregatorAndMultipleWorkers()
+  {
+    Map<String, Object> localContext = new HashMap<>(context);
+    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.MAX.name());
+    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT MILLIS_TO_TIMESTAMP((SUM(CAST(\"m1\" AS BIGINT)))) AS __time "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(localContext)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1970-01-01/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{21L}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+
+  @Test
+  public void testInsertOnFoo1WithTimePostAggregator()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("sum_m1", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT DATE_TRUNC('DAY', TIMESTAMP '2000-01-01' - INTERVAL '1'DAY) AS __time, SUM(m1) AS sum_m1 "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1999-12-31T/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946598400000L, 21.0}
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
   public void testInsertOnFoo1WithTimeFunctionWithSequential()
   {
     List<Object[]> expectedRows = expectedFooRows();
@@ -541,11 +638,9 @@ public class MSQInsertTest extends MSQTestBase
                          "INSERT INTO foo1 SELECT count(dim3) FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Aggregate expression is illegal in GROUP BY clause"))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains("Aggregate expression is illegal in GROUP BY clause")
+                     )
                      .verifyPlanningErrors();
   }
 
@@ -586,12 +681,12 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedResultRows(
                          NullHandling.replaceWithDefault() ?
                          ImmutableList.of(
-                             new Object[]{0L, new Object[]{null}},
+                             new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{"b", "c"}},
                              new Object[]{0L, new Object[]{"d"}}
                          ) : ImmutableList.of(
-                             new Object[]{0L, new Object[]{null}},
+                             new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{""}},
                              new Object[]{0L, new Object[]{"b", "c"}},
@@ -734,6 +829,23 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .verifyResults();
 
+  }
+
+  @Test
+  public void testInsertWithClusteredByDescendingThrowsException()
+  {
+    // Add a DESC clustered by column, which should not be allowed
+    testIngestQuery().setSql("INSERT INTO foo1 "
+                             + "SELECT __time, dim1 , count(*) as cnt "
+                             + "FROM foo "
+                             + "GROUP BY 1, 2"
+                             + "PARTITIONED BY DAY "
+                             + "CLUSTERED BY dim1 DESC"
+                     )
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlIs("Invalid CLUSTERED BY clause [`dim1` DESC]: cannot sort in descending order.")
+                     )
+                     .verifyPlanningErrors();
   }
 
   @Test
@@ -947,25 +1059,27 @@ public class MSQInsertTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Field \"__time\" must be of type TIMESTAMP"))
-        ))
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.USER,
+                DruidException.Category.INVALID_INPUT,
+                "invalidInput"
+            ).expectMessageIs("Field [__time] was the wrong type [VARCHAR], expected TIMESTAMP")
+        )
         .verifyPlanningErrors();
   }
 
   @Test
   public void testIncorrectInsertQuery()
   {
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"))
-                     ))
-                     .verifyPlanningErrors();
+    testIngestQuery()
+        .setSql(
+            "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1"
+        )
+        .setExpectedValidationErrorMatcher(invalidSqlContains(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+        ))
+        .verifyPlanningErrors();
   }
 
 
@@ -1013,11 +1127,9 @@ public class MSQInsertTest extends MSQTestBase
                 + "  )\n"
                 + ") PARTITIONED by day")
         .setQueryContext(context)
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Duplicate field in SELECT: [namespace]"))
-        ))
+        .setExpectedValidationErrorMatcher(
+            invalidSqlIs("Duplicate field in SELECT: [namespace]")
+        )
         .verifyPlanningErrors();
   }
 
@@ -1031,11 +1143,13 @@ public class MSQInsertTest extends MSQTestBase
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(
-                         ThrowableMessageMatcher.hasMessage(
-                             CoreMatchers.startsWith(
-                                 MultiStageQueryContext.CTX_MAX_NUM_TASKS
-                                 + " cannot be less than 2 since at least 1 controller and 1 worker is necessary."
-                             )
+                         new DruidExceptionMatcher(
+                             DruidException.Persona.USER,
+                             DruidException.Category.INVALID_INPUT,
+                             "invalidInput"
+                         ).expectMessageIs(
+                             "MSQ context maxNumTasks [1] cannot be less than 2, since at least 1 controller "
+                             + "and 1 worker is necessary"
                          )
                      )
                      .verifyExecutionError();
@@ -1078,11 +1192,11 @@ public class MSQInsertTest extends MSQTestBase
                              + "FROM foo "
                              + "LIMIT 50 "
                              + "PARTITIONED BY MONTH")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
+                         )
+                     )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
   }
@@ -1096,11 +1210,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains("INSERT and REPLACE queries cannot have an OFFSET")
+                     )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
   }

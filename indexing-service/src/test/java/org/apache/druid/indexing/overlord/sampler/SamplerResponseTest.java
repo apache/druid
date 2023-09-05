@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -65,7 +65,7 @@ public class SamplerResponseTest
                 new StringDimensionSchema("dim1")
             ),
             ImmutableList.of(
-                new NestedDataDimensionSchema("dim1")
+                new AutoTypeColumnSchema("dim1")
             ),
             RowSignature.builder().addTimeColumn().add("dim1", ColumnType.STRING).add("met1", ColumnType.LONG).build(),
             data

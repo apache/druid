@@ -45,6 +45,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.ParseExceptionReport;
@@ -2003,12 +2004,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     ((TestableKinesisIndexTask) staleReplica).setLocalSupplier(recordSupplier2);
     final ListenableFuture<TaskStatus> normalReplicaFuture = runTask(normalReplica);
     // Simulating one replica is slower than the other
-    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transform(
+    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transformAsync(
         taskExec.submit(() -> {
           Thread.sleep(1000);
           return staleReplica;
         }),
-        (AsyncFunction<Task, TaskStatus>) this::runTask
+        (AsyncFunction<Task, TaskStatus>) this::runTask,
+        MoreExecutors.directExecutor()
     );
 
     waitUntil(normalReplica, this::isTaskPaused);
@@ -2485,7 +2487,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
 
     @Override
-    protected KinesisRecordSupplier newTaskRecordSupplier()
+    protected KinesisRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return localSupplier == null ? recordSupplier : localSupplier;
     }

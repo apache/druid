@@ -60,7 +60,7 @@ public class MSQTaskReportTest
 {
   private static final String TASK_ID = "mytask";
   private static final String HOST = "example.com:1234";
-  private static final QueryDefinition QUERY_DEFINITION =
+  public static final QueryDefinition QUERY_DEFINITION =
       QueryDefinition
           .builder()
           .add(
@@ -105,7 +105,8 @@ public class MSQTaskReportTest
             new MSQResultsReport(
                 Collections.singletonList(new MSQResultsReport.ColumnAndType("s", ColumnType.STRING)),
                 ImmutableList.of(SqlTypeName.VARCHAR),
-                Yielders.each(Sequences.simple(results))
+                Yielders.each(Sequences.simple(results)),
+                null
             )
         )
     );
@@ -132,7 +133,6 @@ public class MSQTaskReportTest
       results2.add(yielder.get());
       yielder = yielder.next(null);
     }
-
     Assert.assertEquals(results.size(), results2.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(results.get(i), results2.get(i));

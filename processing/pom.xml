@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>27.0.0-SNAPSHOT</version>
+    <version>28.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -37,6 +37,7 @@
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>${sigar.base.version}.132</sigar.version>
     <ipaddress.version>5.3.4</ipaddress.version>
+    <oshi.version>6.4.4</oshi.version>
   </properties>
 
   <dependencies>
@@ -119,8 +120,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
@@ -334,6 +335,11 @@
       <!-- "Provided" because this dependency is used only during the build itself: some files from this
       dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-core</artifactId>
+      <version>${oshi.version}</version>
     </dependency>
 
 

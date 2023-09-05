@@ -45,7 +45,7 @@ public class NullValueHandlingConfig
   )
   {
     if (useDefaultValuesForNull == null) {
-      this.useDefaultValuesForNull = Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"));
+      this.useDefaultValuesForNull = Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "false"));
     } else {
       this.useDefaultValuesForNull = useDefaultValuesForNull;
     }

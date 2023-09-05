@@ -28,9 +28,9 @@ import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.NestedDataDimensionHandler;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -106,7 +106,6 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     }
     builder.setComplexColumnSupplier(supplier);
     builder.setColumnFormat(new NestedColumnFormatV4());
-    builder.setFilterable(true);
   }
 
   @Override
@@ -169,13 +168,13 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedDataDimensionHandler(columnName);
+      return new NestedCommonFormatColumnHandler(columnName);
     }
 
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new NestedDataDimensionSchema(columnName);
+      return new AutoTypeColumnSchema(columnName);
     }
 
     @Override
@@ -188,7 +187,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public ColumnCapabilities toColumnCapabilities()
     {
-      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true).setFilterable(true);
+      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA).setHasNulls(true);
     }
   }
 }

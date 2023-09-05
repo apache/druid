@@ -60,7 +60,7 @@ import java.util.Objects;
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
-  private static final String VARIANCE_TYPE_NAME = "variance";
+  public static final String VARIANCE_TYPE_NAME = "variance";
   public static final ColumnType TYPE = ColumnType.ofComplex(VARIANCE_TYPE_NAME);
 
   protected final String fieldName;
@@ -247,12 +247,6 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new VarianceFoldingAggregatorFactory(name, name, estimator);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new VarianceAggregatorFactory(fieldName, fieldName, estimator, inputType));
   }
 
   @Override

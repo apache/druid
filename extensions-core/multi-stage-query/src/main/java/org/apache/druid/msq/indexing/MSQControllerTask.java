@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -46,9 +47,13 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.Interval;
@@ -60,7 +65,7 @@ import java.util.Map;
 import java.util.Set;
 
 @JsonTypeName(MSQControllerTask.TYPE)
-public class MSQControllerTask extends AbstractTask
+public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";
@@ -80,7 +85,7 @@ public class MSQControllerTask extends AbstractTask
   private final Map<String, Object> sqlQueryContext;
 
   /**
-   * Enables usage of {@link SqlResults#coerce(ObjectMapper, SqlResults.Context, Object, SqlTypeName)}.
+   * Enables usage of {@link SqlResults#coerce(ObjectMapper, SqlResults.Context, Object, SqlTypeName, String)}.
    */
   @Nullable
   private final SqlResults.Context sqlResultsContext;
@@ -90,6 +95,9 @@ public class MSQControllerTask extends AbstractTask
    */
   @Nullable
   private final List<SqlTypeName> sqlTypeNames;
+
+  @Nullable
+  private final List<ColumnType> nativeTypeNames;
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   @JacksonInject
@@ -105,6 +113,7 @@ public class MSQControllerTask extends AbstractTask
       @JsonProperty("sqlQueryContext") @Nullable Map<String, Object> sqlQueryContext,
       @JsonProperty("sqlResultsContext") @Nullable SqlResults.Context sqlResultsContext,
       @JsonProperty("sqlTypeNames") @Nullable List<SqlTypeName> sqlTypeNames,
+      @JsonProperty("nativeTypeNames") @Nullable List<ColumnType> nativeTypeNames,
       @JsonProperty("context") @Nullable Map<String, Object> context
   )
   {
@@ -121,6 +130,7 @@ public class MSQControllerTask extends AbstractTask
     this.sqlQueryContext = sqlQueryContext;
     this.sqlResultsContext = sqlResultsContext;
     this.sqlTypeNames = sqlTypeNames;
+    this.nativeTypeNames = nativeTypeNames;
 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
@@ -152,6 +162,15 @@ public class MSQControllerTask extends AbstractTask
   public List<SqlTypeName> getSqlTypeNames()
   {
     return sqlTypeNames;
+  }
+
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<ColumnType> getNativeTypeNames()
+  {
+    return nativeTypeNames;
   }
 
   @Nullable
@@ -246,5 +265,24 @@ public class MSQControllerTask extends AbstractTask
   public static boolean isIngestion(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
+  }
+
+  /**
+   * Returns true if the task reads from the same table as the destionation. In this case, we would prefer to fail
+   * instead of reading any unused segments to ensure that old data is not read.
+   */
+  public static boolean isReplaceInputDataSourceTask(MSQControllerTask task)
+  {
+    return task.getQuerySpec()
+               .getQuery()
+               .getDataSource()
+               .getTableNames()
+               .stream()
+               .anyMatch(datasouce -> task.getDataSource().equals(datasouce));
+  }
+
+  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
+  {
+    return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 }

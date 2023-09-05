@@ -23,6 +23,9 @@ title: "Automatic compaction"
   -->
 
 In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
+This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
+
+## How Druid manages automatic compaction
 
 The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
@@ -33,16 +36,19 @@ At every invocation of auto-compaction, the Coordinator initiates a [segment sea
 When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
 If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
 
+:::info
+ Auto-compaction skips datasources that have a segment granularity of `ALL`.
+:::
+
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
-This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
 
 ## Enable automatic compaction
 
 You can enable automatic compaction for a datasource using the web console or programmatically via an API.
-This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/api-reference.md#tasks).
+This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
 
-### web console
+### Web console
 
 Use the web console to enable automatic compaction for a datasource as follows.
 
@@ -59,10 +65,10 @@ To disable auto-compaction for a datasource, click **Delete** from the **Compact
 
 ### Compaction configuration API
 
-Use the [Coordinator API](../api-reference/api-reference.md#automatic-compaction-status) to configure automatic compaction.
+Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#manage-automatic-compaction) to configure automatic compaction.
 To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
 See [Configure automatic compaction](#configure-automatic-compaction) for the syntax of an auto-compaction spec.
-Send the JSON object as a payload in a [`POST` request](../api-reference/api-reference.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
+Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#create-or-update-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
 The following example configures auto-compaction for the `wikipedia` datasource:
 
 ```sh
@@ -76,7 +82,7 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 }'
 ```
 
-To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/api-reference.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
+To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#remove-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
 
 ```sh
 curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
@@ -115,11 +121,11 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
-Compaction tasks fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
-_unless_ the following items are all set. It is strongly recommended to set all of these items to maximize performance
-and minimize disk usage of the `compact` tasks launched by auto-compaction:
+Compaction tasks typically fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+_unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to
+maximize performance and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec). All three values must be set to non-null values: `segmentGranularity`, `queryGranularity`, and `rollup`.
+- [`granularitySpec`](compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
 - [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 
@@ -152,7 +158,7 @@ After the Coordinator has initiated auto-compaction, you can view compaction sta
 
 In the web console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
 
-To get statistics by API, send a [`GET` request](../api-reference/api-reference.md#automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
+To get statistics by API, send a [`GET` request](../api-reference/automatic-compaction-api.md#view-automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
 
 ## Examples
 
@@ -173,8 +179,6 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
   "skipOffsetFromLatest": "P1W",
 }
 ```
-
-> Auto-compaction skips datasources containing ALL granularity segments when the target granularity is different.
 
 ### Update partitioning scheme
 

@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>27.0.0-SNAPSHOT</version>
+        <version>28.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -133,8 +133,8 @@
             <artifactId>curator-recipes</artifactId>
         </dependency>
         <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -271,53 +271,6 @@
     </dependencies>
 
     <profiles>
-        <profile>
-            <id>hadoop2</id>
-            <activation>
-                <property>
-                    <name>hadoop2.enabled</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-mapreduce-client-core</artifactId>
-                    <scope>provided</scope>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>javax.servlet</groupId>
-                            <artifactId>servlet-api</artifactId>
-                        </exclusion>
-                    </exclusions>
-                </dependency>
-                <dependency>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-common</artifactId>
-                    <scope>provided</scope>
-                </dependency>
-                <dependency>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-client</artifactId>
-                    <version>${hadoop.compile.version}</version>
-                    <scope>provided</scope>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>org.apache.avro</groupId>
-                            <artifactId>avro</artifactId>
-                        </exclusion>
-                    </exclusions>
-                </dependency>
-                <dependency>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-yarn-common</artifactId>
-                    <scope>provided</scope>
-                </dependency>
-            </dependencies>
-            <properties>
-                <hadoop-task-libs>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</hadoop-task-libs>
-            </properties>
-        </profile>
         <profile>
             <id>hadoop3</id>
             <activation>
