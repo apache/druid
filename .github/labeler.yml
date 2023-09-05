@@ -38,6 +38,11 @@
   - 'extensions-core/lookups-cached-single/**'
   - 'extensions-core/kafka-extraction-namespace/**'
 
+'Area - Metrics/Event Emitting':
+  - 'processing/src/main/java/org/apache/druid/java/util/metrics/**'
+  - 'processing/src/main/java/org/apache/druid/java/util/emitter/**'
+  - 'extensions-contrib/*-emitter/**'
+
 'Area - Querying':
   - 'sql/**'
 
