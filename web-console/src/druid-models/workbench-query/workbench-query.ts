@@ -17,6 +17,7 @@
  */
 
 import type {
+  QueryParameter,
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
@@ -66,6 +67,7 @@ interface IngestionLines {
 export interface WorkbenchQueryValue {
   queryString: string;
   queryContext: QueryContext;
+  queryParameters?: QueryParameter[];
   engine?: DruidEngine;
   lastExecution?: LastExecution;
   unlimited?: boolean;
@@ -235,6 +237,7 @@ export class WorkbenchQuery {
 
   public readonly queryString: string;
   public readonly queryContext: QueryContext;
+  public readonly queryParameters?: QueryParameter[];
   public readonly engine?: DruidEngine;
   public readonly lastExecution?: LastExecution;
   public readonly unlimited?: boolean;
@@ -251,6 +254,7 @@ export class WorkbenchQuery {
     }
     this.queryString = queryString;
     this.queryContext = value.queryContext;
+    this.queryParameters = value.queryParameters;
 
     // Start back compat code for the engine names that might be coming from local storage
     let possibleEngine: string | undefined = value.engine;
@@ -274,6 +278,7 @@ export class WorkbenchQuery {
     return {
       queryString: this.queryString,
       queryContext: this.queryContext,
+      queryParameters: this.queryParameters,
       engine: this.engine,
       unlimited: this.unlimited,
     };
@@ -295,6 +300,10 @@ export class WorkbenchQuery {
 
   public changeQueryContext(queryContext: QueryContext): WorkbenchQuery {
     return new WorkbenchQuery({ ...this.valueOf(), queryContext });
+  }
+
+  public changeQueryParameters(queryParameters: QueryParameter[] | undefined): WorkbenchQuery {
+    return new WorkbenchQuery({ ...this.valueOf(), queryParameters });
   }
 
   public changeEngine(engine: DruidEngine | undefined): WorkbenchQuery {
@@ -425,11 +434,12 @@ export class WorkbenchQuery {
     let ret: WorkbenchQuery = this;
 
     // Explicitly select MSQ, adjust the context, set maxNumTasks to the lowest possible and add in ingest mode flags
+    const { queryContext } = this;
     ret = ret.changeEngine('sql-msq-task').changeQueryContext({
-      ...this.queryContext,
+      ...queryContext,
       maxNumTasks: 2,
-      finalizeAggregations: false,
-      groupByEnableMultiValueUnnesting: false,
+      finalizeAggregations: queryContext.finalizeAggregations ?? false,
+      groupByEnableMultiValueUnnesting: queryContext.groupByEnableMultiValueUnnesting ?? false,
     });
 
     // Remove everything pertaining to INSERT INTO / REPLACE INTO from the query string
@@ -458,7 +468,7 @@ export class WorkbenchQuery {
     prefixLines: number;
     cancelQueryId?: string;
   } {
-    const { queryString, queryContext, unlimited, prefixLines } = this;
+    const { queryString, queryContext, queryParameters, unlimited, prefixLines } = this;
     const engine = this.getEffectiveEngine();
 
     if (engine === 'native') {
@@ -542,6 +552,10 @@ export class WorkbenchQuery {
       apiQuery.context.executionMode ??= 'async';
       apiQuery.context.finalizeAggregations ??= !ingestQuery;
       apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
+    }
+
+    if (Array.isArray(queryParameters) && queryParameters.length) {
+      apiQuery.parameters = queryParameters;
     }
 
     return {

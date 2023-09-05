@@ -130,7 +130,7 @@ public class BalanceSegmentsProfiler
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(segments)
+        .withUsedSegments(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
@@ -185,7 +185,7 @@ public class BalanceSegmentsProfiler
                 )
                 .build()
         )
-        .withUsedSegmentsInTest(segments)
+        .withUsedSegments(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .withSegmentAssignerUsing(loadQueueManager)
         .build();

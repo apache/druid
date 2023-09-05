@@ -145,7 +145,7 @@ public class LoadRuleTest
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(balancerStrategy)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withSmartSegmentLoading(false)
@@ -335,7 +335,7 @@ public class LoadRuleTest
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(balancerStrategy)
-        .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
+        .withUsedSegments(dataSegment1, dataSegment2, dataSegment3)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withSmartSegmentLoading(false)
