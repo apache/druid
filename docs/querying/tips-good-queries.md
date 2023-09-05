@@ -55,7 +55,7 @@ This section outlines Druid settings that can help to improve query performance.
 
 You can enable caching in Druid to improve query times for frequently accessed data. Caching enables increased concurrency on the same system, leading to noticeable performance improvements for queries handling throughput for concurrent, mixed workloads.
 
-The largest performance gains from caching tend to apply to TopN and time series queries. For GroupBy queries, if the bottleneck is in the merging phase on the Broker, enabling caching results in little noticeable query improvement. See [Performance considerations for caching](./caching.md#performance-considerations-for-caching) for more information.
+The largest performance gains from caching tend to apply to TopN and timeseries queries. For GroupBy queries, if the bottleneck is in the merging phase on the Broker, enabling caching results in little noticeable query improvement. See [Performance considerations for caching](./caching.md#performance-considerations-for-caching) for more information.
 
 #### Use approximation
 
