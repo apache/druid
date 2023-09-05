@@ -124,7 +124,7 @@ UNION ALL
 GROUP BY id
 ```
 
-To simply this query, you could split it into several queries, for example:
+To simplify this query, you could split it into several queries, for example:
 
 ```
 SELECT id, SUM(revenue) FROM datasource_1
