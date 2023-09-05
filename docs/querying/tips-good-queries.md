@@ -169,7 +169,7 @@ WHERE __time BETWEEN '2023-08-01' AND '2023-08-31'
 
 #### Reduce the computation in your queries
 
-Examine your query to see if it uses a lot of transformation, functions, and expressions. Consider whether you could rewrite the query to reduce the level of computation.
+Examine your query to see if it uses a lot of transformations, functions, and expressions. Consider whether you could rewrite the query to reduce the level of computation.
 
 ## Druid SQL query example
 
