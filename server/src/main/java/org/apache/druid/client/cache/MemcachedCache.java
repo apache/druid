@@ -371,11 +371,13 @@ public class MemcachedCache implements Cache
       if ("dynamic".equals(config.getClientMode())) {
         connectionFactoryBuilder.setClientMode(ClientMode.Dynamic);
         connectionFactoryBuilder.setHostnameForTlsVerification(config.getHosts().split(",")[0]);
-      }
-      else {
+      } else if ("static".equals(config.getClientMode())) {
         connectionFactoryBuilder.setClientMode(ClientMode.Static);
-      } if (config.skipTlsHostnameVerification()) {
-        connectionFactoryBuilder.setSkipTlsHostnameVerification(true);
+      } else {
+        throw new RuntimeException("Invalid value provided for `druid.cache.clientMode`. Value must be 'static' or 'dynamic'.");
+      }
+      if (config.skipTlsHostnameVerification()) {
+          connectionFactoryBuilder.setSkipTlsHostnameVerification(true);
       }
       final ConnectionFactory connectionFactory = connectionFactoryBuilder.build();
       final List<InetSocketAddress> hosts = AddrUtil.getAddresses(config.getHosts());
