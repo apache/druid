@@ -68,7 +68,7 @@ When possible, design your SQL queries in such a way that they match the rules f
 
 Note that TopN queries are approximate in that each data process ranks its top K results and only returns those top K results to the Broker.
 
-You can follow the tutorial [Using TopN approximation in Druid queries](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/notebooks/03-query/02-approxRanking.ipynb) to work through some examples with approximation turned on and off. The tutorial [Get to know query view](../tutorials/tutorial-sql-query-view.md) demonstrates running aggregate queries in the Druid console.
+You can follow the tutorial [Using TopN approximation in Druid queries](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/notebooks/03-query/02-approxRanking.ipynb) to work through some examples with approximation turned on and off. The tutorial [Get to know Query view](../tutorials/tutorial-sql-query-view.md) demonstrates running aggregate queries in the Druid console.
 
 ### Manually tune your queries
 
