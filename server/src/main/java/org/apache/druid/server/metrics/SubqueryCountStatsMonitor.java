@@ -80,7 +80,7 @@ public class SubqueryCountStatsMonitor extends AbstractMonitor
 
     if (diff != null) {
       for (Map.Entry<String, Long> diffEntry : diff.entrySet()) {
-        emitter.emit(builder.build(diffEntry.getKey(), diffEntry.getValue()));
+        emitter.emit(builder.setMetric(diffEntry.getKey(), diffEntry.getValue()));
       }
     }
 
