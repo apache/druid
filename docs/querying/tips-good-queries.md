@@ -29,7 +29,7 @@ Your ability to effectively query your data depends in large part on the way you
 
 ## Investigate query performance
 
-If your queries are running slower than anticipated, you can use the following tools to investigate query performance issues.
+If your queries run slower than anticipated, you can use the following tools to investigate query performance issues.
 
 ### Analyze query metrics
 
