@@ -152,8 +152,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(taskStatus, future.get());
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
@@ -191,8 +189,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
@@ -208,8 +204,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(taskStatus, future.get());
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
   }
 
   @Test
@@ -236,28 +230,11 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();
-
-    Assert.assertFalse(runner.tasks.containsKey(task.getId()));
-  }
-
-  @Test
-  public void test_doTask_withoutWorkItem_throwsRuntimeException()
-  {
-    Assert.assertThrows(
-        "Task [id] disappeared",
-        RuntimeException.class,
-        () -> runner.doTask(task, true)
-    );
   }
 
   @Test
   public void test_doTask_whenShutdownRequested_throwsRuntimeException()
   {
-    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null);
-    workItem.shutdown();
-
-    runner.tasks.put(task.getId(), workItem);
-
     Assert.assertThrows(
         "Task [id] has been shut down",
         RuntimeException.class,
@@ -266,13 +243,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_shutdown_withoutExistingTask()
-  {
-    runner.shutdown(task.getId(), "");
-  }
-
-  @Test
-  public void test_shutdown_withExistingTask()
+  public void test_shutdown_withExistingTask_removesTaskFromMap()
   {
     KubernetesWorkItem workItem = new KubernetesWorkItem(task, null) {
       @Override
@@ -282,7 +253,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
 
     runner.tasks.put(task.getId(), workItem);
+    runner.shutdown(task.getId(), "");
+    Assert.assertTrue(runner.tasks.isEmpty());
+  }
 
+  @Test
+  public void test_shutdown_withoutExistingTask()
+  {
     runner.shutdown(task.getId(), "");
   }
 
@@ -627,5 +604,46 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     runner.emitTaskStateMetrics(KubernetesPeonLifecycle.State.RUNNING, task.getId());
 
     verifyAll();
+  }
+
+  @Test
+  public void test_getTaskLocation_withExistingTask()
+  {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null) {
+      @Override
+      public TaskLocation getLocation()
+      {
+        return TaskLocation.create("host", 0, 1, false);
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    TaskLocation taskLocation = runner.getTaskLocation(task.getId());
+    Assert.assertEquals(TaskLocation.create("host", 0, 1, false), taskLocation);
+  }
+
+  @Test
+  public void test_getTaskLocation_noTaskFound()
+  {
+    TaskLocation taskLocation = runner.getTaskLocation(task.getId());
+    Assert.assertEquals(TaskLocation.unknown(), taskLocation);
+  }
+
+  @Test
+  public void test_getTotalCapacity()
+  {
+    Assert.assertEquals(1, runner.getTotalCapacity());
+  }
+
+  @Test
+  public void test_getUsedCapacity()
+  {
+    Assert.assertEquals(0, runner.getUsedCapacity());
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null);
+    runner.tasks.put(task.getId(), workItem);
+    Assert.assertEquals(1, runner.getUsedCapacity());
+    runner.tasks.remove(task.getId());
+    Assert.assertEquals(0, runner.getUsedCapacity());
   }
 }

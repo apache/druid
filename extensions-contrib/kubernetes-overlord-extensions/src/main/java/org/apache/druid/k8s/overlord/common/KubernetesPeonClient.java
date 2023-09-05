@@ -271,6 +271,6 @@ public class KubernetesPeonClient
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    emitter.emit(metricBuilder.build(metric, durationMs));
+    emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

@@ -55,6 +55,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -104,6 +105,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
@@ -412,9 +414,15 @@ public class ControllerImpl implements Controller
       final String selfHost = MSQTasks.getHostFromSelfNode(selfDruidNode);
       final MSQErrorReport controllerError =
           exceptionEncountered != null
-          ? MSQErrorReport.fromException(id(), selfHost, null, exceptionEncountered)
+          ? MSQErrorReport.fromException(
+              id(),
+              selfHost,
+              null,
+              exceptionEncountered,
+              task.getQuerySpec().getColumnMappings()
+          )
           : null;
-      final MSQErrorReport workerError = workerErrorRef.get();
+      MSQErrorReport workerError = workerErrorRef.get();
 
       taskStateForReport = TaskState.FAILED;
       errorForReport = MSQTasks.makeErrorReport(id(), selfHost, controllerError, workerError);
@@ -748,7 +756,10 @@ public class ControllerImpl implements Controller
         !workerTaskLauncher.isTaskLatest(errorReport.getTaskId())) {
       log.info("Ignoring task %s", errorReport.getTaskId());
     } else {
-      workerErrorRef.compareAndSet(null, errorReport);
+      workerErrorRef.compareAndSet(
+          null,
+          mapQueryColumnNameToOutputColumnName(errorReport)
+      );
     }
   }
 
@@ -2649,6 +2660,39 @@ public class ControllerImpl implements Controller
       );
     }
     return mergeMode;
+  }
+
+  /**
+   * Maps the query column names (used internally while generating the query plan) to output column names (the one used
+   * by the user in the SQL query) for certain errors reported by workers (where they have limited knowledge of the
+   * ColumnMappings). For remaining errors not relying on the query column names, it returns it as is.
+   */
+  @Nullable
+  private MSQErrorReport mapQueryColumnNameToOutputColumnName(
+      @Nullable final MSQErrorReport workerErrorReport
+  )
+  {
+
+    if (workerErrorReport == null) {
+      return null;
+    } else if (workerErrorReport.getFault() instanceof InvalidNullByteFault) {
+      InvalidNullByteFault inbf = (InvalidNullByteFault) workerErrorReport.getFault();
+      return MSQErrorReport.fromException(
+          workerErrorReport.getTaskId(),
+          workerErrorReport.getHost(),
+          workerErrorReport.getStageNumber(),
+          InvalidNullByteException.builder()
+                                  .source(inbf.getSource())
+                                  .rowNumber(inbf.getRowNumber())
+                                  .column(inbf.getColumn())
+                                  .value(inbf.getValue())
+                                  .position(inbf.getPosition())
+                                  .build(),
+          task.getQuerySpec().getColumnMappings()
+      );
+    } else {
+      return workerErrorReport;
+    }
   }
 
 
