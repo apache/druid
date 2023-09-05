@@ -353,10 +353,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
             return new ValueMatcher()
             {
               @Override
-              public X3Val matches() {
-      return X3Val.dodgy2Val(matches1());
-              }
-              public boolean matches1()
+              public boolean matches()
               {
                 Object[] dims = currEntry.get().getDims();
                 if (dimIndex >= dims.length) {
@@ -402,10 +399,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
         return new ValueMatcher()
         {
           @Override
-          public X3Val matches() {
-  return X3Val.dodgy2Val(matches1());
-          }
-          public boolean matches1()
+          public boolean matches()
           {
             Object[] dims = currEntry.get().getDims();
             if (dimIndex >= dims.length) {

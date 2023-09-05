@@ -36,9 +36,9 @@ final class TrueValueMatcher implements ValueMatcher
   }
 
   @Override
-  public X3Val matches()
+  public boolean matches()
   {
-    return X3Val.True;
+    return true;
   }
 
   @Override

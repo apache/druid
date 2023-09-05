@@ -124,10 +124,7 @@ public class UnnestDimensionCursor implements Cursor
               return new ValueMatcher()
               {
                 @Override
-                public X3Val matches() {
-        return X3Val.dodgy2Val(matches1());
-                }
-                public boolean matches1()
+                public boolean matches()
                 {
                   return false;
                 }
@@ -143,10 +140,7 @@ public class UnnestDimensionCursor implements Cursor
             return new ValueMatcher()
             {
               @Override
-              public X3Val matches() {
-      return X3Val.dodgy2Val(matches1());
-              }
-              public boolean matches1()
+              public boolean matches()
               {
                 if (indexedIntsForCurrentRow == null) {
                   return false;

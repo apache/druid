@@ -26,7 +26,6 @@ import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -78,7 +77,7 @@ public final class FilteredOffset extends Offset
   {
     while (!Thread.currentThread().isInterrupted()) {
       baseOffset.increment();
-      if (!baseOffset.withinBounds() || filterMatcher.matches()== X3Val.True) {
+      if (!baseOffset.withinBounds() || filterMatcher.matches()) {
         return;
       }
     }
@@ -100,7 +99,7 @@ public final class FilteredOffset extends Offset
   private void incrementIfNeededOnCreationOrReset()
   {
     if (baseOffset.withinBounds()) {
-      if (filterMatcher.matches() != X3Val.True) {
+      if (!filterMatcher.matches()) {
         increment();
         // increment() returns early if it detects the current Thread is interrupted. It will leave this
         // FilteredOffset in an illegal state, because it may point to an offset that should be filtered. So must to
@@ -175,14 +174,14 @@ public final class FilteredOffset extends Offset
           int iterOffset = Integer.MAX_VALUE;
 
           @Override
-          public X3Val matches()
+          public boolean matches()
           {
             int currentOffset = offset.getOffset();
             while (iterOffset > currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
 
-            return iterOffset == currentOffset ? X3Val.True : X3Val.False;
+            return iterOffset == currentOffset;
           }
 
           @Override
@@ -198,14 +197,14 @@ public final class FilteredOffset extends Offset
           int iterOffset = -1;
 
           @Override
-          public X3Val matches()
+          public boolean matches()
           {
             int currentOffset = offset.getOffset();
             while (iterOffset < currentOffset && iter.hasNext()) {
               iterOffset = iter.next();
             }
 
-            return X3Val.dodgy2Val( iterOffset == currentOffset);
+            return iterOffset == currentOffset;
           }
 
           @Override

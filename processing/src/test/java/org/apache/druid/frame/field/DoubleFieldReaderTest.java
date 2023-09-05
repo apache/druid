@@ -23,10 +23,8 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -132,27 +130,17 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
 
     // Value matcher tests.
     if (NullHandling.replaceWithDefault()) {
-      AssertassertTrue(readSelector.makeValueMatcher("0.0").matches());
-      AssertassertFalse(readSelector.makeValueMatcher((String) null).matches());
-      AssertassertTrue(readSelector.makeValueMatcher("0.0"::equals).matches());
-      AssertassertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
+      Assert.assertTrue(readSelector.makeValueMatcher("0.0").matches());
+      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches());
+      Assert.assertTrue(readSelector.makeValueMatcher("0.0"::equals).matches());
+      Assert.assertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
     } else {
-      AssertassertFalse(readSelector.makeValueMatcher("0.0").matches());
-      AssertassertTrue(readSelector.makeValueMatcher((String) null).matches());
-      AssertassertFalse(readSelector.makeValueMatcher("0.0"::equals).matches());
-      AssertassertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
+      Assert.assertFalse(readSelector.makeValueMatcher("0.0").matches());
+      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches());
+      Assert.assertFalse(readSelector.makeValueMatcher("0.0"::equals).matches());
+      Assert.assertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
     }
   }
-  private void AssertassertFalse(X3Val matches)
-  {
-    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
-  }
-
-  private void AssertassertTrue(X3Val matches)
-  {
-    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
-  }
-
 
   @Test
   public void test_makeDimensionSelector_aValue()
@@ -175,10 +163,10 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    AssertassertTrue(readSelector.makeValueMatcher("5.1").matches());
-    AssertassertFalse(readSelector.makeValueMatcher("5").matches());
-    AssertassertTrue(readSelector.makeValueMatcher("5.1"::equals).matches());
-    AssertassertFalse(readSelector.makeValueMatcher("5"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("5.1").matches());
+    Assert.assertFalse(readSelector.makeValueMatcher("5").matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("5.1"::equals).matches());
+    Assert.assertFalse(readSelector.makeValueMatcher("5"::equals).matches());
   }
 
   @Test
@@ -206,10 +194,10 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    AssertassertTrue(readSelector.makeValueMatcher("0.5").matches());
-    AssertassertFalse(readSelector.makeValueMatcher("2").matches());
-    AssertassertTrue(readSelector.makeValueMatcher("0.5"::equals).matches());
-    AssertassertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("0.5").matches());
+    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("0.5"::equals).matches());
+    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
   }
 
   private void writeToMemory(final Double value)

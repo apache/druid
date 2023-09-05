@@ -59,12 +59,9 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
-        if (value == null || getValue() == null) {
-          return X3Val.Null;
-        }
-        return getValue().equals(value) ? X3Val.True : X3Val.False;
+        return Objects.equals(getValue(), value);
       }
 
       @Override
@@ -81,14 +78,9 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
-        String val = getValue();
-        if(val==null) {
-          return X3Val.Null;
-        }
-
-        return X3Val.from2Val(predicate.apply(getValue()));
+        return predicate.apply(getValue());
       }
 
       @Override

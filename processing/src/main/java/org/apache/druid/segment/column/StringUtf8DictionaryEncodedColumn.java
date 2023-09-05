@@ -283,10 +283,7 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
               return new ValueMatcher()
               {
                 @Override
-                public X3Val matches() {
-        return X3Val.dodgy2Val(matches1());
-                }
-                public boolean matches1()
+                public boolean matches()
                 {
                   return getRowValue() == valueId;
                 }
@@ -316,10 +313,7 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
           return new ValueMatcher()
           {
             @Override
-            public X3Val matches() {
-    return X3Val.dodgy2Val(matches1());
-            }
-            public boolean matches1()
+            public boolean matches()
             {
               final int id = getRowValue();
 

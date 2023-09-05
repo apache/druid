@@ -28,9 +28,7 @@ import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.ConstantMultiValueDimensionSelectorTest;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -322,10 +320,10 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
                                        .get(rowNumber));
       Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(rowNumber));
 
-      AssertassertTrue(dimSelector.makeValueMatcher(theString).matches());
-      AssertassertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
-      AssertassertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
-      AssertassertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+      Assert.assertTrue(dimSelector.makeValueMatcher(theString).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
+      Assert.assertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     } else {
       Assert.assertNull(valueSelector.getObject());
       Assert.assertTrue(path, valueSelector.isNull());
@@ -347,21 +345,10 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
                                        .computeBitmapResult(resultFactory)
                                        .get(rowNumber));
 
-      AssertassertTrue(dimSelector.makeValueMatcher((String) null).matches());
-      AssertassertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
-      AssertassertTrue(dimSelector.makeValueMatcher(x -> x == null).matches());
-      AssertassertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+      Assert.assertTrue(dimSelector.makeValueMatcher((String) null).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
+      Assert.assertTrue(dimSelector.makeValueMatcher(x -> x == null).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     }
   }
-  private void AssertassertFalse(X3Val matches)
-  {
-    ConstantMultiValueDimensionSelectorTest.assertMatchFalse(matches);
-  }
-
-  private void AssertassertTrue(X3Val matches)
-  {
-    ConstantMultiValueDimensionSelectorTest.assertMatchTrue(matches);
-  }
-
-
 }

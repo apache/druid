@@ -26,7 +26,6 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -93,8 +92,7 @@ public class Transformer
 
     if (valueMatcher != null) {
       rowSupplierForValueMatcher.set(transformedRow);
-      if (valueMatcher.matches()!= X3Val.True) {
-        // this is essentially an IS TRUE evaluation
+      if (!valueMatcher.matches()) {
         return null;
       }
     }

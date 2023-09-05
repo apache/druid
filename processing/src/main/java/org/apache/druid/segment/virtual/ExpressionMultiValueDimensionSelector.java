@@ -127,14 +127,14 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         ExprEval evaluated = getEvaluated();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
-          return X3Val.dodgy2Val(array.stream().anyMatch(x -> Objects.equals(x, value)));
+          return array.stream().anyMatch(x -> Objects.equals(x, value));
         }
-        return X3Val.dodgy2Val(Objects.equals(getValue(evaluated), value));
+        return Objects.equals(getValue(evaluated), value);
       }
 
       @Override
@@ -151,15 +151,14 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         ExprEval evaluated = getEvaluated();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
-          return X3Val.dodgy2Val(
-              array.stream().anyMatch(x -> predicate.apply(x)));
+          return array.stream().anyMatch(x -> predicate.apply(x));
         }
-        return X3Val.dodgy2Val( predicate.apply(getValue(evaluated)));
+        return predicate.apply(getValue(evaluated));
       }
 
       @Override

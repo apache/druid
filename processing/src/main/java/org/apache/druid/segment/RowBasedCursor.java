@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.joda.time.DateTime;
@@ -136,7 +135,7 @@ public class RowBasedCursor<RowType> implements Cursor
 
   private void advanceToMatchingRow()
   {
-    while (!isDone() && valueMatcher.matches()!= X3Val.True) {
+    while (!isDone() && !valueMatcher.matches()) {
       rowWalker.advance();
       rowId++;
     }

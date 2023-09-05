@@ -256,16 +256,14 @@ public class AndFilter implements BooleanFilter
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
-        X3Val match = X3Val.True;
         for (ValueMatcher matcher : baseMatchers) {
-          match = match.weaken(matcher.matches());
-          if (match == X3Val.False) {
-            return match;
+          if (!matcher.matches()) {
+            return false;
           }
         }
-        return match;
+        return true;
       }
 
       @Override

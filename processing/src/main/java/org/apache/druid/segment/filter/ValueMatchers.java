@@ -26,7 +26,6 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -134,10 +133,7 @@ public class ValueMatchers
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches() {
-return X3Val.dodgy2Val(matches1());
-      }
-      public boolean matches1()
+      public boolean matches()
       {
         if (selector.isNull()) {
           return false;
@@ -167,13 +163,13 @@ return X3Val.dodgy2Val(matches1());
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         if (selector.isNull()) {
-          return X3Val.Null;
+          return false;
         }
-        return X3Val.from2Val(selector.getLong() == value);
-            }
+        return selector.getLong() == value;
+      }
 
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
@@ -271,12 +267,12 @@ return X3Val.dodgy2Val(matches1());
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         if (selector.isNull()) {
-          return X3Val.Null;
+          return false;
         }
-        return X3Val.from2Val(Double.doubleToLongBits(selector.getDouble()) == matchValLongBits);
+        return Double.doubleToLongBits(selector.getDouble()) == matchValLongBits;
       }
 
       @Override
@@ -350,7 +346,7 @@ return X3Val.dodgy2Val(matches1());
   }
 
   /**
-   * If {@link #toBooleanIfPossible} would return non-null, this returns a {@link BooleanValueMatcher} that always
+   * If {@link #toBooleanIfPossible} would return nonnull, this returns a {@link BooleanValueMatcher} that always
    * returns that value. Otherwise, this returns null.
    *
    * @param selector          string selector

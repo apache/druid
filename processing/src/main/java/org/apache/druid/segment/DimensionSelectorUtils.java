@@ -60,7 +60,6 @@ public final class DimensionSelectorUtils
   private static ValueMatcher makeDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
       final int valueId,
-      // FIXME: seems like `null` value was repurposed to match empty?
       final boolean matchNull
   )
   {
@@ -68,20 +67,20 @@ public final class DimensionSelectorUtils
       return new ValueMatcher()
       {
         @Override
-        public X3Val matches()
+        public boolean matches()
         {
           final IndexedInts row = selector.getRow();
           final int size = row.size();
           if (size == 0) {
             // null should match empty rows in multi-value columns
-            return X3Val.dodgy2Val(matchNull);
+            return matchNull;
           } else {
             for (int i = 0; i < size; ++i) {
               if (row.get(i) == valueId) {
-                return X3Val.True;
+                return true;
               }
             }
-            return X3Val.False;
+            return false;
           }
         }
 
@@ -96,11 +95,11 @@ public final class DimensionSelectorUtils
         return new ValueMatcher()
         {
           @Override
-          public X3Val matches()
+          public boolean matches()
           {
             final IndexedInts row = selector.getRow();
             final int size = row.size();
-            return X3Val.from2Val(size == 0);
+            return size == 0;
           }
 
           @Override
@@ -123,20 +122,20 @@ public final class DimensionSelectorUtils
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         final IndexedInts row = selector.getRow();
         final int size = row.size();
         if (size == 0) {
           // null should match empty rows in multi-value columns
-          return X3Val.dodgy2Val(  value == null);
+          return value == null;
         } else {
           for (int i = 0; i < size; ++i) {
             if (Objects.equals(selector.lookupName(row.get(i)), value)) {
-              return X3Val.True;
+              return true;
             }
           }
-          return X3Val.False;
+          return false;
         }
       }
 
@@ -177,13 +176,13 @@ public final class DimensionSelectorUtils
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         final IndexedInts row = selector.getRow();
         final int size = row.size();
         if (size == 0) {
           // null should match empty rows in multi-value columns
-          return X3Val.dodgy2Val(matchNull);
+          return matchNull;
         } else {
           for (int i = 0; i < size; ++i) {
             final int id = row.get(i);
@@ -200,10 +199,10 @@ public final class DimensionSelectorUtils
             }
 
             if (matches) {
-              return X3Val.True;
+              return true;
             }
           }
-          return X3Val.False;
+          return false;
         }
       }
 
@@ -224,20 +223,20 @@ public final class DimensionSelectorUtils
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         final IndexedInts row = selector.getRow();
         final int size = row.size();
         if (size == 0) {
           // null should match empty rows in multi-value columns
-          return X3Val.dodgy2Val(  matchNull);
+          return matchNull;
         } else {
           for (int i = 0; i < size; ++i) {
             if (predicate.apply(selector.lookupName(row.get(i)))) {
-              return X3Val.True;
+              return true;
             }
           }
-          return X3Val.False;
+          return false;
         }
       }
 

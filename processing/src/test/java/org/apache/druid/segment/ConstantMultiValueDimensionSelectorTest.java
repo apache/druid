@@ -23,7 +23,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.filter.ValueMatcher.X3Val;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -121,48 +120,38 @@ public class ConstantMultiValueDimensionSelectorTest extends InitializedNullHand
   @Test
   public void testValueMatcher()
   {
-    assertMatchTrue(NULL_SELECTOR.makeValueMatcher((String) null).matches());
-    assertMatchFalse(NULL_SELECTOR.makeValueMatcher("douglas").matches());
+    Assert.assertTrue(NULL_SELECTOR.makeValueMatcher((String) null).matches());
+    Assert.assertFalse(NULL_SELECTOR.makeValueMatcher("douglas").matches());
 
-    assertMatchTrue(EMPTY_SELECTOR.makeValueMatcher((String) null).matches());
-    assertMatchFalse(EMPTY_SELECTOR.makeValueMatcher("douglas").matches());
+    Assert.assertTrue(EMPTY_SELECTOR.makeValueMatcher((String) null).matches());
+    Assert.assertFalse(EMPTY_SELECTOR.makeValueMatcher("douglas").matches());
 
-    assertMatchTrue(CONST_SELECTOR.makeValueMatcher("billy").matches());
-    assertMatchTrue(CONST_SELECTOR.makeValueMatcher("douglas").matches());
-    assertMatchFalse(CONST_SELECTOR.makeValueMatcher("debbie").matches());
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher("billy").matches());
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher("douglas").matches());
+    Assert.assertFalse(CONST_SELECTOR.makeValueMatcher("debbie").matches());
 
-    assertMatchTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches());
-    assertMatchFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher((String) null).matches());
+    Assert.assertTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches());
+    Assert.assertFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher((String) null).matches());
 
-    assertMatchTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("bill").matches());
-    assertMatchTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("doug").matches());
-    assertMatchFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches());
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("bill").matches());
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("doug").matches());
+    Assert.assertFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches());
 
-    assertMatchTrue(NULL_SELECTOR.makeValueMatcher(Predicates.isNull()).matches());
-    assertMatchFalse(NULL_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
+    Assert.assertTrue(NULL_SELECTOR.makeValueMatcher(Predicates.isNull()).matches());
+    Assert.assertFalse(NULL_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
 
-    assertMatchTrue(EMPTY_SELECTOR.makeValueMatcher(Predicates.equalTo(null)).matches());
-    assertMatchFalse(EMPTY_SELECTOR.makeValueMatcher(Predicates.equalTo("douglas")).matches());
+    Assert.assertTrue(EMPTY_SELECTOR.makeValueMatcher(Predicates.equalTo(null)).matches());
+    Assert.assertFalse(EMPTY_SELECTOR.makeValueMatcher(Predicates.equalTo("douglas")).matches());
 
-    assertMatchTrue(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
-    assertMatchTrue(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("douglas")).matches());
-    assertMatchFalse(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("debbie")).matches());
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("douglas")).matches());
+    Assert.assertFalse(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("debbie")).matches());
 
-    assertMatchTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
-    assertMatchFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo(null)).matches());
+    Assert.assertTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
+    Assert.assertFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo(null)).matches());
 
-    assertMatchTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("bill")).matches());
-    assertMatchTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("doug")).matches());
-    assertMatchFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
-  }
-
-  public static void assertMatchFalse(X3Val matches)
-  {
-    Assert.assertEquals(X3Val.False, matches);
-  }
-
-  public static void assertMatchTrue(X3Val matches)
-  {
-    Assert.assertEquals(X3Val.True, matches);
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("bill")).matches());
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("doug")).matches());
+    Assert.assertFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
   }
 }

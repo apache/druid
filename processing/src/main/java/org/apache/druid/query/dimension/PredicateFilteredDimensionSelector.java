@@ -67,7 +67,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         final IndexedInts baseRow = selector.getRow();
         final int baseRowSize = baseRow.size();
@@ -76,13 +76,13 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
           String rowValue = lookupName(baseRow.get(i));
           if (predicate.apply(rowValue)) {
             if (Objects.equals(rowValue, value)) {
-              return X3Val.True;
+              return true;
             }
             nullRow = false;
           }
         }
         // null should match empty rows in multi-value columns
-        return X3Val.dodgy2Val(nullRow && value == null);
+        return nullRow && value == null;
       }
 
       @Override
@@ -101,7 +101,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         final IndexedInts baseRow = selector.getRow();
         final int baseRowSize = baseRow.size();
@@ -110,14 +110,13 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
           String rowValue = lookupName(baseRow.get(i));
           if (predicate.apply(rowValue)) {
             if (matcherPredicate.apply(rowValue)) {
-              return X3Val.True;
+              return true;
             }
             nullRow = false;
           }
         }
         // null should match empty rows in multi-value columns
-        return X3Val.dodgy2Val(nullRow && matchNull
-            );
+        return nullRow && matchNull;
       }
 
       @Override

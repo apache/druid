@@ -101,18 +101,18 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
       return new ValueMatcher()
       {
         @Override
-        public X3Val matches()
+        public boolean matches()
         {
           Object o = selector.getObject();
           if (o == null || o instanceof Object[]) {
-            return X3Val.dodgy2Val( predicate.apply((Object[]) o));
+            return predicate.apply((Object[]) o);
           }
           if (o instanceof List) {
             ExprEval<?> oEval = ExprEval.bestEffortArray((List<?>) o);
-            return X3Val.dodgy2Val( predicate.apply(oEval.asArray()));
+            return predicate.apply(oEval.asArray());
           }
           // upcast non-array to a single element array to behave consistently with expressions.. idk if this is cool
-          return X3Val.dodgy2Val( predicate.apply(new Object[]{o}));
+          return predicate.apply(new Object[]{o});
         }
 
         @Override
@@ -137,9 +137,9 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
       return new ValueMatcher()
       {
         @Override
-        public X3Val matches()
+        public boolean matches()
         {
-          return X3Val.dodgy2Val(predicate.apply(selector.getObject()));
+          return predicate.apply(selector.getObject());
         }
 
         @Override
@@ -162,10 +162,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         private Predicate<Object[]> arrayPredicate;
 
         @Override
-        public X3Val matches() {
-return X3Val.dodgy2Val(matches1());
-        }
-        public boolean matches1()
+        public boolean matches()
         {
           final Object rowValue = selector.getObject();
 

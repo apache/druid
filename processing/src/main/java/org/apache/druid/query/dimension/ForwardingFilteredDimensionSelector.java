@@ -89,7 +89,7 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
         return new ValueMatcher()
         {
           @Override
-          public X3Val matches()
+          public boolean matches()
           {
             final IndexedInts baseRow = selector.getRow();
             final int baseRowSize = baseRow.size();
@@ -100,13 +100,13 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
                 // Make the following check after the `forwardedValue >= 0` check, because if forwardedValue is -1 and
                 // valueId is -1, we don't want to return true from matches().
                 if (forwardedValue == valueId) {
-                  return X3Val.True;
+                  return true;
                 }
                 nullRow = false;
               }
             }
             // null should match empty rows in multi-value columns
-            return X3Val.dodgy2Val( nullRow && value == null);
+            return nullRow && value == null;
           }
 
           @Override
@@ -132,7 +132,7 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         final IndexedInts baseRow = selector.getRow();
         final int baseRowSize = baseRow.size();
@@ -141,13 +141,13 @@ final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelecto
           int forwardedValue = idMapping.getForwardedId(baseRow.get(i));
           if (forwardedValue >= 0) {
             if (valueIds.get(forwardedValue)) {
-              return X3Val.True;
+              return true;
             }
             nullRow = false;
           }
         }
         // null should match empty rows in multi-value columns
-        return X3Val.dodgy2Val( nullRow && matchNull);
+        return nullRow && matchNull;
       }
 
       @Override

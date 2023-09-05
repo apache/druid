@@ -85,7 +85,7 @@ public class ColumnComparisonFilter implements Filter
     return new ValueMatcher()
     {
       @Override
-      public X3Val matches()
+      public boolean matches()
       {
         // Keep all values to compare against each other.
         String[][] values = new String[valueGetters.size()][];
@@ -95,12 +95,11 @@ public class ColumnComparisonFilter implements Filter
           // Compare the new values to the values we already got.
           for (int j = 0; j < i; j++) {
             if (!overlap(values[i], values[j])) {
-              // FIXME: not sure if there is a Null case here or not
-              return X3Val.False;
+              return false;
             }
           }
         }
-        return X3Val.True;
+        return true;
       }
 
       @Override

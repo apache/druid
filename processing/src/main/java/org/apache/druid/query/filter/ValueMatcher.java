@@ -31,58 +31,6 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface ValueMatcher extends HotLoopCallee
 {
-  enum X3Val {
-    True,
-    Null,
-    False;
-
-    public X3Val weaken(X3Val matches)
-    {
-      if (matches.ordinal() > ordinal()) {
-        return matches;
-      }
-      return this;
-    }
-
-    public X3Val negate()
-    {
-      switch (this)
-      {
-      case True:
-        return False;
-      case False:
-        return True;
-      default:
-        return Null;
-      }
-    }
-
-public static    X3Val from2Val(boolean v)
-    {
-  if(v) {
-    return True;
-  } else {
-    return False;
-  }
-
-    }
-
-public static X3Val dodgy2Val(boolean matchNull)
-{
-  return from2Val(matchNull);
-}
-
-public X3Val ex(X3Val matches)
-{
-  if(matches.ordinal()<ordinal()) {
-    return matches;
-  }
-  return this;
-}
-  }
   @CalledFromHotLoop
-  X3Val matches();
-  default boolean matchesT() {
-    return matches() == X3Val.True;
-  }
+  boolean matches();
 }
