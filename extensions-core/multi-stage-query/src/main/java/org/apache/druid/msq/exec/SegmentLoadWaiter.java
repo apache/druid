@@ -61,9 +61,22 @@ public class SegmentLoadWaiter
   private static final Logger log = new Logger(SegmentLoadWaiter.class);
   private static final long SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long TIMEOUT_DURATION_MILLIS = TimeUnit.MINUTES.toMillis(10);
+
+  /**
+   * The query sent to the broker. This query uses replication_factor to determine how many copies of a segment has to be
+   * loaded as per the load rules.
+   * - If a segment is not used, the broker will not have any information about it, hence, a COUNT(*) should return this count.
+   * - If replication_factor is more than 0, the segment will be loaded on historicals and needs to be waited for.
+   * - If replication_factor is 0, that means that the segment will never be loaded on a historical and does not need to
+   *   be waited for.
+   * - If replication_factor is -1, the replication factor is not known currently and will become known after a load rule
+   *   evaluation.
+   * <br>
+   * See https://github.com/apache/druid/pull/14403 for more details about replication_factor
+   */
   private static final String LOAD_QUERY = "SELECT COUNT(*) AS usedSegments,\n"
                                            + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor > 0) AS precachedSegments,\n"
-                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor = 0) AS asyncOnlySegments,\n"
+                                           + "COUNT(*) FILTER (WHERE is_published = 1 AND replication_factor = 0) AS onDemandSegments,\n"
                                            + "COUNT(*) FILTER (WHERE is_available = 0 AND is_published = 1 AND replication_factor != 0) AS pendingSegments,\n"
                                            + "COUNT(*) FILTER (WHERE replication_factor = -1) AS unknownSegments\n"
                                            + "FROM sys.segments\n"
@@ -172,11 +185,11 @@ public class SegmentLoadWaiter
    */
   private void updateStatus(State state, DateTime startTime)
   {
-    int pendingSegmentCount = 0, usedSegmentsCount = 0, precachedSegmentCount = 0, asyncOnlySegmentCount = 0, unknownSegmentCount = 0;
+    int pendingSegmentCount = 0, usedSegmentsCount = 0, precachedSegmentCount = 0, onDemandSegmentCount = 0, unknownSegmentCount = 0;
     for (Map.Entry<String, VersionLoadStatus> entry : versionToLoadStatusMap.entrySet()) {
       usedSegmentsCount += entry.getValue().getUsedSegments();
       precachedSegmentCount += entry.getValue().getPrecachedSegments();
-      asyncOnlySegmentCount += entry.getValue().getAsyncOnlySegments();
+      onDemandSegmentCount += entry.getValue().getOnDemandSegments();
       unknownSegmentCount += entry.getValue().getUnknownSegments();
       pendingSegmentCount += entry.getValue().getPendingSegments();
     }
@@ -190,7 +203,7 @@ public class SegmentLoadWaiter
             totalSegmentsGenerated,
             usedSegmentsCount,
             precachedSegmentCount,
-            asyncOnlySegmentCount,
+            onDemandSegmentCount,
             pendingSegmentCount,
             unknownSegmentCount
         )
@@ -235,7 +248,7 @@ public class SegmentLoadWaiter
     private final int totalSegments;
     private final int usedSegments;
     private final int precachedSegments;
-    private final int asyncOnlySegments;
+    private final int onDemandSegments;
     private final int pendingSegments;
     private final int unknownSegments;
 
@@ -247,7 +260,7 @@ public class SegmentLoadWaiter
         @JsonProperty("totalSegments") int totalSegments,
         @JsonProperty("usedSegments") int usedSegments,
         @JsonProperty("precachedSegments") int precachedSegments,
-        @JsonProperty("asyncOnlySegments") int asyncOnlySegments,
+        @JsonProperty("onDemandSegments") int onDemandSegments,
         @JsonProperty("pendingSegments") int pendingSegments,
         @JsonProperty("unknownSegments") int unknownSegments
     )
@@ -258,7 +271,7 @@ public class SegmentLoadWaiter
       this.totalSegments = totalSegments;
       this.usedSegments = usedSegments;
       this.precachedSegments = precachedSegments;
-      this.asyncOnlySegments = asyncOnlySegments;
+      this.onDemandSegments = onDemandSegments;
       this.pendingSegments = pendingSegments;
       this.unknownSegments = unknownSegments;
     }
@@ -302,9 +315,9 @@ public class SegmentLoadWaiter
     }
 
     @JsonProperty
-    public int getAsyncOnlySegments()
+    public int getOnDemandSegments()
     {
-      return asyncOnlySegments;
+      return onDemandSegments;
     }
 
     @JsonProperty
@@ -322,10 +335,27 @@ public class SegmentLoadWaiter
 
   public enum State
   {
+    /**
+     * Initial state after being initialised with the segment versions and before #waitForSegmentsToLoad has been called.
+     */
     INIT,
+    /**
+     * All segments that need to be loaded have not yet been loaded. The load status is perodically being queried from
+     * the broker.
+     */
     WAITING,
+    /**
+     * All segments which need to be loaded have been loaded, and the SegmentLoadWaiter exited successfully.
+     */
     SUCCESS,
+    /**
+     * An exception occurred while checking load status. The SegmentLoadWaiter exited without failing the task.
+     */
     FAILED,
+    /**
+     * The time spent waiting for segments to load exceeded org.apache.druid.msq.exec.SegmentLoadWaiter#TIMEOUT_DURATION_MILLIS.
+     * The SegmentLoadWaiter exited without failing the task.
+     */
     TIMED_OUT
   }
 
@@ -333,7 +363,7 @@ public class SegmentLoadWaiter
   {
     private final int usedSegments;
     private final int precachedSegments;
-    private final int asyncOnlySegments;
+    private final int onDemandSegments;
     private final int pendingSegments;
     private final int unknownSegments;
 
@@ -341,14 +371,14 @@ public class SegmentLoadWaiter
     public VersionLoadStatus(
         @JsonProperty("usedSegments") int usedSegments,
         @JsonProperty("precachedSegments") int precachedSegments,
-        @JsonProperty("asyncOnlySegments") int asyncOnlySegments,
+        @JsonProperty("onDemandSegments") int onDemandSegments,
         @JsonProperty("pendingSegments") int pendingSegments,
         @JsonProperty("unknownSegments") int unknownSegments
     )
     {
       this.usedSegments = usedSegments;
       this.precachedSegments = precachedSegments;
-      this.asyncOnlySegments = asyncOnlySegments;
+      this.onDemandSegments = onDemandSegments;
       this.pendingSegments = pendingSegments;
       this.unknownSegments = unknownSegments;
     }
@@ -366,9 +396,9 @@ public class SegmentLoadWaiter
     }
 
     @JsonProperty
-    public int getAsyncOnlySegments()
+    public int getOnDemandSegments()
     {
-      return asyncOnlySegments;
+      return onDemandSegments;
     }
 
     @JsonProperty
@@ -386,7 +416,7 @@ public class SegmentLoadWaiter
     @JsonIgnore
     public boolean isLoadingComplete()
     {
-      return pendingSegments == 0 && (usedSegments == precachedSegments + asyncOnlySegments);
+      return pendingSegments == 0 && (usedSegments == precachedSegments + onDemandSegments);
     }
   }
 }

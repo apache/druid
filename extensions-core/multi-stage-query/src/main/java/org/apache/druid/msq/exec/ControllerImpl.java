@@ -456,10 +456,7 @@ public class ControllerImpl implements Controller
 
 
     try {
-      final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
-      for (final TaskLock lock : locks) {
-        context.taskActionClient().submit(new LockReleaseAction(lock.getInterval()));
-      }
+      releaseTaskLocks();
 
       cleanUpDurableStorageIfNeeded();
 
@@ -547,6 +544,23 @@ public class ControllerImpl implements Controller
     } else {
       // errorForReport is nonnull when taskStateForReport != SUCCESS. Use that message.
       return TaskStatus.failure(id(), MSQFaultUtils.generateMessageWithErrorCode(errorForReport.getFault()));
+    }
+  }
+
+  /**
+   * Releases the locks obtained by the task.
+   */
+  private void releaseTaskLocks() throws IOException
+  {
+    final List<TaskLock> locks;
+    try {
+      locks = context.taskActionClient().submit(new LockListAction());
+      for (final TaskLock lock : locks) {
+        context.taskActionClient().submit(new LockReleaseAction(lock.getInterval()));
+      }
+    }
+    catch (IOException e) {
+      throw new IOException("Failed to release locks", e);
     }
   }
 
