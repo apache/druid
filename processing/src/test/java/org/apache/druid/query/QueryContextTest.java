@@ -326,6 +326,23 @@ public class QueryContextTest
   }
 
   @Test
+  public void testGetMaxSubqueryBytes()
+  {
+    final QueryContext context1 = new QueryContext(
+        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, 500_000_000)
+    );
+    assertEquals("500000000", context1.getMaxSubqueryMemoryBytes(null));
+
+    final QueryContext context2 = new QueryContext(
+        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto")
+    );
+    assertEquals("auto", context2.getMaxSubqueryMemoryBytes(null));
+    
+    final QueryContext context3 = new QueryContext(ImmutableMap.of());
+    assertEquals("unlimited", context3.getMaxSubqueryMemoryBytes("unlimited"));
+  }
+
+  @Test
   public void testDefaultEnableQueryDebugging()
   {
     assertFalse(QueryContext.empty().isDebug());
