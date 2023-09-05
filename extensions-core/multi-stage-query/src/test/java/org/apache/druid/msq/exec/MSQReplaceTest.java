@@ -740,6 +740,128 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
+  public void testReplaceUnnestSegmentEntireTable()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("d", ColumnType.STRING)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, d "
+                             + "FROM foo, UNNEST(MV_TO_ARRAY(dim3)) as unnested(d) "
+                             + "PARTITIONED BY ALL TIME ")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                         "foo",
+                         Intervals.of("2000-01-01T/P1M"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, "a"},
+                             new Object[]{946684800000L, "b"},
+                             new Object[]{946771200000L, "b"},
+                             new Object[]{946771200000L, "c"},
+                             new Object[]{946857600000L, "d"},
+                             new Object[]{978307200000L, NullHandling.sqlCompatible() ? "" : null},
+                             new Object[]{978393600000L, null},
+                             new Object[]{978480000000L, null}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(8).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(8).frames(1),
+                         1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(8),
+                         1, 0
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testReplaceUnnestWithVirtualColumnSegmentEntireTable()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("d", ColumnType.FLOAT)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, d "
+                             + "FROM foo, UNNEST(ARRAY[m1, m2]) as unnested(d) "
+                             + "PARTITIONED BY ALL TIME ")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                         "foo",
+                         Intervals.of("2000-01-01T/P1M"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f},
+                             new Object[]{946684800000L, 1.0f},
+                             new Object[]{946771200000L, 2.0f},
+                             new Object[]{946771200000L, 2.0f},
+                             new Object[]{946857600000L, 3.0f},
+                             new Object[]{946857600000L, 3.0f},
+                             new Object[]{978307200000L, 4.0f},
+                             new Object[]{978307200000L, 4.0f},
+                             new Object[]{978393600000L, 5.0f},
+                             new Object[]{978393600000L, 5.0f},
+                             new Object[]{978480000000L, 6.0f},
+                             new Object[]{978480000000L, 6.0f}
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(12).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(12).frames(1),
+                         1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(12),
+                         1, 0
+                     )
+                     .verifyResults();
+  }
+
+  @Test
   public void testReplaceTombstonesOverPartiallyOverlappingSegments()
   {
     RowSignature rowSignature = RowSignature.builder()
