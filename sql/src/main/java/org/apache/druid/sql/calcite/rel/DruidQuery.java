@@ -355,7 +355,7 @@ public class DruidQuery
       final Filter filter
   )
   {
-//    XConv xc = new XConv(plannerContext,filter.getCondition());
+    XConv xc = new XConv(plannerContext,filter.getCondition());
     RexNode condition = filter.getCondition();
 
     final DimFilter dimFilter = Expressions.toFilter(

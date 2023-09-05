@@ -18,6 +18,8 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,9 +29,25 @@ import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSimplify;
+import org.apache.calcite.rex.RexUnknownAs;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+/**
+ * Translates 3 valued logic expression to 2/3 valued one.
+ *
+ * Execution engine:
+ * <ol>
+ * <li>always uses {@link RexUnknownAs#FALSE}</li>
+ * <li>doesn't support NOT_EQUALS</li>
+ * <li>execution of 2 valued expressions are faster</li>
+ * <li>can only handle 3 valued logic inside: IS [NOT] (FALSE|TRUE)</li>
+ * </ol>
+ *
+ *
+ */
 public class XConv extends RexShuttle
 {
 
@@ -39,6 +57,7 @@ public class XConv extends RexShuttle
   private RexExecutor executor;
   private RexSimplify rexSimplify;
   private RexBuilder rexBuilder;
+  private RexUnknownAs unknownAs;
 
   public XConv(PlannerContext plannerContext, RexNode condition)
   {
@@ -47,26 +66,74 @@ public class XConv extends RexShuttle
 
     executor = plannerContext.unwrap(RexExecutor.class);
     relBuilder = plannerContext.unwrap(RelBuilder.class);
-
     rexSimplify = plannerContext.unwrap(RexSimplify.class);
 
     rexBuilder = relBuilder.getRexBuilder();
     S1 s1 = new S1(rexBuilder, false, executor);
     s1.simplifyUnknownAs(condition, null);
 
+    RexCall w = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, condition);
+
+    unknownAs = RexUnknownAs.FALSE;
+    // start visit
+    RexNode w2 = w.accept(this);
+
+    RexCall w1 = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, condition);
   }
 
   public RexNode getCond()
   {
     return condition;
-
   }
 
   @Override
   public RexNode visitCall(RexCall call)
   {
-//    Strong.isStrong(call)
+    SqlKind kind = call.getKind();
+    if (isKind(kind)) {
+      SqlKind unknownAsKind = getUnknownAsKind(unknownAs);
+      RexNode op = getOnlyElement(call.getOperands());
+
+      if (kind == unknownAsKind) {
+        return op.accept(this);
+      }
+      if (kind == unknownAsKind.negate()) {
+        op = rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+        return op.accept(this);
+      }
+
+      switch (op.getKind())
+      {
+      case AND:
+      case OR:
+        call = distributive(call);
+        return call.accept(this);
+      case NOT_EQUALS:
+      case EQUALS:
+        call = evalEquals(call, (RexCall) op);
+        break;
+      }
+    }
+
+    RexUnknownAs oldUnknownAs = unknownAs;
+
     switch (call.getKind())
+    {
+    case NOT:
+      unknownAs = unknownAs.negate();
+      RexNode op = getOnlyElement(call.getOperands());
+      op=op.accept(this);
+      op = rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+
+    }
+//    RexNode node = super.visitCall(call);
+    unknownAs = oldUnknownAs;
+    return node;
+  }
+
+  private boolean isKind(SqlKind kind)
+  {
+    switch (kind)
     {
     case IS_NOT_NULL:
     case IS_NULL:
@@ -74,20 +141,24 @@ public class XConv extends RexShuttle
     case IS_NOT_TRUE:
     case IS_FALSE:
     case IS_NOT_FALSE:
-      RexNode op = call.getOperands().get(0);
-      switch (op.getKind())
-      {
-      case AND:
-      case OR:
-        call = distributive(call);
-        break;
-      case EQUALS:
-        call = evalEquals(call, (RexCall) op);
-        break;
-      }
+      return true;
+    default:
+      return false;
     }
 
-    return super.visitCall(call);
+  }
+
+  private static SqlKind getUnknownAsKind(RexUnknownAs unknownAs)
+  {
+    switch (unknownAs)
+    {
+    case TRUE:
+      return SqlKind.IS_NOT_FALSE;
+    case FALSE:
+      return SqlKind.IS_TRUE;
+    default:
+      throw new RuntimeException("invalid");
+    }
   }
 
   private RexCall evalEquals(RexCall parentOp, RexCall op)
