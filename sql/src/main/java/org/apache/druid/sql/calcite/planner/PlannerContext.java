@@ -50,6 +50,8 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -563,6 +565,28 @@ public class PlannerContext
       throw new ISE("ExplainAttributes has already been set");
     }
     this.explainAttributes = explainAttributes;
+  }
+
+  List<Object> li = new ArrayList<>();
+
+  public void push(Object rs)
+  {
+    li.add(rs);
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T unwrap(Class<T> cl)
+  {
+    T ret = null;
+    for (Object object : li) {
+      if (cl.isInstance(object)) {
+        if (ret != null) {
+          throw new RuntimeException("dup");
+        }
+        ret = (T) object;
+      }
+    }
+    return ret;
   }
 
 }

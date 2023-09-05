@@ -38,9 +38,12 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSimplify;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -311,6 +314,17 @@ public class DruidQuery
       final VirtualColumnRegistry virtualColumnRegistry
   )
   {
+
+    RexBuilder rexBuilder = partialQuery.getRelBuilder().getRexBuilder();
+    RexExecutor executor = partialQuery.getRelBuilder().getCluster().getPlanner().getExecutor();
+
+    RexSimplify rs = new RexSimplify(rexBuilder, false, executor);
+    RexNode w = rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, partialQuery.getWhereFilter().getCondition());
+//    : rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_FALSE, e);
+    RexNode w2 = rs.simplify(w);
+    plannerContext.push(rs);
+    plannerContext.push(rexBuilder);
+
     return getDimFilter(plannerContext, rowSignature, virtualColumnRegistry, partialQuery.getWhereFilter());
   }
 

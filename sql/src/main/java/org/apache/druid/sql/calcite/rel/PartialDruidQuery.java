@@ -278,6 +278,10 @@ public class PartialDruidQuery
     );
   }
 
+  public RelBuilder getRelBuilder() {
+    return builderSupplier.get();
+  }
+
   public PartialDruidQuery mergeProject(Project newSelectProject)
   {
     if (stage() != Stage.SELECT_PROJECT) {
