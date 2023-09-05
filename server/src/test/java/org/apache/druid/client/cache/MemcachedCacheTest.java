@@ -235,7 +235,7 @@ public class MemcachedCacheTest
       }
     };
     // Static Mode
-    Assert.assertEquals(config.getClientMode(),"static");
+    Assert.assertEquals(config.getClientMode(), "static");
     MemcachedCache client = new MemcachedCache(
             Suppliers.ofInstance(
                     StupidResourceHolder.create(new MockMemcachedClient())

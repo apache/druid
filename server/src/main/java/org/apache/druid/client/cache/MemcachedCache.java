@@ -29,13 +29,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import net.spy.memcached.*;
-
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ClientMode;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
@@ -58,7 +57,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
 import javax.annotation.Nullable;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -361,7 +359,7 @@ public class MemcachedCache implements Cache
           .setOpQueueFactory(opQueueFactory)
           .setMetricCollector(metricCollector)
           .setEnableMetrics(MetricType.DEBUG); // Not as scary as it sounds
-      if(config.enableTls()) {
+      if (config.enableTls()) {
         // Build SSLContext
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init((KeyStore) null);
@@ -370,14 +368,13 @@ public class MemcachedCache implements Cache
         // Create the client in TLS mode
         connectionFactoryBuilder.setSSLContext(sslContext);
       }
-      if("dynamic".equals(config.getClientMode())) {
+      if ("dynamic".equals(config.getClientMode())) {
         connectionFactoryBuilder.setClientMode(ClientMode.Dynamic);
         connectionFactoryBuilder.setHostnameForTlsVerification(config.getHosts().split(",")[0]);
       }
       else {
         connectionFactoryBuilder.setClientMode(ClientMode.Static);
-      }
-      if(config.skipTlsHostnameVerification()) {
+      } if (config.skipTlsHostnameVerification()) {
         connectionFactoryBuilder.setSkipTlsHostnameVerification(true);
       }
       final ConnectionFactory connectionFactory = connectionFactoryBuilder.build();
@@ -414,9 +411,11 @@ public class MemcachedCache implements Cache
     }
     catch (IOException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
-    } catch (KeyStoreException e) {
+    }
+    catch (KeyStoreException e) {
       throw new RuntimeException(e);
-    } catch (KeyManagementException e) {
+    }
+    catch (KeyManagementException e) {
       throw new RuntimeException(e);
     }
   }

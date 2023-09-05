@@ -70,7 +70,7 @@ public class MemcachedCacheConfig
   private String clientMode = "static";
 
   @JsonProperty
-  private boolean skipTlsHostnameVerification = true ;
+  private boolean skipTlsHostnameVerification = true;
 
   public int getExpiration()
   {
@@ -122,15 +122,18 @@ public class MemcachedCacheConfig
     return locator;
   }
 
-  public boolean enableTls() {
+  public boolean enableTls()
+  {
     return enableTls;
   }
 
-  public String getClientMode() {
+  public String getClientMode()
+  {
     return clientMode;
   }
 
-  public boolean skipTlsHostnameVerification() {
+  public boolean skipTlsHostnameVerification()
+  {
     return skipTlsHostnameVerification;
   }
 }
