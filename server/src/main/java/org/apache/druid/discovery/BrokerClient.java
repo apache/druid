@@ -85,9 +85,13 @@ public class BrokerClient
           HttpResponseStatus responseStatus = fullResponseHolder.getResponse().getStatus();
           if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
               || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
-            throw new IOE(StringUtils.format("Request to broker failed due to failed response status: [%s]", responseStatus));
+            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build("Request to broker failed due to failed response status: [%s]", responseStatus);
           } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
-            throw new IOE(StringUtils.format("Request to broker failed due to failed response code: [%s]", responseStatus.getCode()));
+            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build("Request to broker failed due to failed response code: [%s]", responseStatus.getCode());
           }
           return fullResponseHolder.getContent();
         },
