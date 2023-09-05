@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUnknownAs;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -375,24 +376,64 @@ public class Expressions
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
+  ) {
+    return toFilter1(plannerContext, rowSignature, virtualColumnRegistry, expression, RexUnknownAs.FALSE);
+  }
+
+  /**
+   * Handles the translation of "condition" to a Druid filter.
+   *
+   * The native execution engine only supports 2 valued logic with {@link RexUnknownAs#FALSE} semantics.
+   *
+   * @param plannerContext        planner context
+   * @param rowSignature          input row signature
+   * @param virtualColumnRegistry re-usable virtual column references, may be null if virtual columns aren't allowed
+   * @param expression            Calcite row expression
+   * @param unknownAs             Current UnknownAs mode
+   */
+  @Nullable
+  private static DimFilter toFilter1(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      @Nullable final VirtualColumnRegistry virtualColumnRegistry,
+      final RexNode expression, RexUnknownAs unknownAs
   )
   {
     final SqlKind kind = expression.getKind();
 
-    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-      return toFilter(
+    if (kind == SqlKind.IS_TRUE) {
+      return toFilter1(
           plannerContext,
           rowSignature,
           virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) expression).getOperands())
+          Iterables.getOnlyElement(((RexCall) expression).getOperands()),
+          RexUnknownAs.FALSE
       );
-    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+    } else if (kind == SqlKind.IS_NOT_FALSE) {
+      return toFilter1(
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          Iterables.getOnlyElement(((RexCall) expression).getOperands()),
+          RexUnknownAs.TRUE);
+    } else if (kind == SqlKind.IS_FALSE) {
       return new NotDimFilter(
-          toFilter(
+          toFilter1(
               plannerContext,
               rowSignature,
               virtualColumnRegistry,
-              Iterables.getOnlyElement(((RexCall) expression).getOperands())
+              Iterables.getOnlyElement(((RexCall) expression).getOperands()),
+              unknownAs.TRUE
+          )
+      );
+    } else if (kind == SqlKind.IS_NOT_TRUE) {
+      return new NotDimFilter(
+          toFilter1(
+              plannerContext,
+              rowSignature,
+              virtualColumnRegistry,
+              Iterables.getOnlyElement(((RexCall) expression).getOperands()),
+              unknownAs.FALSE
           )
       );
     } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
@@ -408,11 +449,12 @@ public class Expressions
                || kind == SqlKind.NOT) {
       final List<DimFilter> filters = new ArrayList<>();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
-        final DimFilter nextFilter = toFilter(
+        final DimFilter nextFilter = toFilter1(
             plannerContext,
             rowSignature,
             virtualColumnRegistry,
-            rexNode
+            rexNode,
+            kind == SqlKind.NOT ? unknownAs.negate() : unknownAs
         );
         if (nextFilter == null) {
           return null;
@@ -430,7 +472,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(plannerContext, rowSignature, virtualColumnRegistry, expression);
+      return toLeafFilter(plannerContext, rowSignature, virtualColumnRegistry, expression, unknownAs);
     }
   }
 
@@ -442,13 +484,14 @@ public class Expressions
    * @param rowSignature          input row signature
    * @param virtualColumnRegistry re-usable virtual column references, may be null if virtual columns aren't allowed
    * @param rexNode               Calcite row expression
+   * @param unknownAs
    */
   @Nullable
   private static DimFilter toLeafFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
-      final RexNode rexNode
+      final RexNode rexNode, RexUnknownAs unknownAs
   )
   {
     if (rexNode.isAlwaysTrue()) {
@@ -461,7 +504,8 @@ public class Expressions
         plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        rexNode
+        rexNode,
+        unknownAs
     );
     return simpleFilter != null
            ? simpleFilter
@@ -476,31 +520,53 @@ public class Expressions
    * @param rowSignature          input row signature
    * @param virtualColumnRegistry re-usable virtual column references, may be null if virtual columns aren't allowed
    * @param rexNode               Calcite row expression
+   * @param unknownAs
    */
   @Nullable
   private static DimFilter toSimpleLeafFilter(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
-      final RexNode rexNode
+      final RexNode rexNode, RexUnknownAs unknownAs
   )
   {
     final SqlKind kind = rexNode.getKind();
 
-    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+    if (kind == SqlKind.IS_TRUE ) {
       return toSimpleLeafFilter(
           plannerContext,
           rowSignature,
           virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
+          Iterables.getOnlyElement(((RexCall) rexNode).getOperands()),
+          RexUnknownAs.FALSE
       );
-    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+    } else     if (kind == SqlKind.IS_NOT_FALSE) {
+      return toSimpleLeafFilter(
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          Iterables.getOnlyElement(((RexCall) rexNode).getOperands()),
+          RexUnknownAs.TRUE
+      );
+    } else if (kind == SqlKind.IS_FALSE ) {
       return new NotDimFilter(
           toSimpleLeafFilter(
               plannerContext,
               rowSignature,
               virtualColumnRegistry,
-              Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
+              Iterables.getOnlyElement(((RexCall) rexNode).getOperands()),
+          RexUnknownAs.TRUE
+          )
+      );
+    } else if ( kind == SqlKind.IS_NOT_TRUE) {
+      return new NotDimFilter(
+          toSimpleLeafFilter(
+              plannerContext,
+              rowSignature,
+              virtualColumnRegistry,
+              Iterables.getOnlyElement(((RexCall) rexNode).getOperands()),
+                        RexUnknownAs.FALSE
+
           )
       );
     } else if (kind == SqlKind.IS_NULL || kind == SqlKind.IS_NOT_NULL) {
