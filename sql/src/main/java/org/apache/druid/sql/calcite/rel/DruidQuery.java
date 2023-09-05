@@ -324,6 +324,8 @@ public class DruidQuery
     RexNode w2 = rs.simplify(w);
     plannerContext.push(rs);
     plannerContext.push(rexBuilder);
+    plannerContext.push(partialQuery.getRelBuilder());
+    plannerContext.push(executor);
 
     return getDimFilter(plannerContext, rowSignature, virtualColumnRegistry, partialQuery.getWhereFilter());
   }
@@ -353,7 +355,9 @@ public class DruidQuery
       final Filter filter
   )
   {
-    final RexNode condition = filter.getCondition();
+    XConv xc = new XConv(plannerContext,filter.getCondition());
+    RexNode condition = xc.getCond();
+
     final DimFilter dimFilter = Expressions.toFilter(
         plannerContext,
         rowSignature,
@@ -361,7 +365,7 @@ public class DruidQuery
         condition
     );
     if (dimFilter == null) {
-      throw new CannotBuildQueryException(filter, condition);
+      throw new CannotBuildQueryException(filter, filter.getCondition());
     } else {
       return dimFilter;
     }
