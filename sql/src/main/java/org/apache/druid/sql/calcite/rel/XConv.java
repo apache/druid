@@ -27,7 +27,6 @@ import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSimplify;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -66,48 +65,7 @@ public class XConv extends RexShuttle
   @Override
   public RexNode visitCall(RexCall call)
   {
-    call = distributive(call);
-
-    call = eqRules(call);
-
-    return super.visitCall(call);
-  }
-
-  private RexCall eqRules(RexCall call)
-  {
-    if(!(call.getKind() == SqlKind.EQUALS)) {
-      return call;
-    }
-
-
-
-  }
-
-  private RexCall distributive(RexCall call)
-  {
-
-    if (!isIsXOperator(call)) {
-      return call;
-    }
-    RexCall topOp = call;
-    RexCall bottomOp = (RexCall) call.getOperands().get(0);
-
-    SqlKind bottomKind = bottomOp.getKind();
-    if (!(bottomKind == SqlKind.AND || bottomKind == SqlKind.OR)) {
-      return call;
-    }
-
-    List<RexNode> oldops = bottomOp.getOperands();
-    List<RexNode> newOperands = new ArrayList<>();
-    for (RexNode rexNode : oldops) {
-      newOperands.add(rexBuilder.makeCall(topOp.getOperator(), rexNode));
-    }
-    return (RexCall) rexBuilder.makeCall(bottomOp.getOperator(), newOperands);
-
-  }
-
-  private boolean isIsXOperator(RexCall call)
-  {
+//    Strong.isStrong(call)
     switch (call.getKind())
     {
     case IS_NOT_NULL:
@@ -116,9 +74,57 @@ public class XConv extends RexShuttle
     case IS_NOT_TRUE:
     case IS_FALSE:
     case IS_NOT_FALSE:
-      return true;
+      RexNode op = call.getOperands().get(0);
+      switch (op.getKind())
+      {
+      case AND:
+      case OR:
+        call = distributive(call);
+        break;
+      case EQUALS:
+        call = evalEquals(call, (RexCall) op);
+        break;
+      }
     }
-    return false;
+
+    return super.visitCall(call);
+  }
+
+  private RexCall evalEquals(RexCall parentOp, RexCall op)
+  {
+    switch (parentOp.getKind())
+    {
+    case IS_TRUE:
+      // op && op is not null
+
+    case IS_NOT_NULL:
+      // l is not null and r is not null
+    case IS_NULL:
+      // l is null or r is null
+
+    case IS_NOT_TRUE:
+      // return not(eq())
+    case IS_FALSE:
+      // not(eq()) && is not null
+    case IS_NOT_FALSE:
+      // eq() || l is null || r is null
+    }
+    return op;
+
+  }
+
+  private RexCall distributive(RexCall call)
+  {
+    RexCall topOp = call;
+    RexCall bottomOp = (RexCall) call.getOperands().get(0);
+
+    List<RexNode> oldops = bottomOp.getOperands();
+    List<RexNode> newOperands = new ArrayList<>();
+    for (RexNode rexNode : oldops) {
+      newOperands.add(rexBuilder.makeCall(topOp.getOperator(), rexNode));
+    }
+    return (RexCall) rexBuilder.makeCall(bottomOp.getOperator(), newOperands);
+
   }
 
   static class S1 extends RexSimplify

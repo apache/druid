@@ -1980,6 +1980,33 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "select cityName from druid.wikipedia "
+            + "where  (cityName != isNew and isNew > channel ) is not false",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+"wikipedia")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    and(
+                        like("channel","#min%"),
+//                        notNull("cityName"),
+                        not(equality("cityName", "some",ColumnType.STRING))
+                    )
+                )
+                .columns("cityName")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of());
+  }
+
+  @Test
+  public void testNotEqFiltersNull10()
+  {
+    cannotVectorize();
+    testQuery(
+        "select cityName from druid.wikipedia "
             + "where channel like '#min%' and cityName is not null and cityName != 'some' is true",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -2000,4 +2027,26 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()),
         ImmutableList.of());
   }
+
+//
+//  select cityName,isNew,countryName
+//  from "wikiticker-2015-09-12-sampled"
+//  where
+//  (cityName != isNew ) is not false
+//  AND
+//  ( isNew != countryName)  is not false
+//
+//   and (cityName=countryName) is null
+//
+
+
+//  --select isNew,count(1) from "wikiticker-2015-09-12-sampled"  group by isNew
+//
+//  select cityName,isNew,countryName
+//    from "wikiticker-2015-09-12-sampled"
+//    where
+//    (cityName != isNew and isNew != countryName ) is not false
+//    and
+//    cityName is null
+
 }
