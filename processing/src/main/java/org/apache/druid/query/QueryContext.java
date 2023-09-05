@@ -349,7 +349,12 @@ public class QueryContext
 
   public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    return getString(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
+    // Generic to allow for both strings and numbers to be passed as values in the query context
+    Object maxSubqueryBytesObject = get(QueryContexts.MAX_SUBQUERY_BYTES_KEY);
+    if (maxSubqueryBytesObject == null) {
+      maxSubqueryBytesObject = defaultMemoryBytes;
+    }
+    return String.valueOf(maxSubqueryBytesObject);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
