@@ -84,7 +84,7 @@ Only select the columns needed for the query instead of retrieving all columns f
 
 #### Use filters
 
-Use filters, for example the WHERE clause, and filter on time. Try to minimize the use of non-equal filters, because they're very resource-intensive.
+Use filters, for example the WHERE clause, and filter on time. Try to minimize the use of inequality filters, because they're very resource-intensive.
 
 The following example query filters on `__time` and `product`:
 
@@ -104,7 +104,7 @@ The following example uses a wildcard filter on the `diffUrl` column:
 ```
 SELECT * from Wikipedia
 WHERE diffUrl LIKE 'https://en.wikipedia%'
-AND __time BETWEEN '2016-06-27 00:00' AND '2016-06-27 12:00'
+AND TIME_IN_INTERVAL(__time, '2016-06-27T01:00:00/2016-06-27T02:00:00')
 ```
 
 #### Shorten your queries
@@ -124,7 +124,7 @@ UNION ALL
 GROUP BY id
 ```
 
-To simply this query, you could split it into several queries and then aggregate the results. For example:
+To simply this query, you could split it into several queries, for example:
 
 ```
 SELECT id, SUM(revenue) FROM datasource_1
@@ -134,15 +134,17 @@ SELECT id, SUM(revenue) FROM datasource_2
 SELECT id, SUM(revenue) FROM datasource_n
 ```
 
+You could then manually aggregate the results of the individual queries.
+
 #### Minimize or remove subqueries
 
-Consider whether you can pre-compute a subquery task and store it as a join or make it a part of the datasource.
+Consider whether you can pre-compute a subquery task and store it as a join or make it a part of the datasource. See [Datasources: join](./datasource.md#join) and [SQL query translation: Joins](./sql-translation.md#joins) for more information and examples.
 
 #### Consider alternatives to GroupBy
 
 Consider using Timeseries and TopN as alternatives to GroupBy. See [GroupBy queries: alternatives](./groupbyquery.md#alternatives) for more information.
 
-Avoid grouping on a high cardinality column, for example user ID. Investigate whether you can filter on user ID first. Find out whether your dataset is already partitioned by user ID. See [Partitioning](../ingestion/partitioning.md) for information on configuring paritioning.
+Avoid grouping on high cardinality columns, for example user ID. Investigate whether you can apply a filter first, to reduce the number of results for grouping. 
 
 #### Query over smaller intervals
 
@@ -192,7 +194,7 @@ SELECT
    APPROX_COUNT_DISTINCT_DS_HLL(userid)
 FROM sales
 GROUP BY month, country
-WHERE artist = 'Madonna' and "__time" BETWEEN '2023-08-01' AND '2023-08-31'
+WHERE artist = 'Madonna' AND TIME_IN_INTERVAL(__time, '2023-08-01/P1M')
 ORDER BY country, SUM(price) DESC
 LIMIT 100
 ```
