@@ -100,9 +100,16 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   {
     // An UnnestDataSource or FilteredDataSource can have a join as a base
     // In such a case a side channel is expected to be there
+    final DataSource baseDataSource;
+    if (dataSource instanceof  UnnestDataSource) {
+      baseDataSource = ((UnnestDataSource) dataSource).getBase();
+    } else if (dataSource instanceof FilteredDataSource) {
+      baseDataSource = ((FilteredDataSource) dataSource).getBase();
+    } else {
+      baseDataSource = dataSource;
+    }
     if (!(dataSource instanceof JoinDataSource
-          || dataSource instanceof UnnestDataSource
-          || dataSource instanceof FilteredDataSource) && !sideChannels.isEmpty()) {
+          || baseDataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
       throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
     }
 
@@ -114,7 +121,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     }
 
 
-    if (dataSource instanceof JoinDataSource || dataSource instanceof UnnestDataSource || dataSource instanceof FilteredDataSource) {
+    if (dataSource instanceof JoinDataSource || baseDataSource instanceof JoinDataSource) {
       final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
       final List<FrameReader> channelReaders = new ArrayList<>();
 
