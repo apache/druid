@@ -487,8 +487,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "multi-string1 = 2",
-        "(~(unnested-multi-string1 = 3) && multi-string1 = 2)"
+        "(multi-string1 = 2)",
+        "(~(unnested-multi-string1 = 3) || multi-string1 = 2)"
     );
   }
 
