@@ -65,7 +65,7 @@ public class SegmentLoadWaiter
   /**
    * The query sent to the broker. This query uses replication_factor to determine how many copies of a segment has to be
    * loaded as per the load rules.
-   * - If a segment is not used, the broker will not have any information about it, hence, a COUNT(*) should return this count.
+   * - If a segment is not used, the broker will not have any information about it, hence, a COUNT(*) should return the used count only.
    * - If replication_factor is more than 0, the segment will be loaded on historicals and needs to be waited for.
    * - If replication_factor is 0, that means that the segment will never be loaded on a historical and does not need to
    *   be waited for.
