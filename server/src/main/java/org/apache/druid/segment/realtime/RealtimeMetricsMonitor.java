@@ -81,7 +81,7 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
             thrownAway
         );
       }
-      emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
+      emitter.emit(builder.setMetric("ingest/events/thrownAway", thrownAway));
       final long unparseable = metrics.unparseable() - previous.unparseable();
       if (unparseable > 0) {
         log.error(
@@ -89,39 +89,39 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
             unparseable
         );
       }
-      emitter.emit(builder.build("ingest/events/unparseable", unparseable));
+      emitter.emit(builder.setMetric("ingest/events/unparseable", unparseable));
       final long dedup = metrics.dedup() - previous.dedup();
       if (dedup > 0) {
         log.warn("[%,d] duplicate events!", dedup);
       }
-      emitter.emit(builder.build("ingest/events/duplicate", dedup));
+      emitter.emit(builder.setMetric("ingest/events/duplicate", dedup));
 
-      emitter.emit(builder.build("ingest/events/processed", metrics.processed() - previous.processed()));
-      emitter.emit(builder.build("ingest/rows/output", metrics.rowOutput() - previous.rowOutput()));
-      emitter.emit(builder.build("ingest/persists/count", metrics.numPersists() - previous.numPersists()));
-      emitter.emit(builder.build("ingest/persists/time", metrics.persistTimeMillis() - previous.persistTimeMillis()));
-      emitter.emit(builder.build("ingest/persists/cpu", metrics.persistCpuTime() - previous.persistCpuTime()));
+      emitter.emit(builder.setMetric("ingest/events/processed", metrics.processed() - previous.processed()));
+      emitter.emit(builder.setMetric("ingest/rows/output", metrics.rowOutput() - previous.rowOutput()));
+      emitter.emit(builder.setMetric("ingest/persists/count", metrics.numPersists() - previous.numPersists()));
+      emitter.emit(builder.setMetric("ingest/persists/time", metrics.persistTimeMillis() - previous.persistTimeMillis()));
+      emitter.emit(builder.setMetric("ingest/persists/cpu", metrics.persistCpuTime() - previous.persistCpuTime()));
       emitter.emit(
-          builder.build(
+          builder.setMetric(
               "ingest/persists/backPressure",
               metrics.persistBackPressureMillis() - previous.persistBackPressureMillis()
           )
       );
-      emitter.emit(builder.build("ingest/persists/failed", metrics.failedPersists() - previous.failedPersists()));
-      emitter.emit(builder.build("ingest/handoff/failed", metrics.failedHandoffs() - previous.failedHandoffs()));
-      emitter.emit(builder.build("ingest/merge/time", metrics.mergeTimeMillis() - previous.mergeTimeMillis()));
-      emitter.emit(builder.build("ingest/merge/cpu", metrics.mergeCpuTime() - previous.mergeCpuTime()));
-      emitter.emit(builder.build("ingest/handoff/count", metrics.handOffCount() - previous.handOffCount()));
-      emitter.emit(builder.build("ingest/sink/count", metrics.sinkCount()));
+      emitter.emit(builder.setMetric("ingest/persists/failed", metrics.failedPersists() - previous.failedPersists()));
+      emitter.emit(builder.setMetric("ingest/handoff/failed", metrics.failedHandoffs() - previous.failedHandoffs()));
+      emitter.emit(builder.setMetric("ingest/merge/time", metrics.mergeTimeMillis() - previous.mergeTimeMillis()));
+      emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previous.mergeCpuTime()));
+      emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previous.handOffCount()));
+      emitter.emit(builder.setMetric("ingest/sink/count", metrics.sinkCount()));
 
       long messageGap = metrics.messageGap();
       if (messageGap >= 0) {
-        emitter.emit(builder.build("ingest/events/messageGap", messageGap));
+        emitter.emit(builder.setMetric("ingest/events/messageGap", messageGap));
       }
 
       long maxSegmentHandoffTime = metrics.maxSegmentHandoffTime();
       if (maxSegmentHandoffTime >= 0) {
-        emitter.emit(builder.build("ingest/handoff/time", maxSegmentHandoffTime));
+        emitter.emit(builder.setMetric("ingest/handoff/time", maxSegmentHandoffTime));
       }
 
       previousValues.put(fireDepartment, metrics);

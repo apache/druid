@@ -122,7 +122,7 @@ public class SQLAuditManager implements AuditManager
   @Override
   public void doAudit(AuditEntry auditEntry, Handle handle) throws IOException
   {
-    emitter.emit(getAuditMetricEventBuilder(auditEntry).build("config/audit", 1));
+    emitter.emit(getAuditMetricEventBuilder(auditEntry).setMetric("config/audit", 1));
 
     AuditEntry auditEntryToStore = auditEntry;
     if (config.getMaxPayloadSizeBytes() >= 0) {

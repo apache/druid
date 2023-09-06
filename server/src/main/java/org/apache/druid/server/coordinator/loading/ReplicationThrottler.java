@@ -31,20 +31,14 @@ import java.util.Map;
  * <ul>
  *   <li>{@link CoordinatorDynamicConfig#getReplicationThrottleLimit()} - Maximum
  *   number of replicas that can be assigned to a tier in a single run.</li>
- *   <li>{@link CoordinatorDynamicConfig#getMaxNonPrimaryReplicantsToLoad()} -
- *   Maximum number of total replicas that can be assigned across all tiers in a
- *   single run.</li>
  * </ul>
  */
 public class ReplicationThrottler
 {
   private final int replicationThrottleLimit;
-  private final int maxReplicaAssignmentsInRun;
 
   private final Object2IntOpenHashMap<String> tierToNumAssigned = new Object2IntOpenHashMap<>();
   private final Object2IntOpenHashMap<String> tierToMaxAssignments = new Object2IntOpenHashMap<>();
-
-  private int totalReplicasAssignedInRun;
 
   /**
    * Creates a new ReplicationThrottler for use during a single coordinator run.
@@ -53,22 +47,17 @@ public class ReplicationThrottler
    * replicas at the start of a coordinator run, it may be assigned only
    * {@code replicationThrottleLimit - k} more replicas during the run.
    *
-   * @param tierToLoadingReplicaCount  Map from tier name to number of replicas
-   *                                   already being loaded.
-   * @param replicationThrottleLimit   Maximum number of replicas that can be
-   *                                   assigned to a single tier in the current run.
-   * @param maxReplicaAssignmentsInRun Max number of total replicas that can be
-   *                                   assigned across all tiers in the current run.
+   * @param tierToLoadingReplicaCount Map from tier name to number of replicas
+   *                                  already being loaded.
+   * @param replicationThrottleLimit  Maximum number of replicas that can be
+   *                                  assigned to a single tier in the current run.
    */
   public ReplicationThrottler(
       Map<String, Integer> tierToLoadingReplicaCount,
-      int replicationThrottleLimit,
-      int maxReplicaAssignmentsInRun
+      int replicationThrottleLimit
   )
   {
     this.replicationThrottleLimit = replicationThrottleLimit;
-    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
-    this.totalReplicasAssignedInRun = 0;
 
     if (tierToLoadingReplicaCount != null) {
       tierToLoadingReplicaCount.forEach(
@@ -82,13 +71,12 @@ public class ReplicationThrottler
 
   public boolean isReplicationThrottledForTier(String tier)
   {
-    return tierToNumAssigned.getInt(tier) >= tierToMaxAssignments.getOrDefault(tier, replicationThrottleLimit)
-           || totalReplicasAssignedInRun >= maxReplicaAssignmentsInRun;
+    return tierToNumAssigned.getOrDefault(tier, 0)
+           >= tierToMaxAssignments.getOrDefault(tier, replicationThrottleLimit);
   }
 
   public void incrementAssignedReplicas(String tier)
   {
-    ++totalReplicasAssignedInRun;
     tierToNumAssigned.addTo(tier, 1);
   }
 

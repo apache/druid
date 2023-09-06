@@ -412,7 +412,7 @@ public abstract class AbstractTask implements Task
     if (emitter == null || metric == null || value == null) {
       return;
     }
-    emitter.emit(getMetricBuilder().build(metric, value));
+    emitter.emit(getMetricBuilder().setMetric(metric, value));
   }
 
 
