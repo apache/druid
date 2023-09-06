@@ -6,9 +6,10 @@ import org.joda.time.Period;
 public class SegmentMetadataCacheConfig
 {
   @JsonProperty
-  private boolean awaitInitializationOnStart = true;
+  private boolean awaitInitializationOnStart = false;
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
+  private boolean enabled = false;
   @JsonProperty
   private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
       new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
@@ -40,5 +41,10 @@ public class SegmentMetadataCacheConfig
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
+  }
+
+  public boolean isEnabled()
+  {
+    return enabled;
   }
 }

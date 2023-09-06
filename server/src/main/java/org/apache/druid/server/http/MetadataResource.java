@@ -29,11 +29,10 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
-import org.apache.druid.segment.metadata.DatasourceSchema;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.DataSourceSchema;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -44,7 +43,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -58,6 +56,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -361,17 +360,26 @@ public class MetadataResource
   }
 
   @POST
-  @Path("/datasourceSchema")
-  public Response getDatasourceSchema(
-      List<String> datasources
+  @Path("/dataSourceSchema")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getDataSourceSchema(
+      List<String> dataSources
   )
   {
     if (null == segmentMetadataCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-    Map<String, DatasourceSchema> datasourceSchemaMap = segmentMetadataCache.getDatasourceSchemaMap();
-    datasourceSchemaMap.keySet().retainAll(datasources);
+    Map<String, DataSourceSchema> dataSourceSchemaMap = segmentMetadataCache.getDataSourceSchemaMap();
 
-    return Response.status(Response.Status.OK).entity(datasourceSchemaMap.values()).build();
+    List<DataSourceSchema> results = new ArrayList<>();
+    List<String> dataSourcesToRetain = (null == dataSources) ? new ArrayList<>(dataSourceSchemaMap.keySet()) : dataSources;
+
+    for (Map.Entry<String, DataSourceSchema> entry : dataSourceSchemaMap.entrySet()) {
+      if (dataSourcesToRetain.contains(entry.getKey())) {
+        results.add(entry.getValue());
+      }
+    }
+
+    return Response.status(Response.Status.OK).entity(results).build();
   }
 }

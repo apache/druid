@@ -220,6 +220,7 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.balancer.cachingCost",
                 CachingCostBalancerStrategyConfig.class
             );
+            JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             if (beOverlord) {
@@ -532,7 +533,6 @@ public class CliCoordinator extends ServerRunnable
       binder.install(new BrokerProcessingModule());
       binder.install(new JoinableFactoryModule());
 
-      JsonConfigProvider.bind(binder, "druid.coordinator.segment", SegmentMetadataCacheConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
       JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
       JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);

@@ -4,14 +4,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.column.RowSignature;
 
-public class DatasourceSchema
+public class DataSourceSchema
 {
   // dsinfo
   private final String datasource;
   private final RowSignature rowSignature;
 
   @JsonCreator
-  public DatasourceSchema(
+  public DataSourceSchema(
       @JsonProperty("datasource") String datasource,
       @JsonProperty("rowSignature") RowSignature rowSignature)
   {

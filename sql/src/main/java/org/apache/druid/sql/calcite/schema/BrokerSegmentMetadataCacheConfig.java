@@ -11,6 +11,9 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
 
+  @JsonProperty
+  private boolean awaitInitializationOnStart = true;
+
   public boolean isMetadataSegmentCacheEnable()
   {
     return metadataSegmentCacheEnable;
@@ -21,4 +24,9 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
+  @Override
+  public boolean isAwaitInitializationOnStart()
+  {
+    return awaitInitializationOnStart;
+  }
 }

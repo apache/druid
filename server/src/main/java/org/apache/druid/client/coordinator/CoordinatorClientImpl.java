@@ -30,7 +30,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.segment.metadata.DatasourceSchema;
+import org.apache.druid.segment.metadata.DataSourceSchema;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -110,20 +110,20 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<List<DatasourceSchema>> fetchDatasourceSchema(Set<String> datasources)
+  public ListenableFuture<List<DataSourceSchema>> fetchDataSourceSchema(Set<String> dataSources)
   {
-    final String path = "/druid/coordinator/v1/metadata/datasourceSchema";
-    if (null == datasources)
+    final String path = "/druid/coordinator/v1/metadata/dataSourceSchema";
+    if (null == dataSources)
     {
-      datasources = new HashSet<>();
+      dataSources = new HashSet<>();
     }
     return FutureUtils.transform(
         client.asyncRequest(
             new RequestBuilder(HttpMethod.POST, path)
-                .jsonContent(jsonMapper, datasources),
+                .jsonContent(jsonMapper, dataSources),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DatasourceSchema>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceSchema>>() {})
     );
   }
 
