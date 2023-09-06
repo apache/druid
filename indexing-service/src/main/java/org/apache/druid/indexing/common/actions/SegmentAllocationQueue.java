@@ -529,7 +529,7 @@ public class SegmentAllocationQueue
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, request.getTask());
     metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
-    emitter.emit(metricBuilder.build(metric, value));
+    emitter.emit(metricBuilder.setMetric(metric, value));
   }
 
   private void emitBatchMetric(String metric, long value, AllocateRequestKey key)
@@ -538,7 +538,7 @@ public class SegmentAllocationQueue
     metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, key.dataSource);
     metricBuilder.setDimension(DruidMetrics.INTERVAL, key.preferredAllocationInterval.toString());
-    emitter.emit(metricBuilder.build(metric, value));
+    emitter.emit(metricBuilder.setMetric(metric, value));
   }
 
   /**

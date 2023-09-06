@@ -44,6 +44,7 @@ import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
@@ -63,6 +64,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -292,6 +294,7 @@ public class ControllerImpl implements Controller
   private WorkerMemoryParameters workerMemoryParameters;
   private boolean isDurableStorageEnabled;
   private boolean isFaultToleranceEnabled;
+  private volatile SegmentLoadWaiter segmentLoadWaiter;
 
   public ControllerImpl(
       final MSQControllerTask task,
@@ -437,6 +440,45 @@ public class ControllerImpl implements Controller
       }
     }
 
+    if (queryKernel != null && queryKernel.isSuccess()) {
+      // If successful, encourage the tasks to exit successfully.
+      postFinishToAllTasks();
+      workerTaskLauncher.stop(false);
+    } else {
+      // If not successful, cancel running tasks.
+      if (workerTaskLauncher != null) {
+        workerTaskLauncher.stop(true);
+      }
+    }
+
+    // Wait for worker tasks to exit. Ignore their return status. At this point, we've done everything we need to do,
+    // so we don't care about the task exit status.
+    if (workerTaskRunnerFuture != null) {
+      try {
+        workerTaskRunnerFuture.get();
+      }
+      catch (Exception ignored) {
+        // Suppress.
+      }
+    }
+
+
+    try {
+      releaseTaskLocks();
+
+      cleanUpDurableStorageIfNeeded();
+
+      if (queryKernel != null && queryKernel.isSuccess()) {
+        if (segmentLoadWaiter != null) {
+          // If successful and there are segments created, segmentLoadWaiter should wait for them to become available.
+          segmentLoadWaiter.waitForSegmentsToLoad();
+        }
+      }
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception thrown during cleanup. Ignoring it and writing task report.");
+    }
+
     try {
       // Write report even if something went wrong.
       final MSQStagesReport stagesReport;
@@ -488,7 +530,8 @@ public class ControllerImpl implements Controller
               workerWarnings,
               queryStartTime,
               new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
-              workerTaskLauncher
+              workerTaskLauncher,
+              segmentLoadWaiter
           ),
           stagesReport,
           countersSnapshot,
@@ -504,35 +547,28 @@ public class ControllerImpl implements Controller
       log.warn(e, "Error encountered while writing task report. Skipping.");
     }
 
-    if (queryKernel != null && queryKernel.isSuccess()) {
-      // If successful, encourage the tasks to exit successfully.
-      postFinishToAllTasks();
-      workerTaskLauncher.stop(false);
-    } else {
-      // If not successful, cancel running tasks.
-      if (workerTaskLauncher != null) {
-        workerTaskLauncher.stop(true);
-      }
-    }
-
-    // Wait for worker tasks to exit. Ignore their return status. At this point, we've done everything we need to do,
-    // so we don't care about the task exit status.
-    if (workerTaskRunnerFuture != null) {
-      try {
-        workerTaskRunnerFuture.get();
-      }
-      catch (Exception ignored) {
-        // Suppress.
-      }
-    }
-
-    cleanUpDurableStorageIfNeeded();
-
     if (taskStateForReport == TaskState.SUCCESS) {
       return TaskStatus.success(id());
     } else {
       // errorForReport is nonnull when taskStateForReport != SUCCESS. Use that message.
       return TaskStatus.failure(id(), MSQFaultUtils.generateMessageWithErrorCode(errorForReport.getFault()));
+    }
+  }
+
+  /**
+   * Releases the locks obtained by the task.
+   */
+  private void releaseTaskLocks() throws IOException
+  {
+    final List<TaskLock> locks;
+    try {
+      locks = context.taskActionClient().submit(new LockListAction());
+      for (final TaskLock lock : locks) {
+        context.taskActionClient().submit(new LockReleaseAction(lock.getInterval()));
+      }
+    }
+    catch (IOException e) {
+      throw new IOException("Failed to release locks", e);
     }
   }
 
@@ -875,7 +911,8 @@ public class ControllerImpl implements Controller
                     workerWarnings,
                     queryStartTime,
                     queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
-                    workerTaskLauncher
+                    workerTaskLauncher,
+                    segmentLoadWaiter
                 ),
                 makeStageReport(
                     queryDef,
@@ -1316,17 +1353,36 @@ public class ControllerImpl implements Controller
       if (segmentsWithTombstones.isEmpty()) {
         // Nothing to publish, only drop. We already validated that the intervalsToDrop do not have any
         // partially-overlapping segments, so it's safe to drop them as intervals instead of as specific segments.
+        // This should not need a segment load wait as segments are marked as unused immediately.
         for (final Interval interval : intervalsToDrop) {
           context.taskActionClient()
                  .submit(new MarkSegmentsAsUnusedAction(task.getDataSource(), interval));
         }
       } else {
+        Set<String> versionsToAwait = segmentsWithTombstones.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
+        segmentLoadWaiter = new SegmentLoadWaiter(
+            context.injector().getInstance(BrokerClient.class),
+            context.jsonMapper(),
+            task.getDataSource(),
+            versionsToAwait,
+            segmentsWithTombstones.size(),
+            true
+        );
         performSegmentPublish(
             context.taskActionClient(),
             SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {
+      Set<String> versionsToAwait = segments.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
+      segmentLoadWaiter = new SegmentLoadWaiter(
+          context.injector().getInstance(BrokerClient.class),
+          context.jsonMapper(),
+          task.getDataSource(),
+          versionsToAwait,
+          segments.size(),
+          true
+      );
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
@@ -2072,7 +2128,8 @@ public class ControllerImpl implements Controller
       final Queue<MSQErrorReport> errorReports,
       @Nullable final DateTime queryStartTime,
       final long queryDuration,
-      MSQWorkerTaskLauncher taskLauncher
+      MSQWorkerTaskLauncher taskLauncher,
+      final SegmentLoadWaiter segmentLoadWaiter
   )
   {
     int pendingTasks = -1;
@@ -2083,6 +2140,9 @@ public class ControllerImpl implements Controller
       pendingTasks = workerTaskCount.getPendingWorkerCount();
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
     }
+
+    SegmentLoadWaiter.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
+
     return new MSQStatusReport(
         taskState,
         errorReport,
@@ -2090,7 +2150,8 @@ public class ControllerImpl implements Controller
         queryStartTime,
         queryDuration,
         pendingTasks,
-        runningTasks
+        runningTasks,
+        status
     );
   }
 
@@ -2259,6 +2320,7 @@ public class ControllerImpl implements Controller
         throwKernelExceptionIfNotUnknown();
       }
 
+      updateLiveReportMaps();
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
     }
