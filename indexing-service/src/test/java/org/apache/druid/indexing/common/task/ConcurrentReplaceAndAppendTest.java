@@ -41,6 +41,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -119,14 +120,14 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final Interval year2023 = Intervals.of("2023/2024");
 
     // Commit initial segments for v0
-    ActionsTestTask replaceTask0 = createAndStartTask();
-    TaskLock replaceLock = replaceTask0.acquireReplaceLockOn(year2023);
+    final ActionsTestTask replaceTask0 = createAndStartTask();
+    final String v0 = replaceTask0.acquireReplaceLockOn(year2023).getVersion();
 
     final DataSegment segmentV00
         = DataSegment.builder()
                      .dataSource(DS.WIKI)
                      .interval(year2023)
-                     .version(replaceLock.getVersion())
+                     .version(v0)
                      .size(1)
                      .build();
 
@@ -138,28 +139,28 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Allocate an append segment for v0
     final ActionsTestTask appendTask0 = createAndStartTask();
     appendTask0.acquireAppendLockOn(year2023);
-    // TODO: fix allocation and version of allocated segment
-    final SegmentIdWithShardSpec pendingSegmentV01 = appendTask0.allocateSegment();
+    final SegmentIdWithShardSpec pendingSegmentV01
+        = appendTask0.allocateSegmentForTimestamp(year2023.getStart(), Granularities.YEAR);
 
     // Commit replace segment for v1
     final ActionsTestTask replaceTask1 = createAndStartTask();
-    replaceTask1.acquireReplaceLockOn(year2023);
+    final String v1 = replaceTask1.acquireReplaceLockOn(year2023).getVersion();
 
-    final DataSegment segmentV10 = DataSegment.builder(segmentV00).version("v1").build();
+    final DataSegment segmentV10 = DataSegment.builder(segmentV00).version(v1).build();
     replaceTask1.commitReplaceSegments(segmentV10);
     replaceTask1.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(year2023, segmentV00, segmentV10);
     verifyIntervalHasVisibleSegments(year2023, segmentV10);
 
     final ActionsTestTask replaceTask2 = createAndStartTask();
-    replaceTask2.acquireReplaceLockOn(year2023);
+    final String v2 = replaceTask2.acquireReplaceLockOn(year2023).getVersion();
 
     // Commit append segment v0 and verify that it gets upgraded to v1
     final DataSegment segmentV01 = asSegment(pendingSegmentV01);
     appendTask0.commitAppendSegments(segmentV01);
     appendTask0.finishRunAndGetStatus();
 
-    final DataSegment segmentV11 = DataSegment.builder(segmentV01).version(segmentV10.getVersion()).build();
+    final DataSegment segmentV11 = DataSegment.builder(segmentV01).version(v1).build();
     verifyIntervalHasUsedSegments(
         year2023,
         segmentV00, segmentV01, segmentV10, segmentV11
@@ -167,11 +168,11 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(year2023, segmentV10, segmentV11);
 
     // Commit replace segment v2 and verify that append segment gets upgraded to v2
-    final DataSegment segmentV20 = DataSegment.builder(segmentV00).version("v2").build();
+    final DataSegment segmentV20 = DataSegment.builder(segmentV00).version(v2).build();
     replaceTask2.commitReplaceSegments(segmentV20);
     replaceTask2.finishRunAndGetStatus();
 
-    final DataSegment segmentV21 = DataSegment.builder(segmentV01).version(segmentV20.getVersion()).build();
+    final DataSegment segmentV21 = DataSegment.builder(segmentV01).version(v2).build();
     verifyIntervalHasUsedSegments(
         year2023,
         segmentV00, segmentV01, segmentV10, segmentV11, segmentV20, segmentV21

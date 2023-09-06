@@ -4,7 +4,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -17,7 +16,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Test task that can be given a series of commands to execute in its {@link #runTask} method.
@@ -26,16 +24,17 @@ public class CommandQueueTask extends AbstractTask
 {
   private static final Logger log = new Logger(CommandQueueTask.class);
 
+  private final Object queueNotification = new Object();
   private final BlockingQueue<Command<?>> commandQueue = new LinkedBlockingQueue<>();
   private final AtomicBoolean finishRequested = new AtomicBoolean(false);
   private final AtomicInteger numCommandsExecuted = new AtomicInteger(0);
 
-  private final AtomicReference<TaskStatus> finalTaskStatus = new AtomicReference<>();
+  private final CompletableFuture<TaskStatus> finalTaskStatus = new CompletableFuture<>();
 
   public CommandQueueTask(String datasource, String groupId)
   {
     super(
-        StringUtils.format("test_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()),
+        StringUtils.format("test_%s_%s", datasource, UUID.randomUUID().toString()),
         groupId,
         null,
         datasource,
@@ -50,13 +49,19 @@ public class CommandQueueTask extends AbstractTask
    */
   public TaskStatus finishRunAndGetStatus()
   {
-    // Mark finished to prevent submission of any more commands
-    finishRequested.set(true);
+    synchronized (finishRequested) {
+      finishRequested.set(true);
+    }
+    synchronized (queueNotification) {
+      queueNotification.notify();
+    }
 
-    // Submit a dummy command to ensure that all previous commands have finished
-    executeInternal(() -> 1);
-
-    return finalTaskStatus.get();
+    try {
+      return finalTaskStatus.get(10, TimeUnit.SECONDS);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Error waiting for task[%s] to finish", getId());
+    }
   }
 
   /**
@@ -65,10 +70,6 @@ public class CommandQueueTask extends AbstractTask
    */
   public void submit(Runnable runnable)
   {
-    if (finishRequested.get()) {
-      throw new ISE("Task[%s] cannot accept any more commands as it is already shutting down.", getId());
-    }
-
     // Add a command with a dummy return value
     Command<?> command = new Command<>(
         () -> {
@@ -76,7 +77,7 @@ public class CommandQueueTask extends AbstractTask
           return 1;
         }
     );
-    commandQueue.offer(command);
+    addToQueue(command);
   }
 
   /**
@@ -85,18 +86,28 @@ public class CommandQueueTask extends AbstractTask
    */
   public <V> V execute(Callable<V> callable)
   {
-    if (finishRequested.get()) {
-      throw new ISE("Task[%s] cannot accept any more commands as it is already shutting down.", getId());
-    }
-
-    return executeInternal(callable);
+    Command<V> command = new Command<>(callable);
+    addToQueue(command);
+    return waitForCommandToFinish(command);
   }
 
-  private <V> V executeInternal(Callable<V> callable)
+  private <V> void addToQueue(Command<V> command)
   {
-    Command<V> command = new Command<>(callable);
-    commandQueue.offer(command);
+    synchronized (finishRequested) {
+      if (finishRequested.get()) {
+        throw new ISE("Task[%s] cannot accept any more commands as it is already shutting down.", getId());
+      } else {
+        commandQueue.offer(command);
+      }
+    }
 
+    synchronized (queueNotification) {
+      queueNotification.notify();
+    }
+  }
+
+  private <V> V waitForCommandToFinish(Command<V> command)
+  {
     try {
       return command.value.get(10, TimeUnit.SECONDS);
     }
@@ -110,9 +121,20 @@ public class CommandQueueTask extends AbstractTask
   {
     TaskStatus status;
     try {
-      while (commandQueue.size() > 0 || !finishRequested.get()) {
-        Command<?> command = commandQueue.poll(10, TimeUnit.SECONDS);
-        if (command != null) {
+      while (true) {
+        synchronized (finishRequested) {
+          if (finishRequested.get() && commandQueue.isEmpty()) {
+            break;
+          }
+        }
+
+        Command<?> command = commandQueue.poll();
+        if (command == null) {
+          synchronized (queueNotification) {
+            queueNotification.wait(10_000);
+          }
+        } else {
+          log.info("Running command[%d] for task[%s]", numCommandsExecuted.get(), getId());
           command.execute();
           numCommandsExecuted.incrementAndGet();
         }
@@ -124,7 +146,7 @@ public class CommandQueueTask extends AbstractTask
       status = TaskStatus.failure(getId(), e.getMessage());
     }
 
-    finalTaskStatus.set(status);
+    finalTaskStatus.complete(status);
     return status;
   }
 

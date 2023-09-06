@@ -1,8 +1,10 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.Sets;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -12,9 +14,15 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.task.CommandQueueTask;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Test task that can only invoke task actions.
@@ -22,6 +30,7 @@ import org.joda.time.Interval;
 public class ActionsTestTask extends CommandQueueTask
 {
   private final TaskActionClient client;
+  private final AtomicInteger sequenceId = new AtomicInteger(0);
 
   public ActionsTestTask(String datasource, TaskActionClientFactory factory)
   {
@@ -53,9 +62,22 @@ public class ActionsTestTask extends CommandQueueTask
     );
   }
 
-  public SegmentIdWithShardSpec allocateSegment()
+  public SegmentIdWithShardSpec allocateSegmentForTimestamp(DateTime timestamp, Granularity preferredSegmentGranularity)
   {
-    return null;
+    return runAction(
+        new SegmentAllocateAction(
+            getDataSource(),
+            timestamp,
+            Granularities.SECOND,
+            preferredSegmentGranularity,
+            getId() + "__" + sequenceId.getAndIncrement(),
+            null,
+            false,
+            NumberedPartialShardSpec.instance(),
+            LockGranularity.TIME_CHUNK,
+            TaskLockType.APPEND
+        )
+    );
   }
 
   private TaskLock tryTimeChunkLock(Interval interval, TaskLockType lockType)
