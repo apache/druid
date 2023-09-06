@@ -36,15 +36,20 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Translates 3 valued logic expression to 2/3 valued one.
+ * Partially translates 3 valued logic expressions to 2/3 valued one.
+ *
+ * Translates the top level of the expression tree to be evaluated in 2 valued
+ * logic.
  *
  * Execution engine:
  * <ol>
+ * <li>supports a limited set of expression types
  * <li>always uses {@link RexUnknownAs#FALSE}</li>
- * <li>doesn't support NOT_EQUALS</li>
  * <li>execution of 2 valued expressions are faster</li>
- * <li>can only handle 3 valued logic inside: IS [NOT] (FALSE|TRUE)</li>
+ * <li>can handle 3 valued logic inside a IS [NOT] (FALSE|TRUE) marker
+ * block</li>
  * </ol>
+ * <li>doesn't support NOT_EQUALS</li>
  *
  *
  */
@@ -69,21 +74,23 @@ public class XConv extends RexShuttle
     rexSimplify = plannerContext.unwrap(RexSimplify.class);
 
     rexBuilder = relBuilder.getRexBuilder();
-    S1 s1 = new S1(rexBuilder, false, executor);
-    s1.simplifyUnknownAs(condition, null);
-
-    RexCall w = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, condition);
-
-    unknownAs = RexUnknownAs.FALSE;
-    // start visit
-    RexNode w2 = w.accept(this);
-
-    RexCall w1 = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, condition);
+    // S1 s1 = new S1(rexBuilder, false, executor);
+    // s1.simplifyUnknownAs(condition, null);
+    //
+    // RexCall w = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE,
+    // condition);
+    //
+    // // start visit
+    // RexNode w2 = w.accept(this);
+    //
+    // RexCall w1 = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE,
+    // condition);
   }
 
   public RexNode getCond()
   {
-    return condition;
+    unknownAs = RexUnknownAs.FALSE;
+    return condition.accept(this);
   }
 
   @Override
@@ -97,9 +104,14 @@ public class XConv extends RexShuttle
       if (kind == unknownAsKind) {
         return op.accept(this);
       }
-      if (kind == unknownAsKind.negate()) {
-        op = rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
-        return op.accept(this);
+      // if (kind == unknownAsKind.negate()) {
+      // op = rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+      // return op.accept(this);
+      // }
+
+      if (isKind(op.getKind())) {
+        // we have isX(isY(op))
+        return isXisY(kind, op).accept(this);
       }
 
       switch (op.getKind())
@@ -109,26 +121,104 @@ public class XConv extends RexShuttle
         call = distributive(call);
         return call.accept(this);
       case NOT_EQUALS:
-      case EQUALS:
-        call = evalEquals(call, (RexCall) op);
-        break;
+        // case EQUALS:
+        // call = evalEquals(call, (RexCall) op);
+        // break;
       }
     }
 
-    RexUnknownAs oldUnknownAs = unknownAs;
-
-    switch (call.getKind())
-    {
-    case NOT:
-      unknownAs = unknownAs.negate();
-      RexNode op = getOnlyElement(call.getOperands());
-      op=op.accept(this);
-      op = rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+    if (!isSupportedKind(kind)) {
 
     }
-//    RexNode node = super.visitCall(call);
-    unknownAs = oldUnknownAs;
-    return node;
+
+    RexUnknownAs oldUnknownAs = unknownAs;
+    try {
+
+      switch (call.getKind())
+      {
+      case NOT:
+      {
+        unknownAs = unknownAs.negate();
+        RexNode op = getOnlyElement(call.getOperands());
+        RexNode newOp = op.accept(this);
+        if (op == newOp) {
+          return call;
+        }
+        return rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+
+      }
+      case IS_NOT_NULL:
+      case IS_NULL:
+      {
+        unknownAs = unknownAs.negate();
+        RexNode op = getOnlyElement(call.getOperands());
+        RexNode newOp = op.accept(this);
+        if (op == newOp) {
+          return call;
+        }
+        return rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+
+      }
+
+      case IS_FALSE:
+      case IS_NOT_FALSE:
+      case IS_TRUE:
+      case IS_NOT_TRUE:
+      {
+        RexNode op = getOnlyElement(call.getOperands());
+
+        op = rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, op, rexBuilder.makeNullLiteral(op.getType()));
+      }
+
+      default:
+        RexNode node = super.visitCall(call);
+      }
+    } finally {
+      unknownAs = oldUnknownAs;
+    }
+  }
+
+  /**
+   * {@link SqlKind}-s supported by the execution layer as indexes/filters/etc.
+   */
+  private boolean isSupportedKind(SqlKind kind)
+  {
+    switch (kind)
+    {
+    case AND:
+    case OR:
+    case IS_NULL:
+    case IS_NOT_NULL:
+    case EQUALS:
+    case NOT:
+    case GREATER_THAN:
+    case GREATER_THAN_OR_EQUAL:
+    case LESS_THAN:
+    case LESS_THAN_OR_EQUAL:
+      return true;
+    default:
+      return false;
+    }
+
+  }
+
+  private RexNode isXisY(SqlKind topKind, RexNode op)
+  {
+    switch (topKind)
+    {
+    case IS_NOT_NULL:
+      return rexBuilder.makeLiteral(true);
+    case IS_NULL:
+      return rexBuilder.makeLiteral(false);
+    case IS_TRUE:
+    case IS_NOT_FALSE:
+      return op;
+    case IS_NOT_TRUE:
+    case IS_FALSE:
+      return rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+    default:
+      throw new RuntimeException();
+    }
   }
 
   private boolean isKind(SqlKind kind)

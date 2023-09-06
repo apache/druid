@@ -2035,7 +2035,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 //  (cityName != isNew ) is not false
 //  AND
 //  ( isNew != countryName)  is not false
-//
 //   and (cityName=countryName) is null
 //
 
