@@ -196,17 +196,19 @@ class ByteBuffers
 
   private static long lookupAddressOffset(MethodHandles.Lookup lookup) throws Throwable
   {
-    MethodHandle objectFieldOffset = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "objectFieldOffset",
-                                                        MethodType.methodType(long.class, Field.class)
-    );
+    MethodHandle objectFieldOffset = lookup.findVirtual(
+        UnsafeUtils.theUnsafeClass(),
+        "objectFieldOffset",
+        MethodType.methodType(long.class, Field.class));
     return (long) objectFieldOffset.bindTo(UnsafeUtils.theUnsafe()).invoke(Buffer.class.getDeclaredField("address"));
   }
 
   private static MethodHandle lookupGetLong(MethodHandles.Lookup lookup) throws Throwable
   {
-    MethodHandle getLong = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "getLong",
-                                              MethodType.methodType(long.class, Object.class, long.class)
-    );
+    MethodHandle getLong = lookup.findVirtual(
+        UnsafeUtils.theUnsafeClass(),
+        "getLong",
+        MethodType.methodType(long.class, Object.class, long.class));
     return getLong.bindTo(UnsafeUtils.theUnsafe());
   }
 

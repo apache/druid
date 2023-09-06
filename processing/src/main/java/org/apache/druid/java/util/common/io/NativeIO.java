@@ -146,15 +146,13 @@ public class NativeIO
     catch (UnsatisfiedLinkError ule) {
       // if JNA is unavailable just skipping Direct I/O
       // instance of this class will act like normal RandomAccessFile
-      log.warn(ule, "Unsatisfied Link error: posix_fadvise failed on file descriptor [%d], offset [%d]",
-          fd, offset);
+      log.warn(ule, "Unsatisfied Link error: posix_fadvise failed on file descriptor [%d], offset [%d]", fd, offset);
       fadvisePossible = false;
     }
     catch (Exception e) {
       // This is best effort anyway so lets just log that there was an
       // exception and forget
-      log.warn(e, "Unknown exception: posix_fadvise failed on file descriptor [%d], offset [%d]",
-          fd, offset);
+      log.warn(e, "Unknown exception: posix_fadvise failed on file descriptor [%d], offset [%d]", fd, offset);
     }
   }
 
@@ -175,7 +173,11 @@ public class NativeIO
       int ret_code = sync_file_range(fd, offset, nbytes, flags);
       if (ret_code != 0) {
         log.warn("failed on syncing fd [%d], offset [%d], bytes [%d], ret_code [%d], errno [%d]",
-            fd, offset, nbytes, ret_code, Native.getLastError());
+            fd,
+            offset,
+            nbytes,
+            ret_code,
+            Native.getLastError());
         return;
       }
     }
@@ -188,8 +190,7 @@ public class NativeIO
       syncFileRangePossible = false;
     }
     catch (Exception e) {
-      log.warn(e, "Unknown exception: sync_file_range failed on fd [%d], offset [%d], bytes [%d]",
-          fd, offset, nbytes);
+      log.warn(e, "Unknown exception: sync_file_range failed on fd [%d], offset [%d], bytes [%d]", fd, offset, nbytes);
       syncFileRangePossible = false;
     }
   }
@@ -224,7 +225,10 @@ public class NativeIO
           trySyncFileRange(fd, offset, numBytes, SYNC_FILE_RANGE_WRITE);
           if (offset > 0) {
             // This does a blocking write-and-wait on any old ranges
-            trySyncFileRange(fd, lastOffset, lastBytes,
+            trySyncFileRange(
+                fd,
+                lastOffset,
+                lastBytes,
                 SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
             // Remove the old range from the cache
             trySkipCache(fd, lastOffset, lastBytes);

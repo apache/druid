@@ -5113,11 +5113,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"),
-                            QueryRunnerTestHelper.INDEX_LONG_MIN, QueryRunnerTestHelper.INDEX_LONG_MAX,
-                            QueryRunnerTestHelper.INDEX_DOUBLE_MIN, QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
-                            QueryRunnerTestHelper.INDEX_FLOAT_MIN, QueryRunnerTestHelper.INDEX_FLOAT_MAX
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index"),
+            QueryRunnerTestHelper.INDEX_LONG_MIN,
+            QueryRunnerTestHelper.INDEX_LONG_MAX,
+            QueryRunnerTestHelper.INDEX_DOUBLE_MIN,
+            QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
+            QueryRunnerTestHelper.INDEX_FLOAT_MIN,
+            QueryRunnerTestHelper.INDEX_FLOAT_MAX)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(havingSpec);
 
@@ -5721,7 +5724,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         expectedResults,
-        GroupByQueryRunnerTestHelper.runQuery(factory, runner, query), "subquery"
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
+        "subquery"
     );
 
     subquery = makeQueryBuilder(subquery)
@@ -5745,7 +5749,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         expectedResults,
-        GroupByQueryRunnerTestHelper.runQuery(factory, runner, query), "subquery"
+        GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
+        "subquery"
     );
   }
 

@@ -351,7 +351,8 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
         headerOut.size()
     );
     Preconditions.checkState(
-        numBytesWritten < fileSizeLimit, "Wrote[%s] bytes, which is too many.",
+        numBytesWritten < fileSizeLimit,
+        "Wrote[%s] bytes, which is too many.",
         numBytesWritten
     );
 

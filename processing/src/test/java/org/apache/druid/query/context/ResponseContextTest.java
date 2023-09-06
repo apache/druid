@@ -310,8 +310,7 @@ public class ResponseContextTest
     final ResponseContext ctx = ResponseContext.createEmpty();
     ctx.put(
         Keys.UNCOVERED_INTERVALS,
-        Arrays.asList(interval(1), interval(2), interval(3), interval(4),
-                      interval(5), interval(6))
+        Arrays.asList(interval(1), interval(2), interval(3), interval(4), interval(5), interval(6))
     );
     // This value should be longer than the above so it is fully removed
     // before we truncate the above.

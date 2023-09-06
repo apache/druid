@@ -237,7 +237,8 @@ public class Windowing
       // as defensive programming.
       final Mappings.TargetMapping mapping = Preconditions.checkNotNull(
           partialQuery.getWindowProject().getMapping(),
-          "mapping for windowProject[%s]", partialQuery.getWindowProject()
+          "mapping for windowProject[%s]",
+          partialQuery.getWindowProject()
       );
 
       final List<String> windowProjectOutputColumns = new ArrayList<>();

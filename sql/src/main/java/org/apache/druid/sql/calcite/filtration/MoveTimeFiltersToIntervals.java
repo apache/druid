@@ -179,8 +179,10 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
       return Range.downTo(Long.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType());
     } else {
       return Range.range(
-          Long.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType(),
-          Long.parseLong(range.upperEndpoint().getValue()), range.upperBoundType()
+          Long.parseLong(range.lowerEndpoint().getValue()),
+          range.lowerBoundType(),
+          Long.parseLong(range.upperEndpoint().getValue()),
+          range.upperBoundType()
       );
     }
   }
@@ -195,8 +197,10 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
       return Range.downTo(Numbers.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType());
     } else {
       return Range.range(
-          Numbers.parseLong(range.lowerEndpoint().getValue()), range.lowerBoundType(),
-          Numbers.parseLong(range.upperEndpoint().getValue()), range.upperBoundType()
+          Numbers.parseLong(range.lowerEndpoint().getValue()),
+          range.lowerBoundType(),
+          Numbers.parseLong(range.upperEndpoint().getValue()),
+          range.upperBoundType()
       );
     }
   }

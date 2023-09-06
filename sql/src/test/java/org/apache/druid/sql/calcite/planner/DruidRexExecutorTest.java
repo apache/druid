@@ -121,11 +121,13 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
         SqlStdOperatorTable.MULTIPLY,
         rexBuilder.makeLiteral(
             new BigDecimal(10L),
-            typeFactory.createSqlType(SqlTypeName.BIGINT), true
+            typeFactory.createSqlType(SqlTypeName.BIGINT),
+            true
         ),
         rexBuilder.makeLiteral(
             new BigDecimal(3L),
-            typeFactory.createSqlType(SqlTypeName.BIGINT), true
+            typeFactory.createSqlType(SqlTypeName.BIGINT),
+            true
         )
     );
 

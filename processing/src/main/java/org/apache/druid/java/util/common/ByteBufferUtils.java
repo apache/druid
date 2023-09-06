@@ -121,13 +121,16 @@ public class ByteBufferUtils
     MethodHandle directBufferCleanerMethod = lookup.unreflect(m);
     Class<?> cleanerClass = directBufferCleanerMethod.type().returnType();
     MethodHandle cleanMethod = lookup.findVirtual(cleanerClass, "clean", MethodType.methodType(void.class));
-    MethodHandle nonNullTest = lookup.findStatic(Objects.class, "nonNull",
-                                                 MethodType.methodType(boolean.class, Object.class)
-    ).asType(MethodType.methodType(boolean.class, cleanerClass));
-    MethodHandle noop = MethodHandles.dropArguments(MethodHandles.constant(
-        Void.class,
-        null
-    ).asType(MethodType.methodType(void.class)), 0, cleanerClass);
+    MethodHandle nonNullTest = lookup.findStatic(
+        Objects.class,
+        "nonNull",
+        MethodType.methodType(boolean.class, Object.class))
+        .asType(MethodType.methodType(boolean.class, cleanerClass));
+    MethodHandle noop = MethodHandles.dropArguments(
+        MethodHandles.constant(Void.class, null)
+            .asType(MethodType.methodType(void.class)),
+        0,
+        cleanerClass);
     MethodHandle unmapper = MethodHandles.filterReturnValue(
         directBufferCleanerMethod,
         MethodHandles.guardWithTest(nonNullTest, cleanMethod, noop)

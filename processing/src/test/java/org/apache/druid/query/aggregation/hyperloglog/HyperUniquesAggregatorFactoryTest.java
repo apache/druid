@@ -164,9 +164,13 @@ public class HyperUniquesAggregatorFactoryTest
       Assert.assertEquals(
           StringUtils.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
                              "Left={cardinality=%f, hll=%s},\n" +
-                             "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
-                             leftCollector.estimateCardinality(), leftCollector,
-                             rightCollector.estimateCardinality(), rightCollector
+                             "Right={cardinality=%f, hll=%s},\n",
+                             orderedByComparator,
+                             orderedByCardinality,
+                             leftCollector.estimateCardinality(),
+                             leftCollector,
+                             rightCollector.estimateCardinality(),
+                             rightCollector
           ),
           orderedByCardinality,
           orderedByComparator
