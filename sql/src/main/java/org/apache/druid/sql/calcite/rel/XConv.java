@@ -128,7 +128,8 @@ public class XConv extends RexShuttle
     }
 
     if (!isSupportedKind(kind)) {
-
+      // FIXME: should it be wrapped or left alone?
+      return call;
     }
 
     RexUnknownAs oldUnknownAs = unknownAs;
@@ -145,7 +146,6 @@ public class XConv extends RexShuttle
           return call;
         }
         return rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
-
       }
       case IS_NOT_NULL:
       case IS_NULL:
@@ -156,22 +156,25 @@ public class XConv extends RexShuttle
         if (op == newOp) {
           return call;
         }
-        return rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
-
+        return rexBuilder.makeCall(call.getOperator(), op);
       }
 
-      case IS_FALSE:
-      case IS_NOT_FALSE:
-      case IS_TRUE:
-      case IS_NOT_TRUE:
-      {
-        RexNode op = getOnlyElement(call.getOperands());
-
-        op = rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, op, rexBuilder.makeNullLiteral(op.getType()));
-      }
+//      case IS_FALSE:
+//      case IS_NOT_FALSE:
+//      case IS_TRUE:
+//      case IS_NOT_TRUE:
+//      {
+//        // RexNode op = getOnlyElement(call.getOperands());
+//        //
+//        // op = rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, op,
+//        // rexBuilder.makeNullLiteral(op.getType()));
+//      }
+      case AND:
+      case OR:
+        RexNode node = super.visitCall(call);
 
       default:
-        RexNode node = super.visitCall(call);
+        throw new RuntimeException("unhandled: " + kind);
       }
     } finally {
       unknownAs = oldUnknownAs;
