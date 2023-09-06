@@ -406,7 +406,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
+  public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
@@ -677,7 +677,7 @@ public class SegmentMetadataCache
    * which may be a subset of the asked-for set.
    */
   @VisibleForTesting
-  protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+  public Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
   {
     final Set<SegmentId> retVal = new HashSet<>();
 
@@ -878,7 +878,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  TreeSet<SegmentId> getSegmentsNeedingRefresh()
+  public TreeSet<SegmentId> getSegmentsNeedingRefresh()
   {
     synchronized (lock) {
       return segmentsNeedingRefresh;
@@ -886,7 +886,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  TreeSet<SegmentId> getMutableSegments()
+  public TreeSet<SegmentId> getMutableSegments()
   {
     synchronized (lock) {
       return mutableSegments;
@@ -894,12 +894,18 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  Set<String> getDataSourcesNeedingRebuild()
+  public Set<String> getDataSourcesNeedingRebuild()
   {
     synchronized (lock) {
       return dataSourcesNeedingRebuild;
     }
   }
+
+  public Object getLock()
+  {
+    return lock;
+  }
+
 
   /**
    * Execute a SegmentMetadata query and return a {@link Sequence} of {@link SegmentAnalysis}.

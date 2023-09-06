@@ -11,9 +11,6 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
 
-  @JsonProperty
-  private boolean segmentMetadataCacheEnabled = false;
-
   public boolean isMetadataSegmentCacheEnable()
   {
     return metadataSegmentCacheEnable;
@@ -24,8 +21,4 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
-  public boolean isSegmentMetadataCacheEnabled()
-  {
-    return segmentMetadataCacheEnabled;
-  }
 }

@@ -33,6 +33,7 @@ import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.DatasourceSchema;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -77,7 +78,7 @@ public class MetadataResource
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
-  private final SegmentMetadataCache segmentMetadataCache;
+  private final @Nullable SegmentMetadataCache segmentMetadataCache;
 
   @Inject
   public MetadataResource(
@@ -85,7 +86,7 @@ public class MetadataResource
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator,
-      SegmentMetadataCache segmentMetadataCache
+      @Nullable SegmentMetadataCache segmentMetadataCache
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
@@ -149,11 +150,11 @@ public class MetadataResource
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
       @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus,
-      @QueryParam("includeOvershadowedStatus") final @Nullable String includeRealtime
+      @QueryParam("includeRealtimeSegments") final @Nullable String includeRealtimeSegments
   )
   {
     if (includeOvershadowedStatus != null) {
-      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources);
+      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
     }
 
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
@@ -180,7 +181,8 @@ public class MetadataResource
 
   private Response getAllUsedSegmentsWithAdditionalDetails(
       HttpServletRequest req,
-      @Nullable Set<String> dataSources
+      @Nullable Set<String> dataSources,
+      String includeRealtimeSegments
   )
   {
     DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
@@ -200,44 +202,61 @@ public class MetadataResource
         .map(segment -> {
           // The replication factor for unloaded segments is 0 as they will be unloaded soon
           boolean isOvershadowed = overshadowedSegments.contains(segment);
-          AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(
-              segment.getDataSource(),
-              segment.getId()
-          );
+          Long numRows = null;
+          if (null != segmentMetadataCache) {
+            AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(
+                segment.getDataSource(),
+                segment.getId()
+            );
+            if (null != availableSegmentMetadata) {
+              numRows = availableSegmentMetadata.getNumRows();
+            }
+          }
           Integer replicationFactor = isOvershadowed ? (Integer) 0
                                                      : coordinator.getReplicationFactor(segment.getId());
-          Long numRows = (null != availableSegmentMetadata) ? availableSegmentMetadata.getNumRows() : null;
           segmentAlreadySeen.add(segment.getId());
-          return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, 20L, true, 0L);
-        }).peek(v -> log.info("peeking into first stream segmentseen [%s], id [%s] isPublished [%s]", segmentAlreadySeen, v.getDataSegment().getId(), v.isPublished()));
+          return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, 20L, true);
+        }).peek(v -> log.info("peeking into first stream segmentseen [%s], id [%s]", segmentAlreadySeen, v.getDataSegment().getId()));
 
-    log.info("printing the content in smc cache %s", segmentMetadataCache.getSegmentMetadataSnapshot().values());
+    Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
-    final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
-        .getSegmentMetadataSnapshot()
-        .values()
-        .stream()
-        .peek(v -> log.info("peeking into second stream (first) segmentseen [%s], id [%s]", segmentAlreadySeen, v.getSegment().getId()))
-        .filter(availableSegmentMetadata -> !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
-        .map(availableSegmentMetadata -> {
-          return new SegmentStatusInCluster(
-              availableSegmentMetadata.getSegment(),
-              false,
-              (int) availableSegmentMetadata.getNumReplicas(),
-              /**availableSegmentMetadata.getNumRows(), **/ 30L,
-              false,
-              availableSegmentMetadata.isRealtime()
-          );
-        }).peek(v -> log.info("peeking into second stream (second) segmentseen [%s], id [%s]", segmentAlreadySeen, v.getDataSegment().getId()));;
+    if (null != includeRealtimeSegments && segmentMetadataCache != null) {
+      log.info("printing the content in smc cache %s", segmentMetadataCache.getSegmentMetadataSnapshot().values());
+      final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
+          .getSegmentMetadataSnapshot()
+          .values()
+          .stream()
+          .peek(v -> log.info(
+              "peeking into second stream (first) segmentseen [%s], id [%s]",
+              segmentAlreadySeen,
+              v.getSegment().getId()
+          ))
+          .filter(availableSegmentMetadata -> !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment()
+                                                                                                   .getId()))
+          .map(availableSegmentMetadata -> {
+            return new SegmentStatusInCluster(
+                availableSegmentMetadata.getSegment(),
+                false,
+                (int) availableSegmentMetadata.getNumReplicas(),
+                /**availableSegmentMetadata.getNumRows(), **/30L,
+                availableSegmentMetadata.isRealtime() != 0
+            );
+          })
+          .peek(v -> log.info("peeking into second stream (second) segmentseen [%s], id [%s]",
+                              segmentAlreadySeen,
+                              v.getDataSegment().getId()
+          ));
 
+      finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus)
+                                                      .peek(v -> log.info("combined stream element %s", v));
+    }
 
-    Stream<SegmentStatusInCluster> combined = Stream.concat(segmentStatus, realtimeSegmentStatus).peek(v -> log.info("combined stream element %s", v));
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
     final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        combined::iterator,
+        finalSegments::iterator,
         raGenerator,
         authorizerMapper
     );
@@ -347,6 +366,9 @@ public class MetadataResource
       List<String> datasources
   )
   {
+    if (null == segmentMetadataCache) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
     Map<String, DatasourceSchema> datasourceSchemaMap = segmentMetadataCache.getDatasourceSchemaMap();
     datasourceSchemaMap.keySet().retainAll(datasources);
 

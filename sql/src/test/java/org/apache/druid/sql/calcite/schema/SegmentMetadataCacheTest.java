@@ -344,7 +344,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         )
     {
       @Override
-      void markDataSourceAsNeedRebuild(String datasource)
+      public void markDataSourceAsNeedRebuild(String datasource)
       {
         super.markDataSourceAsNeedRebuild(datasource);
         markDataSourceLatch.countDown();
@@ -352,7 +352,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
       @Override
       @VisibleForTesting
-      void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
+      public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
       {
         super.refresh(segmentsToRefresh, dataSourcesToRebuild);
         refreshLatch.countDown();

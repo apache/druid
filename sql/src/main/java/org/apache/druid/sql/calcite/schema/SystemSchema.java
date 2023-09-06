@@ -133,7 +133,6 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_ACTIVE_TRUE = 1L;
   private static final long IS_PUBLISHED_FALSE = 0L;
   private static final long IS_PUBLISHED_TRUE = 1L;
-  private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
 
@@ -214,7 +213,6 @@ public class SystemSchema extends AbstractSchema
 
   @Inject
   public SystemSchema(
-      final DruidSchema druidSchema,
       final BrokerSegmentMetadataView metadataView,
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
@@ -227,7 +225,7 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SEGMENTS_TABLE, new SegmentsTable(metadataView, jsonMapper, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper),
@@ -246,19 +244,16 @@ public class SystemSchema extends AbstractSchema
    */
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
-    private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final BrokerSegmentMetadataView metadataView;
 
     public SegmentsTable(
-        DruidSchema druidSchemna,
         BrokerSegmentMetadataView metadataView,
         ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
-      this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
@@ -299,7 +294,7 @@ public class SystemSchema extends AbstractSchema
                   //is_active is true for published segments that are not overshadowed
                   val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
                   //is_published is true for published segments
-                  val.isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
+                  (val.getIsRealtime() == 0) ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
                   val.getIsAvailable(),
                   val.getIsRealtime(),
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
@@ -378,7 +373,6 @@ public class SystemSchema extends AbstractSchema
       private final long numRows;
       private final Integer replicationFactor;
       private final boolean isOvershadowed;
-      private final boolean isPublished;
 
       public SegmentTableView(
           DataSegment segment,
@@ -387,8 +381,7 @@ public class SystemSchema extends AbstractSchema
           long numReplicas,
           long numRows,
           Integer replicationFactor,
-          boolean isOvershadowed,
-          boolean isPublished
+          boolean isOvershadowed
       )
       {
         this.segment = segment;
@@ -398,7 +391,6 @@ public class SystemSchema extends AbstractSchema
         this.numRows = numRows;
         this.replicationFactor = replicationFactor;
         this.isOvershadowed = isOvershadowed;
-        this.isPublished = isPublished;
       }
 
       public DataSegment getSegment()
@@ -436,9 +428,18 @@ public class SystemSchema extends AbstractSchema
         return isOvershadowed;
       }
 
-      public boolean isPublished()
+      @Override
+      public String toString()
       {
-        return isPublished;
+        return "SegmentTableView{" +
+               "segmentId=" + segment.getId() +
+               ", isAvailable=" + isAvailable +
+               ", isRealtime=" + isRealtime +
+               ", numReplicas=" + numReplicas +
+               ", numRows=" + numRows +
+               ", replicationFactor=" + replicationFactor +
+               ", isOvershadowed=" + isOvershadowed +
+               '}';
       }
     }
 

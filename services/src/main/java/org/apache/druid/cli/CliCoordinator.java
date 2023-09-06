@@ -233,6 +233,7 @@ public class CliCoordinator extends ServerRunnable
             } else {
               binder.bind(CoordinatorInventoryView.class).to(CoordinatorServerView.class).in(LazySingleton.class);
               LifecycleModule.register(binder, CoordinatorServerView.class);
+              binder.bind(SegmentMetadataCache.class).toProvider(Providers.of(null));
             }
 
             binder.bind(SegmentsMetadataManager.class)
