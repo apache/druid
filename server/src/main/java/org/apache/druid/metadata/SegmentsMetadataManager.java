@@ -139,16 +139,17 @@ public interface SegmentsMetadataManager
   Set<String> retrieveAllDataSourceNames();
 
   /**
-   * Returns top N unused segment intervals with the end time no later than the specified maxEndTime and
-   * used_status_last_updated time no later than maxLastUsedTime when ordered by segment start time, end time. Any segment having no
-   * used_status_last_updated time due to upgrade from legacy Druid means maxUsedFlagLastUpdatedTime is ignored for that segment.
+   * Returns top N unused segment intervals with the start time no earlier than the specified start time (if not null)
+   * and with the end time no later than the specified maxEndTime and with sed_status_last_updated time no later than
+   * maxLastUsedTime when ordered by segment start time, end time. Any segment having no used_status_last_updated time
+   * due to upgrade from legacy Druid means maxUsedFlagLastUpdatedTime is ignored for that segment.
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,
+      DateTime minStartTime,
       DateTime maxEndTime,
       int limit,
-      DateTime maxUsedFlagLastUpdatedTime
-  );
+      DateTime maxUsedFlagLastUpdatedTime);
 
   @VisibleForTesting
   void poll();

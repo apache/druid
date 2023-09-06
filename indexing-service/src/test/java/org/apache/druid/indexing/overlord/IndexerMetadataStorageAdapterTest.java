@@ -66,14 +66,14 @@ public class IndexerMetadataStorageAdapterTest
             DateTimes.of("2017-12-01"),
             TaskStatus.running("id1"),
             "dataSource",
-            NoopTask.create("id1", 0)
+            NoopTask.create()
         ),
         new TaskInfo<>(
             "id1",
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
             "dataSource",
-            NoopTask.create("id2", 0)
+            NoopTask.create()
         )
     );
     EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource")).andReturn(taskInfos);
@@ -101,14 +101,14 @@ public class IndexerMetadataStorageAdapterTest
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id1"),
             "dataSource",
-            NoopTask.create("id1", 0)
+            NoopTask.create()
         ),
         new TaskInfo<>(
             "id1",
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
             "dataSource",
-            NoopTask.create("id2", 0)
+            NoopTask.create()
         )
     );
 

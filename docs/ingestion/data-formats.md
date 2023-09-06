@@ -560,17 +560,19 @@ Configure the Kafka `inputFormat` as follows:
 | `type` | String | Set value to `kafka`. | yes |
 | `valueFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
 | `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
+| `topicColumnName` | String |Name of the column for the kafka record's topic. It is useful when ingesting data from multiple topics.| no (default = "kafka.timestamp") |
 | `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
 | `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
 | `keyFormat` | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
 | `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
+
 
 The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
 
 If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
 This ensures that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.  
 
-Here is a minimal example that only augments the parsed payload with the Kafka timestamp column:
+Here is a minimal example that only augments the parsed payload with the Kafka timestamp column and kafka topic column:
 
 ```
 "ioConfig": {
@@ -594,6 +596,7 @@ Here is a complete example:
       "type": "json"
     }
     "timestampColumnName": "kafka.timestamp",
+    "topicColumnName": "kafka.topic",
     "headerFormat": {
       "type": "string",
       "encoding": "UTF-8"

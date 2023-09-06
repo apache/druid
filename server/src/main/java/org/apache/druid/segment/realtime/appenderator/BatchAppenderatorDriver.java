@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -140,9 +141,10 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Set<SegmentIdWithShardSpec> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames);
 
-    final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transform(
+    final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transformAsync(
         pushInBackground(null, requestedSegmentIdsForSequences, false),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::dropInBackground
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::dropInBackground,
+        MoreExecutors.directExecutor()
     );
 
     final SegmentsAndCommitMetadata segmentsAndCommitMetadata =
@@ -192,14 +194,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    * Publish all segments.
    *
    * @param segmentsToBeOverwritten segments which can be overwritten by new segments published by the given publisher
-   * @param segmentsToBeDropped     segments which will be dropped and marked unused
    * @param publisher               segment publisher
    *
    * @return a {@link ListenableFuture} for the publish task
    */
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
-      @Nullable final Set<DataSegment> segmentsToBeDropped,
       @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
       final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
@@ -212,7 +212,6 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 
     return publishInBackground(
         segmentsToBeOverwritten,
-        segmentsToBeDropped,
         tombstones == null ? Collections.emptySet() : tombstones,
         new SegmentsAndCommitMetadata(
             snapshot

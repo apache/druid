@@ -72,7 +72,7 @@ public class KafkaEmitterTest
   public void testKafkaEmitter() throws InterruptedException
   {
     final List<ServiceMetricEvent> serviceMetricEvents = ImmutableList.of(
-        ServiceMetricEvent.builder().build("m1", 1).build("service", "host")
+        ServiceMetricEvent.builder().setMetric("m1", 1).build("service", "host")
     );
 
     final List<AlertEvent> alertEvents = ImmutableList.of(

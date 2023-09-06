@@ -236,7 +236,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   {
     try {
     
-      ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
+      Map<String, List<Rule>> newRulesMap =
           dbi.withHandle(
               handle -> handle.createQuery(
                   // Return latest version rule by dataSource
@@ -272,8 +272,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                     }
                   }
               )
-          )
       );
+
+      ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(newRulesMap);
 
       final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
       log.info("Polled and found [%d] rule(s) for [%d] datasource(s).", newRuleCount, newRules.size());
