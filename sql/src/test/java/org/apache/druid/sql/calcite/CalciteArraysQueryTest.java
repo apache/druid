@@ -3686,18 +3686,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
-        // The result as incorrect because of pushing the not filter
-        // into the base. I would expect this result to be 'a'
-        // Putting the not on the direct mapped column from unnest
-        // makes it eatup the values from MVD.
-        // For example select dim3 from numFoo where dim2='a' AND dim1 <> 'foo'
-        // Has 2 rows
-        // ["a","b"]
-        // empty
-        // if dim3 <> 'b' is pushed down to base it eats up the first row and the
-        // result only has empty.
-        // Future developer should ensure not filters involving direct mapping of unnested
-        // column should not be pushed to base but should onluy appear in the post filter
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{""}
