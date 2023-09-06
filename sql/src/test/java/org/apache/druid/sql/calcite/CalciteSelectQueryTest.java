@@ -1948,7 +1948,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNotEqFiltersNull0()
+  public void testNotEqFiltersNull()
   {
     cannotVectorize();
     testQuery(
@@ -1975,12 +1975,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNotEqFiltersNull()
+  public void testNotEqFiltersNull11()
   {
     cannotVectorize();
     testQuery(
-        "select cityName from druid.wikipedia "
-            + "where  (cityName != isNew and isNew > channel ) is not false",
+        "select cityName,isNew,channel,cityName != isNew , isNew > channel from druid.wikipedia "
+            + "where  (cityName != isNew and isNew > channel ) is not false and cityName < 'Aa'",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
@@ -2002,7 +2002,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNotEqFiltersNull10()
+  public void testNotEqFiltersNull8()
   {
     cannotVectorize();
     testQuery(

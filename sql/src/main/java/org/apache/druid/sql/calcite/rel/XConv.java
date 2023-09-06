@@ -158,6 +158,25 @@ public class XConv extends RexShuttle
         }
         return rexBuilder.makeCall(call.getOperator(), op);
       }
+      case EQUALS:
+      case GREATER_THAN:
+      case GREATER_THAN_OR_EQUAL:
+      case LESS_THAN:
+      case LESS_THAN_OR_EQUAL:
+      {
+        if(unknownAs == RexUnknownAs.FALSE ) {
+          RexNode newCall= super.visitCall(call);
+          if (call == newCall) {
+            return call;
+          }
+          return newCall;
+        }else {
+          throw new RuntimeException("not yety");
+        }
+      }
+//      case EQUAL:
+//      case NOT_EQUALS:
+
 
 //      case IS_FALSE:
 //      case IS_NOT_FALSE:
@@ -171,7 +190,7 @@ public class XConv extends RexShuttle
 //      }
       case AND:
       case OR:
-        RexNode node = super.visitCall(call);
+        return super.visitCall(call);
 
       default:
         throw new RuntimeException("unhandled: " + kind);
