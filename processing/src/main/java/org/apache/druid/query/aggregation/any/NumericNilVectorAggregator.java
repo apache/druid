@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 
@@ -102,7 +103,7 @@ public class NumericNilVectorAggregator implements VectorAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return returnValue;
+    return new SerializablePair<>(0L, returnValue);
   }
 
   @Override

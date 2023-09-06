@@ -42,6 +42,7 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -128,8 +129,7 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return capabilities != null && capabilities.isNumeric();
+    return true;
   }
 
   @Override
@@ -137,8 +137,8 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
-    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.isNumeric()) {
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
       VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new FloatLastVectorAggregator(timeSelector, valueSelector);
