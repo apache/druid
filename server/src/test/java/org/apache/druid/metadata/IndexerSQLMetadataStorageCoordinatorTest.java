@@ -632,28 +632,26 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     for (DataSegment segment : day1) {
       final Set<SegmentIdWithShardSpec> newIds = segmentToNewIds.get(segment);
 
-      // TODO: this test originally expected 2 new IDs but older version would already be overshadowed
-      Assert.assertEquals(1, newIds.size());
+      Assert.assertEquals(2, newIds.size());
       Assert.assertEquals(
-          ImmutableSet.of(v2),
+          ImmutableSet.of(v1, v2),
           newIds.stream().map(SegmentIdWithShardSpec::getVersion).collect(Collectors.toSet())
       );
     }
     for (DataSegment segment : day2) {
       final Set<SegmentIdWithShardSpec> newIds = segmentToNewIds.get(segment);
 
-      // TODO: this test originally expected 2 new IDs but older version would already be overshadowed
-      Assert.assertEquals(1, newIds.size());
+      Assert.assertEquals(2, newIds.size());
       Assert.assertEquals(
-          ImmutableSet.of(v2),
+          ImmutableSet.of(v1, v2),
           newIds.stream().map(SegmentIdWithShardSpec::getVersion).collect(Collectors.toSet())
       );
     }
     for (DataSegment segment : day3) {
       final Set<SegmentIdWithShardSpec> newIds = segmentToNewIds.get(segment);
-      Assert.assertEquals(1, newIds.size());
+      Assert.assertEquals(2, newIds.size());
       Assert.assertEquals(
-          ImmutableSet.of(v2),
+          ImmutableSet.of(v1, v2),
           newIds.stream().map(SegmentIdWithShardSpec::getVersion).collect(Collectors.toSet())
       );
     }

@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
@@ -30,8 +31,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
-import org.apache.druid.indexing.common.task.batch.parallel.AppendTask;
-import org.apache.druid.indexing.common.task.batch.parallel.ReplaceTask;
+import org.apache.druid.indexing.common.task.batch.parallel.ActionsTestTask;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -41,8 +41,6 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -50,6 +48,8 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -58,28 +58,25 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 {
-  private static final Map<String, Object> REPLACE_CONTEXT = ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "REPLACE");
-  private static final Map<String, Object> APPEND_CONTEXT = ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "APPEND");
   private static final WorkerConfig WORKER_CONFIG = new WorkerConfig().setCapacity(10);
 
   private TaskQueue taskQueue;
   private TaskRunner taskRunner;
-  private TaskActionClient taskActionClient;
+  private TaskActionClientFactory taskActionClientFactory;
+  private TaskActionClient dummyTaskActionClient;
   private final List<Task> runningTasks = new ArrayList<>();
 
   @Before
   public void setup()
   {
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
-    final TaskActionClientFactory taskActionClientFactory = createActionClientFactory();
-    taskActionClient = taskActionClientFactory.create(NoopTask.create());
+    taskActionClientFactory = createActionClientFactory();
+    dummyTaskActionClient = taskActionClientFactory.create(NoopTask.create());
     final TaskToolboxFactory toolboxFactory = new TestTaskToolboxFactory(taskConfig, taskActionClientFactory);
     taskRunner = new ThreadingTaskRunner(
         toolboxFactory,
@@ -101,18 +98,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
         taskActionClientFactory,
         getLockbox(),
         new NoopServiceEmitter()
-    )
-    {
-      @Override
-      public boolean add(Task task) throws EntryExistsException
-      {
-        boolean added = super.add(task);
-        if (added) {
-          runningTasks.add(task);
-        }
-        return added;
-      }
-    };
+    );
     runningTasks.clear();
     taskQueue.start();
   }
@@ -121,1162 +107,91 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   public void tearDown()
   {
     for (Task task : runningTasks) {
-      if (task instanceof AppendTask) {
-        AppendTask appendTask = (AppendTask) task;
-        appendTask.markReady();
-        appendTask.beginPublish();
-        appendTask.completeSegmentAllocation();
-      } else if (task instanceof ReplaceTask) {
-        ReplaceTask replaceTask = (ReplaceTask) task;
-        replaceTask.markReady();
-        replaceTask.beginPublish();
+      if (task instanceof ActionsTestTask) {
+        ((ActionsTestTask) task).finishRunAndGetStatus();
       }
     }
   }
 
   @Test
-  public void testCommandExecutingTask() throws Exception
+  public void testAppendSegmentGetsUpgraded() throws Exception
   {
-    CommandExecutingTask replaceTask0 = new CommandExecutingTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        REPLACE_CONTEXT,
-        AbstractTask.IngestionMode.REPLACE
+    final Interval year2023 = Intervals.of("2023/2024");
+
+    // Commit initial segments for v0
+    ActionsTestTask replaceTask0 = createAndStartTask();
+    TaskLock replaceLock = replaceTask0.acquireReplaceLockOn(year2023);
+
+    final DataSegment segmentV00
+        = DataSegment.builder()
+                     .dataSource(DS.WIKI)
+                     .interval(year2023)
+                     .version(replaceLock.getVersion())
+                     .size(1)
+                     .build();
+
+    replaceTask0.commitReplaceSegments(segmentV00);
+    replaceTask0.finishRunAndGetStatus();
+    verifyIntervalHasUsedSegments(year2023, segmentV00);
+    verifyIntervalHasVisibleSegments(year2023, segmentV00);
+
+    // Allocate an append segment for v0
+    final ActionsTestTask appendTask0 = createAndStartTask();
+    appendTask0.acquireAppendLockOn(year2023);
+    // TODO: fix allocation and version of allocated segment
+    final SegmentIdWithShardSpec pendingSegmentV01 = appendTask0.allocateSegment();
+
+    // Commit replace segment for v1
+    final ActionsTestTask replaceTask1 = createAndStartTask();
+    replaceTask1.acquireReplaceLockOn(year2023);
+
+    final DataSegment segmentV10 = DataSegment.builder(segmentV00).version("v1").build();
+    replaceTask1.commitReplaceSegments(segmentV10);
+    replaceTask1.finishRunAndGetStatus();
+    verifyIntervalHasUsedSegments(year2023, segmentV00, segmentV10);
+    verifyIntervalHasVisibleSegments(year2023, segmentV10);
+
+    final ActionsTestTask replaceTask2 = createAndStartTask();
+    replaceTask2.acquireReplaceLockOn(year2023);
+
+    // Commit append segment v0 and verify that it gets upgraded to v1
+    final DataSegment segmentV01 = asSegment(pendingSegmentV01);
+    appendTask0.commitAppendSegments(segmentV01);
+    appendTask0.finishRunAndGetStatus();
+
+    final DataSegment segmentV11 = DataSegment.builder(segmentV01).version(segmentV10.getVersion()).build();
+    verifyIntervalHasUsedSegments(
+        year2023,
+        segmentV00, segmentV01, segmentV10, segmentV11
     );
-    Runnable runReplaceTask0 = () -> {
-      try {
-        final Set<DataSegment> segments = replaceTask0.createCorePartitions(1);
-        replaceTask0.replaceSegments(segments);
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    };
+    verifyIntervalHasVisibleSegments(year2023, segmentV10, segmentV11);
 
-    CommandExecutingTask appendTask0 = new CommandExecutingTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        APPEND_CONTEXT,
-        AbstractTask.IngestionMode.APPEND
+    // Commit replace segment v2 and verify that append segment gets upgraded to v2
+    final DataSegment segmentV20 = DataSegment.builder(segmentV00).version("v2").build();
+    replaceTask2.commitReplaceSegments(segmentV20);
+    replaceTask2.finishRunAndGetStatus();
+
+    final DataSegment segmentV21 = DataSegment.builder(segmentV01).version(segmentV20.getVersion()).build();
+    verifyIntervalHasUsedSegments(
+        year2023,
+        segmentV00, segmentV01, segmentV10, segmentV11, segmentV20, segmentV21
     );
-    Runnable runAppendTask0 = () -> {
-      try {
-        final Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>();
-        pendingSegments.add(
-            appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01")
-        );
-        final Set<DataSegment> segments = appendTask0.convertPendingSegments(pendingSegments);
-        appendTask0.appendSegments(segments);
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    };
-
-    CommandExecutingTask replaceTask1 = new CommandExecutingTask(
-        "replace1",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        REPLACE_CONTEXT,
-        AbstractTask.IngestionMode.REPLACE
-    );
-    Runnable runReplaceTask1 = () -> {
-      try {
-        final Set<DataSegment> segments = replaceTask1.createCorePartitions(1);
-        replaceTask1.replaceSegments(segments);
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    };
-
-    CommandExecutingTask replaceTask2 = new CommandExecutingTask(
-        "replace2",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        REPLACE_CONTEXT,
-        AbstractTask.IngestionMode.REPLACE
-    );
-    Runnable runReplaceTask2 = () -> {
-      try {
-        final Set<DataSegment> segments = replaceTask2.createCorePartitions(1);
-        replaceTask2.replaceSegments(segments);
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    };
-
-
-    // Create a set of initial segments
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.runCommand(runReplaceTask0);
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(replaceTask0);
-
-    // Append task begins and allocates pending segments
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    appendTask0.runCommand(runAppendTask0);
-
-    // New replace task starts and ends before the appending task finishes
-    taskQueue.add(replaceTask1);
-    replaceTask1.markReady();
-    replaceTask1.runCommand(runReplaceTask1);
-    replaceTask1.awaitRunComplete();
-    verifySegmentCount(2, 1);
-    verifyTaskSuccess(replaceTask1);
-
-    taskQueue.add(replaceTask2);
-    replaceTask2.markReady();
-    replaceTask2.awaitReadyComplete();
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(4, 2);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask2.runCommand(runReplaceTask2);
-    replaceTask2.awaitRunComplete();
-    verifySegmentCount(6, 2);
-    verifyTaskSuccess(replaceTask2);
+    verifyIntervalHasVisibleSegments(year2023, segmentV20, segmentV21);
   }
 
-  @Test
-  public void test() throws Exception
+  private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
+    final SegmentId id = pendingSegment.asSegmentId();
+    return new DataSegment(
+        id,
+        Collections.singletonMap(id.toString(), id.toString()),
+        Collections.emptyList(),
+        Collections.emptyList(),
+        pendingSegment.getShardSpec(),
         null,
-        null
+        0,
+        0
     );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null
-    );
-
-    ReplaceTask replaceTask1 = new ReplaceTask(
-        "replace1",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null,
-        null
-    );
-
-    ReplaceTask replaceTask2 = new ReplaceTask(
-        "replace2",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null,
-        null
-    );
-
-    // Create a set of initial segments
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(replaceTask0);
-
-    // Append task begins and allocates pending segments
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01");
-    appendTask0.completeSegmentAllocation();
-
-    // New replace task starts and ends before the appending task finishes
-    taskQueue.add(replaceTask1);
-    replaceTask1.markReady();
-    replaceTask1.beginPublish();
-    replaceTask1.awaitRunComplete();
-    verifySegmentCount(2, 1);
-    verifyTaskSuccess(replaceTask1);
-
-    taskQueue.add(replaceTask2);
-    replaceTask2.markReady();
-    replaceTask2.awaitReadyComplete();
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(4, 2);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask2.beginPublish();
-    replaceTask2.awaitRunComplete();
-    verifySegmentCount(6, 2);
-    verifyTaskSuccess(replaceTask2);
-  }
-
-  @Test
-  public void testRRAA_dailyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(replaceTask0);
-
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(62, 62);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testRAAR_dailyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(93, 62);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-  @Test
-  public void testRARA_dailyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(93, 62);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testARRA_dailyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(93, 62);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testARAR_dailyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(93, 62);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-  @Test
-  public void testAARR_dailyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(appendTask0);
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(62, 31);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-
-  @Test
-  public void testRRAA_monthlyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(replaceTask0);
-
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(2, 2);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testRAAR_monthlyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(63, 32);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-  @Test
-  public void testRARA_monthlyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(63, 32);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testARRA_monthlyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(63, 32);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testARAR_monthlyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(63, 32);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-  @Test
-  public void testAARR_monthlyReplaceDailyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(appendTask0);
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(32, 1);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-
-  @Test
-  public void testRRAA_dailyReplaceMonthlyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(replaceTask0);
-
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(62, 62);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testRAAR_dailyReplaceMonthlyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskFailure(replaceTask0);
-  }
-
-  @Test
-  public void testRARA_dailyReplaceMonthlyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskFailure(appendTask0);
-  }
-
-  @Test
-  public void testARRA_dailyReplaceMonthlyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(31, 31);
-    verifyTaskFailure(appendTask0);
-  }
-
-  @Test
-  public void testARAR_dailyReplaceMonthlyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskFailure(replaceTask0);
-  }
-
-  @Test
-  public void testAARR_dailyReplaceMonthlyAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    for (int i = 1; i <= 9; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-0" + i);
-    }
-    for (int i = 10; i <= 31; i++) {
-      appendTask0.allocateOrGetSegmentForTimestamp("2023-01-" + i);
-    }
-    appendTask0.completeSegmentAllocation();
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(appendTask0);
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(32, 31);
-    verifyTaskSuccess(replaceTask0);
-  }
-
-  @Test
-  public void testMultipleAppend() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null
-    );
-
-    AppendTask appendTask1 = new AppendTask(
-        "append1",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01");
-    appendTask0.completeSegmentAllocation();
-
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    taskQueue.add(appendTask1);
-    appendTask1.markReady();
-    appendTask1.awaitReadyComplete();
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-01-01");
-    appendTask1.completeSegmentAllocation();
-    appendTask1.beginPublish();
-    appendTask1.awaitRunComplete();
-    verifySegmentCount(1, 1);
-    verifyTaskSuccess(appendTask1);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(3, 2);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(5, 3);
-    verifyTaskSuccess(appendTask0);
-  }
-
-  @Test
-  public void testMultipleGranularities() throws Exception
-  {
-    ReplaceTask replaceTask0 = new ReplaceTask(
-        "replace0",
-        DS.WIKI,
-        Intervals.of("2023/2024"),
-        Granularities.YEAR,
-        null,
-        null
-    );
-
-    AppendTask appendTask0 = new AppendTask(
-        "append0",
-        DS.WIKI,
-        Intervals.of("2023-01-01/2023-02-01"),
-        Granularities.DAY,
-        null
-    );
-
-    AppendTask appendTask1 = new AppendTask(
-        "append1",
-        DS.WIKI,
-        Intervals.of("2023-07-01/2024-01-01"),
-        Granularities.QUARTER,
-        null
-    );
-
-    AppendTask appendTask2 = new AppendTask(
-        "append2",
-        DS.WIKI,
-        Intervals.of("2023-12-01/2024-01-01"),
-        Granularities.MONTH,
-        null
-    );
-
-    taskQueue.add(appendTask0);
-    appendTask0.markReady();
-    appendTask0.awaitReadyComplete();
-    appendTask0.allocateOrGetSegmentForTimestamp("2023-01-01");
-    appendTask0.completeSegmentAllocation();
-
-
-    taskQueue.add(appendTask1);
-    appendTask1.markReady();
-    appendTask1.awaitReadyComplete();
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-07-01");
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-08-01");
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-09-01");
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-10-01");
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-11-01");
-    appendTask1.allocateOrGetSegmentForTimestamp("2023-12-01");
-    appendTask1.completeSegmentAllocation();
-    appendTask1.beginPublish();
-    appendTask1.awaitRunComplete();
-    verifySegmentCount(2, 2);
-    verifyTaskSuccess(appendTask1);
-
-    taskQueue.add(appendTask2);
-    appendTask2.markReady();
-    appendTask2.awaitReadyComplete();
-    appendTask2.allocateOrGetSegmentForTimestamp("2023-12-01");
-    appendTask2.completeSegmentAllocation();
-
-    taskQueue.add(replaceTask0);
-    replaceTask0.markReady();
-    replaceTask0.awaitReadyComplete();
-
-    appendTask0.beginPublish();
-    appendTask0.awaitRunComplete();
-    verifySegmentCount(3, 3);
-    verifyTaskSuccess(appendTask0);
-
-    replaceTask0.beginPublish();
-    replaceTask0.awaitRunComplete();
-    verifySegmentCount(5, 2);
-    verifyTaskSuccess(replaceTask0);
-
-    appendTask2.beginPublish();
-    appendTask2.awaitRunComplete();
-    verifySegmentCount(7, 3);
-    verifyTaskSuccess(appendTask2);
   }
 
   private void verifyTaskSuccess(Task task)
@@ -1305,27 +220,27 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     Assert.assertTrue(getTaskStorage().getStatus(task.getId()).get().isFailure());
   }
 
-  private void verifySegmentCount(int expectedTotal, int expectedVisible) throws Exception
+  private void verifyIntervalHasUsedSegments(Interval interval, DataSegment... expectedSegments) throws Exception
   {
-    Collection<DataSegment> allUsed = taskActionClient.submit(
-        new RetrieveUsedSegmentsAction(
-            DS.WIKI,
-            null,
-            ImmutableList.of(Intervals.ETERNITY),
-            Segments.INCLUDING_OVERSHADOWED
-        )
-    );
-    Assert.assertEquals(expectedTotal, allUsed.size());
+    verifySegments(interval, Segments.INCLUDING_OVERSHADOWED, expectedSegments);
+  }
 
-    Collection<DataSegment> visibleUsed = taskActionClient.submit(
+  private void verifyIntervalHasVisibleSegments(Interval interval, DataSegment... expectedSegments) throws Exception
+  {
+    verifySegments(interval, Segments.ONLY_VISIBLE, expectedSegments);
+  }
+
+  private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments) throws Exception
+  {
+    Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
         new RetrieveUsedSegmentsAction(
             DS.WIKI,
             null,
-            ImmutableList.of(Intervals.ETERNITY),
-            Segments.ONLY_VISIBLE
+            ImmutableList.of(interval),
+            visibility
         )
     );
-    Assert.assertEquals(expectedVisible, visibleUsed.size());
+    Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
   }
 
   private class TestTaskToolboxFactory extends TaskToolboxFactory
@@ -1385,4 +300,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     static final String WIKI = "wiki";
   }
+
+  private ActionsTestTask createAndStartTask()
+  {
+    ActionsTestTask task = new ActionsTestTask("wiki", taskActionClientFactory);
+    taskQueue.add(task);
+    runningTasks.add(task);
+    return task;
+  }
+
 }

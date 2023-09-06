@@ -1085,27 +1085,32 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                              .add(segment);
     }
 
-    // Fetch all used non-overshadowed segments that overlap with any of the append intervals
-    final Collection<DataSegment> overlappingSegments
-        = retrieveUsedSegmentsForIntervals(dataSource, new ArrayList<>(appendIntervals), Segments.ONLY_VISIBLE);
+    // Fetch all used segments that overlap with any of the append intervals
+    final Collection<DataSegment> overlappingSegments = retrieveUsedSegmentsForIntervals(
+        dataSource,
+        new ArrayList<>(appendIntervals),
+        Segments.INCLUDING_OVERSHADOWED
+    );
 
     final Set<String> committedVersions = new HashSet<>();
     final Map<Interval, Set<DataSegment>> committedIntervalToSegments = new HashMap<>();
     for (DataSegment segment : overlappingSegments) {
       committedVersions.add(segment.getVersion());
       committedIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
-                               .add(segment);
+                                 .add(segment);
     }
 
     final Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds = new HashMap<>();
-    for (String version : committedVersions) {
-      Map<Interval, Set<DataSegment>> committedIntervalToCarrySegments
-          = getIntervalToCarrySegments(version, committedIntervalToSegments.keySet(), appendVersionToSegments);
-      for (Map.Entry<Interval, Set<DataSegment>> entry : committedIntervalToCarrySegments.entrySet()) {
+    for (String upgradeVersion : committedVersions) {
+      Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
+          upgradeVersion,
+          committedIntervalToSegments.keySet(),
+          appendVersionToSegments
+      );
+      for (Map.Entry<Interval, Set<DataSegment>> entry : segmentsToUpgrade.entrySet()) {
         computeNewAppendIdsForVersion(
             handle,
-            version,
-            dataSource,
+            upgradeVersion,
             entry.getKey(),
             entry.getValue(),
             committedIntervalToSegments,
@@ -1117,55 +1122,60 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return appendSegmentToNewIds;
   }
 
-  private Map<Interval, Set<DataSegment>> getIntervalToCarrySegments(
-      String version,
-      Set<Interval> committedIntervals,
-      TreeMap<String, Set<DataSegment>> appendVersionToSegments
+  /**
+   * Creates a Map from eligible interval to Set of segments that are fully
+   * contained in that interval and have a version strictly lower than {@code #cutoffVersion}.
+   */
+  private Map<Interval, Set<DataSegment>> getSegmentsWithVersionLowerThan(
+      String cutoffVersion,
+      Set<Interval> eligibleIntervals,
+      TreeMap<String, Set<DataSegment>> versionToSegments
   )
   {
-    // Find all the append segments with version strictly less than this version
-    final Set<DataSegment> segmentsToCarryForward = new HashSet<>();
+    final Set<DataSegment> eligibleSegments
+        = versionToSegments.headMap(cutoffVersion).values().stream()
+                           .flatMap(Collection::stream)
+                           .collect(Collectors.toSet());
 
-    Map<String, Set<DataSegment>> candidateVersionToSegments = appendVersionToSegments.headMap(version);
-    for (Set<DataSegment> segments : candidateVersionToSegments.values()) {
-      segmentsToCarryForward.addAll(segments);
-    }
+    final Map<Interval, Set<DataSegment>> eligibleIntervalToSegments = new HashMap<>();
 
-    final Map<Interval, Set<DataSegment>> committedIntervalToAppendSegments = new HashMap<>();
-    for (DataSegment appendSegment : segmentsToCarryForward) {
-      final Interval appendSegmentInterval = appendSegment.getInterval();
-      for (Interval committedInterval : committedIntervals) {
-        if (committedInterval.contains(appendSegmentInterval)) {
-          committedIntervalToAppendSegments.computeIfAbsent(committedInterval, itvl -> new HashSet<>())
-                                           .add(appendSegment);
+    for (DataSegment segment : eligibleSegments) {
+      final Interval segmentInterval = segment.getInterval();
+      for (Interval eligibleInterval : eligibleIntervals) {
+        if (eligibleInterval.contains(segmentInterval)) {
+          eligibleIntervalToSegments.computeIfAbsent(eligibleInterval, itvl -> new HashSet<>())
+                                    .add(segment);
           break;
-        } else if (committedInterval.overlaps(appendSegmentInterval)) {
+        } else if (eligibleInterval.overlaps(segmentInterval)) {
           // Committed interval overlaps only partially
           throw new ISE(
               "Committed interval[%s] conflicts with interval[%s] of append segment[%s].",
-              committedInterval, appendSegmentInterval, appendSegment.getId()
+              eligibleInterval, segmentInterval, segment.getId()
           );
         }
       }
     }
 
-    return committedIntervalToAppendSegments;
+    return eligibleIntervalToSegments;
   }
 
+  /**
+   * Computes new Segment IDs for the {@code segmentsToUpgrade} being upgraded
+   * to the given {@code upgradeVersion}.
+   */
   private void computeNewAppendIdsForVersion(
       Handle handle,
-      String committedVersion,
-      String dataSource,
+      String upgradeVersion,
       Interval interval,
-      Set<DataSegment> carrySegments,
-      Map<Interval, Set<DataSegment>> committedIntervalToSegments,
+      Set<DataSegment> segmentsToUpgrade,
+      Map<Interval, Set<DataSegment>> committedSegmentsByInterval,
       Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds
   ) throws IOException
   {
     final Set<DataSegment> committedSegments
-        = committedIntervalToSegments.getOrDefault(interval, Collections.emptySet())
+        = committedSegmentsByInterval.getOrDefault(interval, Collections.emptySet())
                                      .stream()
-                                     .filter(s -> s.getVersion().equals(committedVersion))
+                                     .filter(s -> s.getVersion().equals(upgradeVersion))
                                      .collect(Collectors.toSet());
 
     SegmentIdWithShardSpec committedMaxId = null;
@@ -1177,16 +1187,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Get pending segments for the new version, if any
+    final String dataSource = segmentsToUpgrade.iterator().next().getDataSource();
     final Set<SegmentIdWithShardSpec> pendingSegments
         = getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval);
 
     // Determine new IDs for each append segment by taking into account both
     // committed and pending segments for this version
-    for (DataSegment segment : carrySegments) {
+    for (DataSegment segment : segmentsToUpgrade) {
       SegmentCreateRequest request = new SegmentCreateRequest(
-          segment.getId() + committedVersion,
+          segment.getId() + "__" + upgradeVersion,
           null,
-          committedVersion,
+          upgradeVersion,
           NumberedPartialShardSpec.instance()
       );
       // allocate new segment id
@@ -1194,7 +1205,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           request,
           dataSource,
           interval,
-          committedVersion,
+          upgradeVersion,
           committedMaxId,
           pendingSegments
       );
