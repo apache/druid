@@ -144,4 +144,73 @@ public class BuiltInExprMacros
       }
     }
   }
+
+  public static class StringDecodeBase64UTFExprMacro implements ExprMacroTable.ExprMacro
+  {
+
+    public static final String NAME = "decode_base64_utf8";
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      return new StringDecodeBase64UTFExpression(args);
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarMacroFunctionExpr
+    {
+      public StringDecodeBase64UTFExpression(List<Expr> args)
+      {
+        super(NAME, args);
+        validationHelperCheckArgumentCount(args, 1);
+      }
+
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        ExprEval<?> toDecode = args.get(0).eval(bindings);
+        if (toDecode.value() == null) {
+          return ExprEval.of(null);
+        }
+        return new StringExpr(StringUtils.fromUtf8(StringUtils.decodeBase64String(toDecode.asString()))).eval(bindings);
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
+      }
+
+      @Override
+      public boolean isLiteral()
+      {
+        return args.get(0).isLiteral();
+      }
+
+      @Override
+      public boolean isNullLiteral()
+      {
+        return args.get(0).isNullLiteral();
+      }
+
+      @Nullable
+      @Override
+      public Object getLiteralValue()
+      {
+        return eval(InputBindings.nilBindings()).value();
+      }
+    }
+  }
 }
