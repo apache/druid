@@ -496,7 +496,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   public void test_not_pushdown_not_filter()
   {
     final Filter testQueryFilter = and(ImmutableList.of(
-        selector(OUTPUT_COLUMN_NAME, "3"),
+        not(selector(OUTPUT_COLUMN_NAME, "3")),
         or(ImmutableList.of(
             or(ImmutableList.of(
                 selector("newcol", "2"),
@@ -511,8 +511,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "(multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || multi-string1 = 1))",
-        "(unnested-multi-string1 = 3 && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
+        "(newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || multi-string1 = 1)",
+        "(~(unnested-multi-string1 = 3) && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
     );
   }
 

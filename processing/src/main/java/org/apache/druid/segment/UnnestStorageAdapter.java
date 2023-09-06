@@ -582,7 +582,6 @@ public class UnnestStorageAdapter implements StorageAdapter
       return true;
     } else if (filter instanceof NotFilter) {
       return false;
-      //return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());
     } else {
       return filter instanceof SelectorFilter
              || filter instanceof InDimFilter
