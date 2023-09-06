@@ -315,6 +315,7 @@ public class DruidQuery
   )
   {
 
+    if(true) {
     RexBuilder rexBuilder = partialQuery.getRelBuilder().getRexBuilder();
     RexExecutor executor = partialQuery.getRelBuilder().getCluster().getPlanner().getExecutor();
 
@@ -322,10 +323,12 @@ public class DruidQuery
     RexNode w = rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, partialQuery.getWhereFilter().getCondition());
 //    : rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_FALSE, e);
     RexNode w2 = rs.simplify(w);
+    plannerContext.cx();
     plannerContext.push(rs);
     plannerContext.push(rexBuilder);
     plannerContext.push(partialQuery.getRelBuilder());
     plannerContext.push(executor);
+    }
 
     return getDimFilter(plannerContext, rowSignature, virtualColumnRegistry, partialQuery.getWhereFilter());
   }

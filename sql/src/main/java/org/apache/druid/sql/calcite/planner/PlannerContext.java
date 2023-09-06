@@ -589,4 +589,10 @@ public class PlannerContext
     return ret;
   }
 
+  public void cx()
+  {
+    li.clear();
+
+  }
+
 }
