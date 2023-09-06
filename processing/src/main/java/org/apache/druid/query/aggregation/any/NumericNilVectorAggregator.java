@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 
@@ -70,6 +69,11 @@ public class NumericNilVectorAggregator implements VectorAggregator
   @Nullable
   private final Object returnValue;
 
+  public static NumericNilVectorAggregator of(Object returnValue)
+  {
+    return new NumericNilVectorAggregator(returnValue);
+  }
+
   private NumericNilVectorAggregator(@Nullable Object returnValue)
   {
     this.returnValue = returnValue;
@@ -103,7 +107,7 @@ public class NumericNilVectorAggregator implements VectorAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new SerializablePair<>(0L, returnValue);
+    return returnValue;
   }
 
   @Override

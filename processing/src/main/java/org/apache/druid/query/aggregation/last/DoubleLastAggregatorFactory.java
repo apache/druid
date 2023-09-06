@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -131,7 +132,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new DoubleLastVectorAggregator(timeSelector, valueSelector);
     } else {
-      return NumericNilVectorAggregator.doubleNilVectorAggregator();
+      return NumericNilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultDoubleValue()));
     }
   }
 
