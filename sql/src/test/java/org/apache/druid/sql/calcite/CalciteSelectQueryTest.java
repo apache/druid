@@ -1980,11 +1980,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "select cityName,isNew,channel,cityName != isNew , isNew > channel from druid.wikipedia "
-            + "where  (cityName != isNew and isNew > channel ) is not false and cityName < 'Aa'",
+            + "where  (cityName != isNew and isNew > channel ) is not false and (cityName < 'A' or cityName is null)",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
-                .dataSource(
-"wikipedia")
+                .dataSource("wikipedia")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     and(

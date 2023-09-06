@@ -30,6 +30,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSimplify;
 import org.apache.calcite.rex.RexUnknownAs;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
@@ -145,7 +146,7 @@ public class XConv extends RexShuttle
         if (op == newOp) {
           return call;
         }
-        return rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+        return rexBuilder.makeCall(SqlStdOperatorTable.NOT, newOp);
       }
       case IS_NOT_NULL:
       case IS_NULL:
@@ -156,7 +157,7 @@ public class XConv extends RexShuttle
         if (op == newOp) {
           return call;
         }
-        return rexBuilder.makeCall(call.getOperator(), op);
+        return rexBuilder.makeCall(call.getOperator(), newOp);
       }
       case EQUALS:
       case GREATER_THAN:
@@ -164,18 +165,33 @@ public class XConv extends RexShuttle
       case LESS_THAN:
       case LESS_THAN_OR_EQUAL:
       {
-        if(unknownAs == RexUnknownAs.FALSE ) {
-          RexNode newCall= super.visitCall(call);
-          if (call == newCall) {
-            return call;
+        if (unknownAs == RexUnknownAs.FALSE || kind != SqlKind.EQUALS) {
+          RexNode newCall = super.visitCall(call);
+          return call == newCall ? call : newCall;
+        } else {
+          List<RexNode> ops = new ArrayList<>();
+          List<RexNode> newOperands = new ArrayList<>();
+          for (RexNode op : call.getOperands()) {
+            RexNode newOp = op.accept(this);
+            newOperands.add(newOp);
+            if (RexUtil.isLiteral(newOp, true)) {
+              // FIXME: handle null or not?
+              continue;
+            }
+            ops.add(rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, newOp));
           }
-          return newCall;
-        }else {
-          throw new RuntimeException("not yety");
+          ops.add(rexBuilder.makeCall(call.getOperator(),newOperands));
+          return RexUtil.composeDisjunction(rexBuilder,ops);
         }
       }
 //      case EQUAL:
-//      case NOT_EQUALS:
+      case NOT_EQUALS:
+      {
+        RexCall newCall = (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.NOT,
+            rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, call.getOperands()));
+        return visitCall(newCall);
+      }
+
 
 
 //      case IS_FALSE:
@@ -211,6 +227,7 @@ public class XConv extends RexShuttle
     case OR:
     case IS_NULL:
     case IS_NOT_NULL:
+    case NOT_EQUALS:
     case EQUALS:
     case NOT:
     case GREATER_THAN:
