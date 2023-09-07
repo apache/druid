@@ -2026,6 +2026,32 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()),
         ImmutableList.of());
   }
+  @Test
+  public void test81()
+  {
+    cannotVectorize();
+    testQuery(
+        "select cityName from druid.wikipedia "
+            + "where channel like '%s%' and channel > 'asd'",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+"wikipedia")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    and(
+                        like("channel","%s%"),
+//                        notNull("cityName"),
+                        not(equality("cityName", "some",ColumnType.STRING))
+                    )
+                )
+                .columns("cityName")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of());
+  }
 
 //
 //  select cityName,isNew,countryName
