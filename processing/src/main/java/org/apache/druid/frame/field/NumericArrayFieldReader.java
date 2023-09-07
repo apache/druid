@@ -159,7 +159,10 @@ public abstract class NumericArrayFieldReader implements FieldReader
         return;
       }
 
-      position++;
+      // TODO(laksh): add comment about position < limit check
+      if (position < limit) {
+        position++;
+      }
 
       boolean rowTerminatorSeen = false;
 
