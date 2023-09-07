@@ -53,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -310,6 +311,9 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   @Override
   public Set<String> getAllLookupNames()
   {
+    if (stateRef.get() == null) {
+      return Collections.emptySet();
+    }
     return stateRef.get().lookupMap.keySet();
   }
 
