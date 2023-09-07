@@ -28,13 +28,6 @@ import org.apache.druid.segment.column.ValueType;
 
 /**
  * Reads values written by {@link FloatFieldWriter}.
- *
- * Values are sortable as bytes without decoding.
- *
- * Format:
- *
- * - 1 byte: {@link FloatFieldWriter#NULL_BYTE} or {@link FloatFieldWriter#NOT_NULL_BYTE}
- * - 4 bytes: encoded float, using {@link TransformUtils#transformFromFloat(float)}
  */
 public class FloatFieldReader extends NumericFieldReader
 {

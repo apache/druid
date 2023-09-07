@@ -27,6 +27,7 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ValueType;
 
 /**
+ * Reads the values produced by {@link DoubleFieldWriter}
  */
 public class DoubleFieldReader extends NumericFieldReader
 {

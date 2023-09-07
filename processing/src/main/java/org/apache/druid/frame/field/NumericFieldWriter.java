@@ -25,17 +25,24 @@ import org.apache.druid.segment.BaseNullableColumnValueSelector;
 /**
  * FieldWriter for numeric datatypes. The parent class does the null handling for the underlying data, while
  * the individual subclasses write the individual element (long, float or double type). This also allows for a clean
- * reuse while creating {@link NumericArrayFieldWriter}
- * <p>
+ * reuse of the readers and writers between the numeric types and also allowing the array writers ({@link NumericArrayFieldWriter})
+ * to use these methods directly without duplication
+ *
+ * Format:
+ *  - 1 byte: Whether the following value is null or not. Take a look at the note on the indicator bytes.
+ *  - X bytes: Encoded value of the selector, or the default value if it is null. X denotes the size of the numeric value
+ *
  * Indicator bytes for denoting whether the element is null or not null changes depending on whether the writer is used
  * to write the data for individual value (like LONG) or for an element of an array (like ARRAY<LONG>). This is because
  * array support for the numeric types was added later and by then the field writers for individual fields were using
  * 0x00 to denote the null byte, which is reserved for denoting the array end when we are writing the elements as part
  * of the array instead. (0x00 is used for array end because it helps in preserving the byte comparison property of the
  * numeric array field writers).
- * <p>
+ *
  * Therefore, to preserve backward and forward compatibility, the individual element's writers were left unchanged,
  * while the array's element's writers used 0x01 and 0x02 to denote null and non-null byte respectively
+ *
+ * Values produced by the writer are sortable without decoding
  */
 public abstract class NumericFieldWriter implements FieldWriter
 {
@@ -53,16 +60,16 @@ public abstract class NumericFieldWriter implements FieldWriter
 
   /**
    * Indicator byte denoting that the numeric value succeeding it is null. This is used while writing the individual
-   * elements writers of an array. ARRAY_NULL_BYTE < ARRAY_NOT_NULL_BYTE to preserve the ordering while doing byte
-   * comparison
+   * elements writers of an array. ARRAY_ELEMENT_NULL_BYTE < ARRAY_ELEMENT_NOT_NULL_BYTE to preserve the ordering
+   * while doing byte comparison
    */
-  public static final byte ARRAY_NULL_BYTE = 0x01;
+  public static final byte ARRAY_ELEMENT_NULL_BYTE = 0x01;
 
   /**
    * Indicator byte denoting that the numeric value succeeding it is not null. This is used while writing the individual
    * elements writers of an array
    */
-  public static final byte ARRAY_NOT_NULL_BYTE = 0x02;
+  public static final byte ARRAY_ELEMENT_NOT_NULL_BYTE = 0x02;
 
   private final BaseNullableColumnValueSelector selector;
   private final byte nullIndicatorByte;
@@ -78,8 +85,8 @@ public abstract class NumericFieldWriter implements FieldWriter
       this.nullIndicatorByte = NULL_BYTE;
       this.notNullIndicatorByte = NOT_NULL_BYTE;
     } else {
-      this.nullIndicatorByte = ARRAY_NULL_BYTE;
-      this.notNullIndicatorByte = ARRAY_NOT_NULL_BYTE;
+      this.nullIndicatorByte = ARRAY_ELEMENT_NULL_BYTE;
+      this.notNullIndicatorByte = ARRAY_ELEMENT_NOT_NULL_BYTE;
     }
   }
 

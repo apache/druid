@@ -28,13 +28,6 @@ import org.apache.druid.segment.column.ValueType;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
- * <p>
- * Values are sortable as bytes without decoding.
- * <p>
- * Format:
- * <p>
- * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
- * - 8 bytes: encoded long: big-endian order, with sign flipped
  */
 public class LongFieldReader extends NumericFieldReader
 {

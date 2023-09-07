@@ -29,28 +29,91 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Writes the values of the type ARRAY<X> where X is a numeric type to row based frames.
+ * The format of the array written is as follows:
+ * <p>
+ * Format:
+ * - 1 Byte - {@link #NULL_ROW} or {@link #NON_NULL_ROW} denoting whether the array itself is null
+ * - If the array is null, then the writer stops here
+ * - If the array is not null, then it proceeds to the following steps
+ * <p>
+ * For each value in the non-null array:
+ * - 1 Byte - {@link NumericFieldWriter#ARRAY_ELEMENT_NULL_BYTE} or {@link NumericFieldWriter#ARRAY_ELEMENT_NOT_NULL_BYTE}
+ * denothing whether the proceeding value is null or not.
+ * - ElementSize Bytes - The encoded value of the element
+ * <p>
+ * Once all the values in the non-null arrays are over, writes {@link #ARRAY_TERMINATOR}. This is to aid the byte
+ * comparison, and also let the reader know that the number of elements in the array are over.
+ * <p>
+ * The format doesn't add the number of elements in the array at the beginning, though that would have been more
+ * convenient to keep the written array value byte comparable
+ * <p>
+ * Examples:
+ * 1. null
+ * | Bytes  | Value | Interpretation              |
+ * |--------|-------|-----------------------------|
+ * | 1      | 0x00  | Denotes that the array null |
+ * <p>
+ * 2. [] (empty array)
+ * | Bytes  | Value | Interpretation                     |
+ * |--------|----- -|------------------------------------|
+ * | 1      | 0x01  | Denotes that the array is not null |
+ * | 2      | 0x00  | End of the array                   |
+ * <p>
+ * 3. [5L, null, 6L]
+ * | Bytes   | Value        | Interpretation                                                                    |
+ * |---------|--------------|-----------------------------------------------------------------------------------|
+ * | 1       | 0x01         | Denotes that the array is not null                                                |
+ * | 2       | 0x02         | Denotes that the next element is not null                                         |
+ * | 3-10    | transform(5) | Representation of 5                                                               |
+ * | 11      | 0x01         | Denotes that the next element is null                                             |
+ * | 12-19   | transform(0) | Representation of 0 (default value, the reader will ignore it if SqlCompatible mode is on |
+ * | 20      | 0x02         | Denotes that the next element is not null                                         |
+ * | 21-28   | transform(6) | Representation of 6                                                               |
+ * | 29      | 0x00         | End of array                                                                      |
+ */
 public class NumericArrayFieldWriter implements FieldWriter
 {
 
+  /**
+   * Denotes that the array itself is null
+   */
   public static final byte NULL_ROW = 0x00;
+
+  /**
+   * Denotes that the array is non null
+   */
   public static final byte NON_NULL_ROW = 0x01;
 
-  // Different from NULL_ROW and NON_NULL_ROW bytes
+  /**
+   * Marks the end of the array. Since {@link #NULL_ROW}  and {@link #ARRAY_TERMINATOR} will only occur at different
+   * locations, therefore there is no clash in keeping both's values at 0x00
+   */
   public static final byte ARRAY_TERMINATOR = 0x00;
 
   private final ColumnValueSelector selector;
   private final NumericFieldWriterFactory writerFactory;
 
+  /**
+   * Returns the writer for ARRAY<LONG>
+   */
   public static NumericArrayFieldWriter getLongArrayFieldWriter(final ColumnValueSelector selector)
   {
     return new NumericArrayFieldWriter(selector, LongFieldWriter::forArray);
   }
 
+  /**
+   * Returns the writer for ARRAY<FLOAT>
+   */
   public static NumericArrayFieldWriter getFloatArrayFieldWriter(final ColumnValueSelector selector)
   {
     return new NumericArrayFieldWriter(selector, FloatFieldWriter::forArray);
   }
 
+  /**
+   * Returns the writer for ARRAY<DOUBLE>
+   */
   public static NumericArrayFieldWriter getDoubleArrayFieldWriter(final ColumnValueSelector selector)
   {
     return new NumericArrayFieldWriter(selector, DoubleFieldWriter::forArray);
@@ -74,6 +137,7 @@ public class NumericArrayFieldWriter implements FieldWriter
       memory.putByte(position, NULL_ROW);
       return requiredSize;
     } else {
+
       List<? extends Number> list = FrameWriterUtils.getNumericArrayFromNumericArray(row);
 
       if (list == null) {
@@ -85,6 +149,7 @@ public class NumericArrayFieldWriter implements FieldWriter
         return requiredSize;
       }
 
+      // Create a columnValueSelector to write the individual elements re-using the NumericFieldWriter
       AtomicInteger index = new AtomicInteger(0);
       ColumnValueSelector<Number> columnValueSelector = new ColumnValueSelector<Number>()
       {

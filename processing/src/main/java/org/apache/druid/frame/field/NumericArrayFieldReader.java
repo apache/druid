@@ -30,6 +30,12 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Reader class for the fields written by {@link NumericArrayFieldWriter}. See the Javadoc for the writer for more
+ * information on the format
+ *
+ * The numeric array fields are byte comparable
+ */
 public abstract class NumericArrayFieldReader implements FieldReader
 {
   @Override

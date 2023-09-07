@@ -24,6 +24,9 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
+/**
+ * Reader for fields written by {@link NumericArrayFieldWriter#getLongArrayFieldWriter}
+ */
 public class LongArrayFieldReader extends NumericArrayFieldReader
 {
   @Override

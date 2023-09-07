@@ -23,6 +23,10 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 import java.util.List;
 
+/**
+ * Stores the memory locations in an array, and spits out the value pointed to by the memory location by pointer,
+ * which is settable by the user
+ */
 public class IndexArrayFieldPointer implements ReadableFieldPointer
 {
   private final LongArrayList indices;

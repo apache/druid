@@ -28,9 +28,15 @@ import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
 
+/**
+ * Reads the fields created by the {@link NumericFieldWriter}. See the Javadoc for the writer for format details
+ */
 public abstract class NumericFieldReader implements FieldReader
 {
 
+  /**
+   * The indicator byte which denotes that the following value is null.
+   */
   private final byte nullIndicatorByte;
 
   public NumericFieldReader(boolean forArray)
@@ -38,7 +44,7 @@ public abstract class NumericFieldReader implements FieldReader
     if (!forArray) {
       this.nullIndicatorByte = NumericFieldWriter.NULL_BYTE;
     } else {
-      this.nullIndicatorByte = NumericFieldWriter.ARRAY_NULL_BYTE;
+      this.nullIndicatorByte = NumericFieldWriter.ARRAY_ELEMENT_NULL_BYTE;
     }
   }
 

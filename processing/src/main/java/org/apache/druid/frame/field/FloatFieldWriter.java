@@ -24,8 +24,6 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 /**
  * Wraps a {@link BaseFloatColumnValueSelector} and writes field values.
- * <p>
- * See {@link FloatFieldReader} for format details.
  */
 public class FloatFieldWriter extends NumericFieldWriter
 {
