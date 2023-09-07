@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
@@ -256,7 +255,6 @@ public class DruidCoordinatorRuntimeParams
     public DruidCoordinatorRuntimeParams build()
     {
       initStatsIfRequired();
-      initSegmentLoadingConfigIfRequired();
       initSegmentAssignerIfRequired();
 
       return new DruidCoordinatorRuntimeParams(
@@ -282,15 +280,10 @@ public class DruidCoordinatorRuntimeParams
       stats = stats == null ? new CoordinatorRunStats(debugDimensions) : stats;
     }
 
-    private void initSegmentLoadingConfigIfRequired()
-    {
-      if (segmentLoadingConfig == null
-          && coordinatorDynamicConfig != null
-          && usedSegments != null) {
-        segmentLoadingConfig = SegmentLoadingConfig.create(coordinatorDynamicConfig, usedSegments.size());
-      }
-    }
-
+    /**
+     * Initializes {@link StrategicSegmentAssigner} used by historical management
+     * duties for segment load/drop/move.
+     */
     private void initSegmentAssignerIfRequired()
     {
       if (segmentAssigner != null || loadQueueManager == null) {
@@ -299,8 +292,13 @@ public class DruidCoordinatorRuntimeParams
 
       Preconditions.checkNotNull(druidCluster);
       Preconditions.checkNotNull(balancerStrategy);
-      Preconditions.checkNotNull(segmentLoadingConfig);
+      Preconditions.checkNotNull(usedSegments);
       Preconditions.checkNotNull(stats);
+
+      if (segmentLoadingConfig == null) {
+        segmentLoadingConfig = SegmentLoadingConfig.create(coordinatorDynamicConfig, usedSegments.size());
+      }
+
       segmentAssigner = new StrategicSegmentAssigner(
           loadQueueManager,
           druidCluster,
@@ -339,16 +337,12 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    /** This method must be used in test code only. */
-    @VisibleForTesting
-    public Builder withUsedSegmentsInTest(DataSegment... usedSegments)
+    public Builder withUsedSegments(DataSegment... usedSegments)
     {
-      return withUsedSegmentsInTest(Arrays.asList(usedSegments));
+      return withUsedSegments(Arrays.asList(usedSegments));
     }
 
-    /** This method must be used in test code only. */
-    @VisibleForTesting
-    public Builder withUsedSegmentsInTest(Collection<DataSegment> usedSegments)
+    public Builder withUsedSegments(Collection<DataSegment> usedSegments)
     {
       this.usedSegments = createUsedSegmentsSet(usedSegments);
       this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
@@ -358,6 +352,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withDynamicConfigs(CoordinatorDynamicConfig configs)
     {
       this.coordinatorDynamicConfig = configs;
+      return this;
+    }
+
+    public Builder withSegmentLoadingConfig(SegmentLoadingConfig config)
+    {
+      this.segmentLoadingConfig = config;
       return this;
     }
 

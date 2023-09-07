@@ -98,7 +98,7 @@ class SingleContainerTaskAdapterTest
         druidNode,
         jsonMapper
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,

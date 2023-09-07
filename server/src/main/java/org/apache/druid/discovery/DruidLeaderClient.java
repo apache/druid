@@ -39,12 +39,10 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -202,7 +200,7 @@ public class DruidLeaderClient
             redirectUrl.getPort()
         ));
 
-        request = withUrl(request, redirectUrl);
+        request = ClientUtils.withUrl(request, redirectUrl);
       } else if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
                  || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
         log.warn(
@@ -260,7 +258,7 @@ public class DruidLeaderClient
   {
     final String leader = currentKnownLeader.accumulateAndGet(
         null,
-        (current, given) -> current == null || !cached ? pickOneHost() : current
+        (current, given) -> current == null || !cached ? ClientUtils.pickOneHost(druidNodeDiscovery) : current
     );
 
     if (leader == null) {
@@ -274,43 +272,17 @@ public class DruidLeaderClient
     }
   }
 
-  @Nullable
-  private String pickOneHost()
-  {
-    Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
-    if (iter.hasNext()) {
-      DiscoveryDruidNode node = iter.next();
-      return StringUtils.format(
-          "%s://%s",
-          node.getDruidNode().getServiceScheme(),
-          node.getDruidNode().getHostAndPortToUse()
-      );
-    }
-
-    return null;
-  }
-
-  private Request withUrl(Request old, URL url)
-  {
-    Request req = new Request(old.getMethod(), url);
-    req.addHeaderValues(old.getHeaders());
-    if (old.hasContent()) {
-      req.setContent(old.getContent());
-    }
-    return req;
-  }
-
   private Request getNewRequestUrlInvalidatingCache(Request oldRequest) throws IOException
   {
     try {
       Request newRequest;
       if (oldRequest.getUrl().getQuery() == null) {
-        newRequest = withUrl(
+        newRequest = ClientUtils.withUrl(
             oldRequest,
             new URL(StringUtils.format("%s%s", getCurrentKnownLeader(false), oldRequest.getUrl().getPath()))
         );
       } else {
-        newRequest = withUrl(
+        newRequest = ClientUtils.withUrl(
             oldRequest,
             new URL(StringUtils.format(
                 "%s%s?%s",

@@ -58,8 +58,8 @@ public class ShuffleMonitor extends AbstractMonitor
         final Builder metricBuilder = ServiceMetricEvent
             .builder()
             .setDimension(SUPERVISOR_TASK_ID_DIMENSION, supervisorTaskId);
-        emitter.emit(metricBuilder.build(SHUFFLE_BYTES_KEY, perDatasourceShuffleMetrics.getShuffleBytes()));
-        emitter.emit(metricBuilder.build(SHUFFLE_REQUESTS_KEY, perDatasourceShuffleMetrics.getShuffleRequests()));
+        emitter.emit(metricBuilder.setMetric(SHUFFLE_BYTES_KEY, perDatasourceShuffleMetrics.getShuffleBytes()));
+        emitter.emit(metricBuilder.setMetric(SHUFFLE_REQUESTS_KEY, perDatasourceShuffleMetrics.getShuffleRequests()));
       });
     }
     return true;

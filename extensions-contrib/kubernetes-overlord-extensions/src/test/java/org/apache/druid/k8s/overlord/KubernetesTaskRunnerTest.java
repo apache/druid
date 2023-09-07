@@ -29,7 +29,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.java.util.common.Pair;
@@ -38,6 +37,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
@@ -89,7 +89,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .withCapacity(1)
         .build();
 
-    task = NoopTask.create(ID, 0);
+    task = K8sTestUtils.createTask(ID, 0);
 
     runner = new KubernetesTaskRunner(
         taskAdapter,
@@ -367,7 +367,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_getRunningTasks()
   {
-    Task pendingTask = NoopTask.create("pending-id", 0);
+    Task pendingTask = K8sTestUtils.createTask("pending-id", 0);
     KubernetesWorkItem pendingWorkItem = new KubernetesWorkItem(pendingTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -377,7 +377,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(pendingTask.getId(), pendingWorkItem);
 
-    Task runningTask = NoopTask.create("running-id", 0);
+    Task runningTask = K8sTestUtils.createTask("running-id", 0);
     KubernetesWorkItem runningWorkItem = new KubernetesWorkItem(runningTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -396,7 +396,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_getPendingTasks()
   {
-    Task pendingTask = NoopTask.create("pending-id", 0);
+    Task pendingTask = K8sTestUtils.createTask("pending-id", 0);
     KubernetesWorkItem pendingWorkItem = new KubernetesWorkItem(pendingTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -406,7 +406,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(pendingTask.getId(), pendingWorkItem);
 
-    Task runningTask = NoopTask.create("running-id", 0);
+    Task runningTask = K8sTestUtils.createTask("running-id", 0);
     KubernetesWorkItem runningWorkItem = new KubernetesWorkItem(runningTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
