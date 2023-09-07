@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
@@ -35,11 +34,13 @@ import org.apache.druid.indexing.common.task.batch.parallel.ActionsTestTask;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.overlord.TestTaskToolboxFactory;
 import org.apache.druid.indexing.overlord.ThreadingTaskRunner;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
@@ -57,10 +58,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 {
@@ -78,9 +81,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
     taskActionClientFactory = createActionClientFactory();
     dummyTaskActionClient = taskActionClientFactory.create(NoopTask.create());
-    final TaskToolboxFactory toolboxFactory = new TestTaskToolboxFactory(taskConfig, taskActionClientFactory);
     taskRunner = new ThreadingTaskRunner(
-        toolboxFactory,
+        createToolboxFactory(taskConfig, taskActionClientFactory),
         taskConfig,
         WORKER_CONFIG,
         new NoopTaskLogs(),
@@ -115,7 +117,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   }
 
   @Test
-  public void testAppendSegmentGetsUpgraded() throws Exception
+  public void testAppendSegmentGetsUpgraded()
   {
     final Interval year2023 = Intervals.of("2023/2024");
 
@@ -123,14 +125,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final ActionsTestTask replaceTask0 = createAndStartTask();
     final String v0 = replaceTask0.acquireReplaceLockOn(year2023).getVersion();
 
-    final DataSegment segmentV00
-        = DataSegment.builder()
-                     .dataSource(DS.WIKI)
-                     .interval(year2023)
-                     .version(v0)
-                     .size(1)
-                     .build();
-
+    final DataSegment segmentV00 = createSegment(year2023, v0);
     replaceTask0.commitReplaceSegments(segmentV00);
     replaceTask0.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(year2023, segmentV00);
@@ -141,6 +136,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     appendTask0.acquireAppendLockOn(year2023);
     final SegmentIdWithShardSpec pendingSegmentV01
         = appendTask0.allocateSegmentForTimestamp(year2023.getStart(), Granularities.YEAR);
+    Assert.assertEquals(segmentV00.getVersion(), pendingSegmentV01.getVersion());
 
     // Commit replace segment for v1
     final ActionsTestTask replaceTask1 = createAndStartTask();
@@ -157,10 +153,11 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     // Commit append segment v0 and verify that it gets upgraded to v1
     final DataSegment segmentV01 = asSegment(pendingSegmentV01);
-    appendTask0.commitAppendSegments(segmentV01);
-    appendTask0.finishRunAndGetStatus();
-
     final DataSegment segmentV11 = DataSegment.builder(segmentV01).version(v1).build();
+    Set<DataSegment> appendedSegments = appendTask0.commitAppendSegments(segmentV01).getSegments();
+    Assert.assertEquals(Sets.newHashSet(segmentV01, segmentV11), appendedSegments);
+
+    appendTask0.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(
         year2023,
         segmentV00, segmentV01, segmentV10, segmentV11
@@ -180,6 +177,34 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(year2023, segmentV20, segmentV21);
   }
 
+  @Test
+  public void testRRAA_dailyReplaceDailyAppend()
+  {
+    final Interval firstOfJan = Intervals.of("2023-01-01/2023-01-02");
+
+    final ActionsTestTask replaceTask0 = createAndStartTask();
+    final ActionsTestTask appendTask0 = createAndStartTask();
+
+    final String v0 = replaceTask0.acquireReplaceLockOn(firstOfJan).getVersion();
+
+    final DataSegment segmentV00 = createSegment(firstOfJan, v0);
+
+    replaceTask0.commitReplaceSegments(segmentV00);
+    replaceTask0.finishRunAndGetStatus();
+    verifyIntervalHasUsedSegments(firstOfJan, segmentV00);
+
+    appendTask0.acquireAppendLockOn(firstOfJan);
+    final SegmentIdWithShardSpec pendingSegment
+        = appendTask0.allocateSegmentForTimestamp(firstOfJan.getStart(), Granularities.DAY);
+    Assert.assertEquals(segmentV00.getVersion(), pendingSegment.getVersion());
+
+    final DataSegment segmentV01 = asSegment(pendingSegment);
+    appendTask0.commitAppendSegments(segmentV01);
+
+    verifyIntervalHasUsedSegments(firstOfJan, segmentV00, segmentV01);
+    verifyIntervalHasVisibleSegments(firstOfJan, segmentV00, segmentV01);
+  }
+
   private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
     final SegmentId id = pendingSegment.asSegmentId();
@@ -195,119 +220,74 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     );
   }
 
-  private void verifyTaskSuccess(Task task)
-  {
-    try {
-      while (!getTaskStorage().getStatus(task.getId()).get().isComplete()) {
-        Thread.sleep(100);
-      }
-    }
-    catch (InterruptedException e) {
-      // do nothing
-    }
-    Assert.assertTrue(getTaskStorage().getStatus(task.getId()).get().isSuccess());
-  }
-
-  private void verifyTaskFailure(Task task)
-  {
-    try {
-      while (!getTaskStorage().getStatus(task.getId()).get().isComplete()) {
-        Thread.sleep(100);
-      }
-    }
-    catch (InterruptedException e) {
-      // do nothing
-    }
-    Assert.assertTrue(getTaskStorage().getStatus(task.getId()).get().isFailure());
-  }
-
-  private void verifyIntervalHasUsedSegments(Interval interval, DataSegment... expectedSegments) throws Exception
+  private void verifyIntervalHasUsedSegments(Interval interval, DataSegment... expectedSegments)
   {
     verifySegments(interval, Segments.INCLUDING_OVERSHADOWED, expectedSegments);
   }
 
-  private void verifyIntervalHasVisibleSegments(Interval interval, DataSegment... expectedSegments) throws Exception
+  private void verifyIntervalHasVisibleSegments(Interval interval, DataSegment... expectedSegments)
   {
     verifySegments(interval, Segments.ONLY_VISIBLE, expectedSegments);
   }
 
-  private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments) throws Exception
+  private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments)
   {
-    Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
-        new RetrieveUsedSegmentsAction(
-            DS.WIKI,
-            null,
-            ImmutableList.of(interval),
-            visibility
-        )
-    );
-    Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
+    try {
+      Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
+          new RetrieveUsedSegmentsAction(
+              DS.WIKI,
+              null,
+              ImmutableList.of(interval),
+              visibility
+          )
+      );
+      Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Error while fetching used segments in interval[%s]", interval);
+    }
   }
 
-  private class TestTaskToolboxFactory extends TaskToolboxFactory
+  private TaskToolboxFactory createToolboxFactory(
+      TaskConfig taskConfig,
+      TaskActionClientFactory taskActionClientFactory
+  )
   {
-    public TestTaskToolboxFactory(TaskConfig taskConfig, TaskActionClientFactory taskActionClientFactory)
+    TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
+        .setConfig(taskConfig)
+        .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
+        .setTaskActionClientFactory(taskActionClientFactory);
+    return new TestTaskToolboxFactory(builder)
     {
-      super(
-          taskConfig,
-          null,
-          taskActionClientFactory,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-      );
-    }
+      @Override
+      public TaskToolbox build(TaskConfig config, Task task)
+      {
+        return createTaskToolbox(config, task);
+      }
+    };
+  }
 
-    @Override
-    public TaskToolbox build(TaskConfig config, Task task)
-    {
-      return createTaskToolbox(config, task);
-    }
+  private DataSegment createSegment(Interval interval, String version)
+  {
+    return DataSegment.builder()
+                      .dataSource(DS.WIKI)
+                      .interval(interval)
+                      .version(version)
+                      .size(100)
+                      .build();
+  }
+
+  private ActionsTestTask createAndStartTask()
+  {
+    ActionsTestTask task = new ActionsTestTask(DS.WIKI, taskActionClientFactory);
+    taskQueue.add(task);
+    runningTasks.add(task);
+    return task;
   }
 
   private static class DS
   {
     static final String WIKI = "wiki";
-  }
-
-  private ActionsTestTask createAndStartTask()
-  {
-    ActionsTestTask task = new ActionsTestTask("wiki", taskActionClientFactory);
-    taskQueue.add(task);
-    runningTasks.add(task);
-    return task;
   }
 
 }

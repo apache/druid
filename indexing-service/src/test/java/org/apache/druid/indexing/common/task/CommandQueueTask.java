@@ -26,6 +26,7 @@ public class CommandQueueTask extends AbstractTask
 
   private final Object queueNotification = new Object();
   private final BlockingQueue<Command<?>> commandQueue = new LinkedBlockingQueue<>();
+
   private final AtomicBoolean finishRequested = new AtomicBoolean(false);
   private final AtomicInteger numCommandsExecuted = new AtomicInteger(0);
 
@@ -97,7 +98,10 @@ public class CommandQueueTask extends AbstractTask
       if (finishRequested.get()) {
         throw new ISE("Task[%s] cannot accept any more commands as it is already shutting down.", getId());
       } else {
-        commandQueue.offer(command);
+        boolean added = commandQueue.offer(command);
+        if (!added) {
+          throw new ISE("Could not add command to task[%s].", getId());
+        }
       }
     }
 
