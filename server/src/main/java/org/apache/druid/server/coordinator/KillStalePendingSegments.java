@@ -62,19 +62,19 @@ public class KillStalePendingSegments implements CoordinatorDuty
               .getDataSourcesToNotKillStalePendingSegmentsIn()
     );
 
-    final DateTime maxCreatedTime = getMaxCreatedTimeOfStalePendingSegments();
+    final DateTime minCreatedTime = getMinCreatedTimeToRetain();
     for (String dataSource : killDatasources) {
       int pendingSegmentsKilled = FutureUtils.getUnchecked(
           overlordClient.killPendingSegments(
               dataSource,
-              new Interval(DateTimes.MIN, maxCreatedTime)
+              new Interval(DateTimes.MIN, minCreatedTime)
           ),
           true
       );
       if (pendingSegmentsKilled > 0) {
         log.info(
             "Killed [%d] pendingSegments created before [%s] for datasource[%s].",
-            pendingSegmentsKilled, maxCreatedTime, dataSource
+            pendingSegmentsKilled, minCreatedTime, dataSource
         );
         params.getCoordinatorStats().add(
             Stats.Kill.PENDING_SEGMENTS,
@@ -87,16 +87,16 @@ public class KillStalePendingSegments implements CoordinatorDuty
   }
 
   /**
-   * Computes the upper limit on created time of pending segments below which
-   * they are considered to be stale and can be safely deleted. The limit is
-   * determined to ensure that the following pending segments are retained for
-   * at least {@link #DURATION_TO_RETAIN}:
+   * Computes the minimum created time of retainable pending segments. Any pending
+   * segment created before this time is considered stale and can be safely deleted.
+   * The limit is determined to ensure that the following pending segments are
+   * retained for at least {@link #DURATION_TO_RETAIN}:
    * <ul>
    * <li>Pending segments created by any active task (across all datasources)</li>
    * <li>Pending segments created by the latest completed task (across all datasources)</li>
    * </ul>
    */
-  private DateTime getMaxCreatedTimeOfStalePendingSegments()
+  private DateTime getMinCreatedTimeToRetain()
   {
     // Fetch the statuses of all active tasks and the latest completed task
     // (The Overlord API returns complete tasks in descending order of created_date.)
