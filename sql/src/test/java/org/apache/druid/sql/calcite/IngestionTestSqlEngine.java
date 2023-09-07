@@ -84,7 +84,6 @@ public class IngestionTestSqlEngine implements SqlEngine
       case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
         return false;
-      case UNNEST:
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
