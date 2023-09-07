@@ -26,8 +26,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ValueType;
 
-import javax.annotation.Nullable;
-
 /**
  * Reads values written by {@link LongFieldWriter}.
  * <p>

@@ -20,15 +20,12 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class NumericFieldReader implements FieldReader
@@ -79,9 +76,9 @@ public abstract class NumericFieldReader implements FieldReader
   }
 
   public abstract ColumnValueSelector<?> getColumnValueSelector(
-      final Memory memory,
-      final ReadableFieldPointer fieldPointer,
-      final byte nullIndicatorByte
+      Memory memory,
+      ReadableFieldPointer fieldPointer,
+      byte nullIndicatorByte
   );
 
   public abstract ValueType getValueType();
