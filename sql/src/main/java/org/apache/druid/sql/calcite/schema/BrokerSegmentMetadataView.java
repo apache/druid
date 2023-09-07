@@ -61,7 +61,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * This class polls the Coordinator in background to keep the latest published segments.
- * Provides {@link #getSegmentMetadata()} for others to get segments in metadata store.
+ * Provides {@link #getSegmentTableView()} for sys segments table view.
  *
  * This class polls the data from {@link SegmentsMetadataManager} object in the memory of the
  * currently leading Coordinator via HTTP queries.
@@ -284,6 +284,7 @@ public class BrokerSegmentMetadataView
 
     return builder.build();
   }
+
   // Note that coordinator must be up to get segments
   private JsonParserIterator<SegmentStatusInCluster> querySegmentMetadata(
       Set<String> watchedDataSources

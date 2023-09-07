@@ -26,8 +26,8 @@ import java.util.Map;
 
 /**
  * This class contains configuration that internally generated Druid queries
- * should add to their query payload. The runtime properties for this class
- * have the prefix "druid.broker.internal.query.config."
+ * should add to their query payload. The runtime properties for this class have
+ * the prefix "druid.{service}.internal.query.config.".
  */
 public class InternalQueryConfig
 {

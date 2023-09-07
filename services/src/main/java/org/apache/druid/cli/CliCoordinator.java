@@ -41,9 +41,9 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.HttpServerInventoryViewResource;
-import org.apache.druid.client.CoordinatorInventoryView;
+import org.apache.druid.client.CoordinatorTimeline;
 import org.apache.druid.client.InternalQueryConfig;
-import org.apache.druid.client.TimelineAwareCoordinatorServerView;
+import org.apache.druid.client.QueryableCoordinatorServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
@@ -232,7 +232,7 @@ public class CliCoordinator extends ServerRunnable
             if (isSegmentMetadataCacheEnabled()) {
               binder.install(new SegmentMetadataCacheModule());
             } else {
-              binder.bind(CoordinatorInventoryView.class).to(CoordinatorServerView.class).in(LazySingleton.class);
+              binder.bind(CoordinatorTimeline.class).to(CoordinatorServerView.class).in(LazySingleton.class);
               LifecycleModule.register(binder, CoordinatorServerView.class);
               binder.bind(SegmentMetadataCache.class).toProvider(Providers.of(null));
             }
@@ -541,10 +541,10 @@ public class CliCoordinator extends ServerRunnable
 
       binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
       binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
-      binder.bind(TimelineAwareCoordinatorServerView.class).in(LazySingleton.class);
-      binder.bind(CoordinatorInventoryView.class).to(TimelineAwareCoordinatorServerView.class).in(LazySingleton.class);
-      binder.bind(TimelineServerView.class).to(TimelineAwareCoordinatorServerView.class).in(LazySingleton.class);
-      LifecycleModule.register(binder, TimelineAwareCoordinatorServerView.class);
+      binder.bind(QueryableCoordinatorServerView.class).in(LazySingleton.class);
+      binder.bind(CoordinatorTimeline.class).to(QueryableCoordinatorServerView.class).in(LazySingleton.class);
+      binder.bind(TimelineServerView.class).to(QueryableCoordinatorServerView.class).in(LazySingleton.class);
+      LifecycleModule.register(binder, QueryableCoordinatorServerView.class);
       LifecycleModule.register(binder, SegmentMetadataCache.class);
     }
   }

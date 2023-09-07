@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,9 +33,6 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
 import org.junit.Before;

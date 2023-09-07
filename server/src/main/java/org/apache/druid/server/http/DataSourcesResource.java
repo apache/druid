@@ -32,7 +32,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.client.CoordinatorInventoryView;
+import org.apache.druid.client.CoordinatorTimeline;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
@@ -102,7 +102,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
   private static final long DEFAULT_LOADSTATUS_INTERVAL_OFFSET = 14 * 24 * 60 * 60 * 1000;
 
-  private final CoordinatorInventoryView serverInventoryView;
+  private final CoordinatorTimeline serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
   private final OverlordClient overlordClient;
@@ -111,7 +111,7 @@ public class DataSourcesResource
 
   @Inject
   public DataSourcesResource(
-      CoordinatorInventoryView serverInventoryView,
+      CoordinatorTimeline coordinatorTimeline,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
@@ -119,7 +119,7 @@ public class DataSourcesResource
       DruidCoordinator coordinator
   )
   {
-    this.serverInventoryView = serverInventoryView;
+    this.serverInventoryView = coordinatorTimeline;
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataRuleManager = metadataRuleManager;
     this.overlordClient = overlordClient;

@@ -38,15 +38,7 @@ public class DruidCalciteSchemaModule implements Module
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
   private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
-  private static final String SEGMENT_METADATA_CACHE_ENABLED = "druid.sql.planner.segmentMetadataCacheEnabled";
   static final String INCOMPLETE_SCHEMA = "INCOMPLETE_SCHEMA";
-
-  private final Properties properties;
-
-  public DruidCalciteSchemaModule(Properties properties)
-  {
-    this.properties = properties;
-  }
 
   @Override
   public void configure(Binder binder)
@@ -60,9 +52,8 @@ public class DruidCalciteSchemaModule implements Module
           .in(Scopes.SINGLETON);
 
     // BrokerSegmentMetadataCache needs to listen to changes for incoming segments
-    if (isSegmentMetadataCacheEnabled()) {
-      LifecycleModule.register(binder, BrokerSegmentMetadataCache.class);
-    }
+    LifecycleModule.register(binder, BrokerSegmentMetadataCache.class);
+
     binder.bind(DruidSchema.class).in(Scopes.SINGLETON);
     binder.bind(SystemSchema.class).in(Scopes.SINGLETON);
     binder.bind(InformationSchema.class).in(Scopes.SINGLETON);
@@ -81,10 +72,5 @@ public class DruidCalciteSchemaModule implements Module
   {
     rootSchema.getRootSchema().add(INFORMATION_SCHEMA_NAME, informationSchema);
     return rootSchema;
-  }
-
-  private boolean isSegmentMetadataCacheEnabled()
-  {
-    return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_ENABLED, "true"));
   }
 }

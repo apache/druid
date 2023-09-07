@@ -21,7 +21,7 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.client.Alpha;
+import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -53,7 +53,7 @@ public class ServersResourceTest
                                      .build();
     dummyServer.addDataSegment(segment);
 
-    Alpha inventoryView = EasyMock.createMock(Alpha.class);
+    CoordinatorServerView inventoryView = EasyMock.createMock(CoordinatorServerView.class);
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(dummyServer)).anyTimes();
     EasyMock.expect(inventoryView.getInventoryValue(dummyServer.getName())).andReturn(dummyServer).anyTimes();
     EasyMock.replay(inventoryView);

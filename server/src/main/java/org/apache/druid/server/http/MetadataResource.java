@@ -214,8 +214,8 @@ public class MetadataResource
           Integer replicationFactor = isOvershadowed ? (Integer) 0
                                                      : coordinator.getReplicationFactor(segment.getId());
           segmentAlreadySeen.add(segment.getId());
-          return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, 20L, true);
-        }).peek(v -> log.info("peeking into first stream segmentseen [%s], id [%s]", segmentAlreadySeen, v.getDataSegment().getId()));
+          return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, numRows, true);
+        });
 
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
@@ -225,29 +225,17 @@ public class MetadataResource
           .getSegmentMetadataSnapshot()
           .values()
           .stream()
-          .peek(v -> log.info(
-              "peeking into second stream (first) segmentseen [%s], id [%s]",
-              segmentAlreadySeen,
-              v.getSegment().getId()
-          ))
           .filter(availableSegmentMetadata -> !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment()
                                                                                                    .getId()))
-          .map(availableSegmentMetadata -> {
-            return new SegmentStatusInCluster(
-                availableSegmentMetadata.getSegment(),
-                false,
-                (int) availableSegmentMetadata.getNumReplicas(),
-                /**availableSegmentMetadata.getNumRows(), **/30L,
-                availableSegmentMetadata.isRealtime() != 0
-            );
-          })
-          .peek(v -> log.info("peeking into second stream (second) segmentseen [%s], id [%s]",
-                              segmentAlreadySeen,
-                              v.getDataSegment().getId()
+          .map(availableSegmentMetadata -> new SegmentStatusInCluster(
+              availableSegmentMetadata.getSegment(),
+              false,
+              (int) availableSegmentMetadata.getNumReplicas(),
+              availableSegmentMetadata.getNumRows(),
+              availableSegmentMetadata.isRealtime() != 0
           ));
 
-      finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus)
-                                                      .peek(v -> log.info("combined stream element %s", v));
+      finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus);
     }
 
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
@@ -359,6 +347,9 @@ public class MetadataResource
     return Response.status(Response.Status.NOT_FOUND).build();
   }
 
+  /**
+   * Return schema for the given dataSources.
+   */
   @POST
   @Path("/dataSourceSchema")
   @Produces(MediaType.APPLICATION_JSON)

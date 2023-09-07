@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -42,9 +42,7 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.metadata.PhysicalDatasourceMetadata;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;

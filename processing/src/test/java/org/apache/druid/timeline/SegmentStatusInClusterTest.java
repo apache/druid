@@ -76,7 +76,7 @@ public class SegmentStatusInClusterTest
         1
     );
 
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, 1L, 0L, true);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, 10L, true);
   }
 
   @Test

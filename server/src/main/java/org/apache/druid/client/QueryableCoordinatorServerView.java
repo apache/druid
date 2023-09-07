@@ -45,12 +45,12 @@ import java.util.Map;
  * ServerView of coordinator for the state of segments being loaded in the cluster.
  */
 @ManageLifecycle
-public class TimelineAwareCoordinatorServerView extends BrokerServerView implements CoordinatorInventoryView
+public class QueryableCoordinatorServerView extends BrokerServerView implements CoordinatorTimeline
 {
   private final FilteredServerInventoryView baseView;
 
   @Inject
-  public TimelineAwareCoordinatorServerView(
+  public QueryableCoordinatorServerView(
       final QueryToolChestWarehouse warehouse,
       final QueryWatcher queryWatcher,
       final @Smile ObjectMapper smileMapper,

@@ -104,7 +104,7 @@ public class SqlModule implements Module
 
     binder.bind(TableDefnRegistry.class).in(LazySingleton.class);
 
-    binder.install(new DruidCalciteSchemaModule(props));
+    binder.install(new DruidCalciteSchemaModule());
     binder.install(new CalcitePlannerModule());
     binder.install(new SqlAggregationModule());
     binder.install(new DruidViewModule());

@@ -101,22 +101,23 @@ public class MetadataResourceTest
         segmentsMetadataManager,
         storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        coordinator
+        coordinator,
+        null
     );
   }
 
   @Test
   public void testGetAllSegmentsWithOvershadowedStatus()
   {
-    Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus");
+    Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", null);
 
     final List<SegmentStatusInCluster> resultList = extractSegmentStatusList(response);
     Assert.assertEquals(resultList.size(), 4);
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 5L, 0L, true), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null,  5L, 0L, true), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, 5L, 0L, true), resultList.get(2));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 5L, true), resultList.get(0));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null,  5L, true), resultList.get(1));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, 5L, true), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0,  5L, 0L, true), resultList.get(3));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0,  5L, true), resultList.get(3));
   }
 
   @Test

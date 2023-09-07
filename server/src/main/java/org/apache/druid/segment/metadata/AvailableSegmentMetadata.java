@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
- * Immutable representation of RowSignature and other segment attributes needed by {@code SystemSchema.SegmentsTable}
+ * Immutable representation of RowSignature and other segment attributes.
  * This class contains the metadata of segments announced by historicals or ingestion tasks.
  */
 public class AvailableSegmentMetadata
@@ -157,15 +157,5 @@ public class AvailableSegmentMetadata
     {
       return new AvailableSegmentMetadata(this);
     }
-  }
-
-  @Override
-  public String toString()
-  {
-    return "AvailableSegmentMetadata{" +
-           "segmentId=" + segment.getId() +
-           ", isRealtime=" + isRealtime +
-           ", numRows=" + numRows +
-           '}';
   }
 }

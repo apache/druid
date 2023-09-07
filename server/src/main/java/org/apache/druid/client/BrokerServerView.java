@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -433,12 +434,7 @@ public class BrokerServerView implements TimelineServerView
 
   public Map<SegmentId, ServerSelector> getSegmentMetadata()
   {
-    return selectors;
-  }
-
-  public Set<String> getDatasourceNames()
-  {
-    return timelines.keySet();
+    return ImmutableMap.copyOf(selectors);
   }
 
   Object getLock()
@@ -454,10 +450,5 @@ public class BrokerServerView implements TimelineServerView
   Map<SegmentId, ServerSelector> getSelectors()
   {
     return selectors;
-  }
-
-  ConcurrentMap<String, QueryableDruidServer> getClients()
-  {
-    return clients;
   }
 }

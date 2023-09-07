@@ -42,6 +42,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DataNodeService;
@@ -252,15 +253,17 @@ public class SystemSchemaTest extends CalciteTestBase
         .add(segment2, index2)
         .add(segment3, index3);
 
-    SegmentMetadataCache cache = new SegmentMetadataCache(
+    BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments(), realtimeSegments),
-        new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataBuilder(
+            new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+            new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
+        new NoopCoordinatorClient()
     );
     cache.start();
     cache.awaitInitialization();
@@ -269,7 +272,6 @@ public class SystemSchemaTest extends CalciteTestBase
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     schema = new SystemSchema(
-        druidSchema,
         metadataView,
         serverView,
         serverInventoryView,
@@ -566,13 +568,13 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(metadataView, new ObjectMapper(), authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, 2L, 0L, true),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, 2L, 0L, true),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, 2L, 0L, true),
-        new SegmentStatusInCluster(segment1, true, 2, 2L, 0L, true),
-        new SegmentStatusInCluster(segment2, false, 0, 2L, 0L, true)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, 2L, true),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, 2L, true),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, 2L, true),
+        new SegmentStatusInCluster(segment1, true, 2, 2L, true),
+        new SegmentStatusInCluster(segment2, false, 0, 2L, true)
     ));
 
     EasyMock.expect(metadataView.getSegmentMetadata()).andReturn(publishedSegments.iterator()).once();

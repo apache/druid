@@ -32,6 +32,8 @@ import java.util.Objects;
  *   <li>the {@code DataSegment} object</li>
  *   <li>overshadowed status of the segment</li>
  *   <li>replication factor of the segment</li>
+ *   <li>number of rows in the segment</li>
+ *   <li>if the segment is realtime</li>
  * </ul>
  * <br></br>
  * Objects of this class are used to sync the state of segments from the Coordinator to different services, typically the Broker.
