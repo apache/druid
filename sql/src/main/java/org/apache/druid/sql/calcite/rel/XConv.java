@@ -97,21 +97,15 @@ public class XConv extends RexShuttle
       // return op.accept(this);
       // }
 
-      if (isKind(op.getKind())) {
-        // we have isX(isY(op))
-        return isXisY(kind, op).accept(this);
-      }
+      // if (isKind(op.getKind())) {
+      // // we have isX(isY(op))
+      // return isXisY(kind, op).accept(this);
+      // }
 
-      switch (op.getKind())
-      {
-      case AND:
-      case OR:
+      // IS operators should pushed outside of the 2valued area
+      if (op.getKind() == SqlKind.OR && (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE)) {
         call = distributive(call);
         return call.accept(this);
-      case NOT_EQUALS:
-        // case EQUALS:
-        // call = evalEquals(call, (RexCall) op);
-        // break;
       }
     }
 
@@ -194,23 +188,22 @@ public class XConv extends RexShuttle
       case IS_NOT_TRUE:
       {
         RexNode op = getOnlyElement(call.getOperands());
-        op=rexBuilder.makeCall(
-            kind==SqlKind.IS_NOT_TRUE?SqlStdOperatorTable.IS_TRUE:SqlStdOperatorTable.IS_FALSE,
+        op = rexBuilder.makeCall(
+            kind == SqlKind.IS_NOT_TRUE ? SqlStdOperatorTable.IS_TRUE : SqlStdOperatorTable.IS_FALSE,
             op);
-        op=rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
+        op = rexBuilder.makeCall(SqlStdOperatorTable.NOT, op);
         return visitCall((RexCall) op);
       }
 
-
-      //      case IS_NOT_FALSE:
-//      case IS_NOT_TRUE:
-//      {
-//
-//        // RexNode op = getOnlyElement(call.getOperands());
-//        //
-//        // op = rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, op,
-//        // rexBuilder.makeNullLiteral(op.getType()));
-//      }
+      // case IS_NOT_FALSE:
+      // case IS_NOT_TRUE:
+      // {
+      //
+      // // RexNode op = getOnlyElement(call.getOperands());
+      // //
+      // // op = rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, op,
+      // // rexBuilder.makeNullLiteral(op.getType()));
+      // }
       case AND:
       case OR:
         return super.visitCall(call);
