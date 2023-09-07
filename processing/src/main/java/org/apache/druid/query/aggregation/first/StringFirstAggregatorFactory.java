@@ -214,7 +214,8 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities != null && capabilities.getType().equals(ValueType.STRING);
   }
 
   @Override
