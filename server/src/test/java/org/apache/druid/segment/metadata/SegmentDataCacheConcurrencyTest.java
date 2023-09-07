@@ -21,8 +21,6 @@ package org.apache.druid.segment.metadata;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -42,7 +40,6 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.metadata.PhysicalDatasourceMetadata;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
@@ -51,15 +48,12 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
@@ -135,10 +129,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
       throws InterruptedException, ExecutionException, TimeoutException
   {
     schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -146,7 +138,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
+      public DataSourceSchema buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -245,10 +237,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
       throws InterruptedException, ExecutionException, TimeoutException
   {
     schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -256,7 +246,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
+      public DataSourceSchema buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {

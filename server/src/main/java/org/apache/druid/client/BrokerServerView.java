@@ -71,11 +71,7 @@ public class BrokerServerView implements TimelineServerView
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 
-  private final Object lock = new Object();
-
   private final ConcurrentMap<String, QueryableDruidServer> clients = new ConcurrentHashMap<>();
-  private final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
-  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
@@ -87,8 +83,13 @@ public class BrokerServerView implements TimelineServerView
   private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
-
   private final CountDownLatch initialized = new CountDownLatch(1);
+
+  protected final Object lock = new Object();
+
+  protected final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
+
+  protected final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
 
   @Inject
   public BrokerServerView(
@@ -430,25 +431,5 @@ public class BrokerServerView implements TimelineServerView
     return clients.values().stream()
                   .map(queryableDruidServer -> queryableDruidServer.getServer().toImmutableDruidServer())
                   .collect(Collectors.toList());
-  }
-
-  public Map<SegmentId, ServerSelector> getSegmentMetadata()
-  {
-    return ImmutableMap.copyOf(selectors);
-  }
-
-  Object getLock()
-  {
-    return lock;
-  }
-
-  Map<String, VersionedIntervalTimeline<String, ServerSelector>> getTimelines()
-  {
-    return timelines;
-  }
-
-  Map<SegmentId, ServerSelector> getSelectors()
-  {
-    return selectors;
   }
 }

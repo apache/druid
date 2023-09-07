@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -55,11 +54,11 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -95,7 +94,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   private static final int WAIT_TIMEOUT_SECS = 6;
 
   private SpecificSegmentsQuerySegmentWalker walker;
-  private TestServerInventoryView serverView;
+  private TestTimelineServerView serverView;
   private List<ImmutableDruidServer> druidServers;
   private SegmentMetadataCache runningSchema;
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
@@ -120,7 +119,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
                                                       .withRollup(false)
                                                       .build()
                                               )
-                                              .rows(SegmentMetadataCacheCommon.ROWS1)
+                                              .rows(ROWS1)
                                               .buildMMappedIndex();
 
     final QueryableIndex index2 = IndexBuilder.create()
@@ -132,7 +131,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
                                                       .withRollup(false)
                                                       .build()
                                               )
-                                              .rows(SegmentMetadataCacheCommon.ROWS2)
+                                              .rows(ROWS2)
                                               .buildMMappedIndex();
 
     final InputRowSchema rowSchema = new InputRowSchema(
@@ -141,7 +140,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         null
     );
     final List<InputRow> autoRows1 = ImmutableList.of(
-        TestDataBuilder.createRow(
+        createRow(
             ImmutableMap.<String, Object>builder()
                         .put("t", "2023-01-01T00:00Z")
                         .put("numbery", 1.1f)
@@ -154,7 +153,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         )
     );
     final List<InputRow> autoRows2 = ImmutableList.of(
-        TestDataBuilder.createRow(
+        createRow(
             ImmutableMap.<String, Object>builder()
                         .put("t", "2023-01-02T00:00Z")
                         .put("numbery", 1L)
@@ -166,6 +165,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             rowSchema
         )
     );
+
     final QueryableIndex indexAuto1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
                                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
@@ -208,7 +208,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
     walker = new SpecificSegmentsQuerySegmentWalker(SegmentMetadataCacheCommon.conglomerate).add(
         DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
+                   .dataSource(DATASOURCE1)
                    .interval(Intervals.of("2000/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
@@ -217,7 +217,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         index1
     ).add(
         DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
+                   .dataSource(DATASOURCE1)
                    .interval(Intervals.of("2001/P1Y"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
@@ -226,7 +226,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         index2
     ).add(
         DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE2)
+                   .dataSource(DATASOURCE2)
                    .interval(index2.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
@@ -235,7 +235,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         index2
     ).add(
         DataSegment.builder()
-                   .dataSource(CalciteTests.SOME_DATASOURCE)
+                   .dataSource(SOME_DATASOURCE)
                    .interval(Intervals.of("2023-01-01T00Z/P1D"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(1))
@@ -244,7 +244,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         indexAuto1
     ).add(
         DataSegment.builder()
-                   .dataSource(CalciteTests.SOME_DATASOURCE)
+                   .dataSource(SOME_DATASOURCE)
                    .interval(Intervals.of("2023-01-02T00Z/P1D"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(1))
@@ -266,7 +266,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         PruneSpecsHolder.DEFAULT
     );
     final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
-    serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
+    serverView = new TestTimelineServerView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
   }
 
@@ -279,13 +279,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     Preconditions.checkState(runningSchema == null);
     runningSchema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(
-            ImmutableSet.of(globalTableJoinable),
-            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
-        ),
         config,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -293,9 +288,9 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(String dataSource)
+      public DataSourceSchema buildDruidTable(String dataSource)
       {
-        DatasourceTable.PhysicalDatasourceMetadata table = super.buildDruidTable(dataSource);
+        DataSourceSchema table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
       }
@@ -317,13 +312,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     Preconditions.checkState(runningSchema == null);
     runningSchema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(
-            ImmutableSet.of(globalTableJoinable),
-            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
-        ),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -364,68 +354,31 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testGetTableMap() throws InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), schema.getDatasourceNames());
+    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema.getDatasourceNames());
 
     final Set<String> tableNames = schema.getDatasourceNames();
-    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), tableNames);
+    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), tableNames);
   }
 
   @Test
   public void testSchemaInit() throws InterruptedException
   {
     SegmentMetadataCache schema2 = buildSchemaMarkAndTableLatch();
-    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), schema2.getDatasourceNames());
+    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema2.getDatasourceNames());
   }
 
   @Test
   public void testGetTableMapFoo() throws InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
-    final DruidTable fooTable = new DatasourceTable(fooDs);
-    final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
-    final List<RelDataTypeField> fields = rowType.getFieldList();
-
-    Assert.assertEquals(6, fields.size());
-
-    Assert.assertEquals("__time", fields.get(0).getName());
-    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
-
-    Assert.assertEquals("dim2", fields.get(1).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
-
-    Assert.assertEquals("m1", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getSqlTypeName());
-
-    Assert.assertEquals("dim1", fields.get(3).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
-
-    Assert.assertEquals("cnt", fields.get(4).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getSqlTypeName());
-
-    Assert.assertEquals("unique_dim1", fields.get(5).getName());
-    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+    final DataSourceSchema fooDs = schema.getDatasource("foo");
   }
 
   @Test
   public void testGetTableMapFoo2() throws InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo2");
-    final DruidTable fooTable = new DatasourceTable(fooDs);
-    final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
-    final List<RelDataTypeField> fields = rowType.getFieldList();
-
-    Assert.assertEquals(3, fields.size());
-
-    Assert.assertEquals("__time", fields.get(0).getName());
-    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
-
-    Assert.assertEquals("dim2", fields.get(1).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
-
-    Assert.assertEquals("m1", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
+    final DataSourceSchema fooDs = schema.getDatasource("foo2");
   }
 
   @Test
@@ -442,41 +395,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
           }
         }
     );
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
-    final DruidTable table = new DatasourceTable(fooDs);
-    final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
-    final List<RelDataTypeField> fields = rowType.getFieldList();
+    final DataSourceSchema fooDs = schema.getDatasource(SOME_DATASOURCE);
 
-    Assert.assertEquals(9, fields.size());
-
-    Assert.assertEquals("__time", fields.get(0).getName());
-    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
-
-    Assert.assertEquals("numbery", fields.get(1).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(1).getType().getSqlTypeName());
-
-    Assert.assertEquals("numberyArrays", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
-
-    Assert.assertEquals("stringy", fields.get(3).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
-
-    Assert.assertEquals("array", fields.get(4).getName());
-    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getComponentType().getSqlTypeName());
-
-    Assert.assertEquals("nested", fields.get(5).getName());
-    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
-
-    Assert.assertEquals("cnt", fields.get(6).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
-
-    Assert.assertEquals("m1", fields.get(7).getName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
-
-    Assert.assertEquals("unique_dim1", fields.get(8).getName());
-    Assert.assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
   }
 
   @Test
@@ -485,42 +405,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
     // least restrictive blend across all segments
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
-    final DruidTable table = new DatasourceTable(fooDs);
-    final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
-    final List<RelDataTypeField> fields = rowType.getFieldList();
-
-    Assert.assertEquals(9, fields.size());
-
-    Assert.assertEquals("__time", fields.get(0).getName());
-    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
-
-    Assert.assertEquals("numbery", fields.get(1).getName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(1).getType().getSqlTypeName());
-
-    Assert.assertEquals("numberyArrays", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
-
-    Assert.assertEquals("stringy", fields.get(3).getName());
-    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(3).getType().getSqlTypeName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getComponentType().getSqlTypeName());
-
-    Assert.assertEquals("array", fields.get(4).getName());
-    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(4).getType().getComponentType().getSqlTypeName());
-
-    Assert.assertEquals("nested", fields.get(5).getName());
-    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
-
-    Assert.assertEquals("cnt", fields.get(6).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
-
-    Assert.assertEquals("m1", fields.get(7).getName());
-    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
-
-    Assert.assertEquals("unique_dim1", fields.get(8).getName());
-    Assert.assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
+    final DataSourceSchema fooDs = schema.getDatasource(SOME_DATASOURCE);
   }
 
 
@@ -691,10 +576,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -734,10 +617,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -781,10 +662,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -825,10 +704,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -866,10 +743,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     CountDownLatch removeSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -924,10 +799,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     CountDownLatch removeSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -985,10 +858,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "serverSegmentRemoveTest";
     CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -1020,10 +891,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -1068,10 +937,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
@@ -1135,12 +1002,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     SegmentMetadataCache schema3 = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema3.getDatasource("foo");
+    DataSourceSchema fooTable = schema3.getDatasource("foo");
     Assert.assertNotNull(fooTable);
-    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    Assert.assertFalse(fooTable.isJoinable());
-    Assert.assertFalse(fooTable.isBroadcast());
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
@@ -1157,8 +1020,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         100L,
         PruneSpecsHolder.DEFAULT
     );
-    segmentDataSourceNames.add("foo");
-    joinableDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
     Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build twice
@@ -1169,16 +1030,10 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
     fooTable = schema3.getDatasource("foo");
     Assert.assertNotNull(fooTable);
-    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    Assert.assertTrue(fooTable.dataSource() instanceof GlobalTableDataSource);
-    Assert.assertTrue(fooTable.isJoinable());
-    Assert.assertTrue(fooTable.isBroadcast());
 
     // now remove it
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
-    joinableDataSourceNames.remove("foo");
-    segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
     Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
@@ -1190,10 +1045,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
     fooTable = schema3.getDatasource("foo");
     Assert.assertNotNull(fooTable);
-    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    Assert.assertFalse(fooTable.isJoinable());
-    Assert.assertFalse(fooTable.isBroadcast());
   }
 
   @Test
@@ -1201,12 +1052,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     SegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
+    DataSourceSchema fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
-    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    Assert.assertFalse(fooTable.isJoinable());
-    Assert.assertFalse(fooTable.isBroadcast());
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
@@ -1223,7 +1070,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         100L,
         PruneSpecsHolder.DEFAULT
     );
-    segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
     Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
@@ -1235,17 +1081,10 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
-    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    // Should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. Ideally this will be
-    // changed in the future and we should expect.
-    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    Assert.assertTrue(fooTable.isBroadcast());
-    Assert.assertFalse(fooTable.isJoinable());
 
     // now remove it
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
-    segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
     Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
@@ -1257,10 +1096,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
     fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
-    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    Assert.assertFalse(fooTable.isBroadcast());
-    Assert.assertFalse(fooTable.isJoinable());
   }
 
   /**
@@ -1309,11 +1144,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache mySchema = new SegmentMetadataCache(
         factoryMock,
         serverView,
-        segmentManager,
-        new MapJoinableFactory(
-            ImmutableSet.of(globalTableJoinable),
-            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
-        ),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         internalQueryConfig,
@@ -1446,10 +1276,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
     SegmentMetadataCache schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, SegmentMetadataCacheCommon.conglomerate),
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),

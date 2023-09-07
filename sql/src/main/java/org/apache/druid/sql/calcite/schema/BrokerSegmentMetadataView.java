@@ -90,8 +90,6 @@ public class BrokerSegmentMetadataView
   @MonotonicNonNull
   private volatile ImmutableSortedSet<SegmentStatusInCluster> segmentMetadata = null;
 
-  private final BrokerServerView brokerServerView;
-
   private final BrokerSegmentMetadataCache segmentMetadataCache;
 
   /**
@@ -111,7 +109,6 @@ public class BrokerSegmentMetadataView
       final ObjectMapper objectMapper,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerSegmentMetadataCacheConfig config,
-      final BrokerServerView brokerServerView,
       final BrokerSegmentMetadataCache segmentMetadataCache
   )
   {
@@ -127,7 +124,6 @@ public class BrokerSegmentMetadataView
     this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
                                                     .expireAfterAccess(10, TimeUnit.MINUTES)
                                                     .build();
-    this.brokerServerView = brokerServerView;
     this.segmentMetadataCache = segmentMetadataCache;
   }
 
@@ -167,7 +163,6 @@ public class BrokerSegmentMetadataView
   {
     final ImmutableSortedSet<SegmentStatusInCluster> segments = getSegmentMetadata();
     final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataMap = segmentMetadataCache.getSegmentMetadataSnapshot();
-    final Map<SegmentId, ServerSelector> brokerSegmentMetadata = brokerServerView.getSegmentMetadata();
     final List<SegmentTableView> segmentsTableViews = new ArrayList<>();
 
     Set<SegmentId> seenSegments = new HashSet<>();
@@ -182,10 +177,6 @@ public class BrokerSegmentMetadataView
       if (availableSegmentMetadata != null) {
         numReplicas = availableSegmentMetadata.getNumReplicas();
         numRows = availableSegmentMetadata.getNumRows();
-        isAvailable = 1L;
-      } else if (brokerSegmentMetadata.containsKey(segmentId)) {
-        ServerSelector serverSelector = brokerSegmentMetadata.get(segmentId);
-        numReplicas = serverSelector.getAllServers().size();
         isAvailable = 1L;
       }
 
@@ -244,7 +235,7 @@ public class BrokerSegmentMetadataView
     segmentMetadataCachePopulated.countDown();
   }
 
-  ImmutableSortedSet<SegmentStatusInCluster> getSegmentMetadata()
+  private ImmutableSortedSet<SegmentStatusInCluster> getSegmentMetadata()
   {
     if (isMetadataSegmentCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(segmentMetadataCachePopulated);

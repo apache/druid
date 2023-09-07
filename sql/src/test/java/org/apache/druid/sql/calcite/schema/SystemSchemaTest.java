@@ -65,7 +65,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -97,16 +96,16 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
+import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable.SegmentTableView;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
-import org.apache.druid.sql.calcite.util.TestServerInventoryView;
+import org.apache.druid.segment.metadata.TestTimelineServerView;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -134,7 +133,7 @@ import java.util.Set;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
-  private static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create();
+  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
       TestDataBuilder.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
@@ -255,14 +254,15 @@ public class SystemSchemaTest extends CalciteTestBase
 
     BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments(), realtimeSegments),
+        new TestTimelineServerView(walker.getSegments(), realtimeSegments),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataBuilder(
             new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-            new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
+            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+        ),
         new NoopCoordinatorClient()
     );
     cache.start();
@@ -569,15 +569,16 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(metadataView, new ObjectMapper(), authMapper);
-    final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, 2L, true),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, 2L, true),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, 2L, true),
-        new SegmentStatusInCluster(segment1, true, 2, 2L, true),
-        new SegmentStatusInCluster(segment2, false, 0, 2L, true)
+
+    final Set<SegmentTableView> segmentTableViews = new HashSet<>(Arrays.asList(
+      new SegmentTableView(publishedCompactedSegment1, 1L, 0L, 1, 2, 2, true),
+      new SegmentTableView(publishedCompactedSegment2, 1L, 0L, 0, 2, 0, false),
+      new SegmentTableView(publishedUncompactedSegment3, 1L, 0L, 1, 2, 2, false),
+      new SegmentTableView(segment1, 1L, 0L, 1, 2, 2, true),
+      new SegmentTableView(segment2, 1L, 0L, 1, 2, 0, false)
     ));
 
-    EasyMock.expect(metadataView.getSegmentMetadata()).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegmentTableView()).andReturn(segmentTableViews.iterator()).once();
 
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);

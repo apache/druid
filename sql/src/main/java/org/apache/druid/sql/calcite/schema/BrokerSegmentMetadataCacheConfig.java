@@ -33,6 +33,11 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  public static BrokerSegmentMetadataCacheConfig create()
+  {
+    return new BrokerSegmentMetadataCacheConfig();
+  }
+
   public boolean isMetadataSegmentCacheEnable()
   {
     return metadataSegmentCacheEnable;

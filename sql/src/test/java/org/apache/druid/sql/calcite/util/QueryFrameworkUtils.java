@@ -42,6 +42,8 @@ import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.TestTimelineServerView;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
@@ -57,6 +59,8 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
@@ -68,7 +72,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataBuilder;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -143,11 +147,10 @@ public class QueryFrameworkUtils
         injector,
         conglomerate,
         walker,
-        plannerConfig,
         druidSchemaManager
     );
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
+        CalciteTests.createMockSystemSchema(createMockQueryLifecycleFactory(walker, conglomerate), walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
@@ -186,7 +189,7 @@ public class QueryFrameworkUtils
 
   public static DruidSchemaCatalog createMockRootSchema(
       final Injector injector,
-           final QueryRunnerFactoryConglomerate conglomerate,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper
@@ -207,26 +210,27 @@ public class QueryFrameworkUtils
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
       final DruidSchemaManager druidSchemaManager
   )
   {
-    final SegmentMetadataCache cache = new SegmentMetadataCache(
+    final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
-        new SegmentManager(EasyMock.createMock(SegmentLoader.class))
-        {
-          @Override
-          public Set<String> getDataSourceNames()
-          {
-            return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
-          }
-        },
-        createDefaultJoinableFactory(injector),
-        SegmentMetadataCacheConfig.create(),
+        new TestTimelineServerView(walker.getSegments()),
+        BrokerSegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataBuilder(
+            createDefaultJoinableFactory(injector),
+            new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+            {
+              @Override
+              public Set<String> getDataSourceNames()
+              {
+                return ImmutableSet.of(CalciteTests.BROADCAST_DATASOURCE);
+              }
+            }),
+        null
     );
 
     try {
@@ -274,5 +278,5 @@ public class QueryFrameworkUtils
   public static LookupSchema createMockLookupSchema(final Injector injector)
   {
     return new LookupSchema(injector.getInstance(LookupExtractorFactoryContainerProvider.class));
-  } **/
+  }
 }

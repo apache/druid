@@ -9,7 +9,9 @@ public class SegmentMetadataCacheConfig
   private boolean awaitInitializationOnStart = false;
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
-  private boolean enabled = false;
+  @JsonProperty
+  private final boolean enabled = false;
+
   @JsonProperty
   private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
       new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.util;
+package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
@@ -44,9 +44,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;

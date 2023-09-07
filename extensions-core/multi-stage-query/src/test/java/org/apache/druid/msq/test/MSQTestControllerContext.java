@@ -48,7 +48,7 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 

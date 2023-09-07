@@ -176,27 +176,9 @@ public class SegmentMetadataCache
   // For awaitInitialization.
   private final CountDownLatch initialized = new CountDownLatch(1);
 
-  /**
-   * This lock coordinates the access from multiple threads to those variables guarded by this lock.
-   * Currently, there are 2 threads that can access these variables.
-   *
-   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
-   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceSchema} if necessary
-   *   based on the information collected via timeline callbacks.
-   */
-  private final Object lock = new Object();
-
   // All mutable segments.
   @GuardedBy("lock")
   private final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
-
-  // All dataSources that need tables regenerated.
-  @GuardedBy("lock")
-  private final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
-
-  // All segments that need to be refreshed.
-  @GuardedBy("lock")
-  private final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
   // Configured context to attach to internally generated queries.
   private final InternalQueryConfig internalQueryConfig;
@@ -213,6 +195,24 @@ public class SegmentMetadataCache
    * and thus there is no concurrency control for this variable.
    */
   private int totalSegments = 0;
+
+  /**
+   * This lock coordinates the access from multiple threads to those variables guarded by this lock.
+   * Currently, there are 2 threads that can access these variables.
+   *
+   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
+   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceSchema} if necessary
+   *   based on the information collected via timeline callbacks.
+   */
+  protected final Object lock = new Object();
+
+  // All dataSources that need tables regenerated.
+  @GuardedBy("lock")
+  protected final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
+
+  // All segments that need to be refreshed.
+  @GuardedBy("lock")
+  protected final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
   @Inject
   public SegmentMetadataCache(
@@ -281,16 +281,15 @@ public class SegmentMetadataCache
     );
   }
 
-  public void removeFromTable(String s)
+  protected void removeFromTable(String s)
   {
     tables.remove(s);
   }
 
-  public boolean tablesContains(String s)
+  protected boolean tablesContains(String s)
   {
     return tables.containsKey(s);
   }
-
 
   private void startCacheExec()
   {
@@ -901,7 +900,7 @@ public class SegmentMetadataCache
     }
   }
 
-  public Object getLock()
+  Object getLock()
   {
     return lock;
   }

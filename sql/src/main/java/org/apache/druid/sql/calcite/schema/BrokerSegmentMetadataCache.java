@@ -61,7 +61,7 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
   public BrokerSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
-      final SegmentMetadataCacheConfig config,
+      final BrokerSegmentMetadataCacheConfig config,
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter,
@@ -118,17 +118,17 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
 
-    synchronized (getLock()) {
+    synchronized (lock) {
       // Add missing segments back to the refresh list.
       getSegmentsNeedingRefresh().addAll(Sets.difference(segmentsToRefresh, refreshed));
 
       // Compute the list of dataSources to rebuild tables for.
-      dataSourcesToRebuild.addAll(getDataSourcesNeedingRebuild());
+      dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
 
       // Remove those dataSource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceSchema.keySet());
-      getDataSourcesNeedingRebuild().clear();
+      dataSourcesNeedingRebuild.clear();
     }
 
     // Rebuild the dataSources.
@@ -163,13 +163,13 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
   }
 
   @Override
-  public void removeFromTable(String s)
+  protected void removeFromTable(String s)
   {
     tables.remove(s);
   }
 
   @Override
-  public boolean tablesContains(String s)
+  protected boolean tablesContains(String s)
   {
     return tables.containsKey(s);
   }

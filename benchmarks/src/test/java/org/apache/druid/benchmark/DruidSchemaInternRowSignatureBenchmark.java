@@ -76,9 +76,6 @@ public class DruidSchemaInternRowSignatureBenchmark
     public SegmentMetadataCacheForBenchmark(
         final QueryLifecycleFactory queryLifecycleFactory,
         final TimelineServerView serverView,
-        final SegmentManager segmentManager,
-        final JoinableFactory joinableFactory,
-        final PlannerConfig config,
         final Escalator escalator,
         final InternalQueryConfig internalQueryConfig
     )
@@ -86,8 +83,6 @@ public class DruidSchemaInternRowSignatureBenchmark
       super(
           queryLifecycleFactory,
           serverView,
-          segmentManager,
-          joinableFactory,
           SegmentMetadataCacheConfig.create(),
           escalator,
           internalQueryConfig,
@@ -176,9 +171,6 @@ public class DruidSchemaInternRowSignatureBenchmark
     cache = new SegmentMetadataCacheForBenchmark(
         EasyMock.mock(QueryLifecycleFactory.class),
         EasyMock.mock(TimelineServerView.class),
-        null,
-        null,
-        EasyMock.mock(PlannerConfig.class),
         null,
         null
     );

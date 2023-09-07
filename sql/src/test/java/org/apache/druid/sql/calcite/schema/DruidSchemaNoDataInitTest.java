@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -34,8 +33,8 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.calcite.util.TestServerInventoryView;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.segment.metadata.TestTimelineServerView;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,25 +43,27 @@ import java.util.Collections;
 
 public class DruidSchemaNoDataInitTest extends CalciteTestBase
 {
-  private static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create();
+  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
   @Test
   public void testInitializationWithNoData() throws Exception
   {
     try (final Closer closer = Closer.create()) {
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
-      final SegmentMetadataCache cache = new SegmentMetadataCache(
+      final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
           CalciteTests.createMockQueryLifecycleFactory(
               new SpecificSegmentsQuerySegmentWalker(conglomerate),
               conglomerate
           ),
-          new TestServerInventoryView(Collections.emptyList()),
-          new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
-          new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+          new TestTimelineServerView(Collections.emptyList()),
           SEGMENT_CACHE_CONFIG_DEFAULT,
           new NoopEscalator(),
           new InternalQueryConfig(),
-          new NoopServiceEmitter()
+          new NoopServiceEmitter(),
+          new PhysicalDatasourceMetadataBuilder(
+              new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+              new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
+          null
       );
 
       cache.start();

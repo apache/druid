@@ -58,7 +58,7 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;

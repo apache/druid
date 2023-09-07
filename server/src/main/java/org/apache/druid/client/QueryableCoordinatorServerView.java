@@ -75,9 +75,9 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
   public VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
   {
     String table = Iterables.getOnlyElement(dataSource.getTableNames());
-    synchronized (getLock()) {
+    synchronized (lock) {
       // build a new timeline?
-      VersionedIntervalTimeline<String, ServerSelector> timeline = getTimelines().get(table);
+      VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(table);
       Collection<ServerSelector> x = timeline.iterateAllObjects();
       VersionedIntervalTimeline<String, SegmentLoadInfo> newTimeline = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
       newTimeline.addAll(x.stream().map(v -> new VersionedIntervalTimeline.PartitionChunkEntry<String, SegmentLoadInfo>(
@@ -90,7 +90,7 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
   @Override
   public Map<SegmentId, SegmentLoadInfo> getSegmentLoadInfos()
   {
-    return CollectionUtils.mapValues(getSelectors(), ServerSelector::toSegmentLoadInfo);
+    return CollectionUtils.mapValues(selectors, ServerSelector::toSegmentLoadInfo);
   }
 
   @Override
