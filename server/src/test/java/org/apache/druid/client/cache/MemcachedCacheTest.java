@@ -55,6 +55,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.SocketAddress;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -218,34 +221,31 @@ public class MemcachedCacheTest
   }
 
   @Test
-  public void testSslConnection()
-  {
+  public void testClientMode() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
     final MemcachedCacheConfig config = new MemcachedCacheConfig()
     {
       @Override
-      public boolean enableTls()
-      {
+      public boolean enableTls() {
         return true;
       }
 
+      @Override
+      public String getClientMode() {
+        return "dynamic";
+      }
       @Override
       public String getHosts()
       {
         return "localhost:9999";
       }
     };
-    // Static Mode
-    Assert.assertEquals(config.getClientMode(), "static");
-    MemcachedCache client = new MemcachedCache(
-            Suppliers.ofInstance(
-                    StupidResourceHolder.create(new MockMemcachedClient())
-            ),
-            config,
-            NOOP_MONITOR
-    );
-    Assert.assertNull(client.get(new Cache.NamedKey("a", HI)));
-    put(client, "a", HI, 1);
-    Assert.assertEquals(1, get(client, "a", HI));
+    ConnectionFactory connectionFactory = MemcachedCache.createConnectionFactory(memcachedCacheConfig, null, null, null);
+    // Ensure client mode is set to the value passed in config. Default is static
+    Assert.assertEquals(connectionFactory.getClientMode(), ClientMode.Static);
+    // Dynamic mode
+    ConnectionFactory connectionFactoryDynamic = MemcachedCache.createConnectionFactory(config, null, null, null);
+    // Ensure client mode is set to the value passed in config. Default is static
+    Assert.assertEquals(connectionFactoryDynamic.getClientMode(), ClientMode.Dynamic);
   }
 
   @Test

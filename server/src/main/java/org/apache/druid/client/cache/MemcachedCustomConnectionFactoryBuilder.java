@@ -56,7 +56,7 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
   @Override
   public ConnectionFactory build()
   {
-    return new DefaultConnectionFactory()
+    return new DefaultConnectionFactory(clientMode)
     {
       @Override
       public NodeLocator createLocator(List<MemcachedNode> nodes)
