@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
@@ -51,8 +51,8 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("nestedData"),
-                new NestedDataDimensionSchema("t_nestedData_listDim"),
+                new AutoTypeColumnSchema("nestedData"),
+                new AutoTypeColumnSchema("t_nestedData_listDim"),
                 new StringDimensionSchema("t_nestedData_listDim_string"),
                 new StringDimensionSchema("t_nestedData_dim2"),
                 new LongDimensionSchema("t_nestedData_dim3"),
@@ -105,10 +105,10 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("a1"),
-                new NestedDataDimensionSchema("a2"),
-                new NestedDataDimensionSchema("t_a2"),
-                new NestedDataDimensionSchema("t_a1_b1"),
+                new AutoTypeColumnSchema("a1"),
+                new AutoTypeColumnSchema("a2"),
+                new AutoTypeColumnSchema("t_a2"),
+                new AutoTypeColumnSchema("t_a1_b1"),
                 new LongDimensionSchema("t_a1_b1_c1"),
                 new LongDimensionSchema("t_e2_0_b1"),
                 new LongDimensionSchema("tt_a2_0_b1")

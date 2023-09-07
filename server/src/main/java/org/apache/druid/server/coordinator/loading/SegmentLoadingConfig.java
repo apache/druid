@@ -32,57 +32,45 @@ public class SegmentLoadingConfig
 
   private final int maxSegmentsInLoadQueue;
   private final int replicationThrottleLimit;
-  private final int maxReplicaAssignmentsInRun;
   private final int maxLifetimeInLoadQueue;
 
-  private final int maxSegmentsToMove;
-  private final int percentDecommSegmentsToMove;
+  private final int balancerComputeThreads;
 
   private final boolean useRoundRobinSegmentAssignment;
 
   /**
-   * Creates a new SegmentLoadingConfig with recomputed coordinator config values from
+   * Creates a new SegmentLoadingConfig with recomputed coordinator config values
    * based on whether {@link CoordinatorDynamicConfig#isSmartSegmentLoading()}
    * is enabled or not.
    */
   public static SegmentLoadingConfig create(CoordinatorDynamicConfig dynamicConfig, int numUsedSegments)
   {
     if (dynamicConfig.isSmartSegmentLoading()) {
-      // Compute recommended values
-      // Impose a lower bound on both replicationThrottleLimit and maxSegmentsToMove
-      final int throttlePercentage = 2;
+      // Compute replicationThrottleLimit with a lower bound of 100
+      final int throttlePercentage = 5;
       final int replicationThrottleLimit = Math.max(100, numUsedSegments * throttlePercentage / 100);
-
-      // Impose an upper bound on maxSegmentsToMove to ensure that coordinator
-      // run times are bounded. This limit can be relaxed as performance of
-      // the CostBalancerStrategy.computeCost() is improved.
-      final int maxSegmentsToMove = Math.min(1000, replicationThrottleLimit);
-
+      final int numBalancerThreads = CoordinatorDynamicConfig.getDefaultBalancerComputeThreads();
       log.info(
-          "Smart segment loading is enabled. Recomputed replicationThrottleLimit"
-          + " [%,d] (%d%% of used segments [%,d]) and maxSegmentsToMove [%,d].",
-          replicationThrottleLimit, throttlePercentage, numUsedSegments, maxSegmentsToMove
+          "Smart segment loading is enabled. Calculated replicationThrottleLimit[%,d]"
+          + " (%d%% of used segments[%,d]) and numBalancerThreads[%d].",
+          replicationThrottleLimit, throttlePercentage, numUsedSegments, numBalancerThreads
       );
 
       return new SegmentLoadingConfig(
           0,
           replicationThrottleLimit,
-          Integer.MAX_VALUE,
           60,
-          maxSegmentsToMove,
-          100,
-          true
+          true,
+          numBalancerThreads
       );
     } else {
       // Use the configured values
       return new SegmentLoadingConfig(
           dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
           dynamicConfig.getReplicationThrottleLimit(),
-          dynamicConfig.getMaxNonPrimaryReplicantsToLoad(),
           dynamicConfig.getReplicantLifetime(),
-          dynamicConfig.getMaxSegmentsToMove(),
-          dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove(),
-          dynamicConfig.isUseRoundRobinSegmentAssignment()
+          dynamicConfig.isUseRoundRobinSegmentAssignment(),
+          dynamicConfig.getBalancerComputeThreads()
       );
     }
   }
@@ -90,30 +78,21 @@ public class SegmentLoadingConfig
   private SegmentLoadingConfig(
       int maxSegmentsInLoadQueue,
       int replicationThrottleLimit,
-      int maxReplicaAssignmentsInRun,
       int maxLifetimeInLoadQueue,
-      int maxSegmentsToMove,
-      int percentDecommSegmentsToMove,
-      boolean useRoundRobinSegmentAssignment
+      boolean useRoundRobinSegmentAssignment,
+      int balancerComputeThreads
   )
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
     this.replicationThrottleLimit = replicationThrottleLimit;
-    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
     this.maxLifetimeInLoadQueue = maxLifetimeInLoadQueue;
-    this.maxSegmentsToMove = maxSegmentsToMove;
-    this.percentDecommSegmentsToMove = percentDecommSegmentsToMove;
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
+    this.balancerComputeThreads = balancerComputeThreads;
   }
 
   public int getMaxSegmentsInLoadQueue()
   {
     return maxSegmentsInLoadQueue;
-  }
-
-  public int getMaxSegmentsToMove()
-  {
-    return maxSegmentsToMove;
   }
 
   public int getReplicationThrottleLimit()
@@ -131,13 +110,8 @@ public class SegmentLoadingConfig
     return maxLifetimeInLoadQueue;
   }
 
-  public int getMaxReplicaAssignmentsInRun()
+  public int getBalancerComputeThreads()
   {
-    return maxReplicaAssignmentsInRun;
-  }
-
-  public int getPercentDecommSegmentsToMove()
-  {
-    return percentDecommSegmentsToMove;
+    return balancerComputeThreads;
   }
 }

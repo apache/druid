@@ -80,7 +80,7 @@ import java.util.concurrent.TimeoutException;
  * similarities and differences.
  *
  * Used by
- * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(QueryProcessingPool, Iterable)}
+ * {@link org.apache.druid.query.groupby.GroupingEngine#mergeRunners(QueryProcessingPool, Iterable)}
  */
 public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 {

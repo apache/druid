@@ -83,7 +83,7 @@ public class JwtAuthFilter implements Filter
         // Parses the JWT and performs the ID Token validation specified in the OpenID spec: https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
         IDTokenClaimsSet claims = tokenValidator.validate(JWTParser.parse(idToken.get()), null);
         if (claims != null) {
-          Optional<String> claim = Optional.of(claims.getStringClaim(oidcConfig.getOidcClaim()));
+          Optional<String> claim = Optional.ofNullable(claims.getStringClaim(oidcConfig.getOidcClaim()));
 
           if (claim.isPresent()) {
             LOG.debug("Authentication successful for " + oidcConfig.getClientID());

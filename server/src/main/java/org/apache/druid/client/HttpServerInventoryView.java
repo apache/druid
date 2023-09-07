@@ -495,12 +495,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         final boolean isSynced = serverHolder.syncer.isSyncedSuccessfully();
         serviceEmitter.emit(
-            eventBuilder.build("serverview/sync/healthy", isSynced ? 1 : 0)
+            eventBuilder.setMetric("serverview/sync/healthy", isSynced ? 1 : 0)
         );
         final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
         if (unstableTimeMillis > 0) {
           serviceEmitter.emit(
-              eventBuilder.build("serverview/sync/unstableTime", unstableTimeMillis)
+              eventBuilder.setMetric("serverview/sync/unstableTime", unstableTimeMillis)
           );
         }
       });
@@ -540,7 +540,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             smileMapper,
             httpClient,
             inventorySyncExecutor,
-            new URL(druidServer.getScheme(), hostAndPort.getHostText(), hostAndPort.getPort(), "/"),
+            new URL(druidServer.getScheme(), hostAndPort.getHost(), hostAndPort.getPort(), "/"),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,
             config.getServerTimeout(),

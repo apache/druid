@@ -65,12 +65,12 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // See https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
       // There are inconsistent units for these. Most are bytes.
-      emitter.emit(builder.build(StringUtils.format("cgroup/memory/%s", key), value));
+      emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory/%s", key), value));
     });
     stat.getNumaMemoryStats().forEach((key, value) -> {
       final ServiceMetricEvent.Builder builder = builder().setDimension("numaZone", Long.toString(key));
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-      value.forEach((k, v) -> emitter.emit(builder.build(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
+      value.forEach((k, v) -> emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
     });
     return true;
   }

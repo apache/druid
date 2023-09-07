@@ -63,7 +63,8 @@ public class HadoopTuningConfigTest
         null,
         null,
         null,
-        null
+        null,
+        1
     );
 
     HadoopTuningConfig actual = jsonReadWriteRead(JSON_MAPPER.writeValueAsString(expected), HadoopTuningConfig.class);

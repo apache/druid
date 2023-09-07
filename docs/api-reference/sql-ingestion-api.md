@@ -3,6 +3,8 @@ id: sql-ingestion-api
 title: SQL-based ingestion API
 sidebar_label: SQL-based ingestion
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
@@ -23,9 +25,11 @@ sidebar_label: SQL-based ingestion
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 The **Query** view in the web console provides a friendly experience for the multi-stage query task engine (MSQ task
 engine) and multi-stage query architecture. We recommend using the web console if you do not need a programmatic
@@ -52,9 +56,10 @@ As an experimental feature, this endpoint also accepts SELECT queries. SELECT qu
 by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The
 behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="1" label="HTTP">
+
 
 ```
 POST /druid/v2/sql/task
@@ -69,7 +74,10 @@ POST /druid/v2/sql/task
 }
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="2" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
@@ -83,7 +91,10 @@ curl --location --request POST 'https://<username>:<password>@<your-instance>:<p
   }'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="3" label="Python">
+
 
 ```python
 import json
@@ -108,7 +119,9 @@ print(response.text)
 
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
@@ -132,22 +145,29 @@ You can retrieve status of a query to see if it is still running, completed succ
 
 #### Request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="4" label="HTTP">
+
 
 ```
 GET /druid/indexer/v1/task/<taskId>/status
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="5" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/status'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="6" label="Python">
+
 
 ```python
 import requests
@@ -163,7 +183,9 @@ response = requests.get(url, headers=headers, data=payload, auth=('USER', 'PASSW
 print(response.text)
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
@@ -210,22 +232,29 @@ For an explanation of the fields in a report, see [Report response fields](#repo
 
 #### Request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="7" label="HTTP">
+
 
 ```
 GET /druid/indexer/v1/task/<taskId>/reports
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="8" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/reports'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="9" label="Python">
+
 
 ```python
 import requests
@@ -238,7 +267,9 @@ response = requests.get(url, headers=headers, auth=('USER', 'PASSWORD'))
 print(response.text)
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
@@ -257,7 +288,19 @@ The response shows an example report for a query.
         "startTime": "2022-09-14T22:12:09.266Z",
         "durationMs": 28227,
         "pendingTasks": 0,
-        "runningTasks": 2
+        "runningTasks": 2,
+        "segmentLoadStatus": {
+          "state": "SUCCESS",
+          "dataSource": "kttm_simple",
+          "startTime": "2022-09-14T23:12:09.266Z",
+          "duration": 15,
+          "totalSegments": 1,
+          "usedSegments": 1,
+          "precachedSegments": 0,
+          "onDemandSegments": 0,
+          "pendingSegments": 0,
+          "unknownSegments": 0
+        }
       },
       "stages": [
         {
@@ -513,7 +556,7 @@ The response shows an example report for a query.
                 "0": 1,
                 "1": 1,
                 "2": 1
-              }, 
+              },
               "totalMergersForUltimateLevel": 1,
               "progressDigest": 1
             }
@@ -562,6 +605,16 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.durationMs` | Milliseconds elapsed after the query has started running. -1 denotes that the query hasn't started running yet. |
 | `multiStageQuery.payload.status.pendingTasks` | Number of tasks that are not fully started. -1 denotes that the number is currently unknown. |
 | `multiStageQuery.payload.status.runningTasks` | Number of currently running tasks. Should be at least 1 since the controller is included. |
+| `multiStageQuery.payload.status.segmentLoadStatus` | Segment loading container. Only present after the segments have been published. |
+| `multiStageQuery.payload.status.segmentLoadStatus.state` | Either INIT, WAITING, SUCCESS, FAILED or TIMED_OUT. |
+| `multiStageQuery.payload.status.segmentLoadStatus.startTime` | Time since which the controller has been waiting for the segments to finish loading. |
+| `multiStageQuery.payload.status.segmentLoadStatus.duration` | The duration in milliseconds that the controller has been waiting for the segments to load. |
+| `multiStageQuery.payload.status.segmentLoadStatus.totalSegments` | The total number of segments generated by the job. This includes tombstone segments (if any). |
+| `multiStageQuery.payload.status.segmentLoadStatus.usedSegments` | The number of segments which are marked as used based on the load rules. Unused segments can be cleaned up at any time. |
+| `multiStageQuery.payload.status.segmentLoadStatus.precachedSegments` | The number of segments which are marked as precached and served by historicals, as per the load rules. |
+| `multiStageQuery.payload.status.segmentLoadStatus.onDemandSegments` | The number of segments which are not loaded on any historical, as per the load rules. |
+| `multiStageQuery.payload.status.segmentLoadStatus.pendingSegments` | The number of segments remaining to be loaded. |
+| `multiStageQuery.payload.status.segmentLoadStatus.unknownSegments` | The number of segments whose status is unknown. |
 | `multiStageQuery.payload.status.errorReport` | Error object. Only present if there was an error. |
 | `multiStageQuery.payload.status.errorReport.taskId` | The task that reported the error, if known. May be a controller task or a worker task. |
 | `multiStageQuery.payload.status.errorReport.host` | The hostname and port of the task that reported the error, if known. |
@@ -589,22 +642,29 @@ The following table describes the response fields when you retrieve a report for
 
 #### Request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="10" label="HTTP">
+
 
 ```
 POST /druid/indexer/v1/task/<taskId>/shutdown
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="11" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request POST 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="12" label="Python">
+
 
 ```python
 import requests
@@ -620,7 +680,9 @@ response = requests.post(url, headers=headers, data=payload, auth=('USER', 'PASS
 print(response.text)
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 

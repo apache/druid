@@ -39,7 +39,7 @@ export const QueryErrorPane = React.memo(function QueryErrorPane(props: QueryErr
     return <div className="query-error-pane">{error.message}</div>;
   }
 
-  const { position, suggestion } = error;
+  const { startRowColumn, suggestion } = error;
   let suggestionElement: JSX.Element | undefined;
   if (suggestion && queryString && onQueryStringChange) {
     const newQuery = suggestion.fn(queryString);
@@ -69,14 +69,14 @@ export const QueryErrorPane = React.memo(function QueryErrorPane(props: QueryErr
       )}
       {error.errorMessageWithoutExpectation && (
         <p>
-          {position ? (
+          {startRowColumn ? (
             <HighlightText
               text={error.errorMessageWithoutExpectation}
               find={/\(line \[\d+], column \[\d+]\)/}
               replace={found => (
                 <a
                   onClick={() => {
-                    moveCursorTo(position);
+                    moveCursorTo(startRowColumn);
                   }}
                 >
                   {found}

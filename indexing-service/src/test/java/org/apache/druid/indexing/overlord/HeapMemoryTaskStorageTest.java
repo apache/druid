@@ -47,8 +47,8 @@ public class HeapMemoryTaskStorageTest
   @Test
   public void testRemoveTasksOlderThan()
   {
-    final NoopTask task1 = NoopTask.create("foo");
-    final NoopTask task2 = NoopTask.create("bar");
+    final NoopTask task1 = NoopTask.create();
+    final NoopTask task2 = NoopTask.create();
     storage.insert(task1, TaskStatus.success(task1.getId()));
     storage.insert(task2, TaskStatus.running(task2.getId()));
 
@@ -64,8 +64,8 @@ public class HeapMemoryTaskStorageTest
   @Test
   public void testGetTaskInfos()
   {
-    final NoopTask task1 = NoopTask.create("foo");
-    final NoopTask task2 = NoopTask.create("bar");
+    final NoopTask task1 = NoopTask.create();
+    final NoopTask task2 = NoopTask.create();
     storage.insert(task1, TaskStatus.success(task1.getId()));
     storage.insert(task2, TaskStatus.running(task2.getId()));
 

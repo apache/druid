@@ -57,6 +57,8 @@ Update your Druid runtime properties with the new metadata configuration.
 
 ### Create Druid tables
 
+**If you have set `druid.metadata.storage.connector.createTables` to `true` (which is the default), and your metadata connect user has DDL privileges, you can disregard this section as Druid will create metadata tables automatically on start up.**
+
 Druid provides a `metadata-init` tool for creating Druid's metadata tables. After initializing the Druid database, you can run the commands shown below from the root of the Druid package to initialize the tables.
 
 In the example commands below:
@@ -81,6 +83,10 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 cd ${DRUID_ROOT}
 java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"postgresql-metadata-storage\"]" -Ddruid.metadata.storage.type=postgresql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid
 ```
+
+### Update Druid tables to latest compatible schema
+
+The same command as above can be used to update Druid metadata tables to the latest version. If any table already exists, it is not created again but any ALTER statements that may be required are still executed.
 
 ### Import metadata
 
