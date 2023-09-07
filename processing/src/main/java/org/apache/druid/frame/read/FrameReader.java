@@ -110,7 +110,14 @@ public class FrameReader
 
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
 
-      if (columnType.getType() == ValueType.ARRAY && columnType.getType() != ValueType.STRING) {
+      // TODO(laksh): comment
+      if (columnType.getType() == ValueType.ARRAY
+          && Preconditions.checkNotNull(
+          columnType.getElementType(),
+          "Element type for array column [%s]",
+          signature.getColumnName(columnNumber)
+      ).getType() != ValueType.STRING
+      ) {
         if (!unsupportedColumnAndType.isPresent()) {
           unsupportedColumnAndType = Optional.of(Pair.of(signature.getColumnName(columnNumber), columnType));
         }

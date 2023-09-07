@@ -60,11 +60,6 @@ public class LongFieldReader extends NumericFieldReader
     return ValueType.LONG;
   }
 
-  public Class<? extends Long> getClassOfObject()
-  {
-    return Long.class;
-  }
-
   @Override
   public ColumnValueSelector<?> getColumnValueSelector(
       final Memory memory,

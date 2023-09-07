@@ -29,8 +29,6 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
  */
 public class DoubleFieldWriter extends NumericFieldWriter
 {
-  public static final int SIZE = Double.BYTES + Byte.BYTES;
-
   private final BaseDoubleColumnValueSelector selector;
 
   public static DoubleFieldWriter forPrimitive(final BaseDoubleColumnValueSelector selector)
