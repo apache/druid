@@ -576,6 +576,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withDatasourcesToNotKillPendingSegmentsIn(Set<String> datasources)
+    {
+      this.dataSourcesToNotKillStalePendingSegmentsIn = datasources;
+      return this;
+    }
+
     public Builder withKillTaskSlotRatio(Double killTaskSlotRatio)
     {
       this.killTaskSlotRatio = killTaskSlotRatio;

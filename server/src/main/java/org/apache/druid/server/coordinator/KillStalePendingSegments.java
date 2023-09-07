@@ -19,27 +19,29 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class KillStalePendingSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillStalePendingSegments.class);
-  private static final Period KEEP_PENDING_SEGMENTS_OFFSET = new Period("P1D");
+  private static final Period DURATION_TO_RETAIN = new Period("P1D");
 
   private final OverlordClient overlordClient;
 
@@ -52,55 +54,75 @@ public class KillStalePendingSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    final List<DateTime> createdTimes = new ArrayList<>();
-
-    // Include one complete status so we can get the time of the last-created complete task. (The Overlord API returns
-    // complete tasks in descending order of created_date.)
-    final List<TaskStatusPlus> statuses =
-        ImmutableList.copyOf(FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 1), true));
-    createdTimes.add(
-        statuses
-            .stream()
-            .filter(status -> status.getStatusCode() == null || !status.getStatusCode().isComplete())
-            .map(TaskStatusPlus::getCreatedTime)
-            .min(Comparators.naturalNullsFirst())
-            .orElse(DateTimes.nowUtc()) // If there are no active tasks, this returns the current time.
+    final Set<String> killDatasources = new HashSet<>(
+        params.getUsedSegmentsTimelinesPerDataSource().keySet()
+    );
+    killDatasources.removeAll(
+        params.getCoordinatorDynamicConfig()
+              .getDataSourcesToNotKillStalePendingSegmentsIn()
     );
 
-    final TaskStatusPlus completeTaskStatus =
-        statuses.stream()
-                .filter(status -> status != null && status.getStatusCode().isComplete())
-                .findFirst()
-                .orElse(null);
-    if (completeTaskStatus != null) {
-      createdTimes.add(completeTaskStatus.getCreatedTime());
-    }
-    createdTimes.sort(Comparators.naturalNullsFirst());
-
-    // There should be at least one createdTime because the current time is added to the 'createdTimes' list if there
-    // is no running/pending/waiting tasks.
-    Preconditions.checkState(!createdTimes.isEmpty(), "Failed to gather createdTimes of tasks");
-
-    // If there is no running/pending/waiting/complete tasks, stalePendingSegmentsCutoffCreationTime is
-    // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
-    final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
-    for (String dataSource : params.getUsedSegmentsTimelinesPerDataSource().keySet()) {
-      if (!params.getCoordinatorDynamicConfig().getDataSourcesToNotKillStalePendingSegmentsIn().contains(dataSource)) {
-        final int pendingSegmentsKilled = FutureUtils.getUnchecked(
-            overlordClient.killPendingSegments(
-                dataSource,
-                new Interval(DateTimes.MIN, stalePendingSegmentsCutoffCreationTime)
-            ),
-            true
-        );
+    final DateTime maxCreatedTime = getMaxCreatedTimeOfStalePendingSegments();
+    for (String dataSource : killDatasources) {
+      int pendingSegmentsKilled = FutureUtils.getUnchecked(
+          overlordClient.killPendingSegments(
+              dataSource,
+              new Interval(DateTimes.MIN, maxCreatedTime)
+          ),
+          true
+      );
+      if (pendingSegmentsKilled > 0) {
         log.info(
-            "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
-            pendingSegmentsKilled,
-            stalePendingSegmentsCutoffCreationTime,
-            dataSource
+            "Killed [%d] pendingSegments created before [%s] for datasource[%s].",
+            pendingSegmentsKilled, maxCreatedTime, dataSource
+        );
+        params.getCoordinatorStats().add(
+            Stats.Kill.PENDING_SEGMENTS,
+            RowKey.of(Dimension.DATASOURCE, dataSource),
+            pendingSegmentsKilled
         );
       }
     }
     return params;
+  }
+
+  /**
+   * Computes the upper limit on created time of pending segments below which
+   * they are considered to be stale and can be safely deleted. The limit is
+   * determined to ensure that the following pending segments are retained for
+   * at least {@link #DURATION_TO_RETAIN}:
+   * <ul>
+   * <li>Pending segments created by any active task (across all datasources)</li>
+   * <li>Pending segments created by the latest completed task (across all datasources)</li>
+   * </ul>
+   */
+  private DateTime getMaxCreatedTimeOfStalePendingSegments()
+  {
+    // Fetch the statuses of all active tasks and the latest completed task
+    // (The Overlord API returns complete tasks in descending order of created_date.)
+    final List<TaskStatusPlus> statuses = ImmutableList.copyOf(
+        FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, 1), true)
+    );
+
+    DateTime earliestActiveTaskStart = DateTimes.nowUtc();
+    DateTime latestCompletedTaskStart = null;
+    for (TaskStatusPlus status : statuses) {
+      if (status.getStatusCode() == null) {
+        // Unknown status
+      } else if (status.getStatusCode().isComplete()) {
+        latestCompletedTaskStart = DateTimes.laterOf(
+            latestCompletedTaskStart,
+            status.getCreatedTime()
+        );
+      } else {
+        earliestActiveTaskStart = DateTimes.earlierOf(
+            earliestActiveTaskStart,
+            status.getCreatedTime()
+        );
+      }
+    }
+
+    return DateTimes.earlierOf(latestCompletedTaskStart, earliestActiveTaskStart)
+                    .minus(DURATION_TO_RETAIN);
   }
 }
