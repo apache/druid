@@ -22,13 +22,15 @@ package org.apache.druid.frame.field;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
+// TODO(laksh): Add comment here
 public abstract class NumericFieldWriter implements FieldWriter
 {
   public static final byte NULL_BYTE = 0x00;
   public static final byte NOT_NULL_BYTE = 0x01;
 
+  // TODO(laksh): Add comment here
   public static final byte ARRAY_NULL_BYTE = 0x01;
-  public static final byte ARRAY_NOT_NULL_BYTE = 0x01;
+  public static final byte ARRAY_NOT_NULL_BYTE = 0x02;
 
   private final BaseNullableColumnValueSelector selector;
   private final byte nullIndicatorByte;

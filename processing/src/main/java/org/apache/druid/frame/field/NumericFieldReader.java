@@ -31,7 +31,7 @@ import org.apache.druid.segment.column.ValueTypes;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public abstract class NumericFieldReader<T extends Number> implements FieldReader
+public abstract class NumericFieldReader implements FieldReader
 {
 
   private final byte nullIndicatorByte;
@@ -48,7 +48,7 @@ public abstract class NumericFieldReader<T extends Number> implements FieldReade
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
   {
-    return new Selector(memory, fieldPointer);
+    return getColumnValueSelector(memory, fieldPointer, nullIndicatorByte);
   }
 
   @Override
@@ -71,72 +71,43 @@ public abstract class NumericFieldReader<T extends Number> implements FieldReade
     return memory.getByte(position) == nullIndicatorByte;
   }
 
+
   @Override
   public boolean isComparable()
   {
     return true;
   }
 
+  public abstract ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
+  );
+
   public abstract ValueType getValueType();
 
-  public abstract Class<? extends T> getClassOfObject();
-
-  public abstract T getValueFromMemory(Memory memory, long position);
-
-  public class Selector implements ColumnValueSelector<T>
+  public abstract static class Selector
   {
 
     private final Memory dataRegion;
     private final ReadableFieldPointer fieldPointer;
+    private final byte nullIndicatorByte;
 
-    private Selector(final Memory dataRegion, final ReadableFieldPointer fieldPointer)
+
+    public Selector(
+        final Memory dataRegion,
+        final ReadableFieldPointer fieldPointer,
+        final byte nullIndicatorByte
+    )
     {
       this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
+      this.nullIndicatorByte = nullIndicatorByte;
     }
 
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    protected boolean _isNull()
     {
-
-    }
-
-    @Override
-    public double getDouble()
-    {
-      return getObject().doubleValue();
-    }
-
-    @Override
-    public float getFloat()
-    {
-      return getObject().floatValue();
-    }
-
-    @Override
-    public long getLong()
-    {
-      return getObject().longValue();
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return NumericFieldReader.this.isNull(dataRegion, fieldPointer.position());
-    }
-
-    @Nonnull
-    @Override
-    public T getObject()
-    {
-      assert NullHandling.replaceWithDefault() || !isNull();
-      return NumericFieldReader.this.getValueFromMemory(dataRegion, fieldPointer.position() + Byte.BYTES);
-    }
-
-    @Override
-    public Class<? extends T> classOfObject()
-    {
-      return getClassOfObject();
+      return dataRegion.getByte(fieldPointer.position()) == nullIndicatorByte;
     }
   }
 }

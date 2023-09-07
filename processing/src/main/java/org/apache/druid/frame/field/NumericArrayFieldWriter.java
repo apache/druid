@@ -36,24 +36,24 @@ public class NumericArrayFieldWriter implements FieldWriter
   public static final byte NON_NULL_ROW = 0x01;
 
   // Different from NULL_ROW and NON_NULL_ROW bytes
-  public static final byte ARRAY_TERMINATOR = 0x02;
+  public static final byte ARRAY_TERMINATOR = 0x00;
 
   private final ColumnValueSelector selector;
   private final NumericFieldWriterFactory writerFactory;
 
   public static NumericArrayFieldWriter getLongArrayFieldWriter(final ColumnValueSelector selector)
   {
-    return new NumericArrayFieldWriter(selector, selector1 -> new LongFieldWriter(selector1, true));
+    return new NumericArrayFieldWriter(selector, LongFieldWriter::forArray);
   }
 
   public static NumericArrayFieldWriter getFloatArrayFieldWriter(final ColumnValueSelector selector)
   {
-    return new NumericArrayFieldWriter(selector, selector1 -> new FloatFieldWriter(selector1, true));
+    return new NumericArrayFieldWriter(selector, FloatFieldWriter::forArray);
   }
 
   public static NumericArrayFieldWriter getDoubleArrayFieldWriter(final ColumnValueSelector selector)
   {
-    return new NumericArrayFieldWriter(selector, selector1 -> new DoubleFieldWriter(selector1, true));
+    return new NumericArrayFieldWriter(selector, DoubleFieldWriter::forArray);
   }
 
   public NumericArrayFieldWriter(final ColumnValueSelector selector, NumericFieldWriterFactory writerFactory)
@@ -65,7 +65,8 @@ public class NumericArrayFieldWriter implements FieldWriter
   @Override
   public long writeTo(WritableMemory memory, long position, long maxSize)
   {
-    if (selector.isNull()) {
+    Object row = selector.getObject();
+    if (row == null) {
       int requiredSize = Byte.BYTES;
       if (requiredSize > maxSize) {
         return -1;
@@ -73,7 +74,7 @@ public class NumericArrayFieldWriter implements FieldWriter
       memory.putByte(position, NULL_ROW);
       return requiredSize;
     } else {
-      List<? extends Number> list = FrameWriterUtils.getNumericArrayFromNumericArraySelector(selector);
+      List<? extends Number> list = FrameWriterUtils.getNumericArrayFromNumericArray(row);
 
       if (list == null) {
         int requiredSize = Byte.BYTES;
@@ -120,6 +121,7 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public boolean isNull()
         {
+          // TODO: Add a comment why NullHandling.replaceWithDefault() is not required here
           return !NullHandling.replaceWithDefault() && getObject() == null;
         }
 

@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 /**
  * Wraps a {@link BaseFloatColumnValueSelector} and writes field values.
@@ -31,7 +32,17 @@ public class FloatFieldWriter extends NumericFieldWriter
 {
   private final BaseFloatColumnValueSelector selector;
 
-  public FloatFieldWriter(final BaseFloatColumnValueSelector selector, final boolean forArray)
+  public static FloatFieldWriter forPrimitive(final BaseFloatColumnValueSelector selector)
+  {
+    return new FloatFieldWriter(selector, false);
+  }
+
+  public static FloatFieldWriter forArray(final BaseFloatColumnValueSelector selector)
+  {
+    return new FloatFieldWriter(selector, true);
+  }
+
+  private FloatFieldWriter(final BaseFloatColumnValueSelector selector, final boolean forArray)
   {
     super(selector, forArray);
     this.selector = selector;

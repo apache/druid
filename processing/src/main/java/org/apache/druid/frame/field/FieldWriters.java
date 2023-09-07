@@ -64,23 +64,38 @@ public class FieldWriters
     }
 
     switch (columnType.getType()) {
+
       case LONG:
         return makeLongWriter(columnSelectorFactory, columnName);
+
       case FLOAT:
         return makeFloatWriter(columnSelectorFactory, columnName);
+
       case DOUBLE:
         return makeDoubleWriter(columnSelectorFactory, columnName);
+
       case STRING:
         return makeStringWriter(columnSelectorFactory, columnName);
-      case ARRAY:
-        switch (columnType.getElementType().getType()) {
-          case STRING:
-            return makeStringArrayWriter(columnSelectorFactory, columnName);
-          default:
-            throw new UnsupportedColumnTypeException(columnName, columnType);
-        }
+
       case COMPLEX:
         return makeComplexWriter(columnSelectorFactory, columnName, columnType.getComplexTypeName());
+
+      case ARRAY:
+
+        switch (columnType.getElementType().getType()) {
+
+          case STRING:
+            return makeStringArrayWriter(columnSelectorFactory, columnName);
+
+          case LONG:
+            return makeLongArrayWriter(columnSelectorFactory, columnName);
+
+          case FLOAT:
+            return makeFloatArrayWriter(columnSelectorFactory, columnName);
+
+          case DOUBLE:
+            return makeDoubleArrayWriter(columnSelectorFactory, columnName);
+        }
       default:
         throw new UnsupportedColumnTypeException(columnName, columnType);
     }
@@ -92,7 +107,7 @@ public class FieldWriters
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new LongFieldWriter(selector, false);
+    return LongFieldWriter.forPrimitive(selector);
   }
 
   private static FieldWriter makeFloatWriter(
@@ -101,7 +116,7 @@ public class FieldWriters
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new FloatFieldWriter(selector, false);
+    return FloatFieldWriter.forPrimitive(selector);
   }
 
   private static FieldWriter makeDoubleWriter(
@@ -110,7 +125,7 @@ public class FieldWriters
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new DoubleFieldWriter(selector, false);
+    return DoubleFieldWriter.forPrimitive(selector);
   }
 
   private static FieldWriter makeStringWriter(
@@ -127,9 +142,35 @@ public class FieldWriters
       final String columnName
   )
   {
-    //noinspection rawtypes
-    final ColumnValueSelector selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
     return new StringArrayFieldWriter(selector);
+  }
+
+  private static FieldWriter makeLongArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return NumericArrayFieldWriter.getLongArrayFieldWriter(selector);
+  }
+
+  private static FieldWriter makeFloatArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return NumericArrayFieldWriter.getFloatArrayFieldWriter(selector);
+  }
+
+  private static FieldWriter makeDoubleArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return NumericArrayFieldWriter.getDoubleArrayFieldWriter(selector);
   }
 
   private static FieldWriter makeComplexWriter(

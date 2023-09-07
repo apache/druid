@@ -20,21 +20,28 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ValueType;
 
 /**
- * Reads values written by {@link DoubleFieldWriter}.
- *
- * Values are sortable as bytes without decoding.
- *
- * Format:
- *
- * - 1 byte: {@link DoubleFieldWriter#NULL_BYTE} or {@link DoubleFieldWriter#NOT_NULL_BYTE}
- * - 8 bytes: encoded double, using {@link TransformUtils#transformFromDouble(double)}
  */
-public class DoubleFieldReader extends NumericFieldReader<Double>
+public class DoubleFieldReader extends NumericFieldReader
 {
-  DoubleFieldReader(final boolean forArray)
+
+  public static DoubleFieldReader forPrimitive()
+  {
+    return new DoubleFieldReader(false);
+  }
+
+  public static DoubleFieldReader forArray()
+  {
+    return new DoubleFieldReader(true);
+  }
+
+  private DoubleFieldReader(final boolean forArray)
   {
     super(forArray);
   }
@@ -46,14 +53,46 @@ public class DoubleFieldReader extends NumericFieldReader<Double>
   }
 
   @Override
-  public Class<? extends Double> getClassOfObject()
+  public ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
+  )
   {
-    return Double.class;
+    return new DoubleFieldReader.DoubleFieldSelector(memory, fieldPointer, nullIndicatorByte);
   }
 
-  @Override
-  public Double getValueFromMemory(Memory memory, long position)
+  private static class DoubleFieldSelector extends NumericFieldReader.Selector implements DoubleColumnSelector
   {
-    return TransformUtils.detransformToDouble(memory.getLong(position));
+
+    final Memory dataRegion;
+    final ReadableFieldPointer fieldPointer;
+
+    public DoubleFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+    {
+      super(dataRegion, fieldPointer, nullIndicatorByte);
+      this.dataRegion = dataRegion;
+      this.fieldPointer = fieldPointer;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      assert NullHandling.replaceWithDefault() || !isNull();
+      final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
+      return TransformUtils.detransformToDouble(bits);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return super._isNull();
+    }
   }
 }

@@ -20,6 +20,10 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.column.ValueType;
 
 /**
@@ -32,9 +36,20 @@ import org.apache.druid.segment.column.ValueType;
  * - 1 byte: {@link FloatFieldWriter#NULL_BYTE} or {@link FloatFieldWriter#NOT_NULL_BYTE}
  * - 4 bytes: encoded float, using {@link TransformUtils#transformFromFloat(float)}
  */
-public class FloatFieldReader extends NumericFieldReader<Float>
+public class FloatFieldReader extends NumericFieldReader
 {
-  FloatFieldReader(final boolean forArray)
+
+  public static FloatFieldReader forPrimitive()
+  {
+    return new FloatFieldReader(false);
+  }
+
+  public static FloatFieldReader forArray()
+  {
+    return new FloatFieldReader(true);
+  }
+
+  private FloatFieldReader(final boolean forArray)
   {
     super(forArray);
   }
@@ -46,14 +61,46 @@ public class FloatFieldReader extends NumericFieldReader<Float>
   }
 
   @Override
-  public Class<? extends Float> getClassOfObject()
+  public ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
+  )
   {
-    return Float.class;
+    return new FloatFieldSelector(memory, fieldPointer, nullIndicatorByte);
   }
 
-  @Override
-  public Float getValueFromMemory(Memory memory, long position)
+  private static class FloatFieldSelector extends NumericFieldReader.Selector implements FloatColumnSelector
   {
-    return TransformUtils.detransformToFloat(memory.getInt(position));
+
+    final Memory dataRegion;
+    final ReadableFieldPointer fieldPointer;
+
+    public FloatFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+    {
+      super(dataRegion, fieldPointer, nullIndicatorByte);
+      this.dataRegion = dataRegion;
+      this.fieldPointer = fieldPointer;
+    }
+
+    @Override
+    public float getFloat()
+    {
+      assert NullHandling.replaceWithDefault() || !isNull();
+      final int bits = dataRegion.getInt(fieldPointer.position() + Byte.BYTES);
+      return TransformUtils.detransformToFloat(bits);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return super._isNull();
+    }
   }
 }

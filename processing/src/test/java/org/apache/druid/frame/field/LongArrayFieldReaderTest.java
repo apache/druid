@@ -85,7 +85,7 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final ColumnValueSelector<?> readSelector =
-        new LongFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 

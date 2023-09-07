@@ -123,6 +123,7 @@ public abstract class NumericArrayFieldReader implements FieldReader
       return firstByte == NumericArrayFieldWriter.NULL_ROW;
     }
 
+    @Nullable
     public abstract T getIndividualValueAtMemory(Memory memory, long position);
 
     public abstract int getIndividualFieldSize();
@@ -162,7 +163,7 @@ public abstract class NumericArrayFieldReader implements FieldReader
 
       boolean rowTerminatorSeen = false;
 
-      while (position < limit && !rowTerminatorSeen) {
+      while (position < limit) {
         final byte kind = memory.getByte(position);
 
         if (kind == NumericArrayFieldWriter.ARRAY_TERMINATOR) {

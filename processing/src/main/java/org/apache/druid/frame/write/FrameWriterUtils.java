@@ -175,11 +175,8 @@ public class FrameWriterUtils
   }
 
   @Nullable
-  public static List<? extends Number> getNumericArrayFromNumericArraySelector(
-      @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
-  )
+  public static List<? extends Number> getNumericArrayFromNumericArray(Object row)
   {
-    Object row = selector.getObject();
     if (row == null) {
       return null;
     } else if (row instanceof Number) {

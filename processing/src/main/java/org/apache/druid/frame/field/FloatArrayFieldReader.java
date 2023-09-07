@@ -22,6 +22,8 @@ package org.apache.druid.frame.field;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 public class FloatArrayFieldReader extends NumericArrayFieldReader
 {
   @Override
@@ -33,12 +35,17 @@ public class FloatArrayFieldReader extends NumericArrayFieldReader
     return new Selector<Float>(memory, fieldPointer)
     {
 
+      @Nullable
       @Override
       public Float getIndividualValueAtMemory(Memory memory, long position)
       {
-        return new FloatFieldReader(true)
-            .makeColumnValueSelector(memory, new ConstantFieldPointer(position))
-            .getFloat();
+        ColumnValueSelector<?> columnValueSelector =
+            FloatFieldReader.forArray()
+                            .makeColumnValueSelector(memory, new ConstantFieldPointer(position));
+        if (columnValueSelector.isNull()) {
+          return null;
+        }
+        return columnValueSelector.getFloat();
       }
 
       @Override

@@ -30,16 +30,20 @@ import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.row.FrameCursorFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -57,15 +61,21 @@ public class FrameReader
   // Field readers, for row-based frames.
   private final List<FieldReader> fieldReaders;
 
+  // TODO(laksh): Write comment why this is a hack for now
+  private final Optional<Pair<String, ColumnType>> unsupportedColumnAndType;
+
+
   private FrameReader(
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders,
-      final List<FieldReader> fieldReaders
+      final List<FieldReader> fieldReaders,
+      final Optional<Pair<String, ColumnType>> unsupportedColumnAndType
   )
   {
     this.signature = signature;
     this.columnReaders = columnReaders;
     this.fieldReaders = fieldReaders;
+    this.unsupportedColumnAndType = unsupportedColumnAndType;
   }
 
   /**
@@ -74,6 +84,7 @@ public class FrameReader
    * If the columnType is null, we store the data as {@link ColumnType#NESTED_DATA}. This can be done if we know that
    * the data that we receive can be serded generically using the nested data. It is currently used in the brokers to
    * store the data with unknown types into frames.
+   *
    * @param signature signature used to generate the reader
    */
   public static FrameReader create(final RowSignature signature)
@@ -87,6 +98,7 @@ public class FrameReader
 
     final List<FrameColumnReader> columnReaders = new ArrayList<>(signature.size());
     final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
+    Optional<Pair<String, ColumnType>> unsupportedColumnAndType = Optional.empty();
 
     for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
       final ColumnType columnType =
@@ -96,11 +108,18 @@ public class FrameReader
               signature.getColumnName(columnNumber)
           );
 
-      columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
+
+      if (columnType.getType() == ValueType.ARRAY && columnType.getType() != ValueType.STRING) {
+        if (!unsupportedColumnAndType.isPresent()) {
+          unsupportedColumnAndType = Optional.of(Pair.of(signature.getColumnName(columnNumber), columnType));
+        }
+      } else {
+        columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
+      }
     }
 
-    return new FrameReader(signature, columnReaders, fieldReaders);
+    return new FrameReader(signature, columnReaders, fieldReaders, unsupportedColumnAndType);
   }
 
   public RowSignature signature()
@@ -110,7 +129,7 @@ public class FrameReader
 
   /**
    * Returns capabilities for a particular column in a particular frame.
-   *
+   * <p>
    * Preferred over {@link RowSignature#getColumnCapabilities(String)} when reading a particular frame, because this
    * method has more insight into what's actually going on with that specific frame (nulls, multivalue, etc). The
    * RowSignature version is based solely on type.
@@ -127,6 +146,7 @@ public class FrameReader
         case COLUMNAR:
           // Better than frameReader.frameSignature().getColumnCapabilities(columnName), because this method has more
           // insight into what's actually going on with this column (nulls, multivalue, etc).
+          throwIfIncompleteColumnReaders();
           return columnReaders.get(columnNumber).readColumn(frame).getCapabilities();
         default:
           return signature.getColumnCapabilities(columnName);
@@ -141,6 +161,7 @@ public class FrameReader
   {
     switch (frame.type()) {
       case COLUMNAR:
+        throwIfIncompleteColumnReaders();
         return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
       case ROW_BASED:
         return new FrameCursorFactory(frame, this, fieldReaders);
@@ -151,7 +172,7 @@ public class FrameReader
 
   /**
    * Create a {@link FrameComparisonWidget} for the given frame.
-   *
+   * <p>
    * Only possible for frames of type {@link org.apache.druid.frame.FrameType#ROW_BASED}. The provided
    * sortColumns must be a prefix of {@link #signature()}.
    */
@@ -160,5 +181,14 @@ public class FrameReader
     FrameWriterUtils.verifySortColumns(keyColumns, signature);
 
     return FrameComparisonWidgetImpl.create(frame, signature, keyColumns, fieldReaders.subList(0, keyColumns.size()));
+  }
+
+  private void throwIfIncompleteColumnReaders()
+  {
+    unsupportedColumnAndType.ifPresent(
+        val -> {
+          throw new UnsupportedColumnTypeException(val.lhs, val.rhs);
+        }
+    );
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 /**
  * Wraps a {@link BaseDoubleColumnValueSelector} and writes field values.
@@ -31,14 +32,19 @@ public class DoubleFieldWriter extends NumericFieldWriter
 {
   public static final int SIZE = Double.BYTES + Byte.BYTES;
 
-  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
-  // nulls to come before non-nulls.
-  public static final byte NULL_BYTE = 0x00;
-  public static final byte NOT_NULL_BYTE = 0x01;
-
   private final BaseDoubleColumnValueSelector selector;
 
-  public DoubleFieldWriter(final BaseDoubleColumnValueSelector selector, final boolean forArray)
+  public static DoubleFieldWriter forPrimitive(final BaseDoubleColumnValueSelector selector)
+  {
+    return new DoubleFieldWriter(selector, false);
+  }
+
+  public static DoubleFieldWriter forArray(final BaseDoubleColumnValueSelector selector)
+  {
+    return new DoubleFieldWriter(selector, true);
+  }
+
+  private DoubleFieldWriter(final BaseDoubleColumnValueSelector selector, final boolean forArray)
   {
     super(selector, forArray);
     this.selector = selector;

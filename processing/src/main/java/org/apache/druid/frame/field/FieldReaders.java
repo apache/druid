@@ -46,13 +46,13 @@ public class FieldReaders
   {
     switch (Preconditions.checkNotNull(columnType, "columnType").getType()) {
       case LONG:
-        return new LongFieldReader(false);
+        return LongFieldReader.forPrimitive();
 
       case FLOAT:
-        return new FloatFieldReader(false);
+        return FloatFieldReader.forPrimitive();
 
       case DOUBLE:
-        return new DoubleFieldReader(false);
+        return DoubleFieldReader.forPrimitive();
 
       case STRING:
         return new StringFieldReader(false);
@@ -61,8 +61,19 @@ public class FieldReaders
         return ComplexFieldReader.createFromType(columnType);
 
       case ARRAY:
-        if (columnType.getElementType().getType() == ValueType.STRING) {
-          return new StringFieldReader(true);
+        switch (Preconditions.checkNotNull(columnType.getElementType().getType(), "array elementType")) {
+          case STRING:
+            return new StringFieldReader(true);
+
+          case LONG:
+            return new LongArrayFieldReader();
+
+          case FLOAT:
+            return new FloatArrayFieldReader();
+
+          case DOUBLE:
+            return new DoubleArrayFieldReader();
+
         }
         // Fall through to error for other array types
 

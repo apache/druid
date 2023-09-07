@@ -20,21 +20,38 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ValueType;
+
+import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
- *
+ * <p>
  * Values are sortable as bytes without decoding.
- *
+ * <p>
  * Format:
- *
+ * <p>
  * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
  * - 8 bytes: encoded long: big-endian order, with sign flipped
  */
-public class LongFieldReader extends NumericFieldReader<Long>
+public class LongFieldReader extends NumericFieldReader
 {
-  LongFieldReader(final boolean forArray)
+
+  public static LongFieldReader forPrimitive()
+  {
+    return new LongFieldReader(false);
+  }
+
+  public static LongFieldReader forArray()
+  {
+    return new LongFieldReader(true);
+  }
+
+  private LongFieldReader(final boolean forArray)
   {
     super(forArray);
   }
@@ -45,15 +62,52 @@ public class LongFieldReader extends NumericFieldReader<Long>
     return ValueType.LONG;
   }
 
-  @Override
   public Class<? extends Long> getClassOfObject()
   {
     return Long.class;
   }
 
   @Override
-  public Long getValueFromMemory(Memory memory, long position)
+  public ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
+  )
   {
-    return TransformUtils.detransformToLong(memory.getLong(position));
+    return new LongFieldSelector(memory, fieldPointer, nullIndicatorByte);
+  }
+
+  private static class LongFieldSelector extends NumericFieldReader.Selector implements LongColumnSelector
+  {
+
+    final Memory dataRegion;
+    final ReadableFieldPointer fieldPointer;
+
+    public LongFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+    {
+      super(dataRegion, fieldPointer, nullIndicatorByte);
+      this.dataRegion = dataRegion;
+      this.fieldPointer = fieldPointer;
+    }
+
+    @Override
+    public long getLong()
+    {
+      assert NullHandling.replaceWithDefault() || !isNull();
+      final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
+      return TransformUtils.detransformToLong(bits);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return super._isNull();
+    }
   }
 }
