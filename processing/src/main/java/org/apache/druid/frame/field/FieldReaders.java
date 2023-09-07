@@ -73,6 +73,9 @@ public class FieldReaders
           case DOUBLE:
             return new DoubleArrayFieldReader();
 
+          default:
+            throw new UnsupportedColumnTypeException(columnName, columnType);
+
         }
         // Fall through to error for other array types
 
