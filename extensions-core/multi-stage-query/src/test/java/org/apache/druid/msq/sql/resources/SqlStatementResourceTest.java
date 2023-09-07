@@ -651,7 +651,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         objectMapper,
         overlordClient,
         new LocalFileStorageConnector(tmpFolder.newFolder("local")),
-        authorizerMappeextensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/sql/resources/SqlStatementResourceTest.javar
+        authorizerMapper
     );
   }
 
