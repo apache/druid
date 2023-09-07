@@ -523,6 +523,10 @@ public class PlannerContext
       return false;
     }
 
+    if (feature == EngineFeature.UNNEST) {
+      return true;
+    }
+
     return engine.featureAvailable(feature, this);
   }
 
