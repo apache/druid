@@ -54,7 +54,7 @@ public class FloatFieldWriter extends NumericFieldWriter
   }
 
   @Override
-  public int getNumericSize()
+  public int getNumericSizeBytes()
   {
     return Float.BYTES;
   }

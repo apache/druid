@@ -121,7 +121,12 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public boolean isNull()
         {
-          // TODO(laksh): Add a comment why NullHandling.replaceWithDefault() is not required here
+          // Arrays preserve the individual element's nullity when they are written and read.
+          // Therefore, when working with SQL incompatible mode, [7, null] won't change to [7, 0] when written to and
+          // read from the underlying serialization (as compared with the primitives). Therefore,
+          // even when NullHandling.replaceWithDefault() is true we need to write null as is, and not convert it to their
+          // default value when writing the array. Therefore, the check is `getObject() == null` ignoring the value of
+          // `NullHandling.replaceWithDefaul()`.
           return getObject() == null;
         }
 
@@ -141,7 +146,7 @@ public class NumericArrayFieldWriter implements FieldWriter
 
       NumericFieldWriter writer = writerFactory.get(columnValueSelector);
 
-      int requiredSize = Byte.BYTES + (writer.getNumericSize() + Byte.BYTES) * list.size() + Byte.BYTES;
+      int requiredSize = Byte.BYTES + (writer.getNumericSizeBytes() + Byte.BYTES) * list.size() + Byte.BYTES;
 
       if (requiredSize > maxSize) {
         return -1;
@@ -157,7 +162,7 @@ public class NumericArrayFieldWriter implements FieldWriter
             position + offset,
             maxSize - offset
         );
-        offset += Byte.BYTES + writer.getNumericSize();
+        offset += Byte.BYTES + writer.getNumericSizeBytes();
       }
 
       memory.putByte(position + offset, ARRAY_TERMINATOR);

@@ -156,7 +156,8 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_arrayLong()
   {
-    // TODO(laksh): add explanation
+    // ARRAY<LONG> can't be read or written for columnar frames, therefore skip the check if it encounters those
+    // parameters
     Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     testWithDataset(FrameWriterTestData.TEST_ARRAYS_LONG);
   }
@@ -164,7 +165,8 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_arrayFloat()
   {
-    // TODO(laksh): add explanation
+    // ARRAY<FLOAT> can't be read or written for columnar frames, therefore skip the check if it encounters those
+    // parameters
     Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     testWithDataset(FrameWriterTestData.TEST_ARRAYS_FLOAT);
   }
@@ -172,7 +174,8 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_arrayDouble()
   {
-    // TODO(laksh): add explanation
+    // ARRAY<DOUBLE> can't be read or written for columnar frames, therefore skip the check if it encounters those
+    // parameters
     Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     testWithDataset(FrameWriterTestData.TEST_ARRAYS_DOUBLE);
   }
@@ -253,7 +256,8 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         if (dataset1.getType().isArray() && dataset1.getType().getElementType().isNumeric()
             || dataset2.getType().isArray() && dataset2.getType().getElementType().isNumeric()) {
           if (inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR) {
-            // TODO(laksh)
+            // Skip the check if any of the dataset is a numerical array and any of the input or the output frame type
+            // is COLUMNAR.
             continue;
           }
         }

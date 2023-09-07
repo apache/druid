@@ -146,7 +146,6 @@ public class DoubleArrayFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertTrue(readSelector.isNull());
   }
 
-  // TODO(laksh): Add a comment about why null doesn't change to default value
   @Test
   public void test_makeColumnValueSelector_aValue()
   {

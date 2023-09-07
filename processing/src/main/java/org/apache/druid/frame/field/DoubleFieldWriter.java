@@ -48,7 +48,7 @@ public class DoubleFieldWriter extends NumericFieldWriter
   }
 
   @Override
-  public int getNumericSize()
+  public int getNumericSizeBytes()
   {
     return Double.BYTES;
   }

@@ -39,8 +39,7 @@ public abstract class NumericArrayFieldReader implements FieldReader
       @Nullable ExtractionFn extractionFn
   )
   {
-    // TODO(laksh): Should I throw an exception here
-    return DimensionSelector.nilSelector();
+    throw DruidException.defensive("Cannot call makeDimensionSelector on field of type ARRAY");
   }
 
   @Override
@@ -159,7 +158,7 @@ public abstract class NumericArrayFieldReader implements FieldReader
         return;
       }
 
-      // TODO(laksh): add comment about position < limit check
+      // Adding a check here to prevent the position from potentially overflowing
       if (position < limit) {
         position++;
       }

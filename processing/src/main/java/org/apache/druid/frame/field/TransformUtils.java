@@ -19,6 +19,12 @@
 
 package org.apache.druid.frame.field;
 
+/**
+ * Utility methods to map the primitive numeric types into an equi-wide byte representation, such that the
+ * given byte sequence preserves the ordering of the original type when done byte comparison.
+ * Checkout {@link org.apache.druid.frame.read.FrameReaderUtils#compareMemoryToByteArrayUnsigned} for how this byte
+ * comparison is performed.
+ */
 public class TransformUtils
 {
   /**

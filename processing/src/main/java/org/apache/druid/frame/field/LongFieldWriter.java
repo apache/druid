@@ -51,7 +51,7 @@ public class LongFieldWriter extends NumericFieldWriter
   }
 
   @Override
-  public int getNumericSize()
+  public int getNumericSizeBytes()
   {
     return Long.BYTES;
   }

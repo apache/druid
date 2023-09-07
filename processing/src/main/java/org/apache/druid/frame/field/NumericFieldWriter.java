@@ -22,14 +22,46 @@ package org.apache.druid.frame.field;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
-// TODO(laksh): Add comment here
+/**
+ * FieldWriter for numeric datatypes. The parent class does the null handling for the underlying data, while
+ * the individual subclasses write the individual element (long, float or double type). This also allows for a clean
+ * reuse while creating {@link NumericArrayFieldWriter}
+ * <p>
+ * Indicator bytes for denoting whether the element is null or not null changes depending on whether the writer is used
+ * to write the data for individual value (like LONG) or for an element of an array (like ARRAY<LONG>). This is because
+ * array support for the numeric types was added later and by then the field writers for individual fields were using
+ * 0x00 to denote the null byte, which is reserved for denoting the array end when we are writing the elements as part
+ * of the array instead. (0x00 is used for array end because it helps in preserving the byte comparison property of the
+ * numeric array field writers).
+ * <p>
+ * Therefore, to preserve backward and forward compatibility, the individual element's writers were left unchanged,
+ * while the array's element's writers used 0x01 and 0x02 to denote null and non-null byte respectively
+ */
 public abstract class NumericFieldWriter implements FieldWriter
 {
+  /**
+   * Indicator byte denoting that the numeric value succeeding it is null. This is used in the primitive
+   * writers. NULL_BYTE < NOT_NULL_BYTE to preserve the ordering while doing byte comparison
+   */
   public static final byte NULL_BYTE = 0x00;
+
+  /**
+   * Indicator byte denoting that the numeric value succeeding it is not null. This is used in the primitive
+   * writers
+   */
   public static final byte NOT_NULL_BYTE = 0x01;
 
-  // TODO(laksh): Add comment here
+  /**
+   * Indicator byte denoting that the numeric value succeeding it is null. This is used while writing the individual
+   * elements writers of an array. ARRAY_NULL_BYTE < ARRAY_NOT_NULL_BYTE to preserve the ordering while doing byte
+   * comparison
+   */
   public static final byte ARRAY_NULL_BYTE = 0x01;
+
+  /**
+   * Indicator byte denoting that the numeric value succeeding it is not null. This is used while writing the individual
+   * elements writers of an array
+   */
   public static final byte ARRAY_NOT_NULL_BYTE = 0x02;
 
   private final BaseNullableColumnValueSelector selector;
@@ -54,12 +86,13 @@ public abstract class NumericFieldWriter implements FieldWriter
   @Override
   public long writeTo(WritableMemory memory, long position, long maxSize)
   {
-    int size = getNumericSize() + Byte.BYTES;
+    int size = getNumericSizeBytes() + Byte.BYTES;
 
     if (maxSize < size) {
       return -1;
     }
 
+    // Using isNull() since this is a primitive type
     if (selector.isNull()) {
       memory.putByte(position, nullIndicatorByte);
       writeNullToMemory(memory, position + Byte.BYTES);
@@ -77,9 +110,21 @@ public abstract class NumericFieldWriter implements FieldWriter
     // Nothing to do
   }
 
-  public abstract int getNumericSize();
+  /**
+   * @return The size in bytes of the numeric datatype that the implementation of this writer occupies
+   */
+  public abstract int getNumericSizeBytes();
 
+  /**
+   * Writes the value pointed by the selector to memory. The caller should ensure that the selector gives out the
+   * correct primitive type
+   */
   public abstract void writeSelectorToMemory(WritableMemory memory, long position);
 
+  /**
+   * Writes the default value for the type to the memory. For long, it is 0L, for double, it is 0.0d etc. Useful mainly
+   * when the SQL incompatible mode is turned off, and maintains the fact that the size of the numeric field written
+   * doesn't vary irrespective of whether the value is null
+   */
   public abstract void writeNullToMemory(WritableMemory memory, long position);
 }

@@ -21,8 +21,13 @@ package org.apache.druid.frame.field;
 
 import org.apache.druid.segment.ColumnValueSelector;
 
-// TODO(laksh): Javadoc
+/**
+ * Factory for {@link NumericFieldWriter}
+ */
 public interface NumericFieldWriterFactory
 {
+  /**
+   * Constructs an instance of {@link NumericFieldWriter} given the column selector
+   */
   NumericFieldWriter get(ColumnValueSelector<Number> selector);
 }

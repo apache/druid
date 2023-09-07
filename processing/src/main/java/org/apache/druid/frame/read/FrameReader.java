@@ -61,7 +61,14 @@ public class FrameReader
   // Field readers, for row-based frames.
   private final List<FieldReader> fieldReaders;
 
-  // TODO(laksh): Write comment why this is a hack for now
+  /**
+   * Currently, only ROW_BASED frames support numerical array columns, while the COLUMNAR frames donot. While creating
+   * a FrameReader, for types unsupported by COLUMNAR frames, we populate this field to denote that the FrameReader is
+   * "incomplete" and can't be used to read the columnar frame. However, the FrameReader performs as expected for the
+   * row-based frames.
+   * In short, this is a temporary measure till columnar frames support the numerical array types to punt the unsupported
+   * type check for the numerical arrays (for COLUMNAR frames only) at the usage time, rather than the creation time
+   */
   private final Optional<Pair<String, ColumnType>> unsupportedColumnAndType;
 
 
@@ -110,13 +117,16 @@ public class FrameReader
 
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
 
-      // TODO(laksh): comment
+      // If we encounter a numeric array type, then don't throw the error immediately since the reader can be used to
+      // read only the ROW_BASED frames. Rather, set the optional, and throw the appropriate error message when the reader
+      // tries to read COLUMNAR frame. This should go away once the COLUMNAR frames also start supporting the numeric
+      // array
       if (columnType.getType() == ValueType.ARRAY
           && Preconditions.checkNotNull(
           columnType.getElementType(),
           "Element type for array column [%s]",
           signature.getColumnName(columnNumber)
-      ).getType() != ValueType.STRING
+      ).getType().isNumeric()
       ) {
         if (!unsupportedColumnAndType.isPresent()) {
           unsupportedColumnAndType = Optional.of(Pair.of(signature.getColumnName(columnNumber), columnType));
