@@ -121,8 +121,8 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public boolean isNull()
         {
-          // TODO: Add a comment why NullHandling.replaceWithDefault() is not required here
-          return !NullHandling.replaceWithDefault() && getObject() == null;
+          // TODO(laksh): Add a comment why NullHandling.replaceWithDefault() is not required here
+          return getObject() == null;
         }
 
         @Nullable

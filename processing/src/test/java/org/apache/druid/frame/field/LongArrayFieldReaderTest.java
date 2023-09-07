@@ -21,7 +21,6 @@ package org.apache.druid.frame.field;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -37,7 +36,10 @@ import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
 {
@@ -51,6 +53,32 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
+
+  private static final Object[] LONGS_ARRAY_1 = new Object[]{
+      Long.MIN_VALUE,
+      Long.MAX_VALUE,
+      null,
+      0L,
+      123L,
+      -123L
+  };
+
+  private static final Object[] LONGS_ARRAY_2 = new Object[]{
+      234L,
+      Long.MAX_VALUE,
+      null,
+      Long.MIN_VALUE,
+      0L,
+      -234L
+  };
+
+  private static final List<Long> LONGS_LIST_1;
+  private static final List<Long> LONGS_LIST_2;
+
+  static {
+    LONGS_LIST_1 = Arrays.stream(LONGS_ARRAY_1).map(val -> (Long) val).collect(Collectors.toList());
+    LONGS_LIST_2 = Arrays.stream(LONGS_ARRAY_2).map(val -> (Long) val).collect(Collectors.toList());
+  }
 
   @Before
   public void setUp()
@@ -66,56 +94,104 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_isNull_defaultOrNull()
+  public void test_isNull_null()
   {
-    writeToMemory(null);
+    writeToMemory(null, MEMORY_POSITION);
     Assert.assertTrue(new LongArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
-    writeToMemory(new Object[]{5});
+    writeToMemory(LONGS_ARRAY_1, MEMORY_POSITION);
     Assert.assertFalse(new LongArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
-  public void test_makeColumnValueSelector_defaultOrNull()
+  public void test_isNull_emptyArray()
   {
-    writeToMemory(NullHandling.defaultLongValue());
-
-    final ColumnValueSelector<?> readSelector =
-        LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
-
-    Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
-
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals((long) NullHandling.defaultLongValue(), readSelector.getLong());
-    }
+    writeToMemory(new Object[]{}, MEMORY_POSITION);
+    Assert.assertFalse(new LongArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
-  public void test_makeColumnValueSelector_aValue()
+  public void test_isNull_arrayWithSingleNullElement()
   {
-    writeToMemory(new Object[]{5, 6, 7});
+    writeToMemory(new Object[]{null}, MEMORY_POSITION);
+    Assert.assertFalse(new LongArrayFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_makeColumnValueSelector_null()
+  {
+    writeToMemory(null, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
         new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
-    assertResults(ImmutableList.of(5L, 6L, 7L), readSelector.getObject());
+    Assert.assertTrue(readSelector.isNull());
   }
 
-  private void writeToMemory(final Object value)
+  // TODO(laksh): Add a comment about why null doesn't change to default value
+  @Test
+  public void test_makeColumnValueSelector_aValue()
   {
-    Mockito.when(writeSelector.isNull()).thenReturn(value == null);
+    writeToMemory(LONGS_ARRAY_1, MEMORY_POSITION);
 
-    if (value != null) {
-      Mockito.when(writeSelector.getObject()).thenReturn(value);
-    }
+    final ColumnValueSelector<?> readSelector =
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
-    if (fieldWriter.writeTo(memory, MEMORY_POSITION, memory.getCapacity() - MEMORY_POSITION) < 0) {
+    assertResults(LONGS_LIST_1, readSelector.getObject());
+  }
+
+  @Test
+  public void test_makeColumnValueSelector_multipleValues()
+  {
+    long sz = writeToMemory(LONGS_ARRAY_1, MEMORY_POSITION);
+    writeToMemory(LONGS_ARRAY_2, MEMORY_POSITION + sz);
+    IndexArrayFieldPointer pointer = new IndexArrayFieldPointer(ImmutableList.of(MEMORY_POSITION, MEMORY_POSITION + sz));
+
+
+    final ColumnValueSelector<?> readSelector = new LongArrayFieldReader().makeColumnValueSelector(memory, pointer);
+
+    pointer.setPointer(0);
+    assertResults(LONGS_LIST_1, readSelector.getObject());
+
+    pointer.setPointer(1);
+    assertResults(LONGS_LIST_2, readSelector.getObject());
+  }
+
+  @Test
+  public void test_makeColumnValueSelector_emptyArray()
+  {
+    writeToMemory(new Object[]{}, MEMORY_POSITION);
+
+    final ColumnValueSelector<?> readSelector =
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+
+    assertResults(Collections.emptyList(), readSelector.getObject());
+  }
+
+  @Test
+  public void test_makeColumnValueSelector_arrayWithSingleNullElement()
+  {
+    writeToMemory(new Object[]{null}, MEMORY_POSITION);
+
+    final ColumnValueSelector<?> readSelector =
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+
+    assertResults(Collections.singletonList(null), readSelector.getObject());
+  }
+
+  private long writeToMemory(final Object value, final long initialPosition)
+  {
+    Mockito.when(writeSelector.getObject()).thenReturn(value);
+
+    long bytesWritten = fieldWriter.writeTo(memory, initialPosition, memory.getCapacity() - initialPosition);
+    if (bytesWritten < 0) {
       throw new ISE("Could not write");
     }
+    return bytesWritten;
   }
 
   private void assertResults(List<Long> expected, Object actual)

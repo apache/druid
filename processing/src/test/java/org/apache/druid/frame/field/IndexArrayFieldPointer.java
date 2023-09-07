@@ -33,7 +33,7 @@ public class IndexArrayFieldPointer implements ReadableFieldPointer
     this.indices = new LongArrayList(indices);
   }
 
-  public int numIndices()
+  private int numIndices()
   {
     return indices.size();
   }
@@ -47,6 +47,6 @@ public class IndexArrayFieldPointer implements ReadableFieldPointer
   @Override
   public long position()
   {
-    return indices.indexOf(pointer);
+    return indices.getLong(pointer);
   }
 }
