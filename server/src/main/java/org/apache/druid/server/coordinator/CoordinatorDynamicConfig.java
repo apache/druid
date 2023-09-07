@@ -77,19 +77,13 @@ public class CoordinatorDynamicConfig
   private final Map<Dimension, String> validDebugDimensions;
 
   /**
-   * Stale pending segments belonging to the data sources in this list are not killed by {@link
+   * Stale pending segments belonging to the data sources in this list are not killed by {@code
    * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
-   * <p>
-   * Pending segments are considered "stale" when their created_time is older than {@link
-   * KillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
    */
   private final Set<String> dataSourcesToNotKillStalePendingSegmentsIn;
 
   /**
    * The maximum number of segments that can be queued for loading to any given server.
-   *
-   * @see LoadQueuePeon
-   * @see org.apache.druid.server.coordinator.rules.LoadRule#run
    */
   private final int maxSegmentsInNodeLoadingQueue;
   private final boolean pauseCoordination;

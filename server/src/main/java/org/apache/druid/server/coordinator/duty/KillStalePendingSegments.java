@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -26,7 +26,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -38,6 +38,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Duty to kill stale pending segments which are not needed anymore. Pending segments
+ * are created when appending realtime or batch tasks allocate segments to build
+ * incremental indexes. Under normal operation, these pending segments get committed
+ * when the task completes and become regular segments. But in case of task failures,
+ * some pending segments might be left around and cause clutter in the metadata store.
+ * <p>
+ * While cleaning up, this duty ensures that the following pending segments are
+ * retained for at least {@link #DURATION_TO_RETAIN}:
+ * <ul>
+ * <li>Pending segments created by any active task (across all datasources)</li>
+ * <li>Pending segments created by the latest completed task (across all datasources)</li>
+ * </ul>
+ */
 public class KillStalePendingSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillStalePendingSegments.class);
@@ -89,12 +103,9 @@ public class KillStalePendingSegments implements CoordinatorDuty
   /**
    * Computes the minimum created time of retainable pending segments. Any pending
    * segment created before this time is considered stale and can be safely deleted.
-   * The limit is determined to ensure that the following pending segments are
-   * retained for at least {@link #DURATION_TO_RETAIN}:
-   * <ul>
-   * <li>Pending segments created by any active task (across all datasources)</li>
-   * <li>Pending segments created by the latest completed task (across all datasources)</li>
-   * </ul>
+   * The limit is determined to ensure that pending segments created by any active
+   * task and the latest completed task (across all datasources) are retained for
+   * at least {@link #DURATION_TO_RETAIN}.
    */
   private DateTime getMinCreatedTimeToRetain()
   {
