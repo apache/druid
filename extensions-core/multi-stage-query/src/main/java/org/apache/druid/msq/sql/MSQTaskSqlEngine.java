@@ -115,6 +115,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
         return false;
+      case UNNEST:
       case CAN_SELECT:
       case CAN_INSERT:
       case CAN_REPLACE:

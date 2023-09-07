@@ -116,11 +116,13 @@ public class DruidRules
     }
 
     // Adding unnest specific rules
-    retVal.add(new DruidUnnestRule(plannerContext));
-    retVal.add(new DruidCorrelateUnnestRule(plannerContext));
-    retVal.add(CoreRules.PROJECT_CORRELATE_TRANSPOSE);
-    retVal.add(DruidFilterUnnestRule.instance());
-    retVal.add(DruidFilterUnnestRule.DruidProjectOnUnnestRule.instance());
+    if (plannerContext.featureAvailable(EngineFeature.UNNEST)) {
+      retVal.add(new DruidUnnestRule(plannerContext));
+      retVal.add(new DruidCorrelateUnnestRule(plannerContext));
+      retVal.add(CoreRules.PROJECT_CORRELATE_TRANSPOSE);
+      retVal.add(DruidFilterUnnestRule.instance());
+      retVal.add(DruidFilterUnnestRule.DruidProjectOnUnnestRule.instance());
+    }
 
 
     return retVal;

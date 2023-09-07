@@ -101,7 +101,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     // An UnnestDataSource or FilteredDataSource can have a join as a base
     // In such a case a side channel is expected to be there
     final DataSource baseDataSource;
-    if (dataSource instanceof  UnnestDataSource) {
+    if (dataSource instanceof UnnestDataSource) {
       baseDataSource = ((UnnestDataSource) dataSource).getBase();
     } else if (dataSource instanceof FilteredDataSource) {
       baseDataSource = ((FilteredDataSource) dataSource).getBase();

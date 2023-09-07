@@ -103,6 +103,7 @@ public class NativeSqlEngine implements SqlEngine
       case TOPN_QUERY:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
+      case UNNEST:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
         return true;
       case TIME_BOUNDARY_QUERY:
