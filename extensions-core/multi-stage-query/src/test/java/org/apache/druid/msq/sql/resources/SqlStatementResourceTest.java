@@ -917,17 +917,17 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  public void testForbiddenRequest()
+  public void testAPIBehaviourWithSuperUsers()
   {
     Assert.assertEquals(
-        Response.Status.FORBIDDEN.getStatusCode(),
+        Response.Status.OK.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
             makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
         ).getStatus()
     );
     Assert.assertEquals(
-        Response.Status.FORBIDDEN.getStatusCode(),
+        Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(
             RUNNING_SELECT_MSQ_QUERY,
             1L,
@@ -936,7 +936,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         ).getStatus()
     );
     Assert.assertEquals(
-        Response.Status.FORBIDDEN.getStatusCode(),
+        Response.Status.ACCEPTED.getStatusCode(),
         resource.deleteQuery(
             RUNNING_SELECT_MSQ_QUERY,
             makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
