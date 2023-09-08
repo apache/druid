@@ -48,7 +48,7 @@ public interface CoordinatorClient
   ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals);
 
   /**
-   * Fetches schema for the given dataSources.
+   * Fetches information for the given dataSources.
    */
   ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
 
