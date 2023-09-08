@@ -487,7 +487,7 @@ public class CoordinatorSimulationBuilder
           null
       );
       this.loadQueueManager =
-          new SegmentLoadQueueManager(coordinatorInventoryView, segmentManager, loadQueueTaskMaster);
+          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);

@@ -42,6 +42,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.testutil.FrameTestUtil;
@@ -73,6 +74,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterNames;
@@ -121,8 +123,8 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -210,6 +212,10 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 /**
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
@@ -352,7 +358,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // which depends on the object mapper that the injector will provide, once it
   // is built, but has not yet been build while we build the SQL engine.
   @Before
-  public void setUp2()
+  public void setUp2() throws Exception
   {
     groupByBuffers = TestGroupByBuffers.createDefault();
 
@@ -380,6 +386,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
 
+    BrokerClient brokerClient = mock(BrokerClient.class);
     List<Module> modules = ImmutableList.of(
         binder -> {
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
@@ -392,6 +399,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
           };
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+          GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+              groupByQueryConfig,
+              groupByBuffers
+          ).getGroupingEngine();
+          binder.bind(GroupingEngine.class).toInstance(groupingEngine);
 
           binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
           binder.bind(new TypeLiteral<Set<NodeRole>>()
@@ -400,13 +412,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(QueryProcessingPool.class)
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
-                .toInstance((dataSegment, channelCounters) -> getSupplierForSegment(dataSegment));
+                .toInstance((dataSegment, channelCounters, isReindex) -> getSupplierForSegment(dataSegment));
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
-
-          binder.bind(GroupByStrategySelector.class)
-                .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-                                                  .getStrategySelector());
 
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
           try {
@@ -466,7 +474,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         ),
         new MSQExternalDataSourceModule(),
         new LookylooModule(),
-        new SegmentWranglerModule()
+        new SegmentWranglerModule(),
+        binder -> binder.bind(BrokerClient.class).toInstance(brokerClient)
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
@@ -475,6 +484,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(sqlModule.getJacksonModules());
+
+    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
     testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
     indexingServiceClient = new MSQTestOverlordServiceClient(

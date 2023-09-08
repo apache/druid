@@ -43,6 +43,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -79,7 +80,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -162,7 +162,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     );
     loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
-    scheduledExecutorFactory = (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor();
+    scheduledExecutorFactory = ScheduledExecutors::fixed;
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
     coordinator = new DruidCoordinator(
@@ -173,7 +173,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
+        new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         new CoordinatorCustomDutyGroups(ImmutableSet.of()),
@@ -781,7 +781,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
+        new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         groups,

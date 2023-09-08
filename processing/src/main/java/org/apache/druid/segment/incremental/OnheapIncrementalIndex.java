@@ -264,8 +264,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
       } else {
-        // This would happen in a race condition where there are multiple write threads
-        // which could be possible in case of GroupBy v1 strategy
+        // this should never happen. Previously, this would happen in a race condition involving multiple write threads
+        // for GroupBy v1 strategy, but it is no more, so this code needs the concurrency model reworked in the future
         parseExceptionMessages.clear();
         aggs = concurrentGet(prev);
         aggSizeForRow = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);

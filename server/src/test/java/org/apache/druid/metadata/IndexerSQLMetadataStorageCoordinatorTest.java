@@ -710,6 +710,21 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testRetrieveUsedSegmentForId()
+  {
+    insertUsedSegments(ImmutableSet.of(defaultSegment));
+    Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), false));
+  }
+
+  @Test
+  public void testRetrieveSegmentForId()
+  {
+    insertUsedSegments(ImmutableSet.of(defaultSegment));
+    markAllSegmentsUnused(ImmutableSet.of(defaultSegment));
+    Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), true));
+  }
+
+  @Test
   public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
   {
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(

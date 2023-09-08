@@ -85,7 +85,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
     if (collector != null) {
       long delta = collector.calculateDelta();
-      emitter.emit(builder.build("jvm/heapAlloc/bytes", delta));
+      emitter.emit(builder.setMetric("jvm/heapAlloc/bytes", delta));
     }
   }
 
@@ -107,10 +107,10 @@ public class JvmMonitor extends FeedDefiningMonitor
       final ServiceMetricEvent.Builder builder = builder().setDimension("memKind", kind);
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-      emitter.emit(builder.build("jvm/mem/max", usage.getMax()));
-      emitter.emit(builder.build("jvm/mem/committed", usage.getCommitted()));
-      emitter.emit(builder.build("jvm/mem/used", usage.getUsed()));
-      emitter.emit(builder.build("jvm/mem/init", usage.getInit()));
+      emitter.emit(builder.setMetric("jvm/mem/max", usage.getMax()));
+      emitter.emit(builder.setMetric("jvm/mem/committed", usage.getCommitted()));
+      emitter.emit(builder.setMetric("jvm/mem/used", usage.getUsed()));
+      emitter.emit(builder.setMetric("jvm/mem/init", usage.getInit()));
     }
 
     // jvm/pool
@@ -122,10 +122,10 @@ public class JvmMonitor extends FeedDefiningMonitor
           .setDimension("poolName", pool.getName());
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-      emitter.emit(builder.build("jvm/pool/max", usage.getMax()));
-      emitter.emit(builder.build("jvm/pool/committed", usage.getCommitted()));
-      emitter.emit(builder.build("jvm/pool/used", usage.getUsed()));
-      emitter.emit(builder.build("jvm/pool/init", usage.getInit()));
+      emitter.emit(builder.setMetric("jvm/pool/max", usage.getMax()));
+      emitter.emit(builder.setMetric("jvm/pool/committed", usage.getCommitted()));
+      emitter.emit(builder.setMetric("jvm/pool/used", usage.getUsed()));
+      emitter.emit(builder.setMetric("jvm/pool/init", usage.getInit()));
     }
   }
 
@@ -135,9 +135,9 @@ public class JvmMonitor extends FeedDefiningMonitor
       final ServiceMetricEvent.Builder builder = builder().setDimension("bufferpoolName", pool.getName());
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-      emitter.emit(builder.build("jvm/bufferpool/capacity", pool.getTotalCapacity()));
-      emitter.emit(builder.build("jvm/bufferpool/used", pool.getMemoryUsed()));
-      emitter.emit(builder.build("jvm/bufferpool/count", pool.getCount()));
+      emitter.emit(builder.setMetric("jvm/bufferpool/capacity", pool.getTotalCapacity()));
+      emitter.emit(builder.setMetric("jvm/bufferpool/used", pool.getMemoryUsed()));
+      emitter.emit(builder.setMetric("jvm/bufferpool/count", pool.getCount()));
     }
   }
 
@@ -265,12 +265,12 @@ public class JvmMonitor extends FeedDefiningMonitor
       MonitorUtils.addDimensionsToBuilder(builder, dimensionsCopy);
 
       long newInvocations = gcBean.getCollectionCount();
-      emitter.emit(builder.build("jvm/gc/count", newInvocations - lastInvocations));
+      emitter.emit(builder.setMetric("jvm/gc/count", newInvocations - lastInvocations));
       lastInvocations = newInvocations;
 
       // getCollectionTime is in milliseconds; we report jvm/gc/cpu in nanoseconds.
       long newCpuMillis = gcBean.getCollectionTime();
-      emitter.emit(builder.build("jvm/gc/cpu", (newCpuMillis - lastCpuMillis) * 1_000_000L));
+      emitter.emit(builder.setMetric("jvm/gc/cpu", (newCpuMillis - lastCpuMillis) * 1_000_000L));
       lastCpuMillis = newCpuMillis;
     }
   }
@@ -311,10 +311,10 @@ public class JvmMonitor extends FeedDefiningMonitor
 
       builder.setDimension("gcGenSpaceName", name);
 
-      emitter.emit(builder.build("jvm/gc/mem/max", memoryUsage.getMax()));
-      emitter.emit(builder.build("jvm/gc/mem/capacity", memoryUsage.getCommitted()));
-      emitter.emit(builder.build("jvm/gc/mem/used", memoryUsage.getUsed()));
-      emitter.emit(builder.build("jvm/gc/mem/init", memoryUsage.getInit()));
+      emitter.emit(builder.setMetric("jvm/gc/mem/max", memoryUsage.getMax()));
+      emitter.emit(builder.setMetric("jvm/gc/mem/capacity", memoryUsage.getCommitted()));
+      emitter.emit(builder.setMetric("jvm/gc/mem/used", memoryUsage.getUsed()));
+      emitter.emit(builder.setMetric("jvm/gc/mem/init", memoryUsage.getInit()));
     }
   }
 }

@@ -67,7 +67,7 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -130,7 +130,7 @@ public class BalanceSegmentsProfiler
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(segments)
+        .withUsedSegments(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
@@ -185,7 +185,7 @@ public class BalanceSegmentsProfiler
                 )
                 .build()
         )
-        .withUsedSegmentsInTest(segments)
+        .withUsedSegments(segments)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
