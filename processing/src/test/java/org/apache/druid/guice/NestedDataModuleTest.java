@@ -46,9 +46,10 @@ public class NestedDataModuleTest
     DEFAULT_HANDLER_PROVIDER = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
     );
+    DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
   }
   @AfterClass
-  public static void restore()
+  public static void teardown()
   {
     if (DEFAULT_HANDLER_PROVIDER == null) {
       DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
