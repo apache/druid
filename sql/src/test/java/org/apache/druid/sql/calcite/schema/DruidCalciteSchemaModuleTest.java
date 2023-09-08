@@ -31,6 +31,8 @@ import com.google.inject.name.Names;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -132,6 +134,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
           binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
+          binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
         },
         new LifecycleModule(),
         target);

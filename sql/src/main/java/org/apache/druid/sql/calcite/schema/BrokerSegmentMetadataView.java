@@ -28,11 +28,9 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
-import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
@@ -74,10 +72,7 @@ public class BrokerSegmentMetadataView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final DruidLeaderClient druidLeaderClient;
   private final ObjectMapper objectMapper;
-
-
   private final boolean isMetadataSegmentCacheEnabled;
-
 
   /**
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
@@ -161,14 +156,16 @@ public class BrokerSegmentMetadataView
 
   protected Iterator<SegmentTableView> getSegmentTableView()
   {
+    // set of published and realtime segments
     final ImmutableSortedSet<SegmentStatusInCluster> segments = getSegmentMetadata();
+
+    // set of available segments and metadata
     final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataMap = segmentMetadataCache.getSegmentMetadataSnapshot();
     final List<SegmentTableView> segmentsTableViews = new ArrayList<>();
 
     Set<SegmentId> seenSegments = new HashSet<>();
 
-    for (SegmentStatusInCluster segmentStatusInCluster : segments)
-    {
+    for (SegmentStatusInCluster segmentStatusInCluster : segments) {
       DataSegment segment = segmentStatusInCluster.getDataSegment();
       SegmentId segmentId = segment.getId();
       AvailableSegmentMetadata availableSegmentMetadata = availableSegmentMetadataMap.get(segmentId);
@@ -188,6 +185,12 @@ public class BrokerSegmentMetadataView
 
       long isRealtime = Boolean.TRUE.equals(segmentStatusInCluster.isRealtime()) ? 1 : 0;
 
+      // set of segments returned from coordinator include published and realtime segments
+      // so realtime segments are not published and vice versa
+      boolean isPublished = !segmentStatusInCluster.isRealtime();
+
+      // is_active is true for published segments that are not overshadowed
+      boolean isActive = isPublished && !segmentStatusInCluster.isOvershadowed();
 
       SegmentTableView segmentTableView = new SegmentTableView(
           segment,
@@ -195,28 +198,48 @@ public class BrokerSegmentMetadataView
           isRealtime,
           numReplicas,
           numRows,
+          // If the segment is unpublished, we won't have this information yet.
+          // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
+          // This should be automatically updated in the next refesh with Coordinator.
           segmentStatusInCluster.getReplicationFactor(),
-          segmentStatusInCluster.isOvershadowed()
+          // If the segment is unpublished this value would be false
+          segmentStatusInCluster.isOvershadowed(),
+          isPublished,
+          isActive
       );
+
       seenSegments.add(segmentId);
       segmentsTableViews.add((segmentTableView));
     }
 
-    for (Map.Entry<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataEntry : availableSegmentMetadataMap.entrySet())
-    {
+    for (Map.Entry<SegmentId, AvailableSegmentMetadata> availableSegmentMetadataEntry : availableSegmentMetadataMap.entrySet()) {
       if (seenSegments.contains(availableSegmentMetadataEntry.getKey())) {
         continue;
       }
       AvailableSegmentMetadata availableSegmentMetadata = availableSegmentMetadataEntry.getValue();
+
+      // since all published segments would have been covered in the previous loop
+      // the curent set of segments must be unpublished
+      boolean isPublished = false;
+
+      // is_active is true for unpublished segments iff they are realtime
+      boolean isActive = availableSegmentMetadata.isRealtime() == 1L;
+
       SegmentTableView segmentTableView = new SegmentTableView(
           availableSegmentMetadata.getSegment(),
+          // segments announced by historicals or realtime tasks are assumed to be available
           1L,
           availableSegmentMetadata.isRealtime(),
           availableSegmentMetadata.getNumReplicas(),
           availableSegmentMetadata.getNumRows(),
+          // If the segment is unpublished, we won't have this information yet.
           null,
-          false
+          // there is an assumption here that unpublished segments are never overshadowed
+          false,
+          isPublished,
+          isActive
       );
+
       segmentsTableViews.add(segmentTableView);
     }
 

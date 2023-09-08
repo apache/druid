@@ -51,7 +51,7 @@ public class SegmentMetadataCacheConfigTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final SegmentMetadataCacheConfig config = provider.get();
-    Assert.assertTrue(config.isAwaitInitializationOnStart());
+    Assert.assertFalse(config.isAwaitInitializationOnStart());
     Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
     Assert.assertEquals(new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }

@@ -288,9 +288,9 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceSchema buildDruidTable(String dataSource)
+      public DataSourceInformation buildDruidTable(String dataSource)
       {
-        DataSourceSchema table = super.buildDruidTable(dataSource);
+        DataSourceInformation table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
       }
@@ -371,14 +371,14 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testGetTableMapFoo() throws InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DataSourceSchema fooDs = schema.getDatasource("foo");
+    final DataSourceInformation fooDs = schema.getDatasource("foo");
   }
 
   @Test
   public void testGetTableMapFoo2() throws InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DataSourceSchema fooDs = schema.getDatasource("foo2");
+    final DataSourceInformation fooDs = schema.getDatasource("foo2");
   }
 
   @Test
@@ -395,7 +395,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
           }
         }
     );
-    final DataSourceSchema fooDs = schema.getDatasource(SOME_DATASOURCE);
+    final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
 
   }
 
@@ -405,7 +405,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
     // least restrictive blend across all segments
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DataSourceSchema fooDs = schema.getDatasource(SOME_DATASOURCE);
+    final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
   }
 
 
@@ -1002,7 +1002,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     SegmentMetadataCache schema3 = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DataSourceSchema fooTable = schema3.getDatasource("foo");
+    DataSourceInformation fooTable = schema3.getDatasource("foo");
     Assert.assertNotNull(fooTable);
 
     markDataSourceLatch = new CountDownLatch(1);
@@ -1052,7 +1052,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     SegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DataSourceSchema fooTable = schema.getDatasource("foo");
+    DataSourceInformation fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
 
     markDataSourceLatch = new CountDownLatch(1);

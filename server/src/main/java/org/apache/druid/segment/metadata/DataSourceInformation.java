@@ -9,13 +9,13 @@ import java.util.Objects;
 /**
  * Encapsulates schema information of a dataSource.
  */
-public class DataSourceSchema
+public class DataSourceInformation
 {
   private final String datasource;
   private final RowSignature rowSignature;
 
   @JsonCreator
-  public DataSourceSchema(
+  public DataSourceInformation(
       @JsonProperty("datasource") String datasource,
       @JsonProperty("rowSignature") RowSignature rowSignature)
   {
@@ -44,7 +44,7 @@ public class DataSourceSchema
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    DataSourceSchema that = (DataSourceSchema) o;
+    DataSourceInformation that = (DataSourceInformation) o;
     return Objects.equals(datasource, that.datasource) && Objects.equals(
         rowSignature,
         that.rowSignature

@@ -30,7 +30,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.segment.metadata.DataSourceSchema;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -110,9 +110,9 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<List<DataSourceSchema>> fetchDataSourceSchema(Set<String> dataSources)
+  public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> dataSources)
   {
-    final String path = "/druid/coordinator/v1/metadata/dataSourceSchema";
+    final String path = "/druid/coordinator/v1/metadata/dataSourceInformation";
     if (null == dataSources)
     {
       dataSources = new HashSet<>();
@@ -123,7 +123,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, dataSources),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceSchema>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceInformation>>() {})
     );
   }
 

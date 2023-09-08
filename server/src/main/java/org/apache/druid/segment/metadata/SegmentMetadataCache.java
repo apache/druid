@@ -124,7 +124,7 @@ public class SegmentMetadataCache
    * Map of DataSource -> DruidTable.
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  private final ConcurrentMap<String, DataSourceSchema> tables = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSourceInformation> tables = new ConcurrentHashMap<>();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -201,7 +201,7 @@ public class SegmentMetadataCache
    * Currently, there are 2 threads that can access these variables.
    *
    * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
-   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceSchema} if necessary
+   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
    *   based on the information collected via timeline callbacks.
    */
   protected final Object lock = new Object();
@@ -428,13 +428,13 @@ public class SegmentMetadataCache
 
   public void rebuildDatasource(String dataSource)
   {
-    final DataSourceSchema druidTable = buildDruidTable(dataSource);
+    final DataSourceInformation druidTable = buildDruidTable(dataSource);
     if (druidTable == null) {
       log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
       tables.remove(dataSource);
       return;
     }
-    final DataSourceSchema oldTable = tables.put(dataSource, druidTable);
+    final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
     if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
       log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
     } else {
@@ -454,12 +454,12 @@ public class SegmentMetadataCache
     initialized.await();
   }
 
-  public DataSourceSchema getDatasource(String name)
+  public DataSourceInformation getDatasource(String name)
   {
     return tables.get(name);
   }
 
-  public Map<String, DataSourceSchema> getDataSourceSchemaMap()
+  public Map<String, DataSourceInformation> getDataSourceSchemaMap()
   {
     return ImmutableMap.copyOf(tables);
   }
@@ -818,7 +818,7 @@ public class SegmentMetadataCache
 
   @VisibleForTesting
   @Nullable
-  public DataSourceSchema buildDruidTable(final String dataSource)
+  public DataSourceInformation buildDruidTable(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
@@ -846,7 +846,7 @@ public class SegmentMetadataCache
     final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
 
-    return new DataSourceSchema(dataSource, builder.build());
+    return new DataSourceInformation(dataSource, builder.build());
   }
 
   public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()

@@ -138,7 +138,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceSchema buildDruidTable(final String dataSource)
+      public DataSourceInformation buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -246,7 +246,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceSchema buildDruidTable(final String dataSource)
+      public DataSourceInformation buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {

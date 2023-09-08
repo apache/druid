@@ -28,9 +28,8 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.segment.metadata.DataSourceSchema;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
@@ -92,13 +91,10 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
 
     // Fetch dataSource schema from the Coordinator
     try {
-      FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceSchema(dataSourcesToQuery), true)
+      FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
                  .forEach(item -> polledDataSourceSchema.put(
                      item.getDatasource(),
-                     physicalDatasourceMetadataBuilder.build(
-                         item.getDatasource(),
-                         item.getRowSignature()
-                     )
+                     physicalDatasourceMetadataBuilder.build(item)
                  ));
     } catch (Exception e) {
       log.error("Exception querying coordinator for schema");
@@ -140,14 +136,13 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
   @Override
   public void rebuildDatasource(String dataSource)
   {
-    final DataSourceSchema druidTable = buildDruidTable(dataSource);
+    final DataSourceInformation druidTable = buildDruidTable(dataSource);
     if (druidTable == null) {
       log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
       tables.remove(dataSource);
       return;
     }
-    final DatasourceTable.PhysicalDatasourceMetadata physicalDatasourceMetadata =
-        physicalDatasourceMetadataBuilder.build(dataSource, druidTable.getRowSignature());
+    final DatasourceTable.PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
     final DatasourceTable.PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
     if (oldTable == null || !oldTable.rowSignature().equals(physicalDatasourceMetadata.rowSignature())) {
       log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());

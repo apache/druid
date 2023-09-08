@@ -31,7 +31,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
-import org.apache.druid.segment.metadata.DataSourceSchema;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -201,6 +201,9 @@ public class MetadataResource
         .map(segment -> {
           // The replication factor for unloaded segments is 0 as they will be unloaded soon
           boolean isOvershadowed = overshadowedSegments.contains(segment);
+          Integer replicationFactor = isOvershadowed ? (Integer) 0
+                                                     : coordinator.getReplicationFactor(segment.getId());
+
           Long numRows = null;
           if (null != segmentMetadataCache) {
             AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(
@@ -211,29 +214,34 @@ public class MetadataResource
               numRows = availableSegmentMetadata.getNumRows();
             }
           }
-          Integer replicationFactor = isOvershadowed ? (Integer) 0
-                                                     : coordinator.getReplicationFactor(segment.getId());
           segmentAlreadySeen.add(segment.getId());
-          return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, numRows, true);
+          return new SegmentStatusInCluster(
+              segment,
+              isOvershadowed,
+              replicationFactor,
+              numRows,
+              // published segment can't be realtime
+              false);
         });
 
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
-    if (null != includeRealtimeSegments && segmentMetadataCache != null) {
-      log.info("printing the content in smc cache %s", segmentMetadataCache.getSegmentMetadataSnapshot().values());
+    if (null != includeRealtimeSegments && null != segmentMetadataCache) {
       final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
           .getSegmentMetadataSnapshot()
           .values()
           .stream()
-          .filter(availableSegmentMetadata -> !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment()
-                                                                                                   .getId()))
-          .map(availableSegmentMetadata -> new SegmentStatusInCluster(
-              availableSegmentMetadata.getSegment(),
-              false,
-              (int) availableSegmentMetadata.getNumReplicas(),
-              availableSegmentMetadata.getNumRows(),
-              availableSegmentMetadata.isRealtime() != 0
-          ));
+          .filter(availableSegmentMetadata ->
+                      !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
+          .map(availableSegmentMetadata ->
+                   new SegmentStatusInCluster(
+                       availableSegmentMetadata.getSegment(),
+                       false,
+                       // replication factor is null for unpublished segments
+                       null,
+                       availableSegmentMetadata.getNumRows(),
+                       availableSegmentMetadata.isRealtime() != 0
+                   ));
 
       finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus);
     }
@@ -351,21 +359,21 @@ public class MetadataResource
    * Return schema for the given dataSources.
    */
   @POST
-  @Path("/dataSourceSchema")
+  @Path("/dataSourceInformation")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getDataSourceSchema(
+  public Response getDataSourceInformation(
       List<String> dataSources
   )
   {
     if (null == segmentMetadataCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-    Map<String, DataSourceSchema> dataSourceSchemaMap = segmentMetadataCache.getDataSourceSchemaMap();
+    Map<String, DataSourceInformation> dataSourceSchemaMap = segmentMetadataCache.getDataSourceSchemaMap();
 
-    List<DataSourceSchema> results = new ArrayList<>();
+    List<DataSourceInformation> results = new ArrayList<>();
     List<String> dataSourcesToRetain = (null == dataSources) ? new ArrayList<>(dataSourceSchemaMap.keySet()) : dataSources;
 
-    for (Map.Entry<String, DataSourceSchema> entry : dataSourceSchemaMap.entrySet()) {
+    for (Map.Entry<String, DataSourceInformation> entry : dataSourceSchemaMap.entrySet()) {
       if (dataSourcesToRetain.contains(entry.getKey())) {
         results.add(entry.getValue());
       }

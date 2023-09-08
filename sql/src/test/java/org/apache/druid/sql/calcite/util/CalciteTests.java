@@ -433,7 +433,7 @@ public class CalciteTests
   /**
    * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
    */
-  private static class FakeHttpClient implements HttpClient
+  public static class FakeHttpClient implements HttpClient
   {
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
@@ -458,7 +458,7 @@ public class CalciteTests
   /**
    * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  public static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
 
@@ -484,7 +484,7 @@ public class CalciteTests
     }
   }
 
-  private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+  public static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
   {
     private final Set<DiscoveryDruidNode> nodes;
 
@@ -493,7 +493,7 @@ public class CalciteTests
       this.nodes = new HashSet<>();
     }
 
-    FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+    public FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
     {
       this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
       nodes.forEach((k, v) -> {

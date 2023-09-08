@@ -22,7 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.segment.metadata.DataSourceSchema;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -50,7 +50,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<List<DataSourceSchema>> fetchDataSourceSchema(Set<String> datasources)
+  public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources)
   {
     throw new UnsupportedOperationException();
   }

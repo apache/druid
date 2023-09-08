@@ -24,6 +24,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 
@@ -39,8 +40,10 @@ public class PhysicalDatasourceMetadataBuilder
     this.segmentManager = segmentManager;
   }
 
-  DatasourceTable.PhysicalDatasourceMetadata build(String dataSource, RowSignature rowSignature)
+  DatasourceTable.PhysicalDatasourceMetadata build(DataSourceInformation dataSourceInformation)
   {
+    final String dataSource = dataSourceInformation.getDatasource();
+    final RowSignature rowSignature = dataSourceInformation.getRowSignature();
     final TableDataSource tableDataSource;
 
     // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing

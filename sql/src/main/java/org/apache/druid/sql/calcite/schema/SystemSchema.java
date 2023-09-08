@@ -27,10 +27,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
@@ -72,7 +68,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -85,7 +80,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -100,7 +94,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
@@ -121,20 +114,6 @@ public class SystemSchema extends AbstractSchema
       segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSource())
       );
-
-  private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
-
-  /**
-   * Booleans constants represented as long type,
-   * where 1 = true and 0 = false to make it easy to count number of segments
-   * which are published, available etc.
-   */
-  private static final long IS_ACTIVE_FALSE = 0L;
-  private static final long IS_ACTIVE_TRUE = 1L;
-  private static final long IS_PUBLISHED_FALSE = 0L;
-  private static final long IS_PUBLISHED_TRUE = 1L;
-  private static final long IS_OVERSHADOWED_FALSE = 0L;
-  private static final long IS_OVERSHADOWED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -291,22 +270,18 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   val.getNumReplicas(),
                   val.getNumRows(),
-                  //is_active is true for published segments that are not overshadowed
-                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
-                  //is_published is true for published segments
-                  (val.getIsRealtime() == 0) ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
-                  val.getIsAvailable(),
-                  val.getIsRealtime(),
-                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
+                  val.isActive(),
+                  val.isPublished(),
+                  val.isAvailable(),
+                  val.isRealtime(),
+                  val.isOvershadowed(),
                   segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
                   segment.getLastCompactionState() == null
                   ? null
                   : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
-                  // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
-                  // This should be automatically updated in the next refesh with Coordinator.
-                  val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
+                  val.getReplicationFactor()
               };
             }
             catch (JsonProcessingException e) {
@@ -366,31 +341,50 @@ public class SystemSchema extends AbstractSchema
 
     protected static class SegmentTableView
     {
+      /**
+       * Booleans constants represented as long type,
+       * where 1 = true and 0 = false to make it easy to count number of segments
+       * which are published, available etc.
+       */
+      private static final long IS_ACTIVE_FALSE = 0L;
+      private static final long IS_ACTIVE_TRUE = 1L;
+      private static final long IS_PUBLISHED_FALSE = 0L;
+      private static final long IS_PUBLISHED_TRUE = 1L;
+      private static final long IS_OVERSHADOWED_FALSE = 0L;
+      private static final long IS_OVERSHADOWED_TRUE = 1L;
+      private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
+
       private final DataSegment segment;
-      private final long isAvailable;
-      private final long isRealtime;
+      private final long available;
+      private final long realtime;
       private final long numReplicas;
       private final long numRows;
-      private final Integer replicationFactor;
-      private final boolean isOvershadowed;
+      private final long replicationFactor;
+      private final long overshadowed;
+      private final long published;
+      private final long active;
 
       public SegmentTableView(
           DataSegment segment,
           long isAvailable,
-          long isRealtime,
+          long realtime,
           long numReplicas,
           long numRows,
           Integer replicationFactor,
-          boolean isOvershadowed
+          boolean overshadowed,
+          boolean isPublished,
+          boolean active
       )
       {
         this.segment = segment;
-        this.isAvailable = isAvailable;
-        this.isRealtime = isRealtime;
+        this.available = isAvailable;
+        this.realtime = realtime;
         this.numReplicas = numReplicas;
         this.numRows = numRows;
-        this.replicationFactor = replicationFactor;
-        this.isOvershadowed = isOvershadowed;
+        this.replicationFactor = (null == replicationFactor) ? REPLICATION_FACTOR_UNKNOWN : (long) replicationFactor;
+        this.overshadowed = overshadowed ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE;
+        this.published = isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE;
+        this.active = active ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE;
       }
 
       public DataSegment getSegment()
@@ -398,14 +392,14 @@ public class SystemSchema extends AbstractSchema
         return segment;
       }
 
-      public long getIsAvailable()
+      public long isAvailable()
       {
-        return isAvailable;
+        return available;
       }
 
-      public long getIsRealtime()
+      public long isRealtime()
       {
-        return isRealtime;
+        return realtime;
       }
 
       public long getNumReplicas()
@@ -418,14 +412,24 @@ public class SystemSchema extends AbstractSchema
         return numRows;
       }
 
-      public Integer getReplicationFactor()
+      public long getReplicationFactor()
       {
         return replicationFactor;
       }
 
-      public boolean isOvershadowed()
+      public long isOvershadowed()
       {
-        return isOvershadowed;
+        return overshadowed;
+      }
+
+      public long isPublished()
+      {
+        return published;
+      }
+
+      public long isActive()
+      {
+        return active;
       }
 
       @Override
@@ -433,88 +437,14 @@ public class SystemSchema extends AbstractSchema
       {
         return "SegmentTableView{" +
                "segmentId=" + segment.getId() +
-               ", isAvailable=" + isAvailable +
-               ", isRealtime=" + isRealtime +
+               ", isAvailable=" + available +
+               ", isRealtime=" + realtime +
                ", numReplicas=" + numReplicas +
                ", numRows=" + numRows +
                ", replicationFactor=" + replicationFactor +
-               ", isOvershadowed=" + isOvershadowed +
+               ", isOvershadowed=" + overshadowed +
+               ", isPublished=" + published +
                '}';
-      }
-    }
-
-    protected static class SegmentTableView1
-    {
-      // pass the stitched
-      private final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata;
-      private final Iterator<SegmentStatusInCluster> publishedSegments; // coordinator
-
-      private final int totalSegmentsCount;
-
-      public SegmentTableView1(
-          Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata,
-          ImmutableSortedSet<SegmentStatusInCluster> publishedSegments
-      )
-      {
-        this.availableSegmentMetadata = availableSegmentMetadata;
-        this.publishedSegments = publishedSegments.iterator();
-        this.totalSegmentsCount = availableSegmentMetadata.size();
-      }
-
-      public Map<SegmentId, AvailableSegmentMetadata> getAvailableSegmentMetadata()
-      {
-        return availableSegmentMetadata;
-      }
-
-      public Iterator<SegmentStatusInCluster> getPublishedSegments()
-      {
-        return publishedSegments;
-      }
-
-      public int totalSegmentCount()
-      {
-        return totalSegmentsCount;
-      }
-    }
-
-    protected static class PartialSegmentData
-    {
-      private final long isAvailable;
-      private final long isRealtime;
-      private final long numReplicas;
-      private final long numRows;
-
-      public PartialSegmentData(
-          final long isAvailable,
-          final long isRealtime,
-          final long numReplicas,
-          final long numRows
-      )
-      {
-        this.isAvailable = isAvailable;
-        this.isRealtime = isRealtime;
-        this.numReplicas = numReplicas;
-        this.numRows = numRows;
-      }
-
-      public long isAvailable()
-      {
-        return isAvailable;
-      }
-
-      public long isRealtime()
-      {
-        return isRealtime;
-      }
-
-      public long getNumReplicas()
-      {
-        return numReplicas;
-      }
-
-      public long getNumRows()
-      {
-        return numRows;
       }
     }
   }
