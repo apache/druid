@@ -871,7 +871,7 @@ public class SegmentMetadataCache
    * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
    * As a result, the returned value might be inexact.
    */
-  int getTotalSegments()
+  public int getTotalSegments()
   {
     return totalSegments;
   }

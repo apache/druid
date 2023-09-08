@@ -27,6 +27,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
@@ -63,10 +66,10 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
-import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -80,6 +83,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -94,6 +98,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
@@ -104,16 +109,31 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
 
-  private static final Function<SegmentsTable.SegmentTableView, Iterable<ResourceAction>>
-      SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segmentTableView ->
+  private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
+      SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
-          segmentTableView.getSegment().getDataSource())
+          segment.getDataSegment().getDataSource())
       );
 
   private static final Function<DataSegment, Iterable<ResourceAction>> SEGMENT_RA_GENERATOR =
       segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSource())
       );
+
+  private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
+
+  /**
+   * Booleans constants represented as long type,
+   * where 1 = true and 0 = false to make it easy to count number of segments
+   * which are published, available etc.
+   */
+  private static final long IS_ACTIVE_FALSE = 0L;
+  private static final long IS_ACTIVE_TRUE = 1L;
+  private static final long IS_PUBLISHED_FALSE = 0L;
+  private static final long IS_PUBLISHED_TRUE = 1L;
+  private static final long IS_AVAILABLE_TRUE = 1L;
+  private static final long IS_OVERSHADOWED_FALSE = 0L;
+  private static final long IS_OVERSHADOWED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -192,7 +212,8 @@ public class SystemSchema extends AbstractSchema
 
   @Inject
   public SystemSchema(
-      final BrokerSegmentMetadataView metadataView,
+      final DruidSchema druidSchema,
+      final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
@@ -204,7 +225,7 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(metadataView, jsonMapper, authorizerMapper),
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper),
@@ -223,16 +244,19 @@ public class SystemSchema extends AbstractSchema
    */
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
+    private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
-    private final BrokerSegmentMetadataView metadataView;
+    private final MetadataSegmentView metadataView;
 
     public SegmentsTable(
-        BrokerSegmentMetadataView metadataView,
+        DruidSchema druidSchemna,
+        MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
+      this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
@@ -253,12 +277,50 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final Iterator<SegmentTableView> segmentTableView = metadataView.getSegmentTableView();
+      //get available segments from druidSchema
+      final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
+          druidSchema.cache().getSegmentMetadataSnapshot();
+      final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
+          availableSegmentMetadata.entrySet().iterator();
 
-      final FluentIterable<Object[]> allSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(segmentTableView, root))
+      // in memory map to store segment data from available segments
+      final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
+          Maps.newHashMapWithExpectedSize(druidSchema.cache().getTotalSegments());
+      for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
+        PartialSegmentData partialSegmentData =
+            new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
+        partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
+      }
+
+      // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
+      // Coordinator.
+      // this may include both published and realtime segments.
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
+
+      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
+
+      final FluentIterable<Object[]> publishedSegments = FluentIterable
+          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
-            final DataSegment segment = val.getSegment();
+            final DataSegment segment = val.getDataSegment();
+            segmentsAlreadySeen.add(segment.getId());
+            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
+            long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
+            if (partialSegmentData != null) {
+              numReplicas = partialSegmentData.getNumReplicas();
+              numRows = partialSegmentData.getNumRows();
+              isAvailable = partialSegmentData.isAvailable();
+            }
+
+            isRealtime = Boolean.TRUE.equals(val.isRealtime()) ? 1 : 0;
+
+            // set of segments returned from coordinator include published and realtime segments
+            // so realtime segments are not published and vice versa
+            boolean isPublished = !val.isRealtime();
+
+            // is_active is true for published segments that are not overshadowed
+            boolean isActive = isPublished && !val.isOvershadowed();
+
             try {
               return new Object[]{
                   segment.getId(),
@@ -268,20 +330,21 @@ public class SystemSchema extends AbstractSchema
                   segment.getSize(),
                   segment.getVersion(),
                   (long) segment.getShardSpec().getPartitionNum(),
-                  val.getNumReplicas(),
-                  val.getNumRows(),
-                  val.isActive(),
-                  val.isPublished(),
-                  val.isAvailable(),
-                  val.isRealtime(),
-                  val.isOvershadowed(),
+                  numReplicas,
+                  numRows,
+                  isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
+                  isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
+                  isAvailable,
+                  isRealtime,
+                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                   segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
-                  segment.getLastCompactionState() == null
-                  ? null
-                  : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
-                  val.getReplicationFactor()
+                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  // If the segment is unpublished, we won't have this information yet.
+                  // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
+                  // This should be automatically updated in the next refesh with Coordinator.
+                  val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
               };
             }
             catch (JsonProcessingException e) {
@@ -289,12 +352,59 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
+      final FluentIterable<Object[]> availableSegments = FluentIterable
+          .from(() -> getAuthorizedAvailableSegments(
+              availableSegmentEntries,
+              root
+          ))
+          .transform(val -> {
+            if (segmentsAlreadySeen.contains(val.getKey())) {
+              return null;
+            }
+            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
+            final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
+            try {
+              return new Object[]{
+                  val.getKey(),
+                  val.getKey().getDataSource(),
+                  val.getKey().getInterval().getStart().toString(),
+                  val.getKey().getInterval().getEnd().toString(),
+                  val.getValue().getSegment().getSize(),
+                  val.getKey().getVersion(),
+                  (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
+                  numReplicas,
+                  val.getValue().getNumRows(),
+                  // is_active is true for unpublished segments iff they are realtime
+                  val.getValue().isRealtime() /* is_active */,
+                  // is_published is false for unpublished segments
+                  IS_PUBLISHED_FALSE,
+                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                  IS_AVAILABLE_TRUE,
+                  val.getValue().isRealtime(),
+                  IS_OVERSHADOWED_FALSE,
+                  // there is an assumption here that unpublished segments are never overshadowed
+                  val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
+                  val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
+                  val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
+                  null, // unpublished segments from realtime tasks will not be compacted yet
+                  REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
+              };
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
+          });
+
+      final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
+          Iterables.concat(publishedSegments, availableSegments)
+      );
 
       return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
+
     }
 
-    private Iterator<SegmentTableView> getAuthorizedPublishedSegments(
-        Iterator<SegmentTableView> it,
+    private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
+        Iterator<SegmentStatusInCluster> it,
         DataContext root
     )
     {
@@ -303,7 +413,7 @@ public class SystemSchema extends AbstractSchema
           "authenticationResult in dataContext"
       );
 
-      final Iterable<SegmentTableView> authorizedSegments = AuthorizationUtils
+      final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,
@@ -339,67 +449,35 @@ public class SystemSchema extends AbstractSchema
       return authorizedSegments.iterator();
     }
 
-    protected static class SegmentTableView
+    private static class PartialSegmentData
     {
-      /**
-       * Booleans constants represented as long type,
-       * where 1 = true and 0 = false to make it easy to count number of segments
-       * which are published, available etc.
-       */
-      private static final long IS_ACTIVE_FALSE = 0L;
-      private static final long IS_ACTIVE_TRUE = 1L;
-      private static final long IS_PUBLISHED_FALSE = 0L;
-      private static final long IS_PUBLISHED_TRUE = 1L;
-      private static final long IS_OVERSHADOWED_FALSE = 0L;
-      private static final long IS_OVERSHADOWED_TRUE = 1L;
-      private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
-
-      private final DataSegment segment;
-      private final long available;
-      private final long realtime;
+      private final long isAvailable;
+      private final long isRealtime;
       private final long numReplicas;
       private final long numRows;
-      private final long replicationFactor;
-      private final long overshadowed;
-      private final long published;
-      private final long active;
 
-      public SegmentTableView(
-          DataSegment segment,
-          long isAvailable,
-          long realtime,
-          long numReplicas,
-          long numRows,
-          Integer replicationFactor,
-          boolean overshadowed,
-          boolean isPublished,
-          boolean active
+      public PartialSegmentData(
+          final long isAvailable,
+          final long isRealtime,
+          final long numReplicas,
+          final long numRows
       )
+
       {
-        this.segment = segment;
-        this.available = isAvailable;
-        this.realtime = realtime;
+        this.isAvailable = isAvailable;
+        this.isRealtime = isRealtime;
         this.numReplicas = numReplicas;
         this.numRows = numRows;
-        this.replicationFactor = (null == replicationFactor) ? REPLICATION_FACTOR_UNKNOWN : (long) replicationFactor;
-        this.overshadowed = overshadowed ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE;
-        this.published = isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE;
-        this.active = active ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE;
-      }
-
-      public DataSegment getSegment()
-      {
-        return segment;
       }
 
       public long isAvailable()
       {
-        return available;
+        return isAvailable;
       }
 
       public long isRealtime()
       {
-        return realtime;
+        return isRealtime;
       }
 
       public long getNumReplicas()
@@ -410,41 +488,6 @@ public class SystemSchema extends AbstractSchema
       public long getNumRows()
       {
         return numRows;
-      }
-
-      public long getReplicationFactor()
-      {
-        return replicationFactor;
-      }
-
-      public long isOvershadowed()
-      {
-        return overshadowed;
-      }
-
-      public long isPublished()
-      {
-        return published;
-      }
-
-      public long isActive()
-      {
-        return active;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "SegmentTableView{" +
-               "segmentId=" + segment.getId() +
-               ", isAvailable=" + available +
-               ", isRealtime=" + realtime +
-               ", numReplicas=" + numReplicas +
-               ", numRows=" + numRows +
-               ", replicationFactor=" + replicationFactor +
-               ", isOvershadowed=" + overshadowed +
-               ", isPublished=" + published +
-               '}';
       }
     }
   }

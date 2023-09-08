@@ -150,7 +150,7 @@ public class QueryFrameworkUtils
         druidSchemaManager
     );
     SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(createMockQueryLifecycleFactory(walker, conglomerate), walker, authorizerMapper);
+        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;

@@ -46,6 +46,11 @@ public class DruidSchema extends AbstractTableSchema
     }
   }
 
+  protected BrokerSegmentMetadataCache cache()
+  {
+    return segmentMetadataCache;
+  }
+
   @Override
   public Table getTable(String name)
   {

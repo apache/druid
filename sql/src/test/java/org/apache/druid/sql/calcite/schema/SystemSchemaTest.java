@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -37,12 +36,11 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.BrokerSegmentWatcherConfig;
-import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.config.NullHandling;
@@ -64,7 +62,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
@@ -82,13 +79,16 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.TestTimelineServerView;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
+import org.apache.druid.server.coordinator.simulate.TestServerInventoryView;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -97,26 +97,18 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
-import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable.SegmentTableView;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
-import org.apache.druid.segment.metadata.TestTimelineServerView;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -130,7 +122,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -162,6 +153,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private SystemSchema schema;
+  private SpecificSegmentsQuerySegmentWalker walker;
   private DruidLeaderClient client;
   private DruidLeaderClient coordinatorClient;
   private OverlordClient overlordClient;
@@ -170,10 +162,11 @@ public class SystemSchemaTest extends CalciteTestBase
   private StringFullResponseHolder responseHolder;
   private BytesAccumulatingResponseHandler responseHandler;
   private Request request;
+  private DruidSchema druidSchema;
   private AuthorizerMapper authMapper;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
-  private BrokerSegmentMetadataView metadataView;
+  private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private FilteredServerInventoryView serverInventoryView;
 
@@ -254,7 +247,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                               .rows(ROWS3)
                                               .buildMMappedIndex();
 
-    SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
         .add(segment3, index3);
@@ -272,72 +265,14 @@ public class SystemSchemaTest extends CalciteTestBase
         ),
         new NoopCoordinatorClient()
     );
-
     cache.start();
     cache.awaitInitialization();
-
-    DruidNode coordinatorNode = new DruidNode("test-coordinator", "localhost", false, 8081, null, true, false);
-    DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        new CalciteTests.FakeHttpClient(),
-        new CalciteTests.FakeDruidNodeDiscoveryProvider(
-            ImmutableMap.of(
-                NodeRole.COORDINATOR,
-                new CalciteTests.FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
-            )
-        ),
-        NodeRole.COORDINATOR,
-        "/simple/leader"
-    )
-    {
-      @Override
-      public String findCurrentLeader()
-      {
-        return coordinatorNode.getHostAndPortToUse();
-      }
-
-      @Override
-      public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
-      {
-        return new Request(httpMethod, new URL(StringUtils.format("http://%s%s", coordinatorNode.getHostAndPortToUse(), urlPath)));
-      }
-
-      @Override
-      public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
-          throws IOException
-      {
-        List<SegmentStatusInCluster> segmentStatusInClusterList = new ArrayList<>(Arrays.asList(
-            new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, 0L, false),
-            new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, 0L, false),
-            new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, 0L, false),
-            new SegmentStatusInCluster(segment1, true, 2, 3L, false),
-            new SegmentStatusInCluster(segment2, false, 0, 3L, false)
-        ));
-
-        InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
-        byte[] bytesToWrite = mapper.writeValueAsString(segmentStatusInClusterList).getBytes(StandardCharsets.UTF_8);
-        responseHolder.addChunk(bytesToWrite);
-        responseHolder.done();
-        return (H) responseHolder;
-      }
-    };
-
-    metadataView = new BrokerSegmentMetadataView(
-        druidLeaderClient,
-        mapper,
-        new BrokerSegmentWatcherConfig(),
-        new BrokerSegmentMetadataCacheConfig() {
-          @Override
-          public boolean isMetadataSegmentCacheEnable()
-          {
-            return false;
-          }
-        },
-        cache
-    );
-
+    druidSchema = new DruidSchema(cache, null);
+    metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     schema = new SystemSchema(
+        druidSchema,
         metadataView,
         serverView,
         serverInventoryView,
@@ -347,17 +282,6 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         mapper
     );
-  }
-
-  @Test
-  public void test1() throws IOException
-  {
-    SegmentStatusInCluster segmentStatusInCluster = new SegmentStatusInCluster(segment1, true, 2, 4L, Boolean.TRUE);
-    byte[] x = mapper.writeValueAsBytes(segmentStatusInCluster);
-    SegmentStatusInCluster w = mapper.readValue(x, new TypeReference<SegmentStatusInCluster>()
-    {
-    });
-    int p = 1;
   }
 
   private final CompactionState expectedCompactionState = new CompactionState(
@@ -645,9 +569,18 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(metadataView, new ObjectMapper(), authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
+        new SegmentStatusInCluster(segment1, true, 2, null, false),
+        new SegmentStatusInCluster(segment2, false, 0, null, false)
+    ));
 
-    EasyMock.replay(client, request, responseHolder, responseHandler);
+    EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
+
+    EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = segmentsTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));

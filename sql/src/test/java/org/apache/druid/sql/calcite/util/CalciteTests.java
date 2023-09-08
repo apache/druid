@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -31,11 +30,8 @@ import com.google.inject.Key;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
-import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
-import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -53,16 +49,12 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.metadata.TestTimelineServerView;
-import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
@@ -80,15 +72,12 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataView;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
-import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataBuilder;
+import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.timeline.DataSegment;
-import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -343,7 +332,7 @@ public class CalciteTests
   }
 
   public static SystemSchema createMockSystemSchema(
-      final QueryLifecycleFactory queryLifecycleFactory,
+      final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
       final AuthorizerMapper authorizerMapper
   )
@@ -383,29 +372,15 @@ public class CalciteTests
       }
     };
 
-    TimelineServerView timelineServerView = new TestTimelineServerView(walker.getSegments());
-
     return new SystemSchema(
-        new BrokerSegmentMetadataView(
+        druidSchema,
+        new MetadataSegmentView(
             druidLeaderClient,
             getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
-            BrokerSegmentMetadataCacheConfig.create(),
-            new BrokerSegmentMetadataCache(
-                queryLifecycleFactory,
-                timelineServerView,
-                BrokerSegmentMetadataCacheConfig.create(),
-                new NoopEscalator(),
-                new InternalQueryConfig(),
-                new NoopServiceEmitter(),
-                new PhysicalDatasourceMetadataBuilder(
-                    new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-                    new SegmentManager(EasyMock.createMock(SegmentLoader.class))
-                ),
-                new NoopCoordinatorClient()
-                )
+            BrokerSegmentMetadataCacheConfig.create()
         ),
-        timelineServerView,
+        new TestTimelineServerView(walker.getSegments()),
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
@@ -433,7 +408,7 @@ public class CalciteTests
   /**
    * A fake {@link HttpClient} for {@link #createMockSystemSchema}.
    */
-  public static class FakeHttpClient implements HttpClient
+  private static class FakeHttpClient implements HttpClient
   {
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
@@ -458,7 +433,7 @@ public class CalciteTests
   /**
    * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  public static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
 
@@ -484,7 +459,7 @@ public class CalciteTests
     }
   }
 
-  public static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
+  private static class FakeDruidNodeDiscovery implements DruidNodeDiscovery
   {
     private final Set<DiscoveryDruidNode> nodes;
 
@@ -493,7 +468,7 @@ public class CalciteTests
       this.nodes = new HashSet<>();
     }
 
-    public FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
+    FakeDruidNodeDiscovery(Map<NodeRole, DruidNode> nodes)
     {
       this.nodes = Sets.newHashSetWithExpectedSize(nodes.size());
       nodes.forEach((k, v) -> {
