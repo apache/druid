@@ -67,7 +67,7 @@ public class DefaultColumnFormatConfig
   @Override
   public String toString()
   {
-    return "DefaultColumnFormatsConfig{" +
+    return "DefaultColumnFormatConfig{" +
            "nestedColumnFormatVersion=" + nestedColumnFormatVersion +
            '}';
   }
