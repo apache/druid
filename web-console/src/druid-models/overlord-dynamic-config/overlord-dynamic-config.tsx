@@ -69,6 +69,8 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
       'equalDistributionWithCategorySpec',
       'fillCapacity',
       'fillCapacityWithCategorySpec',
+      'fillIncrementally',
+      'fillIncrementallyWithCategorySpec',
     ],
   },
 
@@ -82,6 +84,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         deepGet(c, 'selectStrategy.type') ?? 'equalDistribution',
         'equalDistribution',
         'fillCapacity',
+        'fillIncrementally',
       ),
     info: (
       <>
@@ -104,6 +107,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         deepGet(c, 'selectStrategy.type') ?? 'equalDistribution',
         'equalDistribution',
         'fillCapacity',
+        'fillIncrementally',
       ),
   },
 
@@ -117,6 +121,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         deepGet(c, 'selectStrategy.type'),
         'equalDistributionWithCategorySpec',
         'fillCapacityWithCategorySpec',
+        'fillIncrementallyWithCategorySpec',
       ),
     info: (
       <>
@@ -143,6 +148,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
         deepGet(c, 'selectStrategy.type'),
         'equalDistributionWithCategorySpec',
         'fillCapacityWithCategorySpec',
+        'fillIncrementallyWithCategorySpec',
       ),
   },
 
@@ -160,7 +166,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     label: 'Auto scaler type',
     type: 'string',
     suggestions: [undefined, 'ec2', 'gce'],
-    defined: c => oneOf(deepGet(c, 'selectStrategy.type'), 'fillCapacity', 'javascript'),
+    defined: c => oneOf(deepGet(c, 'selectStrategy.type'), 'fillCapacity', 'fillIncrementally', 'javascript'),
   },
   {
     name: 'autoScaler.minNumWorkers',
