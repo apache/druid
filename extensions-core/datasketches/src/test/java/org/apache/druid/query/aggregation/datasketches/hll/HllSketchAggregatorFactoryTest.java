@@ -80,31 +80,6 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
-  public void testGetRequiredColumns()
-  {
-    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
-    Assert.assertEquals(1, aggregatorFactories.size());
-    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
-    Assert.assertEquals(FIELD_NAME, aggregatorFactory.getName());
-    Assert.assertEquals(FIELD_NAME, aggregatorFactory.getFieldName());
-    Assert.assertEquals(LG_K, aggregatorFactory.getLgK());
-    Assert.assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
-    Assert.assertEquals(HllSketchAggregatorFactory.DEFAULT_SHOULD_FINALIZE, aggregatorFactory.isShouldFinalize());
-    Assert.assertEquals(ROUND, aggregatorFactory.isRound());
-  }
-
-
-  @Test
-  public void testWithName()
-  {
-    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
-    Assert.assertEquals(1, aggregatorFactories.size());
-    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
-    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName(aggregatorFactory.getName()));
-    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
-  }
-
-  @Test
   public void testFinalizeComputationNull()
   {
     Assert.assertNull(target.finalizeComputation(null));

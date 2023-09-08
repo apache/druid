@@ -48,7 +48,6 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -194,12 +193,6 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, timeColumn, maxStringBytes));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     Map map = (Map) object;
@@ -292,14 +285,15 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     }
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
     return maxStringBytes == that.maxStringBytes &&
-           Objects.equals(fieldName, that.fieldName) &&
-           Objects.equals(name, that.name);
+        Objects.equals(fieldName, that.fieldName) &&
+        Objects.equals(timeColumn, that.timeColumn) &&
+        Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(fieldName, name, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes, timeColumn);
   }
 
   @Override
@@ -309,6 +303,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
            "fieldName='" + fieldName + '\'' +
            ", name='" + name + '\'' +
            ", maxStringBytes=" + maxStringBytes +
+           ", timeColumn=" + timeColumn +
            '}';
   }
 }

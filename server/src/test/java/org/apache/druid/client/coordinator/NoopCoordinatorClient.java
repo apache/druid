@@ -38,7 +38,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+  public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
   {
     throw new UnsupportedOperationException();
   }

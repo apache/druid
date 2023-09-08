@@ -38,9 +38,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -67,49 +66,44 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
   public void setup() throws IOException
   {
     final IncrementalIndex incrementalIndex = MapVirtualColumnTestBase.generateIndex();
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
 
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+          @Override
+          public int intermediateComputeSizeBytes()
+          {
+            return 10 * 1024 * 1024;
+          }
+
+          @Override
+          public int getNumMergeBuffers()
+          {
+            return 1;
+          }
+
+          @Override
+          public int getNumThreads()
+          {
+            return 1;
+          }
+        },
         GroupByQueryConfig::new,
-        null,
-        new GroupByStrategyV2(
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int intermediateComputeSizeBytes()
-              {
-                return 10 * 1024 * 1024;
-              }
-
-              @Override
-              public int getNumMergeBuffers()
-              {
-                return 1;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                return 1;
-              }
-            },
-            GroupByQueryConfig::new,
-            new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
-            new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1),
-            TestHelper.makeJsonMapper(),
-            new DefaultObjectMapper(),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
+        new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1),
+        TestHelper.makeJsonMapper(),
+        new DefaultObjectMapper(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
-        strategySelector,
-        new GroupByQueryQueryToolChest(strategySelector)
+        groupingEngine,
+        new GroupByQueryQueryToolChest(groupingEngine)
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(

@@ -56,7 +56,6 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
-import org.apache.druid.sql.calcite.rule.logical.DruidAggregateCaseToFilterRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
@@ -318,7 +317,6 @@ public class CalciteRulesManager
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
         .addAll(baseRuleSet(plannerContext))
-        .add(DruidAggregateCaseToFilterRule.INSTANCE)
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }

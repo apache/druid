@@ -240,7 +240,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               null,
               0,
               1,
-              2
+              2,
+              null
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
@@ -305,7 +306,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               null,
               0,
               1,
-              2
+              2,
+              null
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
@@ -648,7 +650,6 @@ public class SqlStatementResourceTest extends MSQTestBase
     setupMocks(overlordClient);
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         overlordClient,
         new LocalFileStorageConnector(tmpFolder.newFolder("local"))

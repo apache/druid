@@ -37,9 +37,10 @@ public interface CoordinatorClient
   ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor);
 
   /**
-   * Fetches segment metadata for the given dataSource and segmentId.
+   * Fetches segment metadata for the given dataSource and segmentId. If includeUnused is set to false, the segment is
+   * not returned if it is marked as unused.
    */
-  ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId);
+  ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused);
 
   /**
    * Fetches segment metadata for the given dataSource and intervals.
