@@ -342,7 +342,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     boolean indexGeneratorJobAttempted = false;
     boolean indexGeneratorJobSuccess = false;
     HadoopIngestionSpec indexerSchema = null;
-    String version = null;
     try {
       registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
       String hadoopJobIdFile = getHadoopJobIdFileName();
@@ -408,6 +407,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       // We should have a lock from before we started running only if interval was specified
+      String version;
       if (determineIntervals) {
         Interval interval = JodaUtils.umbrellaInterval(
             JodaUtils.condenseIntervals(
@@ -450,6 +450,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       log.info("Setting version to: %s", version);
+      // If the version is changed compared to the original spec version, update the indexerSchema to reflect this.
+      // This is required because the cleanup job that runs at the end of the task needs to know the proper version.
+      if (!version.equals(specVersion)) {
+        indexerSchema = indexerSchema.withTuningConfig(indexerSchema.getTuningConfig().withVersion(version));
+      }
 
       Object innerProcessingRunner = getForeignClassloaderObject(
           "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
@@ -526,16 +531,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
     }
     finally {
-      // The indexGenerator job does not always use the version in the spec. Instead, the version can be dynamically
-      // set. If this is the case, we need to clean up the job with the dynamic version, otherwise intermediate indexing
-      // files will be orphaned and require manual cleanup
       indexerGeneratorCleanupJob(
           indexGeneratorJobAttempted,
           indexGeneratorJobSuccess,
-          indexerSchema == null ? null : toolbox.getJsonMapper().writeValueAsString(
-                  indexerSchema.withTuningConfig(
-                          indexerSchema.getTuningConfig().withVersion(
-                                  version == null ? indexerSchema.getTuningConfig().getVersion() : version)))
+          indexerSchema == null ? null : toolbox.getJsonMapper().writeValueAsString(indexerSchema)
       );
     }
   }
