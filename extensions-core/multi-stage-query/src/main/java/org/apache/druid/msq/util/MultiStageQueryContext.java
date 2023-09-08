@@ -90,6 +90,9 @@ public class MultiStageQueryContext
   public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
+  public static final String CTX_INCLUDE_REALTIME = "includeRealtimeResults";
+  public static final boolean DEFAULT_INCLUDE_REALTIME = false;
+
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
@@ -178,6 +181,15 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FINALIZE_AGGREGATIONS,
         DEFAULT_FINALIZE_AGGREGATIONS
+    );
+  }
+
+  public static boolean isIncludeRealtime(final QueryContext queryContext)
+  {
+    return QueryContexts.getAsBoolean(
+        CTX_INCLUDE_REALTIME,
+        queryContext.getBoolean(CTX_INCLUDE_REALTIME, DEFAULT_INCLUDE_REALTIME),
+        DEFAULT_INCLUDE_REALTIME
     );
   }
 

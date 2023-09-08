@@ -39,6 +39,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -140,6 +141,7 @@ import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
+import org.apache.druid.msq.input.table.DataSegmentWithLocation;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
 import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
@@ -1158,14 +1160,31 @@ public class ControllerImpl implements Controller
 
   private DataSegmentTimelineView makeDataSegmentTimelineView()
   {
+    final boolean isIncludeRealtime = MultiStageQueryContext.isIncludeRealtime(task.getQuerySpec().getQuery().context());
+
     return (dataSource, intervals) -> {
-      final Collection<DataSegment> dataSegments =
+      final Iterable<ImmutableSegmentLoadInfo> serverViewSegments;
+
+      // Fetch the realtime segments first, so that we don't miss any segment if they get handed off between the two calls.
+      if (isIncludeRealtime) {
+         serverViewSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
+      } else {
+        serverViewSegments = ImmutableList.of();
+      }
+
+      final Collection<DataSegment> metadataStoreSegments =
           FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
-      if (dataSegments.isEmpty()) {
+      Set<DataSegment> unifiedSegmentView = new HashSet<>(metadataStoreSegments);
+      for (ImmutableSegmentLoadInfo segmentLoadInfo : serverViewSegments) {
+        DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(segmentLoadInfo.getSegment(), segmentLoadInfo.getServers());
+        unifiedSegmentView.add(dataSegmentWithLocation);
+      }
+
+      if (unifiedSegmentView.isEmpty()) {
         return Optional.empty();
       } else {
-        return Optional.of(SegmentTimeline.forSegments(dataSegments));
+        return Optional.of(SegmentTimeline.forSegments(unifiedSegmentView));
       }
     };
   }

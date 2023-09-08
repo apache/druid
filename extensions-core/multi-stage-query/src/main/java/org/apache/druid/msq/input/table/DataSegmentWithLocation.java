@@ -1,0 +1,75 @@
+package org.apache.druid.msq.input.table;
+
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.druid.jackson.CommaListJoinDeserializer;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.timeline.CompactionState;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Data segment including the locations which contain the segment. Used if MSQ needs to fetch the segment from a server
+ * instead of from deep storage.
+ */
+public class DataSegmentWithLocation extends DataSegment
+{
+  private final Set<DruidServerMetadata> servers;
+
+  @JsonCreator
+  public DataSegmentWithLocation(
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("version") String version,
+      // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
+      @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
+      @JsonProperty("dimensions")
+      @JsonDeserialize(using = CommaListJoinDeserializer.class)
+      @Nullable
+      List<String> dimensions,
+      @JsonProperty("metrics")
+      @JsonDeserialize(using = CommaListJoinDeserializer.class)
+      @Nullable
+      List<String> metrics,
+      @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
+      @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
+      @JsonProperty("binaryVersion") Integer binaryVersion,
+      @JsonProperty("size") long size,
+      @JsonProperty("servers") Set<DruidServerMetadata> servers,
+      @JacksonInject PruneSpecsHolder pruneSpecsHolder
+  )
+  {
+    super(dataSource, interval, version, loadSpec, dimensions, metrics, shardSpec, lastCompactionState, binaryVersion, size, pruneSpecsHolder);
+    this.servers = servers;
+  }
+
+  public DataSegmentWithLocation(
+      DataSegment dataSegment,
+      Set<DruidServerMetadata> servers
+  )
+  {
+    super(dataSegment.getDataSource(), dataSegment.getInterval(), dataSegment.getVersion(), dataSegment.getLoadSpec(), dataSegment.getDimensions(), dataSegment.getMetrics(), dataSegment.getShardSpec(), dataSegment.getBinaryVersion(), dataSegment.getSize());
+    this.servers = servers;
+  }
+
+  @JsonProperty
+  public Set<DruidServerMetadata> getServers()
+  {
+    return servers;
+  }
+
+  @JsonIgnore
+  public boolean isRealtime()
+  {
+    return getLoadSpec() == null || getLoadSpec().isEmpty();
+  }
+}
