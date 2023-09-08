@@ -23,8 +23,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -84,8 +82,6 @@ public class StringFirstVectorAggregatorTest extends InitializedNullHandlingTest
     Mockito.doReturn(times).when(timeSelector).getLongVector();
     Mockito.doReturn(timesSame).when(timeSelectorForPairs).getLongVector();
     Mockito.doReturn(pairs).when(selectorForPairs).getObjectVector();
-    final ColumnCapabilities cap = selectorFactory.getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(ValueType.STRING).when(cap).getType();
     target = new StringFirstVectorAggregator(timeSelector, selector, 10);
     targetWithPairs = new StringFirstVectorAggregator(timeSelectorForPairs, selectorForPairs, 10);
     clearBufferForPositions(0, 0);
