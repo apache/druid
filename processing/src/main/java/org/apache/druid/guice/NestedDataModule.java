@@ -27,6 +27,8 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.NestedDataColumnHandlerV4;
@@ -63,12 +65,12 @@ public class NestedDataModule implements DruidModule
     if (formatsConfig.getNestedColumnFormatVersion() != null && formatsConfig.getNestedColumnFormatVersion() == 4) {
       DimensionHandlerUtils.registerDimensionHandlerProvider(
           NestedDataComplexTypeSerde.TYPE_NAME,
-          NestedDataColumnHandlerV4::new
+          new NestedColumnV4HandlerProvider()
       );
     } else {
       DimensionHandlerUtils.registerDimensionHandlerProvider(
           NestedDataComplexTypeSerde.TYPE_NAME,
-          NestedCommonFormatColumnHandler::new
+          new NestedCommonFormatHandlerProvider()
       );
     }
     return new SideEffectHandlerRegisterer();
@@ -92,7 +94,7 @@ public class NestedDataModule implements DruidModule
     registerSerde();
     DimensionHandlerUtils.registerDimensionHandlerProvider(
         NestedDataComplexTypeSerde.TYPE_NAME,
-        NestedCommonFormatColumnHandler::new
+        new NestedCommonFormatHandlerProvider()
     );
   }
 
@@ -103,6 +105,27 @@ public class NestedDataModule implements DruidModule
     }
   }
 
+  public static class NestedCommonFormatHandlerProvider
+      implements DimensionHandlerProvider<StructuredData, StructuredData, StructuredData>
+  {
+
+    @Override
+    public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
+    {
+      return new NestedCommonFormatColumnHandler(dimensionName);
+    }
+  }
+
+  public static class NestedColumnV4HandlerProvider
+      implements DimensionHandlerProvider<StructuredData, StructuredData, StructuredData>
+  {
+
+    @Override
+    public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
+    {
+      return new NestedDataColumnHandlerV4(dimensionName);
+    }
+  }
   /**
    * this is used as a vehicle to register the correct version of the system default nested column handler by side
    * effect with the help of binding to {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} so that
