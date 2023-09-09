@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -42,7 +41,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
 
 
   public StringFirstVectorAggregator(
-      BaseLongVectorValueSelector timeSelector,
+      VectorValueSelector timeSelector,
       VectorObjectSelector valueSelector,
       int maxStringBytes
   )
