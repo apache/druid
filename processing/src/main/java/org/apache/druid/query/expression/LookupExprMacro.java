@@ -54,10 +54,11 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    validationHelperCheckArgumentCount(args, 2);
+    validationHelperCheckMinArgumentCount(args, 2);
 
     final Expr arg = args.get(0);
     final Expr lookupExpr = args.get(1);
+    final String replaceMissingValueWith = getReplaceMissingValueWith(args);
 
     validationHelperCheckArgIsLiteral(lookupExpr, "second argument");
     if (lookupExpr.getLiteralValue() == null) {
@@ -69,7 +70,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         lookupExtractorFactoryContainerProvider,
         lookupName,
         false,
-        null,
+        replaceMissingValueWith,
         false,
         null
     );
@@ -104,6 +105,15 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public String stringify()
       {
+        if (replaceMissingValueWith != null) {
+          return StringUtils.format(
+              "%s(%s, %s, '%s')",
+              FN_NAME,
+              arg.stringify(),
+              lookupExpr.stringify(),
+              replaceMissingValueWith
+          );
+        }
         return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), lookupExpr.stringify());
       }
 
@@ -115,5 +125,16 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
     }
 
     return new LookupExpr(arg);
+  }
+
+  private String getReplaceMissingValueWith(final List<Expr> args)
+  {
+    if (args.size() > 2) {
+      final Expr missingValExpr = args.get(2);
+      if (missingValExpr.isLiteral() && missingValExpr.getLiteralValue() != null) {
+        return missingValExpr.getLiteralValue().toString();
+      }
+    }
+    return null;
   }
 }
