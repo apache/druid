@@ -28,9 +28,9 @@
     "sass": "^1.62.1"
   },
   "dependencies": {
-    "@docusaurus/core": "2.4.0",
-    "@docusaurus/plugin-client-redirects": "2.4.0",
-    "@docusaurus/preset-classic": "2.4.0",
+    "@docusaurus/core": "^2.4.1",
+    "@docusaurus/plugin-client-redirects": "^2.4.1",
+    "@docusaurus/preset-classic": "^2.4.1",
     "clsx": "^1.1.1",
     "fast-glob": "^3.2.2",
     "fs-extra": "^8.1.0",
