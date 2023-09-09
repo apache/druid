@@ -438,7 +438,7 @@ public class SegmentMetadataCache
     if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
       log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
     } else {
-      log.info("[%s] signature is unchanged.", dataSource);
+      log.debug("[%s] signature is unchanged.", dataSource);
     }
   }
 
@@ -459,7 +459,7 @@ public class SegmentMetadataCache
     return tables.get(name);
   }
 
-  public Map<String, DataSourceInformation> getDataSourceSchemaMap()
+  public Map<String, DataSourceInformation> getDataSourceInformationMap()
   {
     return ImmutableMap.copyOf(tables);
   }
@@ -877,7 +877,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  public TreeSet<SegmentId> getSegmentsNeedingRefresh()
+  TreeSet<SegmentId> getSegmentsNeedingRefresh()
   {
     synchronized (lock) {
       return segmentsNeedingRefresh;
@@ -885,7 +885,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  public TreeSet<SegmentId> getMutableSegments()
+  TreeSet<SegmentId> getMutableSegments()
   {
     synchronized (lock) {
       return mutableSegments;
@@ -893,18 +893,12 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  public Set<String> getDataSourcesNeedingRebuild()
+  Set<String> getDataSourcesNeedingRebuild()
   {
     synchronized (lock) {
       return dataSourcesNeedingRebuild;
     }
   }
-
-  Object getLock()
-  {
-    return lock;
-  }
-
 
   /**
    * Execute a SegmentMetadata query and return a {@link Sequence} of {@link SegmentAnalysis}.
@@ -951,7 +945,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
+  public static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {

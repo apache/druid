@@ -28,6 +28,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -166,6 +169,33 @@ public class CoordinatorClientImplTest
     Assert.assertEquals(
         Collections.singletonList(segment),
         coordinatorClient.fetchUsedSegments("xyz", intervals).get()
+    );
+  }
+
+  @Test
+  public void test_fetchDataSourceInformation() throws Exception
+  {
+    String foo = "foo";
+
+    DataSourceInformation fooInfo = new DataSourceInformation(
+        "foo",
+        RowSignature.builder()
+                    .add("d1", ColumnType.FLOAT)
+                    .add("d2", ColumnType.DOUBLE)
+                    .build()
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/dataSourceInformation")
+            .jsonContent(jsonMapper, Collections.singletonList(foo)),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Collections.singletonList(fooInfo))
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList(fooInfo),
+        coordinatorClient.fetchDataSourceInformation(Collections.singleton(foo)).get()
     );
   }
 }

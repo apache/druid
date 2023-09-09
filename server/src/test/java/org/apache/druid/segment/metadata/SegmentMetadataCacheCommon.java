@@ -86,8 +86,10 @@ public abstract class SegmentMetadataCacheCommon
 
   static QueryRunnerFactoryConglomerate conglomerate;
   static Closer resourceCloser;
-
   static QueryToolChestWarehouse queryToolChestWarehouse;
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
 
   @BeforeClass
   public static void setUpClass()
@@ -108,15 +110,6 @@ public abstract class SegmentMetadataCacheCommon
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
-  }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-
-  @Before
-  public void setUpCommon()
-  {
   }
 
   InputRow createRow(final ImmutableMap<String, ?> map)

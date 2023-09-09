@@ -87,43 +87,41 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
 
     segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
 
-    Map<String, DatasourceTable.PhysicalDatasourceMetadata> polledDataSourceSchema = new HashMap<>();
+    Map<String, DatasourceTable.PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 
-    // Fetch dataSource schema from the Coordinator
+    // Fetch dataSource information from the Coordinator
     try {
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
-                 .forEach(item -> polledDataSourceSchema.put(
+                 .forEach(item -> polledDataSourceMetadata.put(
                      item.getDatasource(),
                      physicalDatasourceMetadataBuilder.build(item)
                  ));
     } catch (Exception e) {
-      log.error("Exception querying coordinator for schema");
+      log.warn(e, "Exception querying coordinator to fetch dataSourceInformation.");
     }
 
-    log.info("Queried ds schema are [%s]", polledDataSourceSchema);
-
-    tables.putAll(polledDataSourceSchema);
+    tables.putAll(polledDataSourceMetadata);
 
     // Remove segments of the dataSource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.forEach(segment -> {
-      if (polledDataSourceSchema.containsKey(segment.getDataSource())) {
+      if (polledDataSourceMetadata.containsKey(segment.getDataSource())) {
         segmentsToRefresh.remove(segment);
       }
     });
 
-    // Refresh the segments.
+    // Refresh the remaining segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.
-      getSegmentsNeedingRefresh().addAll(Sets.difference(segmentsToRefresh, refreshed));
+      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
       // Compute the list of dataSources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
 
       // Remove those dataSource for which we received schema from the Coordinator.
-      dataSourcesToRebuild.removeAll(polledDataSourceSchema.keySet());
+      dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
       dataSourcesNeedingRebuild.clear();
     }
 

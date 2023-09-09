@@ -24,13 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -47,10 +49,10 @@ import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class MetadataResourceTest
 {
@@ -126,7 +128,7 @@ public class MetadataResourceTest
   {
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", null);
 
-    final List<SegmentStatusInCluster> resultList = extractSegmentStatusList(response);
+    final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 4);
     Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false), resultList.get(0));
     Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null,  null, false), resultList.get(1));
@@ -223,7 +225,7 @@ public class MetadataResourceTest
 
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", "includeRealtimeSegments");
 
-    final List<SegmentStatusInCluster> resultList = extractSegmentStatusList(response);
+    final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 6);
     Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultList.get(0));
     Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null,  30L, false), resultList.get(1));
@@ -232,6 +234,50 @@ public class MetadataResourceTest
     Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0,  null, false), resultList.get(3));
     Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultList.get(4));
     Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null,  40L, true), resultList.get(5));
+  }
+
+  @Test
+  public void testGetDataSourceInformation() {
+    SegmentMetadataCache segmentMetadataCache = Mockito.mock(SegmentMetadataCache.class);
+    Map<String, DataSourceInformation> dataSourceInformationMap = new HashMap<>();
+
+    dataSourceInformationMap.put(
+        DATASOURCE1,
+        new DataSourceInformation(
+            DATASOURCE1,
+            RowSignature.builder()
+                        .add("c1", ColumnType.FLOAT)
+                         .add("c2", ColumnType.DOUBLE)
+                        .build()
+        )
+    );
+
+    dataSourceInformationMap.put(
+        "datasource2",
+        new DataSourceInformation(
+            "datasource2",
+            RowSignature.builder()
+                        .add("d1", ColumnType.FLOAT)
+                        .add("d2", ColumnType.DOUBLE)
+                        .build()
+        )
+    );
+
+    Mockito.doReturn(dataSourceInformationMap).when(segmentMetadataCache).getDataSourceInformationMap();
+
+    metadataResource = new MetadataResource(
+        segmentsMetadataManager,
+        storageCoordinator,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        coordinator,
+        segmentMetadataCache
+    );
+
+    Response response = metadataResource.getDataSourceInformation(Collections.singletonList(DATASOURCE1));
+
+    List<DataSourceInformation> dataSourceInformations = extractResponseList(response);
+    Assert.assertEquals(dataSourceInformations.size(), 1);
+    Assert.assertEquals(dataSourceInformations.get(0), dataSourceInformationMap.get(DATASOURCE1));
   }
 
   @Test
@@ -259,10 +305,10 @@ public class MetadataResourceTest
     );
   }
 
-  private List<SegmentStatusInCluster> extractSegmentStatusList(Response response)
+  private <T> List<T> extractResponseList(Response response)
   {
     return Lists.newArrayList(
-        (Iterable<SegmentStatusInCluster>) response.getEntity()
+        (Iterable<T>) response.getEntity()
     );
   }
 }

@@ -369,7 +369,7 @@ public class MetadataResource
     if (null == segmentMetadataCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-    Map<String, DataSourceInformation> dataSourceSchemaMap = segmentMetadataCache.getDataSourceSchemaMap();
+    Map<String, DataSourceInformation> dataSourceSchemaMap = segmentMetadataCache.getDataSourceInformationMap();
 
     List<DataSourceInformation> results = new ArrayList<>();
     List<String> dataSourcesToRetain = (null == dataSources) ? new ArrayList<>(dataSourceSchemaMap.keySet()) : dataSources;
