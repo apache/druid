@@ -124,7 +124,7 @@
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
-        <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
+        <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
         <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
