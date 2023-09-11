@@ -33,24 +33,24 @@ public class KubernetesAndWorkerTaskRunnerConfig
    * */
   @JsonProperty
   @NotNull
-  private String workerTaskRunnerType = "httpRemote";
+  private final boolean useHttpRemoteWorker;
 
   /**
    * Whether or not to send tasks to the worker task runner instead of the Kubernetes runner.
    * */
   @JsonProperty
   @NotNull
-  private Boolean sendAllTasksToWorkerTaskRunner;
+  private final boolean sendAllTasksToWorkerTaskRunner;
 
   @JsonCreator
   public KubernetesAndWorkerTaskRunnerConfig(
-      @JsonProperty("workerTaskRunnerType") String workerTaskRunnerType,
+      @JsonProperty("useHttpRemoteWorker") Boolean useHttpRemoteWorker,
       @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner
   )
   {
-    this.workerTaskRunnerType = ObjectUtils.defaultIfNull(
-        workerTaskRunnerType,
-        this.workerTaskRunnerType
+    this.useHttpRemoteWorker = ObjectUtils.defaultIfNull(
+        useHttpRemoteWorker,
+        true
     );
     this.sendAllTasksToWorkerTaskRunner = ObjectUtils.defaultIfNull(
         sendAllTasksToWorkerTaskRunner,
@@ -58,12 +58,12 @@ public class KubernetesAndWorkerTaskRunnerConfig
     );
   }
 
-  public String getWorkerTaskRunnerType()
+  public boolean isUseHttpRemoteWorker()
   {
-    return workerTaskRunnerType;
+    return useHttpRemoteWorker;
   }
 
-  public Boolean isSendAllTasksToWorkerTaskRunner()
+  public boolean isSendAllTasksToWorkerTaskRunner()
   {
     return sendAllTasksToWorkerTaskRunner;
   }

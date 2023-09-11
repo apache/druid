@@ -63,7 +63,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig("remote", null)
+        new KubernetesAndWorkerTaskRunnerConfig(false, null)
     );
 
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);

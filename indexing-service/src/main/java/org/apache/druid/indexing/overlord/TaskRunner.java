@@ -164,9 +164,4 @@ public interface TaskRunner
   {
     return -1;
   }
-
-  default List<TaskRunner> getSubTaskRunners()
-  {
-    return new ArrayList<>();
-  }
 }

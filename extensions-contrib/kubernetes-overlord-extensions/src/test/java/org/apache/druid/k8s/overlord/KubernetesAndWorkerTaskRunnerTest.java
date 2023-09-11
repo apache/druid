@@ -125,12 +125,6 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_subTaskRunners()
-  {
-    Assert.assertEquals(ImmutableList.of(kubernetesTaskRunner, workerTaskRunner), runner.getSubTaskRunners());
-  }
-
-  @Test
   public void test_getRunnerTaskState_kubernetes()
   {
     RunnerTaskState runnerTaskState = RunnerTaskState.RUNNING;

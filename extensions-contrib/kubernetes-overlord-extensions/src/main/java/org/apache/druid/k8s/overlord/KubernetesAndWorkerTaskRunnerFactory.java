@@ -55,8 +55,8 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   {
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunnerFactory.build(),
-        kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerType().equals("remote") ?
-            remoteTaskRunnerFactory.build() : httpRemoteTaskRunnerFactory.build(),
+        kubernetesAndWorkerTaskRunnerConfig.isUseHttpRemoteWorker() ?
+            httpRemoteTaskRunnerFactory.build() : remoteTaskRunnerFactory.build(),
         kubernetesAndWorkerTaskRunnerConfig
     );
     return runner;

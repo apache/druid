@@ -37,7 +37,7 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
         KubernetesAndWorkerTaskRunnerConfig.class
     );
 
-    Assert.assertEquals("remote", config.getWorkerTaskRunnerType());
+    Assert.assertEquals("remote", config.isUseHttpRemoteWorker());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
 
   }
@@ -47,7 +47,7 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
   {
     KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null);
 
-    Assert.assertEquals("httpRemote", config.getWorkerTaskRunnerType());
+    Assert.assertEquals("httpRemote", config.isUseHttpRemoteWorker());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
   }
 }

@@ -81,6 +81,8 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @LifecycleStart
   public void start()
   {
+    kubernetesTaskRunner.start();
+    workerTaskRunner.start();
   }
 
   @Override
@@ -119,6 +121,8 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @LifecycleStop
   public void stop()
   {
+    kubernetesTaskRunner.stop();
+    workerTaskRunner.stop();
   }
 
   @Override
@@ -159,36 +163,32 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    Map<String, Long> taskSlotCounts = new HashMap<>();
-    taskSlotCounts.putAll(kubernetesTaskRunner.getIdleTaskSlotCount());
-    taskSlotCounts.putAll(workerTaskRunner.getIdleTaskSlotCount());
+    Map<String, Long> taskSlotCounts = new HashMap<>(workerTaskRunner.getIdleTaskSlotCount());
+    kubernetesTaskRunner.getIdleTaskSlotCount().forEach((tier, count) -> taskSlotCounts.merge(tier, count, Long::sum));
     return taskSlotCounts;
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    Map<String, Long> taskSlotCounts = new HashMap<>();
-    taskSlotCounts.putAll(kubernetesTaskRunner.getUsedTaskSlotCount());
-    taskSlotCounts.putAll(workerTaskRunner.getUsedTaskSlotCount());
+    Map<String, Long> taskSlotCounts = new HashMap<>(workerTaskRunner.getUsedTaskSlotCount());
+    kubernetesTaskRunner.getUsedTaskSlotCount().forEach((tier, count) -> taskSlotCounts.merge(tier, count, Long::sum));
     return taskSlotCounts;
   }
 
   @Override
   public Map<String, Long> getLazyTaskSlotCount()
   {
-    Map<String, Long> taskSlotCounts = new HashMap<>();
-    taskSlotCounts.putAll(kubernetesTaskRunner.getLazyTaskSlotCount());
-    taskSlotCounts.putAll(workerTaskRunner.getLazyTaskSlotCount());
+    Map<String, Long> taskSlotCounts = new HashMap<>(workerTaskRunner.getLazyTaskSlotCount());
+    kubernetesTaskRunner.getLazyTaskSlotCount().forEach((tier, count) -> taskSlotCounts.merge(tier, count, Long::sum));
     return taskSlotCounts;
   }
 
   @Override
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    Map<String, Long> taskSlotCounts = new HashMap<>();
-    taskSlotCounts.putAll(kubernetesTaskRunner.getBlacklistedTaskSlotCount());
-    taskSlotCounts.putAll(workerTaskRunner.getBlacklistedTaskSlotCount());
+    Map<String, Long> taskSlotCounts = new HashMap<>(workerTaskRunner.getBlacklistedTaskSlotCount());
+    kubernetesTaskRunner.getBlacklistedTaskSlotCount().forEach((tier, count) -> taskSlotCounts.merge(tier, count, Long::sum));
     return taskSlotCounts;
   }
 
@@ -247,20 +247,24 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
-  public List<TaskRunner> getSubTaskRunners()
-  {
-    return ImmutableList.of(kubernetesTaskRunner, workerTaskRunner);
-  }
-
-  @Override
   public int getTotalCapacity()
   {
-    return kubernetesTaskRunner.getTotalCapacity() + workerTaskRunner.getTotalCapacity();
+    int k8sCapacity = kubernetesTaskRunner.getTotalCapacity();
+    int workerCapacity = workerTaskRunner.getTotalCapacity();
+    if (k8sCapacity == -1 && workerCapacity == -1) {
+      return -1;
+    }
+    return Math.min(0, k8sCapacity) + Math.min(0, workerCapacity);
   }
 
   @Override
   public int getUsedCapacity()
   {
-    return kubernetesTaskRunner.getUsedCapacity() + workerTaskRunner.getUsedCapacity();
+    int k8sCapacity = kubernetesTaskRunner.getUsedCapacity();
+    int workerCapacity = workerTaskRunner.getUsedCapacity();
+    if (k8sCapacity == -1 && workerCapacity == -1) {
+      return -1;
+    }
+    return Math.min(0, k8sCapacity) + Math.min(0, workerCapacity);
   }
 }

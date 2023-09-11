@@ -646,10 +646,4 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(0, runner.getUsedCapacity());
 
   }
-
-  @Test
-  public void test_getSubTaskRunner()
-  {
-    Assert.assertEquals(0, runner.getSubTaskRunners().size());
-  }
 }
