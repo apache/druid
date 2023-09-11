@@ -470,7 +470,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -542,7 +542,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void removeSegment(final DataSegment segment)
+  public void removeSegment(final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -580,7 +580,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+  public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -664,7 +664,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void markDataSourceAsNeedRebuild(String datasource)
+  public void markDataSourceAsNeedRebuild(String datasource)
   {
     synchronized (lock) {
       dataSourcesNeedingRebuild.add(datasource);
@@ -877,7 +877,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  TreeSet<SegmentId> getSegmentsNeedingRefresh()
+  public TreeSet<SegmentId> getSegmentsNeedingRefresh()
   {
     synchronized (lock) {
       return segmentsNeedingRefresh;
@@ -885,7 +885,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  TreeSet<SegmentId> getMutableSegments()
+  public TreeSet<SegmentId> getMutableSegments()
   {
     synchronized (lock) {
       return mutableSegments;
@@ -893,7 +893,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  Set<String> getDataSourcesNeedingRebuild()
+  public Set<String> getDataSourcesNeedingRebuild()
   {
     synchronized (lock) {
       return dataSourcesNeedingRebuild;
@@ -907,7 +907,7 @@ public class SegmentMetadataCache
    * @return {@link Sequence} of {@link SegmentAnalysis} objects
    */
   @VisibleForTesting
-  protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+  public Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final Iterable<SegmentId> segments
   )
   {
@@ -979,7 +979,7 @@ public class SegmentMetadataCache
    * This method is not thread-safe and must be used only in unit tests.
    */
   @VisibleForTesting
-  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
+  public void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
   {
     final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
         .computeIfAbsent(

@@ -29,8 +29,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
-import java.util.Properties;
-
 /**
  * The module responsible for providing bindings to Calcite schemas.
  */

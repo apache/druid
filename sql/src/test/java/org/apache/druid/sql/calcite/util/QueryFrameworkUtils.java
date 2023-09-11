@@ -43,10 +43,10 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.metadata.TestTimelineServerView;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
@@ -57,7 +57,6 @@ import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
@@ -79,7 +78,6 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

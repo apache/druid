@@ -24,8 +24,6 @@ import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;

@@ -20,11 +20,9 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Table;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 
 import javax.inject.Inject;
-
 import java.util.Set;
 
 public class DruidSchema extends AbstractTableSchema

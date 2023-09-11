@@ -30,16 +30,13 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.metadata.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -104,7 +101,7 @@ public class DruidSchemaInternRowSignatureBenchmark
     }
 
     @Override
-    protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
+    public Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
     {
       final int numColumns = 1000;
       LinkedHashMap<String, ColumnAnalysis> columnToAnalysisMap = new LinkedHashMap<>();

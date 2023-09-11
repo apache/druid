@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.joda.time.Period;
 
 public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 {
@@ -36,6 +37,15 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   public static BrokerSegmentMetadataCacheConfig create()
   {
     return new BrokerSegmentMetadataCacheConfig();
+  }
+
+  public static BrokerSegmentMetadataCacheConfig create(
+      String metadataRefreshPeriod
+  )
+  {
+    BrokerSegmentMetadataCacheConfig config = new BrokerSegmentMetadataCacheConfig();
+    config.setMetadataRefreshPeriod(new Period(metadataRefreshPeriod));
+    return config;
   }
 
   public boolean isMetadataSegmentCacheEnable()

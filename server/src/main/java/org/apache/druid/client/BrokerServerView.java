@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -54,7 +53,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;

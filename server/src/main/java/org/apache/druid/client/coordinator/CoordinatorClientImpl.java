@@ -114,8 +114,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> dataSources)
   {
     final String path = "/druid/coordinator/v1/metadata/dataSourceInformation";
-    if (null == dataSources)
-    {
+    if (null == dataSources) {
       dataSources = new HashSet<>();
     }
     return FutureUtils.transform(

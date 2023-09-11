@@ -88,7 +88,6 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
-import org.apache.druid.server.coordinator.simulate.TestServerInventoryView;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;

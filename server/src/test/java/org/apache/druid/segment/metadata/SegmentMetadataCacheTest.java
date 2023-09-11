@@ -296,7 +296,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
 
       @Override
-      void markDataSourceAsNeedRebuild(String datasource)
+      public void markDataSourceAsNeedRebuild(String datasource)
       {
         super.markDataSourceAsNeedRebuild(datasource);
         markDataSourceLatch.countDown();
@@ -407,8 +407,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
   }
-
-
 
   /**
    * This tests that {@link AvailableSegmentMetadata#getNumRows()} is correct in case
@@ -585,7 +583,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -626,7 +624,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -671,7 +669,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -713,7 +711,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -752,7 +750,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -761,7 +759,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
 
       @Override
-      void removeSegment(final DataSegment segment)
+      public void removeSegment(final DataSegment segment)
       {
         super.removeSegment(segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -808,7 +806,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -817,7 +815,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
 
       @Override
-      void removeSegment(final DataSegment segment)
+      public void removeSegment(final DataSegment segment)
       {
         super.removeSegment(segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -867,7 +865,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.removeServerSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -900,7 +898,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -909,7 +907,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
 
       @Override
-      void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.removeServerSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -946,7 +944,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -955,7 +953,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
 
       @Override
-      void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.removeServerSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -1207,7 +1205,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     );
   }
 
-
   @Test
   public void testSegmentMetadataFallbackType()
   {
@@ -1285,7 +1282,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -1294,7 +1291,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
 
       @Override
-      void removeSegment(final DataSegment segment)
+      public void removeSegment(final DataSegment segment)
       {
         super.removeSegment(segment);
       }

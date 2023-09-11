@@ -42,7 +42,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -122,7 +121,8 @@ public abstract class SegmentMetadataCacheCommon
     return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
   }
 
-  QueryLifecycleFactory getQueryLifecycleFactory(QuerySegmentWalker walker) {
+  QueryLifecycleFactory getQueryLifecycleFactory(QuerySegmentWalker walker)
+  {
     return new QueryLifecycleFactory(
         queryToolChestWarehouse,
         walker,

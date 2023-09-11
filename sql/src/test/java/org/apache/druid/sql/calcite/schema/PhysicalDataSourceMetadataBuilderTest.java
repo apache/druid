@@ -89,7 +89,8 @@ public class PhysicalDataSourceMetadataBuilderTest
   }
 
   @Test
-  public void testBuild() {
+  public void testBuild()
+  {
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
 

@@ -96,7 +96,8 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
                      item.getDatasource(),
                      physicalDatasourceMetadataBuilder.build(item)
                  ));
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.warn(e, "Exception querying coordinator to fetch dataSourceInformation.");
     }
 

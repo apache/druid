@@ -131,10 +131,10 @@ public class MetadataResourceTest
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 4);
     Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null,  null, false), resultList.get(1));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false), resultList.get(1));
     Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0,  null, false), resultList.get(3));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
   }
 
   @Test
@@ -228,16 +228,17 @@ public class MetadataResourceTest
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 6);
     Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null,  30L, false), resultList.get(1));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultList.get(1));
     Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0,  null, false), resultList.get(3));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
     Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultList.get(4));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null,  40L, true), resultList.get(5));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultList.get(5));
   }
 
   @Test
-  public void testGetDataSourceInformation() {
+  public void testGetDataSourceInformation()
+  {
     SegmentMetadataCache segmentMetadataCache = Mockito.mock(SegmentMetadataCache.class);
     Map<String, DataSourceInformation> dataSourceInformationMap = new HashMap<>();
 

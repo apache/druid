@@ -20,12 +20,14 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.joda.time.Period;
 
 public class SegmentMetadataCacheConfig
 {
   @JsonProperty
   private boolean awaitInitializationOnStart = false;
+
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
   @JsonProperty
@@ -47,6 +49,12 @@ public class SegmentMetadataCacheConfig
     SegmentMetadataCacheConfig config = new SegmentMetadataCacheConfig();
     config.metadataRefreshPeriod = new Period(metadataRefreshPeriod);
     return config;
+  }
+
+  @VisibleForTesting
+  public void setMetadataRefreshPeriod(Period metadataRefreshPeriod)
+  {
+    this.metadataRefreshPeriod = metadataRefreshPeriod;
   }
 
   public boolean isAwaitInitializationOnStart()
