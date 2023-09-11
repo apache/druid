@@ -118,9 +118,7 @@ public class KillStalePendingSegments implements CoordinatorDuty
     DateTime earliestActiveTaskStart = DateTimes.nowUtc();
     DateTime latestCompletedTaskStart = null;
     for (TaskStatusPlus status : statuses) {
-      if (status.getStatusCode() == null) {
-        // Unknown status
-      } else if (status.getStatusCode().isComplete()) {
+      if (status.getStatusCode() != null && status.getStatusCode().isComplete()) {
         latestCompletedTaskStart = DateTimes.laterOf(
             latestCompletedTaskStart,
             status.getCreatedTime()
