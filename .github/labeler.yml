@@ -34,7 +34,6 @@
   - 'examples/quickstart/jupyter-notebooks/**'
 
 'Area - Ingestion':
-  - 'processing/**'
   - 'indexing-service/**'
 
 'Area - Lookups':
@@ -49,6 +48,7 @@
 
 'Area - Querying':
   - 'sql/**'
+  - 'extensions-core/multi-stage-query/**'
 
 'Area - Segment Format and Ser/De':
   - 'processing/src/main/java/org/apache/druid/segment/**'
