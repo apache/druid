@@ -52,7 +52,7 @@ public class PhysicalDataSourceMetadataBuilderTest
   private PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     segmentDataSourceNames = Sets.newConcurrentHashSet();
     joinableDataSourceNames = Sets.newConcurrentHashSet();
