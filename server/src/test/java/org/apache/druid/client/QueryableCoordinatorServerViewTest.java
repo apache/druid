@@ -142,6 +142,7 @@ public class QueryableCoordinatorServerViewTest extends CuratorTestBase
     unannounceSegmentForServer(druidServer, segment);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
+    timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     Assert.assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2014-10-20T00:00:00Z/P1D"))).size()
@@ -247,6 +248,8 @@ public class QueryableCoordinatorServerViewTest extends CuratorTestBase
       }
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+
+    timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
 
     Assert.assertEquals(
         0,
