@@ -4807,4 +4807,334 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestWithJoinLaterAlongWithAlias()
+  {
+    {
+      testQuery(
+          "select c1 from \n"
+          + "druid.foo t1, unnest(mv_to_array(t1.dim3)) as u1(c1) CROSS JOIN druid.foo t2 \n",
+          QUERY_CONTEXT_UNNEST,
+          ImmutableList.of(
+              Druids.newScanQueryBuilder()
+                    .dataSource(
+                        join(
+                            new QueryDataSource(
+                                Druids.newScanQueryBuilder()
+                                      .dataSource(
+                                          UnnestDataSource.create(
+                                              new TableDataSource(CalciteTests.DATASOURCE1),
+                                              expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                              null
+                                          )
+                                      )
+                                      .intervals(querySegmentSpec(Filtration.eternity()))
+                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                      .legacy(false)
+                                      .columns(
+                                          "__time",
+                                          "cnt",
+                                          "dim1",
+                                          "dim2",
+                                          "dim3",
+                                          "j0.unnest",
+                                          "m1",
+                                          "m2",
+                                          "unique_dim1"
+                                      )
+                                      .context(QUERY_CONTEXT_UNNEST)
+                                      .build()
+                            ),
+                            new QueryDataSource(
+                                Druids.newScanQueryBuilder()
+                                      .dataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                      .intervals(querySegmentSpec(Filtration.eternity()))
+                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                      .legacy(false)
+                                      .context(QUERY_CONTEXT_UNNEST)
+                                      .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                                      .build()
+                            ),
+                            "_j0.",
+                            "1",
+                            JoinType.INNER,
+                            null
+                        )
+                    )
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .legacy(false)
+                    .columns("j0.unnest")
+                    .context(QUERY_CONTEXT_UNNEST)
+                    .build()
+          ),
+          NullHandling.sqlCompatible() ?
+          ImmutableList.of(
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null},
+              new Object[]{null}
+          ) :
+          ImmutableList.of(
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"a"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"b"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"c"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{"d"},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""},
+              new Object[]{""}
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testUnnestWithJoinLaterAlongWithNoAlias()
+  {
+    testQuery(
+        "select c1 from \n"
+        + "druid.foo, unnest(mv_to_array(dim3)) as u1(c1) CROSS JOIN druid.foo t2 \n",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      join(
+                          new QueryDataSource(
+                              Druids.newScanQueryBuilder()
+                                    .dataSource(
+                                        UnnestDataSource.create(
+                                            new TableDataSource(CalciteTests.DATASOURCE1),
+                                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                            null
+                                        )
+                                    )
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .legacy(false)
+                                    .columns(
+                                        "__time",
+                                        "cnt",
+                                        "dim1",
+                                        "dim2",
+                                        "dim3",
+                                        "j0.unnest",
+                                        "m1",
+                                        "m2",
+                                        "unique_dim1"
+                                    )
+                                    .context(QUERY_CONTEXT_UNNEST)
+                                    .build()
+                          ),
+                          new QueryDataSource(
+                              Druids.newScanQueryBuilder()
+                                    .dataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .legacy(false)
+                                    .context(QUERY_CONTEXT_UNNEST)
+                                    .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                                    .build()
+                          ),
+                          "_j0.",
+                          "1",
+                          JoinType.INNER,
+                          null
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .columns("j0.unnest")
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
+        )
+    );
+  }
 }

@@ -158,6 +158,17 @@ SqlNode DruidJoinTable(SqlNode e) :
             null);
     }
 |
+    <COMMA> { joinType = JoinType.COMMA.symbol(getPos()); }
+    e2 = UnNestRef3(ExprContext.ACCEPT_QUERY, true) {
+        return new SqlJoin(joinType.getParserPosition(),
+            e,
+            SqlLiteral.createBoolean(false, joinType.getParserPosition()),
+            joinType,
+            e2,
+            JoinConditionType.NONE.symbol(SqlParserPos.ZERO),
+            null);
+    }
+|
     <OUTER> { joinType = JoinType.LEFT.symbol(getPos()); } <APPLY>
     e2 = DruidTableRef2(true) {
         if (!this.conformance.isApplyAllowed()) {
@@ -204,6 +215,25 @@ SqlNode DruidTableRef2(boolean lateral) :
     e = DruidTableRef3(ExprContext.ACCEPT_QUERY, lateral) { return e; }
 }
 
+SqlNode UnNestRef() :
+{
+    final Span s;
+    SqlNodeList args;
+    SqlUnnestOperator unnestOp = SqlStdOperatorTable.UNNEST;
+}
+{
+        <UNNEST> { s = span(); }
+        args = ParenthesizedQueryOrCommaList(ExprContext.ACCEPT_SUB_QUERY)
+        [
+            <WITH> <ORDINALITY> {
+                unnestOp = SqlStdOperatorTable.UNNEST_WITH_ORDINALITY;
+            }
+        ]
+        {
+            return unnestOp.createCall(s.end(this), (List<SqlNode>) args);
+        }
+}
+
 SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
 {
     final SqlIdentifier tableName;
@@ -240,16 +270,7 @@ SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
         tableRef = addLateral(tableRef, lateral)
         [ tableRef = MatchRecognize(tableRef) ]
     |
-        <UNNEST> { s = span(); }
-        args = ParenthesizedQueryOrCommaList(ExprContext.ACCEPT_SUB_QUERY)
-        [
-            <WITH> <ORDINALITY> {
-                unnestOp = SqlStdOperatorTable.UNNEST_WITH_ORDINALITY;
-            }
-        ]
-        {
-            tableRef = unnestOp.createCall(s.end(this), (List<SqlNode>) args);
-        }
+      tableRef = UnNestRef()
     |
         [ <LATERAL> { lateral = true; } ]
         tableRef = TableFunctionCall()
@@ -266,6 +287,61 @@ SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
         tableRef = addLateral(tableRef, lateral)
     |
         tableRef = ExtendedTableRef()
+    )
+    [
+        LOOKAHEAD(2)
+        tableRef = Pivot(tableRef)
+    ]
+    [
+        LOOKAHEAD(2)
+        tableRef = Unpivot(tableRef)
+    ]
+    [
+        [ <AS> ] alias = SimpleIdentifier()
+        (
+            columnAliasList = ParenthesizedSimpleIdentifierList()
+        |   { columnAliasList = null; }
+        )
+        {
+            // Standard SQL (and Postgres) allow applying "AS alias" to a JOIN,
+            // e.g. "FROM (a CROSS JOIN b) AS c". The new alias obscures the
+            // internal aliases, and columns cannot be referenced if they are
+            // not unique. TODO: Support this behavior; see
+            // [CALCITE-5168] Allow AS after parenthesized JOIN
+            checkNotJoin(tableRef);
+            if (columnAliasList == null) {
+                tableRef = SqlStdOperatorTable.AS.createCall(
+                    Span.of(tableRef).end(this), tableRef, alias);
+            } else {
+                List<SqlNode> idList = new ArrayList<SqlNode>();
+                idList.add(tableRef);
+                idList.add(alias);
+                idList.addAll(columnAliasList.getList());
+                tableRef = SqlStdOperatorTable.AS.createCall(
+                    Span.of(tableRef).end(this), idList);
+            }
+        }
+    ]
+    [ tableRef = Tablesample(tableRef) ]
+    { return tableRef; }
+}
+
+
+SqlNode UnNestRef3(ExprContext exprContext, boolean lateral) :
+{
+    final SqlIdentifier tableName;
+    SqlNode tableRef;
+    List<SqlNode> paramList;
+    final SqlIdentifier alias;
+    final Span s;
+    SqlNodeList args;
+    final SqlNodeList columnAliasList;
+    SqlUnnestOperator unnestOp = SqlStdOperatorTable.UNNEST;
+    SqlNodeList extendList = null;
+}
+{
+    (
+      tableRef = UnNestRef()
     )
     [
         LOOKAHEAD(2)
