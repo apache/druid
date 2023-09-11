@@ -372,6 +372,27 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource("foo");
+    final RowSignature fooRowSignature = fooDs.getRowSignature();
+    List<String> columnNames = fooRowSignature.getColumnNames();
+    Assert.assertEquals(6, columnNames.size());
+
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("dim2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("m1", columnNames.get(2));
+    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(2)).get());
+
+    Assert.assertEquals("dim1", columnNames.get(3));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
+
+    Assert.assertEquals("cnt", columnNames.get(4));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(4)).get());
+
+    Assert.assertEquals("unique_dim1", columnNames.get(5));
+    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(5)).get());
   }
 
   @Test
@@ -379,6 +400,18 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource("foo2");
+    final RowSignature fooRowSignature = fooDs.getRowSignature();
+    List<String> columnNames = fooRowSignature.getColumnNames();
+    Assert.assertEquals(3, columnNames.size());
+
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("dim2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("m1", columnNames.get(2));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(2)).get());
   }
 
   @Test
@@ -396,7 +429,36 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         }
     );
     final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
+    final RowSignature fooRowSignature = fooDs.getRowSignature();
+    List<String> columnNames = fooRowSignature.getColumnNames();
+    Assert.assertEquals(9, columnNames.size());
 
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("numbery", columnNames.get(1));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("numberyArrays", columnNames.get(2));
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(2)).get());
+
+    Assert.assertEquals("stringy", columnNames.get(3));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
+
+    Assert.assertEquals("array", columnNames.get(4));
+    Assert.assertEquals(ColumnType.LONG_ARRAY, fooRowSignature.getColumnType(columnNames.get(4)).get());
+
+    Assert.assertEquals("nested", columnNames.get(5));
+    Assert.assertEquals(ColumnType.ofComplex("json"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+
+    Assert.assertEquals("cnt", columnNames.get(6));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(6)).get());
+
+    Assert.assertEquals("m1", columnNames.get(7));
+    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(7)).get());
+
+    Assert.assertEquals("unique_dim1", columnNames.get(8));
+    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
   }
 
   @Test
@@ -406,6 +468,37 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     // least restrictive blend across all segments
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
+
+    final RowSignature fooRowSignature = fooDs.getRowSignature();
+    List<String> columnNames = fooRowSignature.getColumnNames();
+    Assert.assertEquals(9, columnNames.size());
+
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("numbery", columnNames.get(1));
+    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("numberyArrays", columnNames.get(2));
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(2)).get());
+
+    Assert.assertEquals("stringy", columnNames.get(3));
+    Assert.assertEquals(ColumnType.STRING_ARRAY, fooRowSignature.getColumnType(columnNames.get(3)).get());
+
+    Assert.assertEquals("array", columnNames.get(4));
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(4)).get());
+
+    Assert.assertEquals("nested", columnNames.get(5));
+    Assert.assertEquals(ColumnType.ofComplex("json"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+
+    Assert.assertEquals("cnt", columnNames.get(6));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(6)).get());
+
+    Assert.assertEquals("m1", columnNames.get(7));
+    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(7)).get());
+
+    Assert.assertEquals("unique_dim1", columnNames.get(8));
+    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
   }
 
   /**
