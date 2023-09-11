@@ -20,6 +20,8 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,7 +39,7 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
         KubernetesAndWorkerTaskRunnerConfig.class
     );
 
-    Assert.assertFalse(config.isUseHttpRemoteWorker());
+    Assert.assertEquals(RemoteTaskRunnerFactory.TYPE_NAME, config.getWorkerTaskRunnerType());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
 
   }
@@ -47,7 +49,7 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
   {
     KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null);
 
-    Assert.assertTrue(config.isUseHttpRemoteWorker());
+    Assert.assertEquals(HttpRemoteTaskRunnerFactory.TYPE_NAME, config.getWorkerTaskRunnerType());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
   }
 }

@@ -284,6 +284,6 @@ To do this, set the following property.
 
 |Property| Possible Values |Description|Default|required|
 |--------|-----------------|-----------|-------|--------|
-|`druid.indexer.runner.k8sAndWorker.useHttpRemoteWorker`|`boolean`|Determines whether the `httpRemote` task runner should be used. If false, the `remote` task runner is used.|`true`|No|
+|`druid.indexer.runner.k8sAndWorker.workerTaskRunnerType`|`String`|Determines whether the `httpRemote` or the `remote` task runner should be used in addition to the Kubernetes task runner.|`httpRemote`|No|
 |`druid.indexer.runner.k8sAndWorker.sendAllTasksToWorkerTaskRunner`|`boolean`| Whether to send all the tasks to the worker task runner. If this is set to false all tasks will be sent to Kubernetes|`false`|No|
 

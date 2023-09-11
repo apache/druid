@@ -21,36 +21,47 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 import javax.validation.constraints.NotNull;
 
 public class KubernetesAndWorkerTaskRunnerConfig
 {
-
+  private static final String DEFAULT_WORKER_TASK_RUNNER_TYPE = HttpRemoteTaskRunnerFactory.TYPE_NAME;
   /**
-  * Select which worker task runner to use in addition to the Kubernetes runner, options are httpRemote or remote.
-   * */
+   * Select which worker task runner to use in addition to the Kubernetes runner, options are httpRemote or remote.
+   */
   @JsonProperty
   @NotNull
-  private final boolean useHttpRemoteWorker;
+  private final String workerTaskRunnerType;
 
   /**
    * Whether or not to send tasks to the worker task runner instead of the Kubernetes runner.
-   * */
+   */
   @JsonProperty
   @NotNull
   private final boolean sendAllTasksToWorkerTaskRunner;
 
   @JsonCreator
   public KubernetesAndWorkerTaskRunnerConfig(
-      @JsonProperty("useHttpRemoteWorker") Boolean useHttpRemoteWorker,
+      @JsonProperty("workerTaskRunnerType") String workerTaskRunnerType,
       @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner
   )
   {
-    this.useHttpRemoteWorker = ObjectUtils.defaultIfNull(
-        useHttpRemoteWorker,
-        true
+    this.workerTaskRunnerType = ObjectUtils.defaultIfNull(
+        workerTaskRunnerType,
+        DEFAULT_WORKER_TASK_RUNNER_TYPE
+    );
+    Preconditions.checkArgument(
+        this.workerTaskRunnerType.equals(HttpRemoteTaskRunnerFactory.TYPE_NAME) ||
+        this.workerTaskRunnerType.equals(RemoteTaskRunnerFactory.TYPE_NAME),
+        "workerTaskRunnerType must be set to one of (%s, %s)",
+        HttpRemoteTaskRunnerFactory.TYPE_NAME,
+        RemoteTaskRunnerFactory.TYPE_NAME
     );
     this.sendAllTasksToWorkerTaskRunner = ObjectUtils.defaultIfNull(
         sendAllTasksToWorkerTaskRunner,
@@ -58,9 +69,9 @@ public class KubernetesAndWorkerTaskRunnerConfig
     );
   }
 
-  public boolean isUseHttpRemoteWorker()
+  public String getWorkerTaskRunnerType()
   {
-    return useHttpRemoteWorker;
+    return workerTaskRunnerType;
   }
 
   public boolean isSendAllTasksToWorkerTaskRunner()
