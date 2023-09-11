@@ -21,7 +21,6 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -29,7 +28,6 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
@@ -254,7 +252,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
     if (k8sCapacity == -1 && workerCapacity == -1) {
       return -1;
     }
-    return Math.min(0, k8sCapacity) + Math.min(0, workerCapacity);
+    return Math.max(0, k8sCapacity) + Math.max(0, workerCapacity);
   }
 
   @Override
@@ -265,6 +263,6 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
     if (k8sCapacity == -1 && workerCapacity == -1) {
       return -1;
     }
-    return Math.min(0, k8sCapacity) + Math.min(0, workerCapacity);
+    return Math.max(0, k8sCapacity) + Math.max(0, workerCapacity);
   }
 }

@@ -62,7 +62,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
   @Before
   public void setup()
   {
-    task = NoopTask.create(DATA_SOURCE);
+    task = NoopTask.create();
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,

@@ -1,4 +1,4 @@
 {
-  "workerTaskRunnerType": "remote",
+  "useHttpRemoteWorker": false,
   "sendAllTasksToWorkerTaskRunner": "false"
 }
