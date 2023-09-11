@@ -43,6 +43,12 @@ import java.util.Map;
 
 /**
  * ServerView of coordinator for the state of segments being loaded in the cluster.
+ * <br>
+ * This class simply extends {@link BrokerServerView} and implements methods from {@link CoordinatorTimeline}
+ * for backward compatibility. This newer implementation is primarily required by
+ * {@link org.apache.druid.segment.metadata.SegmentMetadataCache} which will run on the Coordinator.
+ * <br>
+ * Once this class is stable {@link CoordinatorServerView} should be removed.
  */
 @ManageLifecycle
 public class QueryableCoordinatorServerView extends BrokerServerView implements CoordinatorTimeline
@@ -71,20 +77,34 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
     this.baseView = baseView;
   }
 
+  /**
+   * Internally this class maintains a timeline of {@link ServerSelector}.
+   * This method returns a newline of the object {@link SegmentLoadInfo}.
+   *
+   * @param dataSource dataSoruce
+   * @return timeline for the given dataSource
+   */
   @Override
   public VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
   {
     String table = Iterables.getOnlyElement(dataSource.getTableNames());
-    synchronized (lock) {
-      // build a new timeline?
-      VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(table);
-      Collection<ServerSelector> x = timeline.iterateAllObjects();
-      VersionedIntervalTimeline<String, SegmentLoadInfo> newTimeline = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-      newTimeline.addAll(x.stream().map(v -> new VersionedIntervalTimeline.PartitionChunkEntry<String, SegmentLoadInfo>(
-          v.getSegment().getInterval(), v.getSegment().getVersion(), v.getSegment().getShardSpec().createChunk(v.toSegmentLoadInfo()))).iterator());
+    VersionedIntervalTimeline<String, ServerSelector> timeline;
 
-      return newTimeline;
+    synchronized (lock) {
+      timeline = timelines.get(table);
     }
+
+    VersionedIntervalTimeline<String, SegmentLoadInfo> newTimeline =
+        new VersionedIntervalTimeline<>(Comparator.naturalOrder());
+    newTimeline.addAll(
+        timeline.iterateAllObjects().stream()
+                .map(serverSelector -> new VersionedIntervalTimeline.PartitionChunkEntry<>(
+                    serverSelector.getSegment().getInterval(),
+                    serverSelector.getSegment().getVersion(),
+                    serverSelector.getSegment().getShardSpec().createChunk(serverSelector.toSegmentLoadInfo())
+                )).iterator());
+
+    return newTimeline;
   }
 
   @Override

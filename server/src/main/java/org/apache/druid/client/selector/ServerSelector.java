@@ -217,6 +217,12 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     return segment.get().hasData();
   }
 
+  /**
+   * This conversion is required to make the newer {@link org.apache.druid.client.QueryableCoordinatorServerView}
+   * implement methods from {@link org.apache.druid.client.CoordinatorTimeline}
+   *
+   * @return {@link SegmentLoadInfo}
+   */
   public SegmentLoadInfo toSegmentLoadInfo()
   {
     List<DruidServerMetadata> allServers = getAllServers();
