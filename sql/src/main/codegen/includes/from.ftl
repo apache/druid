@@ -159,7 +159,7 @@ SqlNode DruidJoinTable(SqlNode e) :
     }
 |
     <COMMA> { joinType = JoinType.COMMA.symbol(getPos()); }
-    e2 = UnNestRef3(ExprContext.ACCEPT_QUERY, true) {
+    e2 = UnnestRef3(ExprContext.ACCEPT_QUERY, false) {
         return new SqlJoin(joinType.getParserPosition(),
             e,
             SqlLiteral.createBoolean(false, joinType.getParserPosition()),
@@ -215,7 +215,7 @@ SqlNode DruidTableRef2(boolean lateral) :
     e = DruidTableRef3(ExprContext.ACCEPT_QUERY, lateral) { return e; }
 }
 
-SqlNode UnNestRef() :
+SqlNode UnnestRef() :
 {
     final Span s;
     SqlNodeList args;
@@ -270,7 +270,7 @@ SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
         tableRef = addLateral(tableRef, lateral)
         [ tableRef = MatchRecognize(tableRef) ]
     |
-      tableRef = UnNestRef()
+      tableRef = UnnestRef()
     |
         [ <LATERAL> { lateral = true; } ]
         tableRef = TableFunctionCall()
@@ -327,7 +327,7 @@ SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
 }
 
 
-SqlNode UnNestRef3(ExprContext exprContext, boolean lateral) :
+SqlNode UnnestRef3(ExprContext exprContext, boolean lateral) :
 {
     final SqlIdentifier tableName;
     SqlNode tableRef;
@@ -341,7 +341,7 @@ SqlNode UnNestRef3(ExprContext exprContext, boolean lateral) :
 }
 {
     (
-      tableRef = UnNestRef()
+      tableRef = UnnestRef()
     )
     [
         LOOKAHEAD(2)
