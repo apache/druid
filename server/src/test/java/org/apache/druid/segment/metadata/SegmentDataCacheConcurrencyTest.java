@@ -85,9 +85,8 @@ import java.util.stream.Collectors;
 public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
 {
   private static final String DATASOURCE = "datasource";
-
+  static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
   private File tmpDir;
-  private SpecificSegmentsQuerySegmentWalker walker;
   private TestServerInventoryView inventoryView;
   private BrokerServerView serverView;
   private SegmentMetadataCache schema;
@@ -96,6 +95,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   @Before
   public void setUp() throws Exception
   {
+    setUpCommon();
     tmpDir = temporaryFolder.newFolder();
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
     inventoryView = new TestServerInventoryView();
@@ -106,8 +106,10 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   }
 
   @After
+  @Override
   public void tearDown() throws Exception
   {
+    super.tearDown();
     exec.shutdownNow();
     walker.close();
   }

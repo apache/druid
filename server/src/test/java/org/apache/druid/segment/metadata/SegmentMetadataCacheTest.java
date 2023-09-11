@@ -20,7 +20,6 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -28,37 +27,22 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
-import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -66,20 +50,15 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,188 +70,33 @@ import java.util.stream.Collectors;
 public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 {
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
-  private static final int WAIT_TIMEOUT_SECS = 6;
-
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private TestTimelineServerView serverView;
-  private List<ImmutableDruidServer> druidServers;
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+  static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
   private SegmentMetadataCache runningSchema;
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
-  private CountDownLatch refreshLatch = new CountDownLatch(1);
-  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Before
-  public void setUp() throws Exception
+  public void setup() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder();
-    final QueryableIndex index1 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "1"))
-                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                              .schema(
-                                                  new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(
-                                                          new CountAggregatorFactory("cnt"),
-                                                          new DoubleSumAggregatorFactory("m1", "m1"),
-                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                      )
-                                                      .withRollup(false)
-                                                      .build()
-                                              )
-                                              .rows(ROWS1)
-                                              .buildMMappedIndex();
+    setUpCommon();
+    setupData();
+  }
 
-    final QueryableIndex index2 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "2"))
-                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                              .schema(
-                                                  new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
-                                                      .withRollup(false)
-                                                      .build()
-                                              )
-                                              .rows(ROWS2)
-                                              .buildMMappedIndex();
-
-    final InputRowSchema rowSchema = new InputRowSchema(
-        new TimestampSpec("t", null, null),
-        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-        null
-    );
-    final List<InputRow> autoRows1 = ImmutableList.of(
-        createRow(
-            ImmutableMap.<String, Object>builder()
-                        .put("t", "2023-01-01T00:00Z")
-                        .put("numbery", 1.1f)
-                        .put("numberyArrays", ImmutableList.of(1L, 2L, 3L))
-                        .put("stringy", ImmutableList.of("a", "b", "c"))
-                        .put("array", ImmutableList.of(1.1, 2.2, 3.3))
-                        .put("nested", ImmutableMap.of("x", 1L, "y", 2L))
-                        .build(),
-            rowSchema
-        )
-    );
-    final List<InputRow> autoRows2 = ImmutableList.of(
-        createRow(
-            ImmutableMap.<String, Object>builder()
-                        .put("t", "2023-01-02T00:00Z")
-                        .put("numbery", 1L)
-                        .put("numberyArrays", ImmutableList.of(3.3, 2.2, 3.1))
-                        .put("stringy", "a")
-                        .put("array", ImmutableList.of(1L, 2L, 3L))
-                        .put("nested", "hello")
-                        .build(),
-            rowSchema
-        )
-    );
-
-    final QueryableIndex indexAuto1 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "1"))
-                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                              .schema(
-                                                  new IncrementalIndexSchema.Builder()
-                                                      .withTimestampSpec(rowSchema.getTimestampSpec())
-                                                      .withDimensionsSpec(rowSchema.getDimensionsSpec())
-                                                      .withMetrics(
-                                                          new CountAggregatorFactory("cnt"),
-                                                          new DoubleSumAggregatorFactory("m1", "m1"),
-                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                      )
-                                                      .withRollup(false)
-                                                      .build()
-                                              )
-                                              .rows(autoRows1)
-                                              .buildMMappedIndex();
-
-    final QueryableIndex indexAuto2 = IndexBuilder.create()
-                                                  .tmpDir(new File(tmpDir, "1"))
-                                                  .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                                  .schema(
-                                                      new IncrementalIndexSchema.Builder()
-                                                          .withTimestampSpec(
-                                                              new TimestampSpec("t", null, null)
-                                                          )
-                                                          .withDimensionsSpec(
-                                                              DimensionsSpec.builder().useSchemaDiscovery(true).build()
-                                                          )
-                                                          .withMetrics(
-                                                              new CountAggregatorFactory("cnt"),
-                                                              new DoubleSumAggregatorFactory("m1", "m1"),
-                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                          )
-                                                          .withRollup(false)
-                                                          .build()
-                                                  )
-                                                  .rows(autoRows2)
-                                                  .buildMMappedIndex();
-
-    walker = new SpecificSegmentsQuerySegmentWalker(SegmentMetadataCacheCommon.conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2000/P1Y"))
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index1
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATASOURCE1)
-                   .interval(Intervals.of("2001/P1Y"))
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index2
-    ).add(
-        DataSegment.builder()
-                   .dataSource(DATASOURCE2)
-                   .interval(index2.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index2
-    ).add(
-        DataSegment.builder()
-                   .dataSource(SOME_DATASOURCE)
-                   .interval(Intervals.of("2023-01-01T00Z/P1D"))
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexAuto1
-    ).add(
-        DataSegment.builder()
-                   .dataSource(SOME_DATASOURCE)
-                   .interval(Intervals.of("2023-01-02T00Z/P1D"))
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(1))
-                   .size(0)
-                   .build(),
-        indexAuto2
-    );
-    final DataSegment segment1 = new DataSegment(
-        "foo3",
-        Intervals.of("2012/2013"),
-        "version3",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
-    final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
-    serverView = new TestTimelineServerView(walker.getSegments(), realtimeSegments);
-    druidServers = serverView.getDruidServers();
+  @After
+  @Override
+  public void tearDown() throws Exception
+  {
+    super.tearDown();
+    if (runningSchema != null) {
+      runningSchema.stop();
+    }
+    walker.close();
   }
 
   public SegmentMetadataCache buildSchemaMarkAndTableLatch() throws InterruptedException
   {
-    return buildSchemaMarkAndTableLatch(SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT);
+    return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT);
   }
 
   public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config) throws InterruptedException
@@ -308,48 +132,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     return runningSchema;
   }
 
-  public SegmentMetadataCache buildSchemaMarkAndRefreshLatch() throws InterruptedException
-  {
-    Preconditions.checkState(runningSchema == null);
-    runningSchema = new SegmentMetadataCache(
-        getQueryLifecycleFactory(walker),
-        serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
-        new NoopEscalator(),
-        new InternalQueryConfig(),
-        new NoopServiceEmitter()
-        )
-    {
-      @Override
-      public void markDataSourceAsNeedRebuild(String datasource)
-      {
-        super.markDataSourceAsNeedRebuild(datasource);
-        markDataSourceLatch.countDown();
-      }
-
-      @Override
-      @VisibleForTesting
-      public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
-      {
-        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
-        refreshLatch.countDown();
-      }
-    };
-
-    runningSchema.start();
-    runningSchema.awaitInitialization();
-    return runningSchema;
-  }
-
-  @After
-  public void tearDown() throws Exception
-  {
-    if (runningSchema != null) {
-      runningSchema.stop();
-    }
-    walker.close();
-  }
-
   @Test
   public void testGetTableMap() throws InterruptedException
   {
@@ -363,8 +145,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testSchemaInit() throws InterruptedException
   {
-    SegmentMetadataCache schema2 = buildSchemaMarkAndTableLatch();
-    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema2.getDatasourceNames());
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema.getDatasourceNames());
   }
 
   @Test
@@ -511,99 +293,21 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testAvailableSegmentMetadataNumRows() throws InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
-    final List<DataSegment> segments = segmentsMetadata.values()
-                                                       .stream()
-                                                       .map(AvailableSegmentMetadata::getSegment)
-                                                       .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
-    // find the only segment with datasource "foo2"
-    final DataSegment existingSegment = segments.stream()
-                                                .filter(segment -> segment.getDataSource().equals("foo2"))
-                                                .findFirst()
-                                                .orElse(null);
-    Assert.assertNotNull(existingSegment);
-    final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
-    // update AvailableSegmentMetadata of existingSegment with numRows=5
-    AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
-    schema.setAvailableSegmentMetadata(existingSegment.getId(), updatedMetadata);
-    // find a druidServer holding existingSegment
-    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers
-        .stream()
-        .flatMap(druidServer -> druidServer
-            .iterateAllSegments()
-            .stream()
-            .filter(segment -> segment.getId().equals(existingSegment.getId()))
-            .map(segment -> Pair.of(druidServer, segment))
-        )
-        .findAny()
-        .orElse(null);
-    Assert.assertNotNull(pair);
-    final ImmutableDruidServer server = pair.lhs;
-    Assert.assertNotNull(server);
-    final DruidServerMetadata druidServerMetadata = server.getMetadata();
-    // invoke SegmentMetadataCache#addSegment on existingSegment
-    schema.addSegment(druidServerMetadata, existingSegment);
-    segmentsMetadata = schema.getSegmentMetadataSnapshot();
-    // get the only segment with datasource "foo2"
-    final DataSegment currentSegment = segments.stream()
-                                               .filter(segment -> segment.getDataSource().equals("foo2"))
-                                               .findFirst()
-                                               .orElse(null);
-    final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(updatedMetadata.getSegment().getId(), currentMetadata.getSegment().getId());
-    Assert.assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
-    // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
-    Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
+    checkAvailableSegmentMetadataNumRows(schema);
   }
 
   @Test
   public void testNullDatasource() throws IOException, InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
-    final List<DataSegment> segments = segmentMetadatas.values()
-                                                       .stream()
-                                                       .map(AvailableSegmentMetadata::getSegment)
-                                                       .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
-    // segments contains two segments with datasource "foo" and one with datasource "foo2"
-    // let's remove the only segment with datasource "foo2"
-    final DataSegment segmentToRemove = segments.stream()
-                                                .filter(segment -> segment.getDataSource().equals("foo2"))
-                                                .findFirst()
-                                                .orElse(null);
-    Assert.assertNotNull(segmentToRemove);
-    schema.removeSegment(segmentToRemove);
-
-    // The following line can cause NPE without segmentMetadata null check in
-    // SegmentMetadataCache#refreshSegmentsForDataSource
-    schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+    checkNullDatasource(schema);
   }
 
   @Test
   public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
-    final List<DataSegment> segments = segmentMetadatas.values()
-                                                       .stream()
-                                                       .map(AvailableSegmentMetadata::getSegment)
-                                                       .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
-    // remove one of the segments with datasource "foo"
-    final DataSegment segmentToRemove = segments.stream()
-                                                .filter(segment -> segment.getDataSource().equals("foo"))
-                                                .findFirst()
-                                                .orElse(null);
-    Assert.assertNotNull(segmentToRemove);
-    schema.removeSegment(segmentToRemove);
-
-    // The following line can cause NPE without segmentMetadata null check in
-    // SegmentMetadataCache#refreshSegmentsForDataSource
-    schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+    checkNullAvailableSegmentMetadata(schema);
   }
 
   @Test
@@ -669,7 +373,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -710,7 +414,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -755,7 +459,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -797,7 +501,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -836,7 +540,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -892,7 +596,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -951,7 +655,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -984,7 +688,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -1030,7 +734,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter()
@@ -1075,118 +779,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertEquals(0, metadata.isRealtime());
     Assert.assertEquals(0, metadata.getNumRows());
     Assert.assertEquals(0, metadata.getNumReplicas()); // brokers are not counted as replicas yet
-  }
-
-  /**
-   * Test actions on the cache. The current design of the cache makes testing far harder
-   * than it should be.
-   *
-   * - The cache is refreshed on a schedule.
-   * - Datasources are added to the refresh queue via an unsynchronized thread.
-   * - The refresh loop always refreshes since one of the segments is dynamic.
-   *
-   * The use of latches tries to keep things synchronized, but there are many
-   * moving parts. A simpler technique is sorely needed.
-   */
-  @Test
-  public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
-  {
-    SegmentMetadataCache schema3 = buildSchemaMarkAndRefreshLatch();
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DataSourceInformation fooTable = schema3.getDatasource("foo");
-    Assert.assertNotNull(fooTable);
-
-    markDataSourceLatch = new CountDownLatch(1);
-    refreshLatch = new CountDownLatch(1);
-    final DataSegment someNewBrokerSegment = new DataSegment(
-        "foo",
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
-    serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
-    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for build twice
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    refreshLatch = new CountDownLatch(1);
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-
-    fooTable = schema3.getDatasource("foo");
-    Assert.assertNotNull(fooTable);
-
-    // now remove it
-    markDataSourceLatch = new CountDownLatch(1);
-    refreshLatch = new CountDownLatch(1);
-    serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
-
-    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for build twice
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    refreshLatch = new CountDownLatch(1);
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-
-    fooTable = schema3.getDatasource("foo");
-    Assert.assertNotNull(fooTable);
-  }
-
-  @Test
-  public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
-  {
-    SegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DataSourceInformation fooTable = schema.getDatasource("foo");
-    Assert.assertNotNull(fooTable);
-
-    markDataSourceLatch = new CountDownLatch(1);
-    refreshLatch = new CountDownLatch(1);
-    final DataSegment someNewBrokerSegment = new DataSegment(
-        "foo",
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
-    serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
-
-    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for build twice
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    refreshLatch = new CountDownLatch(1);
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-
-    fooTable = schema.getDatasource("foo");
-    Assert.assertNotNull(fooTable);
-
-    // now remove it
-    markDataSourceLatch = new CountDownLatch(1);
-    refreshLatch = new CountDownLatch(1);
-    serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
-
-    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for build twice
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
-    refreshLatch = new CountDownLatch(1);
-    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-
-    fooTable = schema.getDatasource("foo");
-    Assert.assertNotNull(fooTable);
   }
 
   /**
@@ -1235,7 +827,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache mySchema = new SegmentMetadataCache(
         factoryMock,
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         internalQueryConfig,
         new NoopServiceEmitter()
@@ -1351,24 +943,19 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    Set<SegmentId> segments = new HashSet<>();
-    Set<String> datasources = new HashSet<>();
-    datasources.add("wat");
-    Assert.assertNull(schema.getDatasource("wat"));
-    schema.refresh(segments, datasources);
-    Assert.assertNull(schema.getDatasource("wat"));
+    checkStaleDatasourceRefresh(schema);
   }
 
   @Test
   public void testRefreshShouldEmitMetrics() throws InterruptedException, IOException
   {
-    String datasource = "xyz";
+    String dataSource = "xyz";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
     SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
-        SegmentMetadataCacheCommon.SEGMENT_CACHE_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
         emitter
@@ -1378,7 +965,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       public void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
-        if (datasource.equals(segment.getDataSource())) {
+        if (dataSource.equals(segment.getDataSource())) {
           addSegmentLatch.countDown();
         }
       }
@@ -1390,33 +977,6 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       }
     };
 
-    List<DataSegment> segments = ImmutableList.of(
-        newSegment(datasource, 1),
-        newSegment(datasource, 2)
-    );
-    serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
-    serverView.addSegment(segments.get(1), ServerType.REALTIME);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
-    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
-
-    emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
-    emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
-  }
-
-  private static DataSegment newSegment(String datasource, int partitionId)
-  {
-    return new DataSegment(
-        datasource,
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
+    checkRefreshShouldEmitMetrics(schema, dataSource, emitter, addSegmentLatch);
   }
 }
