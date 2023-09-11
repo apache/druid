@@ -4874,8 +4874,8 @@ name: "@babel/code-frame"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.12.11
+copyright: The Babel Team
+version: 7.22.10
 license_file_path: licenses/bin/@babel-code-frame.MIT
 
 ---
@@ -4884,9 +4884,19 @@ name: "@babel/helper-module-imports"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Logan Smyth
-version: 7.13.12
+copyright: The Babel Team
+version: 7.22.5
 license_file_path: licenses/bin/@babel-helper-module-imports.MIT
+
+---
+
+name: "@babel/helper-string-parser"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.22.5
+license_file_path: licenses/bin/@babel-helper-string-parser.MIT
 
 ---
 
@@ -4895,7 +4905,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.19.1
+version: 7.22.5
 license_file_path: licenses/bin/@babel-helper-validator-identifier.MIT
 
 ---
@@ -4905,7 +4915,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.18.6
+version: 7.22.10
 license_file_path: licenses/bin/@babel-highlight.MIT
 
 ---
@@ -4924,8 +4934,8 @@ name: "@babel/types"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.14.4
+copyright: The Babel Team
+version: 7.22.11
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -4998,7 +5008,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.20.5
+version: 0.21.1
 
 ---
 

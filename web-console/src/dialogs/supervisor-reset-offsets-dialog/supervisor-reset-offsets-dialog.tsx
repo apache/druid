@@ -19,10 +19,13 @@
 import { Button, Classes, Code, ControlGroup, Dialog, FormGroup, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
+import { Loader } from '../../components';
 import { FancyNumericInput } from '../../components/fancy-numeric-input/fancy-numeric-input';
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { deepGet, getDruidErrorMessage } from '../../utils';
+import { deepDelete, deepGet, getDruidErrorMessage } from '../../utils';
+
+import './supervisor-reset-offsets-dialog.scss';
 
 type OffsetMap = Record<string, number>;
 
@@ -50,6 +53,7 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
 
   const stream = deepGet(statusResp.data || {}, 'payload.stream');
   const latestOffsets = deepGet(statusResp.data || {}, 'payload.latestOffsets');
+  const latestOffsetsEntries = latestOffsets ? Object.entries(latestOffsets) : undefined;
 
   async function onSave() {
     if (!stream) return;
@@ -89,29 +93,39 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
       onClose={onClose}
       title={`Set supervisor offsets: ${supervisorId}`}
     >
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_BODY}>
-          <p>
-            Set <Code>{supervisorId}</Code> to specific offsets
-          </p>
-          {latestOffsets &&
-            Object.entries(latestOffsets).map(([key, latestOffset]) => (
-              <FormGroup key={key}>
+      <div className={Classes.DIALOG_BODY}>
+        {statusResp.loading && <Loader />}
+        {latestOffsetsEntries && (
+          <>
+            <p>
+              Set <Code>{supervisorId}</Code> to specific offsets
+            </p>
+            {latestOffsetsEntries.map(([key, latestOffset]) => (
+              <FormGroup key={key} label={key} helperText={`(currently: ${latestOffset})`}>
                 <ControlGroup>
-                  <Button text={`${key} (currently: ${latestOffset})`} disabled />
+                  <Button className="label-button" text="New offset:" disabled />
                   <FancyNumericInput
                     value={offsetsToResetTo[key]}
                     onValueChange={valueAsNumber => {
                       setOffsetsToResetTo({ ...offsetsToResetTo, [key]: valueAsNumber });
                     }}
+                    onValueEmpty={() => {
+                      setOffsetsToResetTo(deepDelete(offsetsToResetTo, key));
+                    }}
                     min={0}
                     fill
-                    placeholder={"Don't change"}
+                    placeholder="Don't change offset"
                   />
                 </ControlGroup>
               </FormGroup>
             ))}
-        </div>
+            {latestOffsetsEntries.length === 0 && (
+              <p>There are no partitions currently in this supervisor.</p>
+            )}
+          </>
+        )}
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />
           <Button text="Save" intent={Intent.PRIMARY} onClick={() => void onSave()} />

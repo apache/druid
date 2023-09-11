@@ -60,7 +60,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.util.Collections;
 
 /**
  * Endpoint for SQL execution using MSQ tasks.
@@ -108,17 +107,7 @@ public class SqlTaskResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetEnabled(@Context final HttpServletRequest request)
   {
-    // All authenticated users are authorized for this API: check an empty resource list.
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        Collections.emptyList(),
-        authorizerMapper
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
-    }
-
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
 

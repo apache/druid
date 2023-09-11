@@ -182,10 +182,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         KubernetesWorkItem workItem = tasks.get(task.getId());
 
         if (workItem == null) {
-          throw new ISE("Task [%s] disappeared", task.getId());
-        }
-
-        if (workItem.isShutdownRequested()) {
           throw new ISE("Task [%s] has been shut down", task.getId());
         }
 
@@ -213,11 +209,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
     }
-    finally {
-      synchronized (tasks) {
-        tasks.remove(task.getId());
-      }
-    }
   }
 
   @VisibleForTesting
@@ -236,7 +227,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
         IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
         emitter.emit(
-            metricBuilder.build(
+            metricBuilder.setMetric(
                 "task/pending/time",
                 new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
             )
@@ -269,6 +260,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     if (workItem == null) {
       log.info("Ignoring request to cancel unknown task [%s]", taskid);
       return;
+    }
+
+    synchronized (tasks) {
+      tasks.remove(taskid);
     }
 
     workItem.shutdown();
@@ -438,6 +433,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                 .stream()
                 .filter(KubernetesWorkItem::isPending)
                 .collect(Collectors.toList());
+  }
+
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    final KubernetesWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return TaskLocation.unknown();
+    } else {
+      return workItem.getLocation();
+    }
   }
 
   @Nullable
