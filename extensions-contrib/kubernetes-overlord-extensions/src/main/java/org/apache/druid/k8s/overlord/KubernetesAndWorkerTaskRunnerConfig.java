@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
-import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 import javax.validation.constraints.NotNull;
