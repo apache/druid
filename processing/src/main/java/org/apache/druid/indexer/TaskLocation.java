@@ -106,7 +106,7 @@ public class TaskLocation
 
   @JsonIgnore
   @Nullable
-  public String getTaskLocation()
+  public String getLocation()
   {
     if (k8sPodName != null) {
       return k8sPodName;
