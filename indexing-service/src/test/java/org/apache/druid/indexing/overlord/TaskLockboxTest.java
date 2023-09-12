@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
@@ -34,6 +35,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -46,6 +49,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
@@ -1727,6 +1731,47 @@ public class TaskLockboxTest
     validator.expectActiveLocks(conflictingLock, floorLock);
   }
 
+  @Test
+  public void testCleanUpLocksAfterSegmentAllocationFailure()
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+
+    SegmentAllocateRequest request = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.YEAR,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            null
+        ),
+        90
+    );
+
+    try {
+      testLockbox.allocateSegments(
+          ImmutableList.of(request),
+          "DS",
+          Intervals.of("2023/2024"),
+          false,
+          LockGranularity.TIME_CHUNK
+      );
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+    Assert.assertTrue(testLockbox.getAllLocks().isEmpty());
+  }
+
 
   private class TaskLockboxValidator
   {
@@ -1951,6 +1996,28 @@ public class TaskLockboxTest
     {
       return task.getGroupId()
                  .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
+    }
+  }
+
+  private static class SegmentAllocationFailingTaskLockbox extends TaskLockbox
+  {
+    public SegmentAllocationFailingTaskLockbox(
+        TaskStorage taskStorage,
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+    )
+    {
+      super(taskStorage, metadataStorageCoordinator);
+    }
+
+    @Override
+    void allocateSegmentIds(
+        String dataSource,
+        Interval interval,
+        boolean skipSegmentLineageCheck,
+        Collection<SegmentAllocationHolder> holders
+    )
+    {
+      throw new RuntimeException("This lockbox cannot allocate segemnts.");
     }
   }
 }

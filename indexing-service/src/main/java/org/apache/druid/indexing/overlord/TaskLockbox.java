@@ -494,10 +494,11 @@ public class TaskLockbox
         allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
-
       holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
     }
     finally {
+      holderList.failHoldersForCompletedTasks(this);
+      holderList.clearStaleLocks(this);
       giant.unlock();
     }
 
@@ -711,7 +712,8 @@ public class TaskLockbox
    * for the given requests. Updates the holder with the allocated segment if
    * the allocation succeeds, otherwise marks it as failed.
    */
-  private void allocateSegmentIds(
+  @VisibleForTesting
+  void allocateSegmentIds(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
@@ -1598,6 +1600,28 @@ public class TaskLockbox
       return pending;
     }
 
+    void failHoldersForCompletedTasks(TaskLockbox taskLockbox)
+    {
+      pending
+          .stream()
+          .filter(holder -> !taskLockbox.getActiveTasks().contains(holder.task.getId()))
+          .forEach(holder -> holder.markFailed("Task[%s] is no longer active.", holder.task.getId()));
+    }
+
+    void clearStaleLocks(TaskLockbox taskLockbox)
+    {
+      all
+          .stream()
+          .filter(holder -> holder.acquiredLock != null && holder.allocatedSegment == null)
+          .forEach(holder -> {
+            holder.taskLockPosse.addTask(holder.task);
+            taskLockbox.unlock(
+                holder.task,
+                holder.acquiredLock.getInterval(),
+                holder.acquiredLock instanceof SegmentLock ? ((SegmentLock) holder.acquiredLock).getPartitionId() : null
+            );
+          });
+    }
 
     List<SegmentAllocateResult> getResults()
     {
@@ -1608,7 +1632,8 @@ public class TaskLockbox
   /**
    * Contains the task, request, lock and final result for a segment allocation.
    */
-  private static class SegmentAllocationHolder
+  @VisibleForTesting
+  static class SegmentAllocationHolder
   {
     final AllocationHolderList list;
 
