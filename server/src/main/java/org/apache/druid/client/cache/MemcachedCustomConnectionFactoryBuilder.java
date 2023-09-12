@@ -19,17 +19,7 @@
 
 package org.apache.druid.client.cache;
 
-import net.spy.memcached.ArrayModNodeLocator;
-import net.spy.memcached.ConnectionFactory;
-import net.spy.memcached.ConnectionFactoryBuilder;
-import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.DefaultConnectionFactory;
-import net.spy.memcached.FailureMode;
-import net.spy.memcached.HashAlgorithm;
-import net.spy.memcached.KetamaNodeLocator;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.NodeLocator;
-import net.spy.memcached.OperationFactory;
+import net.spy.memcached.*;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.metrics.MetricCollector;
 import net.spy.memcached.metrics.MetricType;
@@ -37,6 +27,7 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.transcoders.Transcoder;
 import net.spy.memcached.util.DefaultKetamaNodeLocatorConfiguration;
 
+import javax.net.ssl.SSLContext;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -212,6 +203,45 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
       public long getAuthWaitTime()
       {
         return authWaitTime;
+      }
+
+      @Override
+      public SSLContext getSSLContext()
+      {
+        return sslContext == null ? super.getSSLContext() : sslContext;
+      }
+
+      @Override
+      public String getHostnameForTlsVerification()
+      {
+        return hostnameForTlsVerification == null ? super.getHostnameForTlsVerification() : hostnameForTlsVerification;
+      }
+      @Override
+      public ClientMode getClientMode()
+      {
+        return clientMode == null ? super.getClientMode() : clientMode;
+      }
+
+      @Override
+      public boolean skipTlsHostnameVerification()
+      {
+        return skipTlsHostnameVerification;
+      }
+
+      @Override
+      public String toString()
+      {
+        // MURMUR_128 cannot be cast to DefaultHashAlgorithm
+        return "Failure Mode: " + getFailureMode().name() + ", Hash Algorithm: "
+                + getHashAlg().toString() + " Max Reconnect Delay: "
+                + getMaxReconnectDelay() + ", Max Op Timeout: " + getOperationTimeout()
+                + ", Op Queue Length: " + getOpQueueLen() + ", Op Max Queue Block Time"
+                + getOpQueueMaxBlockTime() + ", Max Timeout Exception Threshold: "
+                + getTimeoutExceptionThreshold() + ", Read Buffer Size: "
+                + getReadBufSize() + ", Transcoder: " + getDefaultTranscoder()
+                + ", Operation Factory: " + getOperationFactory() + " isDaemon: "
+                + isDaemon() + ", Optimized: " + shouldOptimize() + ", Using Nagle: "
+                + useNagleAlgorithm() + ", KeepAlive: " + getKeepAlive() + ", SSLContext: " + getSSLContext() + ", ConnectionFactory: " + getName();
       }
     };
   }
