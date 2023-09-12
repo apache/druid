@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -31,7 +30,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
+import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -139,7 +138,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
           timeColumn);
       return new LongFirstVectorAggregator(timeSelector, valueSelector);
     }
-    return NumericNilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultLongValue()));
+    return NilVectorAggregator.of(NilVectorAggregator.FLOAT_NIL_PAIR);
   }
 
   @Override

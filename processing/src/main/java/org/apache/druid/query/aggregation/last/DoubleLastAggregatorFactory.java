@@ -31,7 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
+import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -132,7 +132,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new DoubleLastVectorAggregator(timeSelector, valueSelector);
     } else {
-      return NumericNilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultDoubleValue()));
+      return NilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultDoubleValue()));
     }
   }
 
