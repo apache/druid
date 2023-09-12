@@ -1732,6 +1732,59 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testDoNotCleanUsedLockAfterSegmentAllocationFailure()
+  {
+    final Task task = NoopTask.create();
+    final Interval theInterval = Intervals.of("2023/2024");
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+    final LockResult lockResult = testLockbox.tryLock(task, new TimeChunkLockRequest(
+        TaskLockType.SHARED,
+        task,
+        theInterval,
+        null
+    ));
+    Assert.assertTrue(lockResult.isOk());
+
+    SegmentAllocateRequest request = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.YEAR,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    try {
+      testLockbox.allocateSegments(
+          ImmutableList.of(request),
+          "DS",
+          theInterval,
+          false,
+          LockGranularity.TIME_CHUNK
+      );
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+    Assert.assertFalse(testLockbox.getAllLocks().isEmpty());
+    Assert.assertEquals(
+        lockResult.getTaskLock(),
+        testLockbox.getOnlyTaskLockPosseContainingInterval(task, theInterval).get(0).getTaskLock()
+    );
+  }
+
+  @Test
   public void testCleanUpLocksAfterSegmentAllocationFailure()
   {
     final Task task = NoopTask.create();

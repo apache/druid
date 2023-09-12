@@ -1610,9 +1610,18 @@ public class TaskLockbox
 
     void clearStaleLocks(TaskLockbox taskLockbox)
     {
+      // A lock is valid if it has at least one segment allocated with it
+      // OR if it already has tasks associated with it
+      final Set<TaskLock> validLocks = all
+          .stream()
+          .filter(holder -> holder.allocatedSegment != null
+                            || holder.taskLockPosse != null && !holder.taskLockPosse.isTasksEmpty())
+          .map(holder -> holder.acquiredLock)
+          .collect(Collectors.toSet());
+
       all
           .stream()
-          .filter(holder -> holder.acquiredLock != null && holder.allocatedSegment == null)
+          .filter(holder -> holder.acquiredLock != null && !validLocks.contains(holder.acquiredLock))
           .forEach(holder -> {
             holder.taskLockPosse.addTask(holder.task);
             taskLockbox.unlock(
