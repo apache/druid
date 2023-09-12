@@ -656,7 +656,6 @@ public class SqlStatementResource
 
     String currentUser = authenticationResult.getIdentity();
 
-
     if (currentUser != null && currentUser.equals(queryUser)) {
       return msqControllerTask;
     }
@@ -672,10 +671,9 @@ public class SqlStatementResource
     }
 
     throw new ForbiddenException(StringUtils.format(
-        "The current user[%s] cannot view query id[%s] since the query is owned by user[%s]",
+        "The current user[%s] cannot view query id[%s] since the query is owned by another user",
         currentUser,
-        queryId,
-        queryUser
+        queryId
     ));
   }
 

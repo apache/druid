@@ -319,8 +319,6 @@ public class SqlStatementResourceTest extends MSQTestBase
       )
   );
   private static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
-  private static final Map<String, Object> ROW1 = ImmutableMap.of("_time", 123, "alias", "foo", "market", "bar");
-  private static final Map<String, Object> ROW2 = ImmutableMap.of("_time", 234, "alias", "foo1", "market", "bar1");
   public static final ImmutableList<ColumnNameAndTypes> COL_NAME_AND_TYPES = ImmutableList.of(
       new ColumnNameAndTypes(
           "_time",
@@ -940,6 +938,37 @@ public class SqlStatementResourceTest extends MSQTestBase
         resource.deleteQuery(
             RUNNING_SELECT_MSQ_QUERY,
             makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
+        ).getStatus()
+    );
+  }
+
+  @Test
+  public void testAPIBehaviourWithForbiddenUser()
+  {
+    AuthenticationResult differentUserAuthResult = new AuthenticationResult(
+        "differentUser", AuthConfig.ALLOW_ALL_NAME, null, null
+    );
+    Assert.assertEquals(
+        Response.Status.FORBIDDEN.getStatusCode(),
+        resource.doGetStatus(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.FORBIDDEN.getStatusCode(),
+        resource.doGetResults(
+            RUNNING_SELECT_MSQ_QUERY,
+            1L,
+            null,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.FORBIDDEN.getStatusCode(),
+        resource.deleteQuery(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
   }
