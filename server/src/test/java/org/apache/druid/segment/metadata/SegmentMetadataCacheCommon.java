@@ -53,11 +53,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -84,7 +80,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -159,32 +154,32 @@ public abstract class SegmentMetadataCacheCommon
   {
     final File tmpDir = temporaryFolder.newFolder();
     index1 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "1"))
-                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                              .schema(
-                                                  new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(
-                                                          new CountAggregatorFactory("cnt"),
-                                                          new DoubleSumAggregatorFactory("m1", "m1"),
-                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                      )
-                                                      .withRollup(false)
-                                                      .build()
-                                              )
-                                              .rows(ROWS1)
-                                              .buildMMappedIndex();
+                         .tmpDir(new File(tmpDir, "1"))
+                         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                         .schema(
+                             new IncrementalIndexSchema.Builder()
+                                 .withMetrics(
+                                     new CountAggregatorFactory("cnt"),
+                                     new DoubleSumAggregatorFactory("m1", "m1"),
+                                     new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                 )
+                                 .withRollup(false)
+                                 .build()
+                         )
+                         .rows(ROWS1)
+                         .buildMMappedIndex();
 
     index2 = IndexBuilder.create()
-                                              .tmpDir(new File(tmpDir, "2"))
-                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                              .schema(
-                                                  new IncrementalIndexSchema.Builder()
-                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
-                                                      .withRollup(false)
-                                                      .build()
-                                              )
-                                              .rows(ROWS2)
-                                              .buildMMappedIndex();
+                         .tmpDir(new File(tmpDir, "2"))
+                         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                         .schema(
+                             new IncrementalIndexSchema.Builder()
+                                 .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
+                                 .withRollup(false)
+                                 .build()
+                         )
+                         .rows(ROWS2)
+                         .buildMMappedIndex();
 
     final InputRowSchema rowSchema = new InputRowSchema(
         new TimestampSpec("t", null, null),
@@ -219,44 +214,44 @@ public abstract class SegmentMetadataCacheCommon
     );
 
     indexAuto1 = IndexBuilder.create()
-                                                  .tmpDir(new File(tmpDir, "1"))
-                                                  .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                                  .schema(
-                                                      new IncrementalIndexSchema.Builder()
-                                                          .withTimestampSpec(rowSchema.getTimestampSpec())
-                                                          .withDimensionsSpec(rowSchema.getDimensionsSpec())
-                                                          .withMetrics(
-                                                              new CountAggregatorFactory("cnt"),
-                                                              new DoubleSumAggregatorFactory("m1", "m1"),
-                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                          )
-                                                          .withRollup(false)
-                                                          .build()
-                                                  )
-                                                  .rows(autoRows1)
-                                                  .buildMMappedIndex();
+                             .tmpDir(new File(tmpDir, "1"))
+                             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                             .schema(
+                                 new IncrementalIndexSchema.Builder()
+                                     .withTimestampSpec(rowSchema.getTimestampSpec())
+                                     .withDimensionsSpec(rowSchema.getDimensionsSpec())
+                                     .withMetrics(
+                                         new CountAggregatorFactory("cnt"),
+                                         new DoubleSumAggregatorFactory("m1", "m1"),
+                                         new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                     )
+                                     .withRollup(false)
+                                     .build()
+                             )
+                             .rows(autoRows1)
+                             .buildMMappedIndex();
 
     indexAuto2 = IndexBuilder.create()
-                                                  .tmpDir(new File(tmpDir, "1"))
-                                                  .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                                  .schema(
-                                                      new IncrementalIndexSchema.Builder()
-                                                          .withTimestampSpec(
-                                                              new TimestampSpec("t", null, null)
-                                                          )
-                                                          .withDimensionsSpec(
-                                                              DimensionsSpec.builder().useSchemaDiscovery(true).build()
-                                                          )
-                                                          .withMetrics(
-                                                              new CountAggregatorFactory("cnt"),
-                                                              new DoubleSumAggregatorFactory("m1", "m1"),
-                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-                                                          )
-                                                          .withRollup(false)
-                                                          .build()
-                                                  )
-                                                  .rows(autoRows2)
-                                                  .buildMMappedIndex();
+                             .tmpDir(new File(tmpDir, "1"))
+                             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                             .schema(
+                                 new IncrementalIndexSchema.Builder()
+                                     .withTimestampSpec(
+                                         new TimestampSpec("t", null, null)
+                                     )
+                                     .withDimensionsSpec(
+                                         DimensionsSpec.builder().useSchemaDiscovery(true).build()
+                                     )
+                                     .withMetrics(
+                                         new CountAggregatorFactory("cnt"),
+                                         new DoubleSumAggregatorFactory("m1", "m1"),
+                                         new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                     )
+                                     .withRollup(false)
+                                     .build()
+                             )
+                             .rows(autoRows2)
+                             .buildMMappedIndex();
 
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
