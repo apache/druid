@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -82,5 +83,19 @@ public class NestedDataColumnSchemaTest
     final String there = "{\"type\":\"json\", \"name\":\"test\",\"formatVersion\":4}";
     NestedDataColumnSchema andBack = MAPPER.readValue(there, NestedDataColumnSchema.class);
     Assert.assertEquals(new NestedDataColumnSchema("test", 4), andBack);
+  }
+
+  @Test
+  public void testVersionTooSmall()
+  {
+    Throwable t = Assert.assertThrows(DruidException.class, () -> new NestedDataColumnSchema("test", 3));
+    Assert.assertEquals("Unsupported nested column format version[3]", t.getMessage());
+  }
+
+  @Test
+  public void testVersionTooBig()
+  {
+    Throwable t = Assert.assertThrows(DruidException.class, () -> new NestedDataColumnSchema("test", 6));
+    Assert.assertEquals("Unsupported nested column format version[6]", t.getMessage());
   }
 }

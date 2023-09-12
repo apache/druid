@@ -21,12 +21,24 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class DefaultColumnFormatConfig
 {
+  public static void validateNestedFormatVersion(@Nullable Integer formatVersion)
+  {
+    if (formatVersion != null) {
+      if (formatVersion < 4 || formatVersion > 5) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Unsupported nested column format version[%s]", formatVersion);
+      }
+    }
+  }
+
   @JsonProperty("nestedColumnFormatVersion")
   private final Integer nestedColumnFormatVersion;
 
@@ -36,6 +48,7 @@ public class DefaultColumnFormatConfig
   )
   {
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
+    validateNestedFormatVersion(this.nestedColumnFormatVersion);
   }
 
   @Nullable

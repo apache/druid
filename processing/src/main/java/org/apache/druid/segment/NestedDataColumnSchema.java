@@ -29,6 +29,12 @@ import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Nested column {@link DimensionSchema}. If {@link #formatVersion} is set to 4, or null and
+ * {@link DefaultColumnFormatConfig#nestedColumnFormatVersion} is set to 4, then {@link NestedDataColumnHandlerV4} is
+ * used, else {@link NestedCommonFormatColumnHandler} is used instead and this is equivalent to using
+ * {@link AutoTypeColumnSchema}
+ */
 public class NestedDataColumnSchema extends DimensionSchema
 {
   final int formatVersion;
@@ -50,6 +56,7 @@ public class NestedDataColumnSchema extends DimensionSchema
       // but as far as this is concerned it is v5
       formatVersion = 5;
     }
+    DefaultColumnFormatConfig.validateNestedFormatVersion(this.formatVersion);
   }
 
   public NestedDataColumnSchema(
@@ -59,6 +66,7 @@ public class NestedDataColumnSchema extends DimensionSchema
   {
     super(name, null, true);
     this.formatVersion = version;
+    DefaultColumnFormatConfig.validateNestedFormatVersion(this.formatVersion);
   }
 
   @JsonProperty("formatVersion")
