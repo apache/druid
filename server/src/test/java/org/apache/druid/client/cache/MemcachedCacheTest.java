@@ -254,10 +254,13 @@ public class MemcachedCacheTest
     ConnectionFactory connectionFactory = MemcachedCache.createConnectionFactory(memcachedCacheConfig, null, null, null);
     // Ensure client mode is set to the value passed in config. Default is static
     Assert.assertEquals(connectionFactory.getClientMode(), ClientMode.Static);
+    Assert.assertNull(connectionFactory.getSSLContext());
     // Dynamic mode
     ConnectionFactory connectionFactoryDynamic = MemcachedCache.createConnectionFactory(config, null, null, null);
     // Ensure client mode is set to the value passed in config. Default is static
     Assert.assertEquals(connectionFactoryDynamic.getClientMode(), ClientMode.Dynamic);
+    //enableTls is true so sslContext is not null
+    Assert.assertNotNull(connectionFactoryDynamic.getSSLContext());
   }
 
   @Test
