@@ -31,43 +31,60 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -117,6 +134,13 @@ public abstract class SegmentMetadataCacheCommon
   public TestTimelineServerView serverView;
   public List<ImmutableDruidServer> druidServers;
 
+  public QueryableIndex index1;
+  public QueryableIndex index2;
+
+  public QueryableIndex indexAuto1;
+  public QueryableIndex indexAuto2;
+  public DataSegment realtimeSegment1;
+
   public void setUpCommon()
   {
     resourceCloser = Closer.create();
@@ -134,7 +158,7 @@ public abstract class SegmentMetadataCacheCommon
   public void setupData() throws Exception
   {
     final File tmpDir = temporaryFolder.newFolder();
-    final QueryableIndex index1 = IndexBuilder.create()
+    index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
                                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
@@ -150,7 +174,7 @@ public abstract class SegmentMetadataCacheCommon
                                               .rows(ROWS1)
                                               .buildMMappedIndex();
 
-    final QueryableIndex index2 = IndexBuilder.create()
+    index2 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "2"))
                                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
@@ -194,7 +218,7 @@ public abstract class SegmentMetadataCacheCommon
         )
     );
 
-    final QueryableIndex indexAuto1 = IndexBuilder.create()
+    indexAuto1 = IndexBuilder.create()
                                                   .tmpDir(new File(tmpDir, "1"))
                                                   .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                                   .schema(
@@ -212,7 +236,7 @@ public abstract class SegmentMetadataCacheCommon
                                                   .rows(autoRows1)
                                                   .buildMMappedIndex();
 
-    final QueryableIndex indexAuto2 = IndexBuilder.create()
+    indexAuto2 = IndexBuilder.create()
                                                   .tmpDir(new File(tmpDir, "1"))
                                                   .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                                   .schema(
@@ -280,7 +304,7 @@ public abstract class SegmentMetadataCacheCommon
                    .build(),
         indexAuto2
     );
-    final DataSegment segment1 = new DataSegment(
+    realtimeSegment1 = new DataSegment(
         "foo3",
         Intervals.of("2012/2013"),
         "version3",
@@ -293,7 +317,8 @@ public abstract class SegmentMetadataCacheCommon
         100L,
         DataSegment.PruneSpecsHolder.DEFAULT
     );
-    final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
+
+    final List<DataSegment> realtimeSegments = ImmutableList.of(realtimeSegment1);
     serverView = new TestTimelineServerView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
   }
@@ -449,6 +474,43 @@ public abstract class SegmentMetadataCacheCommon
     Assert.assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
     // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
     Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
+  }
+
+  public void checkRunSegmentMetadataQueryWithContext(SegmentMetadataCache schema, QueryLifecycleFactory factoryMock, QueryLifecycle lifecycleMock)
+  {
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    );
+
+    DataSegment segment = newSegment("test", 0);
+    List<SegmentId> segmentIterable = ImmutableList.of(segment.getId());
+
+    // This is the query that we expect this method to create. We will be testing that it matches the query generated by the method under test.
+    SegmentMetadataQuery expectedMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(segment.getDataSource()),
+        new MultipleSpecificSegmentSpec(
+            segmentIterable.stream()
+                           .map(SegmentId::toDescriptor).collect(Collectors.toList())),
+        new AllColumnIncluderator(),
+        false,
+        queryContext,
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        null,
+        null
+    );
+
+    EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
+    // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+            .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
+
+    EasyMock.replay(factoryMock, lifecycleMock);
+
+    schema.runSegmentMetadataQuery(segmentIterable);
+
+    EasyMock.verify(factoryMock, lifecycleMock);
   }
 
   public DataSegment newSegment(String datasource, int partitionId)

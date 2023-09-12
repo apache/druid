@@ -38,6 +38,7 @@ import org.apache.druid.timeline.SegmentId;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -104,11 +105,7 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     tables.putAll(polledDataSourceMetadata);
 
     // Remove segments of the dataSource from refresh list for which we received schema from the Coordinator.
-    segmentsToRefresh.forEach(segment -> {
-      if (polledDataSourceMetadata.containsKey(segment.getDataSource())) {
-        segmentsToRefresh.remove(segment);
-      }
-    });
+    segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
     // Refresh the remaining segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
