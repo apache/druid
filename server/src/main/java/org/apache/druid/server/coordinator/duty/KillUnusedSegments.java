@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,7 +40,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +79,6 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
 
-  @Inject
   public KillUnusedSegments(
       SegmentsMetadataManager segmentsMetadataManager,
       OverlordClient overlordClient,

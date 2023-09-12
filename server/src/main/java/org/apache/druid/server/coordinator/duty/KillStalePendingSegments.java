@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -59,7 +58,6 @@ public class KillStalePendingSegments implements CoordinatorDuty
 
   private final OverlordClient overlordClient;
 
-  @Inject
   public KillStalePendingSegments(OverlordClient overlordClient)
   {
     this.overlordClient = overlordClient;
