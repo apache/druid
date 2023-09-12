@@ -63,7 +63,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -386,7 +390,8 @@ public class MemcachedCache implements Cache
     }
   }
 
-  public static ConnectionFactory createConnectionFactory(final MemcachedCacheConfig config, final LZ4Transcoder transcoder, final OperationQueueFactory opQueueFactory, final MetricCollector metricCollector) throws KeyManagementException, KeyStoreException, NoSuchAlgorithmException {
+  public static ConnectionFactory createConnectionFactory(final MemcachedCacheConfig config, final LZ4Transcoder transcoder, final OperationQueueFactory opQueueFactory, final MetricCollector metricCollector) throws KeyManagementException, KeyStoreException, NoSuchAlgorithmException
+  {
     MemcachedCustomConnectionFactoryBuilder connectionFactoryBuilder = (MemcachedCustomConnectionFactoryBuilder) new MemcachedCustomConnectionFactoryBuilder()
             // 1000 repetitions gives us good distribution with murmur3_128
             // (approx < 5% difference in counts across nodes, with 5 cache nodes)

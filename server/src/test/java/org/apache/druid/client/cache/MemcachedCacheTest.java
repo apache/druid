@@ -29,7 +29,16 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import net.spy.memcached.*;
+import net.spy.memcached.BroadcastOpFactory;
+import net.spy.memcached.CASResponse;
+import net.spy.memcached.CASValue;
+import net.spy.memcached.CachedData;
+import net.spy.memcached.ClientMode;
+import net.spy.memcached.ConnectionFactory;
+import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.MemcachedClientIF;
+import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.NodeLocator;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.internal.BulkGetCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
@@ -221,16 +230,19 @@ public class MemcachedCacheTest
   }
 
   @Test
-  public void testClientMode() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+  public void testClientMode() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException
+  {
     final MemcachedCacheConfig config = new MemcachedCacheConfig()
     {
       @Override
-      public boolean enableTls() {
+      public boolean enableTls()
+      {
         return true;
       }
 
       @Override
-      public String getClientMode() {
+      public String getClientMode()
+      {
         return "dynamic";
       }
       @Override
