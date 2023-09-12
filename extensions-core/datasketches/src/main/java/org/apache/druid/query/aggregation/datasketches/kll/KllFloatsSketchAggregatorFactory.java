@@ -38,9 +38,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory<KllFloatsSketch, Float>
 {
@@ -79,19 +77,6 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   public Comparator<KllFloatsSketch> getComparator()
   {
     return COMPARATOR;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new KllFloatsSketchAggregatorFactory(
-            getFieldName(),
-            getFieldName(),
-            getK(),
-            getMaxStreamLength()
-        )
-    );
   }
 
   @Override

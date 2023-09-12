@@ -37,7 +37,7 @@
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>${sigar.base.version}.132</sigar.version>
     <ipaddress.version>5.3.4</ipaddress.version>
-    <oshi.version>6.4.2</oshi.version>
+    <oshi.version>6.4.4</oshi.version>
   </properties>
 
   <dependencies>

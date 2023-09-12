@@ -478,7 +478,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           (Function<TaskStatus, TaskStatus>) status -> {
             shutdownTask(task);
             return status;
-          }
+          },
+          MoreExecutors.directExecutor()
       );
       return cleanupFuture;
     }
@@ -1038,7 +1039,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       ImmutableDruidDataSource druidDataSource;
       try {

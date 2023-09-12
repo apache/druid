@@ -41,9 +41,6 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -95,11 +92,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
 
       @Override
       public int getBufferGrouperInitialBuckets()
@@ -164,25 +156,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       );
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPools.getProcessingPool()),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            processingConfig,
-            configSupplier,
-            bufferPools.getProcessingPool(),
-            bufferPools.getMergePool(),
-            TestHelper.makeJsonMapper(),
-            mapper,
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        bufferPools.getProcessingPool(),
+        bufferPools.getMergePool(),
+        TestHelper.makeJsonMapper(),
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
-    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -197,10 +181,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
       for (boolean vectorize : ImmutableList.of(false)) {
         // Add vectorization tests for any indexes that support it.
-        if (!vectorize ||
-            config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-          constructors.add(new Object[]{config, factory, vectorize});
-        }
+        constructors.add(new Object[]{config, factory, vectorize});
       }
 
     }
@@ -734,7 +715,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private void cannotVectorize()
   {
-    if (vectorize && config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+    if (vectorize) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }

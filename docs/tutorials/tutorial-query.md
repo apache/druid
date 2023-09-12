@@ -124,21 +124,23 @@ performance issues. For more information, see [Native queries](../querying/query
 
    ![Explain query](../assets/tutorial-query-05.png "Explain query")
 
-    > Another way to view the explain plan is by adding EXPLAIN PLAN FOR to the front of your query, as follows:
-    >
-    >```sql
-    >EXPLAIN PLAN FOR
-    >SELECT
-    >  "page",
-    >  "countryName",
-    >  COUNT(*) AS "Edits"
-    >FROM "wikipedia"
-    >WHERE "countryName" IS NOT NULL
-    >GROUP BY 1, 2
-    >ORDER BY "Edits" DESC
-    >```
-    >This is particularly useful when running queries 
-    from the command line or over HTTP.
+:::info
+ Another way to view the explain plan is by adding EXPLAIN PLAN FOR to the front of your query, as follows:
+
+```sql
+EXPLAIN PLAN FOR
+SELECT
+  "page",
+  "countryName",
+  COUNT(*) AS "Edits"
+FROM "wikipedia"
+WHERE "countryName" IS NOT NULL
+GROUP BY 1, 2
+ORDER BY "Edits" DESC
+```
+This is particularly useful when running queries
+from the command line or over HTTP.
+:::
 
 
 9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  

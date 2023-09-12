@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -158,7 +159,8 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
           {
             retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId)));
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
 
     return retVal;

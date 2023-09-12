@@ -45,9 +45,11 @@ Druid supports two types of query caching:
 
 Druid invalidates any cache the moment any underlying data change to avoid returning stale results. This is especially important for `table` datasources that have highly-variable underlying data segments, including real-time data segments.
 
-> **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
->
-> The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+:::info
+ **Druid can store cache data on the local JVM heap or in an external distributed key/value store (e.g. memcached)**
+
+ The default is a local cache based upon [Caffeine](https://github.com/ben-manes/caffeine). The default maximum cache storage size is the minimum of 1 GiB / ten percent of maximum runtime memory for the JVM, with no cache expiration. See [Cache configuration](../configuration/index.md#cache-configuration) for information on how to configure cache storage.  When using caffeine, the cache is inside the JVM heap and is directly measurable.  Heap usage will grow up to the maximum configured size, and then the least recently used segment results will be evicted and replaced with newer results.
+:::
 
 ### Per-segment caching
 
@@ -99,12 +101,11 @@ Caching does not solve all types of query performance issues. For each cache typ
 **Per-segment caching** doesn't work for the following:
 - queries containing a sub-query in them. However the output of sub-queries may be cached. See [Query execution](./query-execution.md) for more details on sub-queries execution.
 - queries with joins do not support any caching on the broker.
-- GroupBy v2 queries do not support any caching on broker.
+- GroupBy queries do not support segment level caching on broker.
 - queries with `bySegment` set in the query context are not cached on the broker.
 
 **Whole-query caching** doesn't work for the following:
 - queries that involve an inline datasource or a lookup datasource.
-- GroupBy v2 queries.
 - queries with joins.
 - queries with a union datasource.
 
