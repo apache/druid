@@ -423,7 +423,7 @@ public abstract class SegmentMetadataCacheCommon
     Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
-  public void checkAvailableSegmentMetadataNumRows(SegmentMetadataCache schema) throws InterruptedException
+  public void checkAvailableSegmentMetadataNumRows(SegmentMetadataCache schema)
   {
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentsMetadata.values()
