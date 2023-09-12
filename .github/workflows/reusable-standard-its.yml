@@ -90,9 +90,11 @@ jobs:
 
       - name: Collect docker logs on failure
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: jwalton/gh-docker-logs@v2
-        with:
-          dest: './docker-logs'
+        run: |
+          for c in $(docker ps -a --format="{{.Names}}")
+          do
+            docker logs $c > ./docker-logs/$c.log
+          done
 
       - name: Tar docker logs
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
