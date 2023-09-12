@@ -27,9 +27,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -41,6 +46,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,20 +58,18 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
-public class CoordinatorServerViewTest extends CuratorTestBase
+public class CoordinatorTimelineTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
   private final String inventoryPath;
-
   private CountDownLatch segmentViewInitLatch;
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
   private BatchServerInventoryView baseView;
-  private CoordinatorServerView overlordServerView;
 
-  public CoordinatorServerViewTest()
+  public CoordinatorTimelineTest()
   {
     jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
@@ -81,7 +85,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   }
 
   @Test
-  public void testSingleServerAddedRemovedSegment() throws Exception
+  public void testSingleServerAddedRemovedSegment_CoordinatorServerView() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(1);
@@ -89,6 +93,46 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     setupViews();
 
+    CoordinatorServerView coordinatorServerView = new CoordinatorServerView(
+        baseView,
+        new CoordinatorSegmentWatcherConfig(),
+        new NoopServiceEmitter()
+    );
+
+    baseView.start();
+    coordinatorServerView.start();
+
+    testSingleServerAddedRemovedSegment(coordinatorServerView);
+  }
+
+  @Test
+  public void testSingleServerAddedRemovedSegment_QueryableCoordinatorServerView() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(1);
+    segmentRemovedLatch = new CountDownLatch(1);
+
+    setupViews();
+
+    QueryableCoordinatorServerView queryableCoordinatorServerView = new QueryableCoordinatorServerView(
+        EasyMock.createMock(QueryToolChestWarehouse.class),
+        EasyMock.createMock(QueryWatcher.class),
+        new ObjectMapper(),
+        EasyMock.createMock(HttpClient.class),
+        baseView,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new NoopServiceEmitter(),
+        new CoordinatorSegmentWatcherConfig()
+    );
+
+    baseView.start();
+    queryableCoordinatorServerView.start();
+
+    testSingleServerAddedRemovedSegment(queryableCoordinatorServerView);
+  }
+
+  private void testSingleServerAddedRemovedSegment(CoordinatorTimeline coordinatorTimeline) throws Exception
+  {
     final DruidServer druidServer = new DruidServer(
         "localhost:1234",
         "localhost:1234",
@@ -108,7 +152,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
+    TimelineLookup timeline = coordinatorTimeline.getTimeline(new TableDataSource("test_overlord_server_view"));
     List<TimelineObjectHolder> serverLookupRes = (List<TimelineObjectHolder>) timeline.lookup(
         intervals
     );
@@ -133,6 +177,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     unannounceSegmentForServer(druidServer, segment);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
+    timeline = coordinatorTimeline.getTimeline(new TableDataSource("test_overlord_server_view"));
     Assert.assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2014-10-20T00:00:00Z/P1D"))).size()
@@ -141,16 +186,54 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   }
 
   @Test
-  public void testMultipleServerAddedRemovedSegment() throws Exception
+  public void testMultipleServerAddedRemovedSegment_CoordinatorServerView() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(5);
-
-    // temporarily set latch count to 1
     segmentRemovedLatch = new CountDownLatch(1);
 
     setupViews();
 
+    CoordinatorServerView coordinatorServerView = new CoordinatorServerView(
+        baseView,
+        new CoordinatorSegmentWatcherConfig(),
+        new NoopServiceEmitter()
+    );
+
+    baseView.start();
+    coordinatorServerView.start();
+
+    testMultipleServerAddedRemovedSegment(coordinatorServerView);
+  }
+
+  @Test
+  public void testMultipleServerAddedRemovedSegment_QueryableCoordinatorServerView() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(5);
+    segmentRemovedLatch = new CountDownLatch(1);
+
+    setupViews();
+
+    QueryableCoordinatorServerView queryableCoordinatorServerView = new QueryableCoordinatorServerView(
+        EasyMock.createMock(QueryToolChestWarehouse.class),
+        EasyMock.createMock(QueryWatcher.class),
+        new ObjectMapper(),
+        EasyMock.createMock(HttpClient.class),
+        baseView,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        new NoopServiceEmitter(),
+        new CoordinatorSegmentWatcherConfig()
+    );
+
+    baseView.start();
+    queryableCoordinatorServerView.start();
+
+    testMultipleServerAddedRemovedSegment(queryableCoordinatorServerView);
+  }
+
+  void testMultipleServerAddedRemovedSegment(CoordinatorTimeline coordinatorTimeline) throws Exception
+  {
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         new Function<String, DruidServer>()
@@ -198,7 +281,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
+    TimelineLookup timeline = coordinatorTimeline.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -219,7 +302,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
 
-    timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
+
+    timeline = coordinatorTimeline.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -239,6 +323,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
+    timeline = coordinatorTimeline.getTimeline(new TableDataSource("test_overlord_server_view"));
     Assert.assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))).size()
@@ -287,7 +372,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     }
   }
 
-  private void setupViews() throws Exception
+  private void setupViews()
   {
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
@@ -331,15 +416,6 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         );
       }
     };
-
-    overlordServerView = new CoordinatorServerView(
-        baseView,
-        new CoordinatorSegmentWatcherConfig(),
-        new NoopServiceEmitter()
-    );
-
-    baseView.start();
-    overlordServerView.start();
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
