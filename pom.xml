@@ -120,9 +120,10 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
-        <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
+        <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
+        <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
+        <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
+        <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
@@ -1170,12 +1171,12 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.http.client.apis.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.http.client.apis.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.fasterxml.jackson.core</groupId>

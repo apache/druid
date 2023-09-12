@@ -961,6 +961,9 @@ public class SegmentMetadataCache
         // likelyhood of upgrading from some version lower than 0.23 is low
         try {
           valueType = ColumnType.fromString(entry.getValue().getType());
+          if (valueType == null) {
+            valueType = ColumnType.ofComplex(entry.getValue().getType());
+          }
         }
         catch (IllegalArgumentException ignored) {
           valueType = ColumnType.UNKNOWN_COMPLEX;
