@@ -769,8 +769,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
 
       if (!framesOptional.isPresent()) {
-        log.debug("Unable to materialize the results as frames. Defaulting to materializing the results as rows");
-        return Optional.empty();
+        throw DruidException.defensive("Unable to materialize the results as frames. Defaulting to materializing the results as rows");
       }
 
       Sequence<FrameSignaturePair> frames = framesOptional.get();
@@ -791,6 +790,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
       return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
 
+    }
+    catch (ResourceLimitExceededException e) {
+      throw e;
     }
     catch (UnsupportedColumnTypeException e) {
       subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
