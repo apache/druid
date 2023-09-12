@@ -295,14 +295,15 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     }
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
     return maxStringBytes == that.maxStringBytes &&
-           Objects.equals(fieldName, that.fieldName) &&
-           Objects.equals(name, that.name);
+        Objects.equals(fieldName, that.fieldName) &&
+        Objects.equals(timeColumn, that.timeColumn) &&
+        Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(fieldName, name, maxStringBytes);
+    return Objects.hash(fieldName, name, maxStringBytes, timeColumn);
   }
 
   @Override
@@ -312,6 +313,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
            "fieldName='" + fieldName + '\'' +
            ", name='" + name + '\'' +
            ", maxStringBytes=" + maxStringBytes +
+           ", timeColumn=" + timeColumn +
            '}';
   }
 }

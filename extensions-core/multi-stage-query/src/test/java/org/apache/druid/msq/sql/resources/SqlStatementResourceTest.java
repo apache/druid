@@ -240,7 +240,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               null,
               0,
               1,
-              2
+              2,
+              null
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
@@ -305,7 +306,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               null,
               0,
               1,
-              2
+              2,
+              null
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
