@@ -58,6 +58,7 @@ import org.skife.jdbi.v2.BaseResultSetMapper;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
@@ -1088,6 +1089,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public List<Interval> getUnusedSegmentIntervals(
       final String dataSource,
+      @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
       DateTime maxUsedFlagLastUpdatedTime
@@ -1100,13 +1102,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           @Override
           public List<Interval> inTransaction(Handle handle, TransactionStatus status)
           {
-            Iterator<Interval> iter = handle
+            final Query<Interval> sql = handle
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND "
-                        + "%2$send%2$s <= :end AND used = false AND used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated ORDER BY start, %2$send%2$s",
+                        + "%2$send%2$s <= :end AND used = false AND used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated %3$s ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
-                        connector.getQuoteString()
+                        connector.getQuoteString(),
+                        null != minStartTime ? "AND start >= :start" : ""
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())
@@ -1126,8 +1129,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                         );
                       }
                     }
-                )
-                .iterator();
+                );
+            if (null != minStartTime) {
+              sql.bind("start", minStartTime.toString());
+            }
+
+            Iterator<Interval> iter = sql.iterator();
 
 
             List<Interval> result = Lists.newArrayListWithCapacity(limit);

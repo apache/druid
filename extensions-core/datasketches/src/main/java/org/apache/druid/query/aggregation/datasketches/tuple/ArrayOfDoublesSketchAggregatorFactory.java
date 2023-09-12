@@ -280,20 +280,6 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new ArrayOfDoublesSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            nominalEntries,
-            metricColumns,
-            numberOfValues
-        )
-    );
-  }
-
-  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new ArrayOfDoublesSketchAggregatorFactory(name, name, nominalEntries, null, numberOfValues);

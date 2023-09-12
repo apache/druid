@@ -118,12 +118,6 @@ public class PassthroughAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     throw new UnsupportedOperationException();

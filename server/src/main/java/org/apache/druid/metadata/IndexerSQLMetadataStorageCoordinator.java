@@ -1810,12 +1810,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public DataSegment retrieveUsedSegmentForId(final String id)
+  public DataSegment retrieveSegmentForId(final String id, boolean includeUnused)
   {
     return connector.retryTransaction(
-        (handle, status) ->
-            SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                    .retrieveUsedSegmentForId(id),
+        (handle, status) -> {
+          if (includeUnused) {
+            return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                           .retrieveSegmentForId(id);
+          } else {
+            return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                           .retrieveUsedSegmentForId(id);
+          }
+        },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );

@@ -630,8 +630,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testEarliestAggregators()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT "
@@ -1096,8 +1094,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testPrimitiveEarliestInSubquery()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
@@ -1195,11 +1191,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestInSubquery()
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
-
     testQuery(
-        "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
+        "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -1305,6 +1298,75 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testStringEarliestSingleStringDim()
+  {
+    notMsqCompatible();
+    testQuery(
+        "SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(aggregators(new StringFirstAggregatorFactory(
+                            "a0",
+                            "dim1",
+                            null,
+                            10
+                        )))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{null, "10.1"},
+            new Object[]{"", "2"},
+            new Object[]{"a", ""},
+            new Object[]{"abc", "def"}
+        ) : ImmutableList.of(
+            new Object[]{"", "10.1"},
+            new Object[]{"a", ""},
+            new Object[]{"abc", "def"}
+        )
+    );
+  }
+
+  @Test
+  public void testStringEarliestMultiStringDim()
+  {
+    testQuery(
+        "SELECT dim2, EARLIEST(dim3,10) AS val FROM foo GROUP BY dim2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setAggregatorSpecs(aggregators(new StringFirstAggregatorFactory(
+                            "a0",
+                            "dim3",
+                            null,
+                            10
+                        )))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{null, "[b, c]"},
+            new Object[]{"", "d"},
+            new Object[]{"a", "[a, b]"},
+            new Object[]{"abc", null}
+        ) : ImmutableList.of(
+            new Object[]{"", "[b, c]"},
+            new Object[]{"a", "[a, b]"},
+            new Object[]{"abc", ""}
+        )
+    );
+  }
+
   // This test the off-heap (buffer) version of the AnyAggregator (String)
   @Test
   public void testStringAnyInSubquery()
@@ -1356,8 +1418,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testEarliestAggregatorsNumericNulls()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
@@ -1417,8 +1477,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testFirstLatestAggregatorsSkipNulls()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     final DimFilter filter;
     if (useDefault) {
@@ -1533,8 +1591,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testOrderByEarliestFloat()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1581,8 +1638,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testOrderByEarliestDouble()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1629,8 +1685,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testOrderByEarliestLong()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
+
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -13957,13 +14012,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "CAST(greatest(\"dim1\",\"dim2\"), 'DOUBLE')",
-                                ColumnType.DOUBLE
+                                "greatest(\"dim1\",\"dim2\")",
+                                ColumnType.STRING
                             )
                         )
                         .setGranularity(Granularities.ALL)
                         .addDimension(new DefaultDimensionSpec("l1", "_d0", ColumnType.LONG))
-                        .addAggregator(new DoubleLastAggregatorFactory("a0", "v0", null))
+                        .addAggregator(new StringLastAggregatorFactory("a0", "v0", null, 1024))
                         .setPostAggregatorSpecs(ImmutableList.of(
                             expressionPostAgg("p0", "isnull(\"a0\")")
                         ))
@@ -13976,9 +14031,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{325323L, false}
         ) :
         ImmutableList.of(
-            new Object[]{null, true},
+            new Object[]{null, false},
             new Object[]{0L, false},
-            new Object[]{7L, true},
+            new Object[]{7L, false},
             new Object[]{325323L, false}
         )
     );
@@ -14268,5 +14323,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{978480000000L, "abc"}
         )
     );
+  }
+
+  @Test
+  public void testLatestByOnStringColumnWithoutMaxBytesSpecified()
+  {
+    String defaultString = useDefault ? "" : null;
+    cannotVectorize();
+    testQuery(
+        "SELECT dim2,LATEST(dim3),LATEST_BY(dim1, __time),EARLIEST(dim3),EARLIEST_BY(dim1, __time),ANY_VALUE(dim3) FROM druid.foo where dim2='abc' group by 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    expressionVirtualColumn("v0", "'abc'", ColumnType.STRING))
+                .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
+                .setDimensions(
+                    dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(
+                    aggregators(
+                        new StringLastAggregatorFactory("a0", "dim3", "__time", 1024),
+                        new StringLastAggregatorFactory("a1", "dim1", "__time", 1024),
+                        new StringFirstAggregatorFactory("a2", "dim3", "__time", 1024),
+                        new StringFirstAggregatorFactory("a3", "dim1", "__time", 1024),
+                        new StringAnyAggregatorFactory("a4", "dim3", 1024)))
+                .build()
+
+        ),
+        ImmutableList.of(
+            new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}
+        ));
   }
 }

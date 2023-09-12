@@ -32,7 +32,6 @@ public class SegmentLoadingConfig
 
   private final int maxSegmentsInLoadQueue;
   private final int replicationThrottleLimit;
-  private final int maxReplicaAssignmentsInRun;
   private final int maxLifetimeInLoadQueue;
 
   private final int balancerComputeThreads;
@@ -48,30 +47,27 @@ public class SegmentLoadingConfig
   {
     if (dynamicConfig.isSmartSegmentLoading()) {
       // Compute replicationThrottleLimit with a lower bound of 100
-      final int throttlePercentage = 2;
+      final int throttlePercentage = 5;
       final int replicationThrottleLimit = Math.max(100, numUsedSegments * throttlePercentage / 100);
-      final int balancerComputeThreads = computeNumBalancerThreads(numUsedSegments);
-
+      final int numBalancerThreads = CoordinatorDynamicConfig.getDefaultBalancerComputeThreads();
       log.info(
-          "Smart segment loading is enabled. Calculated balancerComputeThreads[%d]"
-          + " and replicationThrottleLimit[%,d] (%d%% of used segments[%,d]).",
-          balancerComputeThreads, replicationThrottleLimit, throttlePercentage, numUsedSegments
+          "Smart segment loading is enabled. Calculated replicationThrottleLimit[%,d]"
+          + " (%d%% of used segments[%,d]) and numBalancerThreads[%d].",
+          replicationThrottleLimit, throttlePercentage, numUsedSegments, numBalancerThreads
       );
 
       return new SegmentLoadingConfig(
           0,
           replicationThrottleLimit,
-          Integer.MAX_VALUE,
           60,
           true,
-          balancerComputeThreads
+          numBalancerThreads
       );
     } else {
       // Use the configured values
       return new SegmentLoadingConfig(
           dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
           dynamicConfig.getReplicationThrottleLimit(),
-          dynamicConfig.getMaxNonPrimaryReplicantsToLoad(),
           dynamicConfig.getReplicantLifetime(),
           dynamicConfig.isUseRoundRobinSegmentAssignment(),
           dynamicConfig.getBalancerComputeThreads()
@@ -82,7 +78,6 @@ public class SegmentLoadingConfig
   private SegmentLoadingConfig(
       int maxSegmentsInLoadQueue,
       int replicationThrottleLimit,
-      int maxReplicaAssignmentsInRun,
       int maxLifetimeInLoadQueue,
       boolean useRoundRobinSegmentAssignment,
       int balancerComputeThreads
@@ -90,7 +85,6 @@ public class SegmentLoadingConfig
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
     this.replicationThrottleLimit = replicationThrottleLimit;
-    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
     this.maxLifetimeInLoadQueue = maxLifetimeInLoadQueue;
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     this.balancerComputeThreads = balancerComputeThreads;
@@ -116,40 +110,8 @@ public class SegmentLoadingConfig
     return maxLifetimeInLoadQueue;
   }
 
-  public int getMaxReplicaAssignmentsInRun()
-  {
-    return maxReplicaAssignmentsInRun;
-  }
-
   public int getBalancerComputeThreads()
   {
     return balancerComputeThreads;
-  }
-
-  /**
-   * Computes the number of threads to be used in the balancing executor.
-   * The number of used segments in a cluster is generally a good indicator of
-   * the cluster size and has been used here as a proxy for the actual number of
-   * segments that would be involved in cost computations.
-   * <p>
-   * The number of threads increases by 1 first for every 50k segments, then for
-   * every 75k segments and so on.
-   *
-   * @return Number of {@code balancerComputeThreads} in the range [1, 8].
-   */
-  public static int computeNumBalancerThreads(int numUsedSegments)
-  {
-    // Add an extra thread when numUsedSegments increases by a step
-    final int[] stepValues = {50, 50, 75, 75, 100, 100, 150, 150};
-
-    int remainder = numUsedSegments / 1000;
-    for (int step = 0; step < stepValues.length; ++step) {
-      remainder -= stepValues[step];
-      if (remainder < 0) {
-        return step + 1;
-      }
-    }
-
-    return stepValues.length;
   }
 }
