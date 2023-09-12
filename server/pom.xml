@@ -49,6 +49,11 @@
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <dependency>
             <groupId>jakarta.inject</groupId>
@@ -307,10 +312,10 @@
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-guice</artifactId>
         </dependency>
-    	<dependency>
+    	  <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-    	</dependency>
+    	  </dependency>
 
         <!-- Tests -->
         <dependency>
