@@ -50,6 +50,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
+
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -188,8 +189,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    VectorValueSelector timeSelector = selectorFactory.makeValueSelector(
-        timeColumn);
+    final VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = selectorFactory.makeValueSelector(fieldName);
