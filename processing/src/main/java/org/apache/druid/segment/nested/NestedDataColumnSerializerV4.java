@@ -144,7 +144,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.globalDictionaryIdLookup = new DictionaryIdLookup();
   }
 
   @Override
@@ -195,6 +194,16 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     nullBitmapWriter.open();
 
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+
+    globalDictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            dictionaryWriter,
+            longDictionaryWriter,
+            doubleDictionaryWriter,
+            null
+        )
+    );
   }
 
   public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
@@ -263,7 +272,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
 
     // null is always 0
     dictionaryWriter.write(null);
-    globalDictionaryIdLookup.addString(null);
     for (String value : strings) {
       value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
@@ -271,7 +279,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
       }
 
       dictionaryWriter.write(value);
-      globalDictionaryIdLookup.addString(value);
     }
     dictionarySerialized = true;
 
@@ -280,7 +287,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
         continue;
       }
       longDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addLong(value);
     }
 
     for (Double value : doubles) {
@@ -288,7 +294,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
         continue;
       }
       doubleDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addDouble(value);
     }
     dictionarySerialized = true;
   }
