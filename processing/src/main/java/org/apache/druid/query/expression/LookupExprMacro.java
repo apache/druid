@@ -54,7 +54,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    validationHelperCheckMinArgumentCount(args, 2);
+    validationHelperCheckArgumentRange(args, 2, 3);
 
     final Expr arg = args.get(0);
     final Expr lookupExpr = args.get(1);
@@ -131,9 +131,8 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   {
     if (args.size() > 2) {
       final Expr missingValExpr = args.get(2);
-      if (missingValExpr.isLiteral() && missingValExpr.getLiteralValue() != null) {
-        return missingValExpr.getLiteralValue().toString();
-      }
+      validationHelperCheckArgIsLiteral(missingValExpr, "third argument");
+      return String.valueOf(missingValExpr.getLiteralValue());
     }
     return null;
   }

@@ -60,7 +60,7 @@ public class LookupExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "Function[lookup] requires at least 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[lookup] requires 2 to 3 arguments");
     apply(Collections.emptyList());
   }
 

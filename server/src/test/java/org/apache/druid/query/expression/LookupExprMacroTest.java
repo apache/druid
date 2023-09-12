@@ -51,7 +51,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
   public void testLookupMissingValue()
   {
     assertExpr("lookup(y, 'lookyloo', 'N/A')", "N/A");
-    assertExpr("lookup(y, 'lookyloo', null)", null);
+    assertExpr("lookup(y, 'lookyloo', null)", "null");
   }
   @Test
   public void testLookupNotFound()
