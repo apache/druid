@@ -24,7 +24,7 @@ import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
 import {
-  copyJSONResultsToClipboard,
+  copyQueryResultsToClipboard,
   downloadQueryResults,
   formatDurationHybrid,
   formatInteger,
@@ -69,6 +69,10 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
     };
 
+    const handleCopy = (format: string) => {
+      copyQueryResultsToClipboard(queryResult, format);
+    };
+
     buttons.push(
       <Button
         key="results"
@@ -98,14 +102,14 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           className="download-button"
           content={
             <Menu>
-              <MenuDivider title="Save Query Results:" />
+              <MenuDivider title="Download results as..." />
               <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
               <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
               <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
-              <MenuItem
-                text="JSON (copy to clipboard)"
-                onClick={() => copyJSONResultsToClipboard(queryResult)}
-              />
+              <MenuDivider title="Copy to clipboard as..." />
+              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
+              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
             </Menu>
           }
           position={Position.BOTTOM_RIGHT}

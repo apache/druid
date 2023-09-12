@@ -74,11 +74,7 @@ export function downloadFile(text: string, type: string, filename: string): void
   FileSaver.saveAs(blob, filename);
 }
 
-export function downloadQueryResults(
-  queryResult: QueryResult,
-  filename: string,
-  format: string,
-): void {
+function queryResultsToString(queryResult: QueryResult, format: string): string {
   let lines: string[] = [];
   let separator = '';
 
@@ -103,24 +99,19 @@ export function downloadQueryResults(
       return JSONBig.stringify(outputObject);
     });
   }
-
-  const lineBreak = '\n';
-  downloadFile(lines.join(lineBreak), format, filename);
+  return lines.join('\n');
 }
 
-export function copyJSONResultsToClipboard(queryResult: QueryResult): void {
-  let lines: string[] = [];
-  lines = queryResult.rows.map(r => {
-    const outputObject: Record<string, any> = {};
-    for (let k = 0; k < r.length; k++) {
-      const newName = queryResult.header[k];
-      if (newName) {
-        outputObject[newName.name] = r[k];
-      }
-    }
-    return JSONBig.stringify(outputObject);
-  });
+export function downloadQueryResults(
+  queryResult: QueryResult,
+  filename: string,
+  format: string,
+): void {
+  const resultString: string = queryResultsToString(queryResult, format);
+  downloadFile(resultString, format, filename);
+}
 
-  const lineBreak = '\n';
-  copyAndAlert(lines.join(lineBreak), 'Query results copied to clipboard');
+export function copyQueryResultsToClipboard(queryResult: QueryResult, format: string): void {
+  const resultString: string = queryResultsToString(queryResult, format);
+  copyAndAlert(resultString, 'Query results copied to clipboard');
 }
