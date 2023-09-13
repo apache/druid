@@ -119,15 +119,6 @@ public class Logger
     return debug ? this : noStackTraceLogger;
   }
 
-  /**
-   * Returns a copy of this Logger that does not log exception stack traces, unless the log level is DEBUG or lower.
-   * Useful for writing code like: {@code log.noStackTrace().warn(e, "Something happened.");}
-   */
-  public Logger noStackTraceUnless()
-  {
-    return noStackTraceLogger;
-  }
-
   public void trace(String message, Object... formatArgs)
   {
     if (log.isTraceEnabled()) {
