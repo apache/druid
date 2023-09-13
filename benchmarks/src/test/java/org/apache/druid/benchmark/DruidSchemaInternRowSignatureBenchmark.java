@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -68,7 +68,7 @@ public class DruidSchemaInternRowSignatureBenchmark
 {
   private SegmentMetadataCacheForBenchmark cache;
 
-  private static class SegmentMetadataCacheForBenchmark extends SegmentMetadataCache
+  private static class SegmentMetadataCacheForBenchmark extends CoordinatorSegmentMetadataCache
   {
     public SegmentMetadataCacheForBenchmark(
         final QueryLifecycleFactory queryLifecycleFactory,

@@ -31,7 +31,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
-import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;

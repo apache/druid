@@ -39,12 +39,12 @@ import java.util.Set;
  * datasources. The cache provides metadata about a dataSource, see {@link DataSourceInformation}.
  */
 @ManageLifecycle
-public class SegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
+public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
   private static final EmittingLogger log = new EmittingLogger(AbstractSegmentMetadataCache.class);
 
   @Inject
-  public SegmentMetadataCache(
+  public CoordinatorSegmentMetadataCache(
       QueryLifecycleFactory queryLifecycleFactory,
       TimelineServerView serverView,
       SegmentMetadataCacheConfig config,

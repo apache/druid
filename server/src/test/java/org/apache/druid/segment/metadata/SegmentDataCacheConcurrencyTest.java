@@ -131,7 +131,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   public void testSegmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    schema = new SegmentMetadataCache(
+    schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -239,7 +239,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   public void testSegmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    schema = new SegmentMetadataCache(
+    schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,

@@ -33,7 +33,7 @@ import java.util.Properties;
 /**
  * Pathetic little unit test just to keep Jacoco happy.
  */
-public class SegmentMetadataCacheConfigTest
+public class CoordinatorSegmentMetadataCacheConfigTest
 {
   private static final String CONFIG_BASE = "druid.coordinator.segmentMetadataCache";
 

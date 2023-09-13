@@ -32,8 +32,8 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.security.AuthConfig;
@@ -140,7 +140,7 @@ public class MetadataResourceTest
   @Test
   public void testGetAllSegmentsIncludingRealtime()
   {
-    SegmentMetadataCache segmentMetadataCache = Mockito.mock(SegmentMetadataCache.class);
+    CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache = Mockito.mock(CoordinatorSegmentMetadataCache.class);
 
     String dataSource2 = "datasource2";
 
@@ -205,14 +205,14 @@ public class MetadataResourceTest
         ).build()
     );
 
-    Mockito.doReturn(availableSegments).when(segmentMetadataCache).getSegmentMetadataSnapshot();
+    Mockito.doReturn(availableSegments).when(coordinatorSegmentMetadataCache).getSegmentMetadataSnapshot();
 
     Mockito.doReturn(availableSegments.get(segments[0].getId()))
-           .when(segmentMetadataCache)
+           .when(coordinatorSegmentMetadataCache)
            .getAvailableSegmentMetadata(DATASOURCE1, segments[0].getId());
 
     Mockito.doReturn(availableSegments.get(segments[1].getId()))
-           .when(segmentMetadataCache)
+           .when(coordinatorSegmentMetadataCache)
            .getAvailableSegmentMetadata(DATASOURCE1, segments[1].getId());
 
     metadataResource = new MetadataResource(
@@ -220,7 +220,7 @@ public class MetadataResourceTest
         storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         coordinator,
-        segmentMetadataCache
+        coordinatorSegmentMetadataCache
     );
 
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", "includeRealtimeSegments");
@@ -239,7 +239,7 @@ public class MetadataResourceTest
   @Test
   public void testGetDataSourceInformation()
   {
-    SegmentMetadataCache segmentMetadataCache = Mockito.mock(SegmentMetadataCache.class);
+    CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache = Mockito.mock(CoordinatorSegmentMetadataCache.class);
     Map<String, DataSourceInformation> dataSourceInformationMap = new HashMap<>();
 
     dataSourceInformationMap.put(
@@ -264,14 +264,14 @@ public class MetadataResourceTest
         )
     );
 
-    Mockito.doReturn(dataSourceInformationMap).when(segmentMetadataCache).getDataSourceInformationMap();
+    Mockito.doReturn(dataSourceInformationMap).when(coordinatorSegmentMetadataCache).getDataSourceInformationMap();
 
     metadataResource = new MetadataResource(
         segmentsMetadataManager,
         storageCoordinator,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         coordinator,
-        segmentMetadataCache
+        coordinatorSegmentMetadataCache
     );
 
     Response response = metadataResource.getDataSourceInformation(Collections.singletonList(DATASOURCE1));

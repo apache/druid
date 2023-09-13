@@ -93,10 +93,10 @@ import java.util.concurrent.TimeUnit;
 
 public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 {
-  private final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
+  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final int WAIT_TIMEOUT_SECS = 6;
-
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private BrokerSegmentMetadataCache runningSchema;
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
@@ -105,8 +105,6 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   Set<String> segmentDataSourceNames;
   Set<String> joinableDataSourceNames;
   JoinableFactory globalTableJoinable;
-
-  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp() throws Exception

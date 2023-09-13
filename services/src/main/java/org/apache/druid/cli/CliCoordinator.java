@@ -88,7 +88,7 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.audit.AuditManagerProvider;
@@ -481,7 +481,7 @@ public class CliCoordinator extends ServerRunnable
       binder.bind(CoordinatorTimeline.class).to(QueryableCoordinatorServerView.class).in(LazySingleton.class);
       binder.bind(TimelineServerView.class).to(QueryableCoordinatorServerView.class).in(LazySingleton.class);
       LifecycleModule.register(binder, QueryableCoordinatorServerView.class);
-      LifecycleModule.register(binder, SegmentMetadataCache.class);
+      LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
     }
   }
 }

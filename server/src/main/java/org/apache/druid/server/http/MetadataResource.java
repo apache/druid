@@ -30,8 +30,8 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -75,7 +75,7 @@ public class MetadataResource
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
-  private final @Nullable SegmentMetadataCache segmentMetadataCache;
+  private final @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
 
   @Inject
   public MetadataResource(
@@ -83,14 +83,14 @@ public class MetadataResource
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator,
-      @Nullable SegmentMetadataCache segmentMetadataCache
+      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
-    this.segmentMetadataCache = segmentMetadataCache;
+    this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
   }
 
   @GET
@@ -203,8 +203,8 @@ public class MetadataResource
                                                      : coordinator.getReplicationFactor(segment.getId());
 
           Long numRows = null;
-          if (null != segmentMetadataCache) {
-            AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataCache.getAvailableSegmentMetadata(
+          if (null != coordinatorSegmentMetadataCache) {
+            AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
                 segment.getDataSource(),
                 segment.getId()
             );
@@ -226,8 +226,8 @@ public class MetadataResource
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
     // conditionally add realtime segments information
-    if (null != includeRealtimeSegments && null != segmentMetadataCache) {
-      final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
+    if (null != includeRealtimeSegments && null != coordinatorSegmentMetadataCache) {
+      final Stream<SegmentStatusInCluster> realtimeSegmentStatus = coordinatorSegmentMetadataCache
           .getSegmentMetadataSnapshot()
           .values()
           .stream()
@@ -366,10 +366,10 @@ public class MetadataResource
       List<String> dataSources
   )
   {
-    if (null == segmentMetadataCache) {
+    if (null == coordinatorSegmentMetadataCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-    Map<String, DataSourceInformation> dataSourceSchemaMap = segmentMetadataCache.getDataSourceInformationMap();
+    Map<String, DataSourceInformation> dataSourceSchemaMap = coordinatorSegmentMetadataCache.getDataSourceInformationMap();
 
     List<DataSourceInformation> results = new ArrayList<>();
     List<String> dataSourcesToRetain = (null == dataSources) ? new ArrayList<>(dataSourceSchemaMap.keySet()) : dataSources;
