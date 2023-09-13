@@ -43,11 +43,13 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -158,8 +160,22 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+
+    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
+
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = selectorFactory.makeValueSelector(fieldName);
+      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
+          selectorFactory.getReadableVectorInspector(),
+          fieldName,
+          valueSelector,
+          capabilities.toColumnType(),
+          ColumnType.STRING
+      );
+      return new StringLastVectorAggregator(timeSelector, objectSelector, maxStringBytes);
+    }
+
     if (capabilities != null) {
       if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
         if (!capabilities.hasMultipleValues().isTrue()) {
@@ -170,6 +186,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
         }
       }
     }
+
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
     if (capabilities != null) {
       return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
@@ -295,9 +312,9 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     }
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
     return maxStringBytes == that.maxStringBytes &&
-        Objects.equals(fieldName, that.fieldName) &&
-        Objects.equals(timeColumn, that.timeColumn) &&
-        Objects.equals(name, that.name);
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(timeColumn, that.timeColumn) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
