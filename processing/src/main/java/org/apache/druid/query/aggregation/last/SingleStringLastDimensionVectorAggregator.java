@@ -57,7 +57,7 @@ public class SingleStringLastDimensionVectorAggregator implements VectorAggregat
         position + NumericLastVectorAggregator.NULL_OFFSET,
         useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
     );
-    buf.putLong(position + NumericLastVectorAggregator.VALUE_OFFSET, 0);
+    buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, 0);
   }
 
   @Override
