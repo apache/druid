@@ -169,7 +169,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient
     )
     {
@@ -204,7 +204,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient()
     )
     {
@@ -265,7 +265,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient
     );
 
@@ -328,7 +328,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         coordinatorClient
     );
 
@@ -693,7 +693,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new NoopEscalator(),
         internalQueryConfig,
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient()
     );
 
@@ -725,7 +725,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new NoopEscalator(),
         new InternalQueryConfig(),
         emitter,
-        new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient()
     )
     {

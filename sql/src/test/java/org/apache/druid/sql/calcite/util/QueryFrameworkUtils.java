@@ -71,7 +71,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataBuilder;
+import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataFactory;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -218,7 +218,7 @@ public class QueryFrameworkUtils
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataBuilder(
+        new PhysicalDatasourceMetadataFactory(
             createDefaultJoinableFactory(injector),
             new SegmentManager(EasyMock.createMock(SegmentLoader.class))
             {

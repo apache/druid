@@ -60,7 +60,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 {
   private static final EmittingLogger log = new EmittingLogger(BrokerSegmentMetadataCache.class);
 
-  private final PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder;
+  private final PhysicalDatasourceMetadataFactory dataSourceMetadataFactory;
   private final CoordinatorClient coordinatorClient;
 
   @Inject
@@ -71,7 +71,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter,
-      final PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder,
+      final PhysicalDatasourceMetadataFactory dataSourceMetadataFactory,
       final CoordinatorClient coordinatorClient
   )
   {
@@ -83,7 +83,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
         internalQueryConfig,
         emitter
     );
-    this.physicalDatasourceMetadataBuilder = physicalDatasourceMetadataBuilder;
+    this.dataSourceMetadataFactory = dataSourceMetadataFactory;
     this.coordinatorClient = coordinatorClient;
   }
 
@@ -108,7 +108,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
                  .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
                      dataSourceInformation.getDataSource(),
-                     physicalDatasourceMetadataBuilder.build(
+                     dataSourceMetadataFactory.build(
                          dataSourceInformation.getDataSource(),
                          dataSourceInformation.getRowSignature()
                      )
@@ -151,7 +151,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
         return;
       }
 
-      final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(dataSource, rowSignature);
+      final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
       if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
         log.info("[%s] has new signature: %s.", dataSource, rowSignature);

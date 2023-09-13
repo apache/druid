@@ -38,14 +38,14 @@ import org.junit.Test;
 import java.util.Optional;
 import java.util.Set;
 
-public class PhysicalDataSourceMetadataBuilderTest
+public class PhysicalDataSourceMetadataFactoryTest
 {
   private Set<String> segmentDataSourceNames;
   private Set<String> joinableDataSourceNames;
   private SegmentManager segmentManager;
   private JoinableFactory globalTableJoinable;
 
-  private PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder;
+  private PhysicalDatasourceMetadataFactory datasourceMetadataFactory;
 
   @Before
   public void setUp()
@@ -80,7 +80,7 @@ public class PhysicalDataSourceMetadataBuilderTest
       }
     };
 
-    physicalDatasourceMetadataBuilder = new PhysicalDatasourceMetadataBuilder(globalTableJoinable, segmentManager);
+    datasourceMetadataFactory = new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager);
   }
 
   @Test
@@ -101,13 +101,13 @@ public class PhysicalDataSourceMetadataBuilderTest
                     .add("d2", ColumnType.DOUBLE)
                     .build();
 
-    DatasourceTable.PhysicalDatasourceMetadata fooDs = physicalDatasourceMetadataBuilder.build("foo", fooSignature);
+    DatasourceTable.PhysicalDatasourceMetadata fooDs = datasourceMetadataFactory.build("foo", fooSignature);
     Assert.assertTrue(fooDs.isJoinable());
     Assert.assertTrue(fooDs.isBroadcast());
     Assert.assertEquals(fooDs.dataSource().getName(), "foo");
     Assert.assertEquals(fooDs.getRowSignature(), fooSignature);
 
-    DatasourceTable.PhysicalDatasourceMetadata barDs = physicalDatasourceMetadataBuilder.build("bar", barSignature);
+    DatasourceTable.PhysicalDatasourceMetadata barDs = datasourceMetadataFactory.build("bar", barSignature);
     Assert.assertFalse(barDs.isJoinable());
     Assert.assertFalse(barDs.isBroadcast());
     Assert.assertEquals(barDs.dataSource().getName(), "bar");

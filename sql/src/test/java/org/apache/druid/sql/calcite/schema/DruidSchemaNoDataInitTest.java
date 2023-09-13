@@ -59,7 +59,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new NoopEscalator(),
           new InternalQueryConfig(),
           new NoopServiceEmitter(),
-          new PhysicalDatasourceMetadataBuilder(
+          new PhysicalDatasourceMetadataFactory(
               new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
               new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
           null

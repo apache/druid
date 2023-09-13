@@ -31,13 +31,13 @@ import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMeta
  * Builds {@link PhysicalDatasourceMetadata} for a dataSource, including information about its schema,
  * joinability, and broadcast status.
  */
-public class PhysicalDatasourceMetadataBuilder
+public class PhysicalDatasourceMetadataFactory
 {
   private final JoinableFactory joinableFactory;
   private final SegmentManager segmentManager;
 
   @Inject
-  public PhysicalDatasourceMetadataBuilder(JoinableFactory joinableFactory, SegmentManager segmentManager)
+  public PhysicalDatasourceMetadataFactory(JoinableFactory joinableFactory, SegmentManager segmentManager)
   {
     this.joinableFactory = joinableFactory;
     this.segmentManager = segmentManager;
