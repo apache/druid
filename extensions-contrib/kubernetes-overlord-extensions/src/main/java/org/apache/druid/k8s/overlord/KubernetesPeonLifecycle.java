@@ -128,7 +128,7 @@ public class KubernetesPeonLifecycle
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
-      if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
+      if (taskConfig.isUseDeepStorageForTaskPayload()) {
         writeTaskPayload(task);
       }
 

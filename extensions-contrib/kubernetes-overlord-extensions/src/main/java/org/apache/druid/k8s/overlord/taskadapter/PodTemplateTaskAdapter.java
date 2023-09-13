@@ -169,10 +169,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Task toTask(Job from) throws IOException
   {
-    if (taskConfig.isEnableTaskPayloadManagerPerTask()) {
+    if (taskConfig.isUseDeepStorageForTaskPayload()) {
       com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
       if (!taskBody.isPresent()) {
-        throw new IOE("Could not find task payload in task logs for job [%s]", from.getMetadata().getName());
+        throw new IOE("Could not find task payload in deep storage for job [%s]", from.getMetadata().getName());
       }
       String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
       return mapper.readValue(task, Task.class);
