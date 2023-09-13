@@ -29,8 +29,9 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
@@ -48,27 +49,19 @@ import java.util.Set;
  * metadata about a dataSource which is blended with catalog "logical" metadata
  * to provide the final user-view of each dataSource.
  * <p>
- * This class extends {@link SegmentMetadataCache} and introduces following changes,
+ * This class extends {@link AbstractSegmentMetadataCache} and introduces following changes,
  * <ul>
  *   <li>The refresh mechanism now includes polling the coordinator for dataSource schema,
  *       and falling back to running {@link org.apache.druid.query.metadata.metadata.SegmentMetadataQuery}.</li>
- *   <li>It builds and caches {@link PhysicalDatasourceMetadata} object as table
- *       schema instead of {@link DataSourceInformation}. </li>
+ *   <li>It builds and caches {@link PhysicalDatasourceMetadata} object for the table schema</li>
  * </ul>
  */
 @ManageLifecycle
-public class BrokerSegmentMetadataCache extends SegmentMetadataCache<PhysicalDatasourceMetadata>
+public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<PhysicalDatasourceMetadata>
 {
   private static final EmittingLogger log = new EmittingLogger(BrokerSegmentMetadataCache.class);
 
   private final PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder;
-
-  /**
-   * Manages tables of PhysicalDataSourceMetadata. This manager is used to retrieve and store
-   * information related to dataSources.
-   * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
-   */
-  //private final TableManager<> tableManager = new TableManager<>();
   private final CoordinatorClient coordinatorClient;
 
   @Inject
@@ -97,8 +90,10 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache<PhysicalDat
 
   /**
    * Refreshes the set of segments in two steps:
-   * 1. Polls the coordinator for the dataSource schema to update the {@code tables}.
-   * 2. Refreshes the remaining set of segments by executing a SegmentMetadataQuery.
+   * <ul>
+   *  <li>Polls the coordinator for the dataSource schema to update the {@code tables}.</li>
+   *  <li>Refreshes the remaining set of segments by executing a SegmentMetadataQuery.</li>
+   * </ul>
    */
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
@@ -112,13 +107,16 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache<PhysicalDat
     // Fetch dataSource information from the Coordinator
     try {
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
-                 .forEach(item -> polledDataSourceMetadata.put(
-                     item.getDataSource(),
-                     physicalDatasourceMetadataBuilder.build(item)
+                 .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
+                     dataSourceInformation.getDataSource(),
+                     physicalDatasourceMetadataBuilder.build(
+                         dataSourceInformation.getDataSource(),
+                         dataSourceInformation.getRowSignature()
+                     )
                  ));
     }
     catch (Exception e) {
-      log.warn(e, "Exception querying coordinator to fetch dataSourceInformation.");
+      log.warn("Failed to query dataSource information from the Coordinator.");
     }
 
     // remove any extra dataSources returned
@@ -147,16 +145,17 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache<PhysicalDat
 
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
-      final DataSourceInformation druidTable = buildDruidTable(dataSource);
-      if (druidTable == null) {
+      final RowSignature rowSignature = buildDruidTable(dataSource);
+      if (rowSignature == null) {
         log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
         return;
       }
-      final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
+
+      final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(dataSource, rowSignature);
       final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
       if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
-        log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+        log.info("[%s] has new signature: %s.", dataSource, rowSignature);
       } else {
         log.debug("[%s] signature is unchanged.", dataSource);
       }

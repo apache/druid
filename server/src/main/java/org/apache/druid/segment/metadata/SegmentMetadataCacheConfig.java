@@ -37,8 +37,8 @@ public class SegmentMetadataCacheConfig
   private Period metadataRefreshPeriod = new Period("PT1M");
 
   @JsonProperty
-  private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
-      new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
+  private AbstractSegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
+      new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
 
   public static SegmentMetadataCacheConfig create()
   {
@@ -65,7 +65,7 @@ public class SegmentMetadataCacheConfig
     return awaitInitializationOnStart;
   }
 
-  public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+  public AbstractSegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
   {
     return metadataColumnTypeMergePolicy;
   }

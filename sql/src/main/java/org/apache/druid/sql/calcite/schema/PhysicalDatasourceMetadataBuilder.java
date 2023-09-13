@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import com.google.inject.Inject;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.SegmentManager;
@@ -46,9 +47,8 @@ public class PhysicalDatasourceMetadataBuilder
   /**
    * Builds physical metadata for the given data source.
    */
-  PhysicalDatasourceMetadata build(DataSourceInformation dataSourceInformation)
+  PhysicalDatasourceMetadata build(final String dataSource, final RowSignature rowSignature)
   {
-    final String dataSource = dataSourceInformation.getDataSource();
     final TableDataSource tableDataSource;
 
     // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing
@@ -66,7 +66,7 @@ public class PhysicalDatasourceMetadataBuilder
     }
     return new PhysicalDatasourceMetadata(
         tableDataSource,
-        dataSourceInformation.getRowSignature(),
+        rowSignature,
         isJoinable,
         isBroadcast
     );

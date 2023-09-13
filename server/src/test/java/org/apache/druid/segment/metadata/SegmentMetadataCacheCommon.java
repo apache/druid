@@ -346,7 +346,7 @@ public abstract class SegmentMetadataCacheCommon
   }
 
   public void checkRefreshShouldEmitMetrics(
-      SegmentMetadataCache schema,
+      AbstractSegmentMetadataCache schema,
       String dataSource,
       StubServiceEmitter emitter,
       CountDownLatch addSegmentLatch
@@ -366,7 +366,7 @@ public abstract class SegmentMetadataCacheCommon
     emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
   }
 
-  public void checkNullAvailableSegmentMetadata(SegmentMetadataCache schema) throws IOException
+  public void checkNullAvailableSegmentMetadata(AbstractSegmentMetadataCache schema) throws IOException
   {
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentMetadatas.values()
@@ -388,7 +388,7 @@ public abstract class SegmentMetadataCacheCommon
     Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
-  public void checkNullDatasource(SegmentMetadataCache schema) throws IOException
+  public void checkNullDatasource(AbstractSegmentMetadataCache schema) throws IOException
   {
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentMetadatas.values()
@@ -411,7 +411,7 @@ public abstract class SegmentMetadataCacheCommon
     Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
-  public void checkAvailableSegmentMetadataNumRows(SegmentMetadataCache schema)
+  public void checkAvailableSegmentMetadataNumRows(AbstractSegmentMetadataCache schema)
   {
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentsMetadata.values()
@@ -459,7 +459,7 @@ public abstract class SegmentMetadataCacheCommon
     Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
-  public void checkRunSegmentMetadataQueryWithContext(SegmentMetadataCache schema, QueryLifecycleFactory factoryMock, QueryLifecycle lifecycleMock)
+  public void checkRunSegmentMetadataQueryWithContext(AbstractSegmentMetadataCache schema, QueryLifecycleFactory factoryMock, QueryLifecycle lifecycleMock)
   {
     Map<String, Object> queryContext = ImmutableMap.of(
         QueryContexts.PRIORITY_KEY, 5,

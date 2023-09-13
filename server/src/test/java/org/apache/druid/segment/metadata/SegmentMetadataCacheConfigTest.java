@@ -51,7 +51,7 @@ public class SegmentMetadataCacheConfigTest
     final SegmentMetadataCacheConfig config = provider.get();
     Assert.assertFalse(config.isAwaitInitializationOnStart());
     Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
+    Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
@@ -74,7 +74,7 @@ public class SegmentMetadataCacheConfigTest
     Assert.assertFalse(config.isAwaitInitializationOnStart());
     Assert.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
     Assert.assertEquals(
-        new SegmentMetadataCache.FirstTypeMergePolicy(),
+        new AbstractSegmentMetadataCache.FirstTypeMergePolicy(),
         config.getMetadataColumnTypeMergePolicy()
     );
   }

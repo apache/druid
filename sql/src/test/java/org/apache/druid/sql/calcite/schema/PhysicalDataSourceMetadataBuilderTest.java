@@ -28,7 +28,6 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
-import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.easymock.EasyMock;
@@ -38,12 +37,9 @@ import org.junit.Test;
 
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 
 public class PhysicalDataSourceMetadataBuilderTest
 {
-  private CountDownLatch getDatasourcesLatch = new CountDownLatch(1);
-
   private Set<String> segmentDataSourceNames;
   private Set<String> joinableDataSourceNames;
   private SegmentManager segmentManager;
@@ -61,7 +57,6 @@ public class PhysicalDataSourceMetadataBuilderTest
       @Override
       public Set<String> getDataSourceNames()
       {
-        getDatasourcesLatch.countDown();
         return segmentDataSourceNames;
       }
     };
@@ -94,34 +89,28 @@ public class PhysicalDataSourceMetadataBuilderTest
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
 
-    DataSourceInformation foo =
-        new DataSourceInformation(
-            "foo",
-            RowSignature.builder()
-                        .add("c1", ColumnType.FLOAT)
-                        .add("c2", ColumnType.DOUBLE)
-                        .build()
-        );
+    RowSignature fooSignature =
+        RowSignature.builder()
+                    .add("c1", ColumnType.FLOAT)
+                    .add("c2", ColumnType.DOUBLE)
+                    .build();
 
-    DataSourceInformation bar =
-        new DataSourceInformation(
-            "bar",
-            RowSignature.builder()
-                        .add("d1", ColumnType.FLOAT)
-                        .add("d2", ColumnType.DOUBLE)
-                        .build()
-        );
+    RowSignature barSignature =
+        RowSignature.builder()
+                    .add("d1", ColumnType.FLOAT)
+                    .add("d2", ColumnType.DOUBLE)
+                    .build();
 
-    DatasourceTable.PhysicalDatasourceMetadata fooDs = physicalDatasourceMetadataBuilder.build(foo);
+    DatasourceTable.PhysicalDatasourceMetadata fooDs = physicalDatasourceMetadataBuilder.build("foo", fooSignature);
     Assert.assertTrue(fooDs.isJoinable());
     Assert.assertTrue(fooDs.isBroadcast());
-    Assert.assertEquals(fooDs.dataSource().getName(), foo.getDataSource());
-    Assert.assertEquals(fooDs.getRowSignature(), foo.getRowSignature());
+    Assert.assertEquals(fooDs.dataSource().getName(), "foo");
+    Assert.assertEquals(fooDs.getRowSignature(), fooSignature);
 
-    DatasourceTable.PhysicalDatasourceMetadata barDs = physicalDatasourceMetadataBuilder.build(bar);
+    DatasourceTable.PhysicalDatasourceMetadata barDs = physicalDatasourceMetadataBuilder.build("bar", barSignature);
     Assert.assertFalse(barDs.isJoinable());
     Assert.assertFalse(barDs.isBroadcast());
-    Assert.assertEquals(barDs.dataSource().getName(), bar.getDataSource());
-    Assert.assertEquals(barDs.getRowSignature(), bar.getRowSignature());
+    Assert.assertEquals(barDs.dataSource().getName(), "bar");
+    Assert.assertEquals(barDs.getRowSignature(), barSignature);
   }
 }

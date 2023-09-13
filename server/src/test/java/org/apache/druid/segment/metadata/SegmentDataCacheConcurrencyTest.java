@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -89,7 +90,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   private File tmpDir;
   private TestServerInventoryView inventoryView;
   private BrokerServerView serverView;
-  private SegmentMetadataCache schema;
+  private AbstractSegmentMetadataCache schema;
   private ExecutorService exec;
 
   @Before
@@ -115,10 +116,10 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   }
 
   /**
-   * This tests the contention between three components, {@link SegmentMetadataCache},
+   * This tests the contention between three components, {@link AbstractSegmentMetadataCache},
    * {@code InventoryView}, and {@link BrokerServerView}. It first triggers
    * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
-   * {@link SegmentMetadataCache#lock}, {@link SegmentMetadataCache#buildDruidTable}
+   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDruidTable}
    * is overridden to sleep before doing real work. While refreshing
    * {@code SegmentMetadataCache}, more new segments are added to
    * {@code InventoryView}, which triggers updates of {@code BrokerServerView}.
@@ -140,7 +141,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceInformation buildDruidTable(final String dataSource)
+      public RowSignature buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -224,11 +225,11 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   }
 
   /**
-   * This tests the contention between two methods of {@link SegmentMetadataCache}:
-   * {@link SegmentMetadataCache#refresh} and
-   * {@link SegmentMetadataCache#getSegmentMetadataSnapshot()}. It first triggers
+   * This tests the contention between two methods of {@link AbstractSegmentMetadataCache}:
+   * {@link AbstractSegmentMetadataCache#refresh} and
+   * {@link AbstractSegmentMetadataCache#getSegmentMetadataSnapshot()}. It first triggers
    * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
-   * {@link SegmentMetadataCache#lock}, {@link SegmentMetadataCache#buildDruidTable}
+   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDruidTable}
    * is overridden to sleep before doing real work. While refreshing
    * {@code SegmentMetadataCache}, {@code getSegmentMetadataSnapshot()} is continuously
    * called to mimic reading the segments table of SystemSchema. All these calls
@@ -248,7 +249,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceInformation buildDruidTable(final String dataSource)
+      public RowSignature buildDruidTable(final String dataSource)
       {
         doInLock(() -> {
           try {

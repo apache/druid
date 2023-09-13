@@ -32,6 +32,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -43,13 +44,13 @@ import java.util.Map;
 
 /**
  * ServerView of coordinator for the state of segments being loaded in the cluster.
- * <br>
- * This class extends {@link BrokerServerView} and implements {@link CoordinatorTimeline}.
+ *
+ * <p>This class extends {@link BrokerServerView} and implements {@link CoordinatorTimeline}.
  * The main distinction between this class and {@link CoordinatorServerView} is the maintenance of a timeline
- * of {@link ServerSelector} objects, while the other class stores {@link SegmentLoadInfo} object in its timeline.
- * <br>
- * A new timeline class (implementing {@link TimelineServerView}) is required for
- * {@link org.apache.druid.segment.metadata.SegmentMetadataCache}, which will run on the Coordinator.
+ * of {@link ServerSelector} objects, while the other class stores {@link SegmentLoadInfo} object in its timeline.</p>
+ *
+ * <p>A new timeline class (implementing {@link TimelineServerView}) is required for
+ * {@link AbstractSegmentMetadataCache}, which will run on the Coordinator.</p>
  */
 @ManageLifecycle
 public class QueryableCoordinatorServerView extends BrokerServerView implements CoordinatorTimeline

@@ -52,9 +52,9 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheCommon;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -105,7 +105,6 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   Set<String> segmentDataSourceNames;
   Set<String> joinableDataSourceNames;
   JoinableFactory globalTableJoinable;
-  CountDownLatch getDatasourcesLatch = new CountDownLatch(1);
 
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
@@ -122,7 +121,6 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
       @Override
       public Set<String> getDataSourceNames()
       {
-        getDatasourcesLatch.countDown();
         return segmentDataSourceNames;
       }
     };
@@ -178,9 +176,9 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceInformation buildDruidTable(String dataSource)
+      public RowSignature buildDruidTable(String dataSource)
       {
-        DataSourceInformation table = super.buildDruidTable(dataSource);
+        RowSignature table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
       }
@@ -410,9 +408,9 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
         new BrokerSegmentMetadataCacheConfig() {
           @Override
-          public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+          public AbstractSegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
           {
-            return new SegmentMetadataCache.FirstTypeMergePolicy();
+            return new AbstractSegmentMetadataCache.FirstTypeMergePolicy();
           }
         },
         new NoopCoordinatorClient()
@@ -500,7 +498,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
   /**
    * This tests that {@link AvailableSegmentMetadata#getNumRows()} is correct in case
-   * of multiple replicas i.e. when {@link SegmentMetadataCache#addSegment(DruidServerMetadata, DataSegment)}
+   * of multiple replicas i.e. when {@link AbstractSegmentMetadataCache#addSegment(DruidServerMetadata, DataSegment)}
    * is called more than once for same segment
    * @throws InterruptedException
    */

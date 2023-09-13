@@ -63,7 +63,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
-  private SegmentMetadataCache<DataSourceInformation> runningSchema;
+  private SegmentMetadataCache runningSchema;
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
 
@@ -85,15 +85,15 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     walker.close();
   }
 
-  public SegmentMetadataCache<DataSourceInformation> buildSchemaMarkAndTableLatch() throws InterruptedException
+  public SegmentMetadataCache buildSchemaMarkAndTableLatch() throws InterruptedException
   {
     return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT);
   }
 
-  public SegmentMetadataCache<DataSourceInformation> buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config) throws InterruptedException
+  public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config) throws InterruptedException
   {
     Preconditions.checkState(runningSchema == null);
-    runningSchema = new SegmentMetadataCache<DataSourceInformation>(
+    runningSchema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         config,
@@ -103,9 +103,9 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     )
     {
       @Override
-      public DataSourceInformation buildDruidTable(String dataSource)
+      public RowSignature buildDruidTable(String dataSource)
       {
-        DataSourceInformation table = super.buildDruidTable(dataSource);
+        RowSignature table = super.buildDruidTable(dataSource);
         buildTableLatch.countDown();
         return table;
       }
@@ -126,7 +126,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMap() throws InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema.getDatasourceNames());
 
     final Set<String> tableNames = schema.getDatasourceNames();
@@ -136,7 +136,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMapFoo() throws InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource("foo");
     final RowSignature fooRowSignature = fooDs.getRowSignature();
     List<String> columnNames = fooRowSignature.getColumnNames();
@@ -164,7 +164,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMapFoo2() throws InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource("foo2");
     final RowSignature fooRowSignature = fooDs.getRowSignature();
     List<String> columnNames = fooRowSignature.getColumnNames();
@@ -185,12 +185,12 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     // using 'newest first' column type merge strategy, the types are expected to be the types defined in the newer
     // segment, except for json, which is special handled
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch(
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
         new SegmentMetadataCacheConfig() {
           @Override
-          public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+          public AbstractSegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
           {
-            return new SegmentMetadataCache.FirstTypeMergePolicy();
+            return new AbstractSegmentMetadataCache.FirstTypeMergePolicy();
           }
         }
     );
@@ -232,7 +232,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
     // least restrictive blend across all segments
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
 
     final RowSignature fooRowSignature = fooDs.getRowSignature();
@@ -269,35 +269,35 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
   /**
    * This tests that {@link AvailableSegmentMetadata#getNumRows()} is correct in case
-   * of multiple replicas i.e. when {@link SegmentMetadataCache#addSegment(DruidServerMetadata, DataSegment)}
+   * of multiple replicas i.e. when {@link AbstractSegmentMetadataCache#addSegment(DruidServerMetadata, DataSegment)}
    * is called more than once for same segment
    * @throws InterruptedException
    */
   @Test
   public void testAvailableSegmentMetadataNumRows() throws InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     checkAvailableSegmentMetadataNumRows(schema);
   }
 
   @Test
   public void testNullDatasource() throws IOException, InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     checkNullDatasource(schema);
   }
 
   @Test
   public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     checkNullAvailableSegmentMetadata(schema);
   }
 
   @Test
   public void testAvailableSegmentMetadataIsRealtime() throws InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentsMetadata.values()
                                                        .stream()
@@ -354,7 +354,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -395,7 +395,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -440,7 +440,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -482,7 +482,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -521,7 +521,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "segmentRemoveTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     CountDownLatch removeSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -577,7 +577,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "segmentRemoveTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     CountDownLatch removeSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -636,7 +636,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     String datasource = "serverSegmentRemoveTest";
     CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -669,7 +669,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "serverSegmentRemoveTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -715,7 +715,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String datasource = "serverSegmentRemoveTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
     CountDownLatch removeServerSegmentLatch = new CountDownLatch(1);
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -785,7 +785,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     QueryLifecycle lifecycleMock = EasyMock.createMock(QueryLifecycle.class);
 
     // Need to create schema for this test because the available schemas don't mock the QueryLifecycleFactory, which I need for this test.
-    SegmentMetadataCache<DataSourceInformation> mySchema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache mySchema = new SegmentMetadataCache(
         factoryMock,
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -817,7 +817,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), false, true, 1234, 26, null, null, null)
     );
 
-    RowSignature signature = SegmentMetadataCache.analysisToRowSignature(
+    RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
         new SegmentAnalysis(
             "id",
             ImmutableList.of(Intervals.utc(1L, 2L)),
@@ -844,7 +844,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testSegmentMetadataFallbackType()
   {
-    RowSignature signature = SegmentMetadataCache.analysisToRowSignature(
+    RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
         new SegmentAnalysis(
             "id",
             ImmutableList.of(Intervals.utc(1L, 2L)),
@@ -905,7 +905,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
-    SegmentMetadataCache<DataSourceInformation> schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Set<SegmentId> segments = new HashSet<>();
     Set<String> datasources = new HashSet<>();
     datasources.add("wat");
@@ -920,7 +920,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     String dataSource = "xyz";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
     StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
-    SegmentMetadataCache<DataSourceInformation> schema = new SegmentMetadataCache<DataSourceInformation>(
+    SegmentMetadataCache schema = new SegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
