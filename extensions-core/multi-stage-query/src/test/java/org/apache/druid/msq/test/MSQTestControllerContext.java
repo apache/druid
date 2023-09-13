@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.Worker;
@@ -214,6 +215,12 @@ public class MSQTestControllerContext implements ControllerContext
       //do nothing
     }
   };
+
+  @Override
+  public ServiceEmitter emitter()
+  {
+    return null;
+  }
 
   @Override
   public ObjectMapper jsonMapper()
