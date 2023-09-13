@@ -23,7 +23,9 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.Collections;
 
@@ -32,21 +34,27 @@ import java.util.Collections;
  */
 public class DruidSortUnionRule extends RelOptRule
 {
-  private static final DruidSortUnionRule INSTANCE = new DruidSortUnionRule();
+  private final PlannerContext plannerContext;
 
-  private DruidSortUnionRule()
+  public DruidSortUnionRule(PlannerContext plannerContext)
   {
     super(operand(Sort.class, operand(DruidUnionRel.class, any())));
-  }
-
-  public static DruidSortUnionRule instance()
-  {
-    return INSTANCE;
+    this.plannerContext = plannerContext;
   }
 
   @Override
   public boolean matches(final RelOptRuleCall call)
   {
+    // Defensive check. If the planner disallows top level union all, then the DruidUnionRule would have prevented
+    // creating the DruidUnionRel in the first place
+    if (!plannerContext.featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
+      plannerContext.setPlanningError(
+          "Top level 'UNION ALL' is unsupported by SQL engine [%s].",
+          plannerContext.getEngine().name()
+      );
+      return false;
+    }
+
     // LIMIT, no ORDER BY
     final Sort sort = call.rel(0);
     return sort.collation.getFieldCollations().isEmpty() && sort.fetch != null;

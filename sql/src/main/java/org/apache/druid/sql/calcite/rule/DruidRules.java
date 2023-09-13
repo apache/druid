@@ -97,7 +97,7 @@ public class DruidRules
             DruidOuterQueryRule.SORT,
             new DruidUnionRule(plannerContext),
             new DruidUnionDataSourceRule(plannerContext),
-            DruidSortUnionRule.instance(),
+            new DruidSortUnionRule(plannerContext),
             DruidJoinRule.instance(plannerContext)
         )
     );

@@ -27,6 +27,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
@@ -354,6 +355,21 @@ public class MSQFaultsTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
         .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 2))
+        .verifyResults();
+  }
+
+  @Test
+  public void testUnionAllIsDisallowed()
+  {
+    final RowSignature rowSignature =
+        RowSignature.builder().add("__time", ColumnType.LONG).build();
+    testIngestQuery()
+        .setSql("SELECT * FROM foo\n"
+                + "UNION ALL\n"
+                + "SELECT * FROM foo\n")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedDataSource("foo1")
+        .setExpectedMSQFault(QueryNotSupportedFault.instance())
         .verifyResults();
   }
 }
