@@ -158,7 +158,7 @@ public abstract class QueryResultPusher
       // to show the user this error even if we didn't get to the step where
       // we did a security check.
       request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-      return handleDruidException(resultsWriter, e);
+      return handleDruidException(resultsWriter, e, e);
     }
     catch (QueryException e) {
       return handleQueryException(resultsWriter, e);
@@ -208,13 +208,13 @@ public abstract class QueryResultPusher
   @Nullable
   private Response handleQueryException(ResultsWriter resultsWriter, QueryException e)
   {
-    return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
+    return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)),e);
   }
 
-  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e, Exception e2)
   {
     if (resultsWriter != null) {
-      resultsWriter.recordFailure(e);
+      resultsWriter.recordFailure(e2);
       counter.incrementFailed();
 
       if (accumulator != null && accumulator.isInitialized()) {
