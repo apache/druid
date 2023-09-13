@@ -54,6 +54,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   private static final float[] FLOAT_VALUES = new float[]{1.0f, 2.0f, 3.0f, 4.0f};
   private static final double[] DOUBLE_VALUES = new double[]{1.0, 2.0, 3.0, 4.0};
   private static final boolean[] NULLS = new boolean[]{false, false, true, false};
+  private static final boolean[] NULLS1 = new boolean[]{false, false};
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
   private static final String FIELD_NAME_LONG = "LONG_NAME";
@@ -96,7 +97,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
       @Override
       public boolean[] getNullVector()
       {
-        return NULLS;
+        return null;
       }
     };
     nonStringValueSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
@@ -163,9 +164,9 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
       }
     };
     BaseLongVectorValueSelector timeSelectorForPairs = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
-        times.length,
+        timesSame.length,
         0,
-        times.length
+        timesSame.length
     ))
     {
       @Override
@@ -178,7 +179,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
       @Override
       public boolean[] getNullVector()
       {
-        return new boolean[0];
+        return NULLS1;
       }
     };
     VectorObjectSelector selectorForPairs = new VectorObjectSelector()
