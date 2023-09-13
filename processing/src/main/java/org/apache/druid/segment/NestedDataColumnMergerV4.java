@@ -57,7 +57,7 @@ public class NestedDataColumnMergerV4 implements DimensionMergerV9
   private final Closer closer;
 
   private ColumnDescriptor.Builder descriptorBuilder;
-  private GenericColumnSerializer<?> serializer;
+  private NestedDataColumnSerializerV4 serializer;
 
   public NestedDataColumnMergerV4(
       String name,
@@ -111,13 +111,12 @@ public class NestedDataColumnMergerV4 implements DimensionMergerV9
 
       descriptorBuilder = new ColumnDescriptor.Builder();
 
-      final NestedDataColumnSerializerV4 defaultSerializer = new NestedDataColumnSerializerV4(
+      serializer = new NestedDataColumnSerializerV4(
           name,
           indexSpec,
           segmentWriteOutMedium,
           closer
       );
-      serializer = defaultSerializer;
 
       final ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.serializerBuilder()
                                                                      .withTypeName(NestedDataComplexTypeSerde.TYPE_NAME)
@@ -127,14 +126,14 @@ public class NestedDataColumnMergerV4 implements DimensionMergerV9
                        .setHasMultipleValues(false)
                        .addSerde(partSerde);
 
-      defaultSerializer.open();
-      defaultSerializer.serializeFields(mergedFields);
+      serializer.open();
+      serializer.serializeFields(mergedFields);
 
       int stringCardinality;
       int longCardinality;
       int doubleCardinality;
       if (numMergeIndex == 1) {
-        defaultSerializer.serializeDictionaries(
+        serializer.serializeDictionaries(
             sortedLookup.getSortedStrings(),
             sortedLookup.getSortedLongs(),
             sortedLookup.getSortedDoubles()
@@ -155,7 +154,7 @@ public class NestedDataColumnMergerV4 implements DimensionMergerV9
             sortedDoubleLookups,
             DOUBLE_MERGING_COMPARATOR
         );
-        defaultSerializer.serializeDictionaries(
+        serializer.serializeDictionaries(
             () -> stringIterator,
             () -> longIterator,
             () -> doubleIterator

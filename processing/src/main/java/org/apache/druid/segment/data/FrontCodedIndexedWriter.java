@@ -234,6 +234,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   {
     getOffsetBuffer.clear();
     headerOut.readFully(index * (long) Integer.BYTES, getOffsetBuffer);
+    getOffsetBuffer.clear();
     return getOffsetBuffer.getInt(0);
   }
 

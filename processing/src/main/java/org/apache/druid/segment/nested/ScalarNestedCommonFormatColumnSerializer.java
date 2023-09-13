@@ -52,7 +52,6 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   protected final IndexSpec indexSpec;
   @SuppressWarnings("unused")
   protected final Closer closer;
-  protected final String dictionaryFileName;
 
   protected DictionaryIdLookup dictionaryIdLookup;
   protected DictionaryWriter<T> dictionaryWriter;
@@ -66,18 +65,15 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
 
   public ScalarNestedCommonFormatColumnSerializer(
       String name,
-      String dictionaryFileName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
     this.name = name;
-    this.dictionaryFileName = dictionaryFileName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.dictionaryIdLookup = new DictionaryIdLookup();
   }
 
   /**
@@ -98,6 +94,8 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
    * serializers to use the {@link FileSmoosher} to write stuff to places.
    */
   protected abstract void writeValueColumn(FileSmoosher smoosher) throws IOException;
+
+  protected abstract void writeDictionaryFile(FileSmoosher smoosher) throws IOException;
 
   @Override
   public String getColumnName()
@@ -220,7 +218,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     }
 
     writeV0Header(channel, columnNameBytes);
-    writeInternal(smoosher, dictionaryWriter, dictionaryFileName);
+    writeDictionaryFile(smoosher);
     writeInternal(smoosher, encodedValueSerializer, ENCODED_VALUE_COLUMN_FILE_NAME);
     writeValueColumn(smoosher);
     writeInternal(smoosher, bitmapIndexWriter, BITMAP_INDEX_FILE_NAME);
