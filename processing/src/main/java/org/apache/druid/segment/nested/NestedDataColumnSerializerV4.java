@@ -26,13 +26,14 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -44,9 +45,9 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
-import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -60,27 +61,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
-/**
- * Serializer for {@link NestedCommonFormatColumn} which can store nested data. The serializer stores several components
- * including:
- * - a field list and associated type info
- * - value dictionaries for string, long, double, and array values (where the arrays are stored as int[] that point to
- *   the string, long, and double values)
- * - raw data is stored with a {@link CompressedVariableSizedBlobColumnSerializer} as blobs of SMILE encoded data
- * - a null value bitmap to track which 'raw' rows are null
- *
- * For each nested field, a {@link GlobalDictionaryEncodedFieldColumnWriter} will write a sub-column to specialize
- * fast reading and filtering of that path.
- *
- * @see ScalarDoubleFieldColumnWriter - single type double field
- * @see ScalarLongFieldColumnWriter   - single type long field
- * @see ScalarStringFieldColumnWriter - single type string field
- * @see VariantArrayFieldColumnWriter - single type array of string, long, and double field
- * @see VariantFieldColumnWriter      - mixed type field
- */
-public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializer
+public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<StructuredData>
 {
-  private static final Logger log = new Logger(NestedDataColumnSerializer.class);
+  private static final Logger log = new Logger(NestedDataColumnSerializerV4.class);
+  public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
+  public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
+  public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";
+  public static final String RAW_FILE_NAME = "__raw";
+  public static final String NULL_BITMAP_FILE_NAME = "__nullIndex";
+  public static final String NESTED_FIELD_PREFIX = "__field_";
 
   private final String name;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
@@ -122,26 +111,12 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         @Nullable List<?> array
     )
     {
-      final ExprEval<?> eval = ExprEval.bestEffortArray(array);
-      if (eval.type().isPrimitiveArray()) {
-        final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
-            NestedPathFinder.toNormalizedJsonPath(fieldPath)
-        );
-        if (writer != null) {
-          try {
-            writer.addValue(rowCount, eval.value());
-            // serializer doesn't use size estimate
-            return ProcessedValue.NULL_LITERAL;
-          }
-          catch (IOException e) {
-            throw new RE(e, "Failed to write field [%s] value [%s]", fieldPath, array);
-          }
-        }
-      }
+      // classic nested column ingestion does not support array fields
       return null;
     }
   };
 
+  private byte[] metadataBytes;
   private DictionaryIdLookup globalDictionaryIdLookup;
   private SortedMap<String, FieldTypeInfo.MutableTypeSet> fields;
   private GenericIndexedWriter<String> fieldsWriter;
@@ -149,7 +124,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   private DictionaryWriter<String> dictionaryWriter;
   private FixedIndexedWriter<Long> longDictionaryWriter;
   private FixedIndexedWriter<Double> doubleDictionaryWriter;
-  private FrontCodedIntArrayIndexedWriter arrayDictionaryWriter;
   private CompressedVariableSizedBlobColumnSerializer rawWriter;
   private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
   private MutableBitmap nullRowsBitmap;
@@ -158,9 +132,8 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   private boolean closedForWrite = false;
 
   private boolean dictionarySerialized = false;
-  private ByteBuffer columnNameBytes = null;
 
-  public NestedDataColumnSerializer(
+  public NestedDataColumnSerializerV4(
       String name,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -174,25 +147,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   }
 
   @Override
-  public String getColumnName()
-  {
-    return name;
-  }
-
-  @Override
-  public DictionaryIdLookup getGlobalLookup()
-  {
-    return globalDictionaryIdLookup;
-  }
-
-  @Override
-  public boolean hasNulls()
-  {
-    return !nullRowsBitmap.isEmpty();
-  }
-
-  @Override
-  public void openDictionaryWriter() throws IOException
+  public void open() throws IOException
   {
     fieldsWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, name, GenericIndexed.STRING_STRATEGY);
     fieldsWriter.open();
@@ -225,26 +180,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     );
     doubleDictionaryWriter.open();
 
-    arrayDictionaryWriter = new FrontCodedIntArrayIndexedWriter(
-        segmentWriteOutMedium,
-        ByteOrder.nativeOrder(),
-        4
-    );
-    arrayDictionaryWriter.open();
-    globalDictionaryIdLookup = closer.register(
-        new DictionaryIdLookup(
-            name,
-            dictionaryWriter,
-            longDictionaryWriter,
-            doubleDictionaryWriter,
-            arrayDictionaryWriter
-        )
-    );
-  }
-
-  @Override
-  public void open() throws IOException
-  {
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
         getInternalFileName(name, RAW_FILE_NAME),
         segmentWriteOutMedium,
@@ -259,9 +194,18 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     nullBitmapWriter.open();
 
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+
+    globalDictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            dictionaryWriter,
+            longDictionaryWriter,
+            doubleDictionaryWriter,
+            null
+        )
+    );
   }
 
-  @Override
   public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
   {
     this.fields = fields;
@@ -299,14 +243,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               indexSpec,
               globalDictionaryIdLookup
           );
-        } else if (Types.is(type, ValueType.ARRAY)) {
-          writer = new VariantArrayFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
         } else {
           throw new ISE("Invalid field type [%s], how did this happen?", type);
         }
@@ -324,12 +260,10 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     }
   }
 
-  @Override
   public void serializeDictionaries(
       Iterable<String> strings,
       Iterable<Long> longs,
-      Iterable<Double> doubles,
-      Iterable<int[]> arrays
+      Iterable<Double> doubles
   ) throws IOException
   {
     if (dictionarySerialized) {
@@ -361,23 +295,13 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       }
       doubleDictionaryWriter.write(value);
     }
-
-    for (int[] value : arrays) {
-      if (value == null) {
-        continue;
-      }
-      arrayDictionaryWriter.write(value);
-    }
     dictionarySerialized = true;
   }
 
   @Override
   public void serialize(ColumnValueSelector<? extends StructuredData> selector) throws IOException
   {
-    if (!dictionarySerialized) {
-      throw new ISE("Must serialize value dictionaries before serializing values for column [%s]", name);
-    }
-    StructuredData data = StructuredData.wrap(selector.getObject());
+    final StructuredData data = StructuredData.wrap(selector.getObject());
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }
@@ -388,7 +312,8 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     rowCount++;
   }
 
-  private void closeForWrite() throws IOException
+  @Override
+  public long getSerializedSize() throws IOException
   {
     if (!closedForWrite) {
       closedForWrite = true;
@@ -404,17 +329,12 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               )
           )
       );
-      nullBitmapWriter.write(nullRowsBitmap);
-      columnNameBytes = computeFilenameBytes();
+      this.metadataBytes = baos.toByteArray();
+      this.nullBitmapWriter.write(nullRowsBitmap);
     }
-  }
 
-  @Override
-  public long getSerializedSize() throws IOException
-  {
-    closeForWrite();
-
-    long size = 1 + columnNameBytes.capacity();
+    long size = 1;
+    size += metadataBytes.length;
     if (fieldsWriter != null) {
       size += fieldsWriter.getSerializedSize();
     }
@@ -433,35 +353,16 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
-
-    writeV0Header(channel, columnNameBytes);
+    // version 5
+    channel.write(ByteBuffer.wrap(new byte[]{0x04}));
+    channel.write(ByteBuffer.wrap(metadataBytes));
     fieldsWriter.writeTo(channel, smoosher);
     fieldsInfoWriter.writeTo(channel, smoosher);
 
-
-    if (globalDictionaryIdLookup.getStringBufferMapper() != null) {
-      SmooshedFileMapper fileMapper = globalDictionaryIdLookup.getStringBufferMapper();
-      for (String internalName : fileMapper.getInternalFilenames()) {
-        smoosher.add(internalName, fileMapper.mapFile(internalName));
-      }
-    } else {
-      writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
-    }
-    if (globalDictionaryIdLookup.getLongBuffer() != null) {
-      writeInternal(smoosher, globalDictionaryIdLookup.getLongBuffer(), LONG_DICTIONARY_FILE_NAME);
-    } else {
-      writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
-    }
-    if (globalDictionaryIdLookup.getDoubleBuffer() != null) {
-      writeInternal(smoosher, globalDictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
-    } else {
-      writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
-    }
-    if (globalDictionaryIdLookup.getArrayBuffer() != null) {
-      writeInternal(smoosher, globalDictionaryIdLookup.getArrayBuffer(), ARRAY_DICTIONARY_FILE_NAME);
-    } else {
-      writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
-    }
+    // version 3 stores large components in separate files to prevent exceeding smoosh file limit (int max)
+    writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
+    writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
+    writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, rawWriter, RAW_FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
       writeInternal(smoosher, nullBitmapWriter, NULL_BITMAP_FILE_NAME);
@@ -483,5 +384,18 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       writer.writeTo(rowCount, smoosher);
     }
     log.info("Column [%s] serialized successfully with [%d] nested columns.", name, fields.size());
+  }
+
+  private void writeInternal(FileSmoosher smoosher, Serializer serializer, String fileName) throws IOException
+  {
+    final String internalName = getInternalFileName(name, fileName);
+    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
+      serializer.writeTo(smooshChannel, smoosher);
+    }
+  }
+
+  public static String getInternalFileName(String fileNameBase, String field)
+  {
+    return StringUtils.format("%s.%s", fileNameBase, field);
   }
 }
