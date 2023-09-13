@@ -32,7 +32,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -50,7 +49,7 @@ import java.util.Map;
  * of {@link ServerSelector} objects, while the other class stores {@link SegmentLoadInfo} object in its timeline.</p>
  *
  * <p>A new timeline class (implementing {@link TimelineServerView}) is required for
- * {@link AbstractSegmentMetadataCache}, which will run on the Coordinator.</p>
+ * {@link org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache}, which will run on the Coordinator.</p>
  */
 @ManageLifecycle
 public class QueryableCoordinatorServerView extends BrokerServerView implements CoordinatorTimeline
@@ -81,7 +80,7 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
 
   /**
    * This class maintains a timeline of {@link ServerSelector} objects.
-   * This method returns a new timeline of the object {@link SegmentLoadInfo}.
+   * This method converts and returns a new timeline of the object {@link SegmentLoadInfo}.
    *
    * @param dataSource dataSoruce
    * @return timeline for the given dataSource

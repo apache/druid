@@ -87,7 +87,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -221,11 +220,11 @@ public class CliCoordinator extends ServerRunnable
             }
 
             if (isSegmentMetadataCacheEnabled()) {
-              binder.install(new SegmentMetadataCacheModule());
+              binder.install(new CoordinatorSegmentMetadataCacheModule());
             } else {
               binder.bind(CoordinatorTimeline.class).to(CoordinatorServerView.class).in(LazySingleton.class);
               LifecycleModule.register(binder, CoordinatorServerView.class);
-              binder.bind(AbstractSegmentMetadataCache.class).toProvider(Providers.of(null));
+              binder.bind(CoordinatorSegmentMetadataCache.class).toProvider(Providers.of(null));
             }
 
             binder.bind(SegmentsMetadataManager.class)
@@ -457,11 +456,13 @@ public class CliCoordinator extends ServerRunnable
     }
   }
 
-  private static class SegmentMetadataCacheModule implements Module
+  private static class CoordinatorSegmentMetadataCacheModule implements Module
   {
     @Override
     public void configure(Binder binder)
     {
+      // These modules are required to allow running queries on the Coordinator,
+      // since CoordinatorSegmentMetadataCache needs to query data nodes and tasks
       binder.install(new LegacyBrokerParallelMergeConfigModule());
       binder.install(new QueryRunnerFactoryModule());
       binder.install(new SegmentWranglerModule());
@@ -470,10 +471,10 @@ public class CliCoordinator extends ServerRunnable
       binder.install(new JoinableFactoryModule());
 
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
-      JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
-      JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
-      JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
-      JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.select", TierSelectorStrategy.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.select.tier.custom", CustomTierSelectorStrategyConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.balancer", ServerSelectorStrategy.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.retryPolicy", RetryQueryRunnerConfig.class);
 
       binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
       binder.bind(CachingClusteredClient.class).in(LazySingleton.class);

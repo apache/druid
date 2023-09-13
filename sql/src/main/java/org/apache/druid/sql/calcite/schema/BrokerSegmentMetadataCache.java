@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import io.vavr.Predicates;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -90,8 +90,9 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   /**
    * Refreshes the set of segments in two steps:
    * <ul>
-   *  <li>Polls the coordinator for the dataSource schema to update the {@code tables}.</li>
-   *  <li>Refreshes the remaining set of segments by executing a SegmentMetadataQuery.</li>
+   *  <li>Polls the coordinator for the dataSource schema.</li>
+   *  <li>Refreshes the remaining set of segments by executing a SegmentMetadataQuery and
+   *      builds dataSource schema by combining segment schema.</li>
    * </ul>
    */
   @Override

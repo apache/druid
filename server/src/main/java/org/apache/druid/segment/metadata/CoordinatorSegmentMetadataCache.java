@@ -41,7 +41,7 @@ import java.util.Set;
 @ManageLifecycle
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
-  private static final EmittingLogger log = new EmittingLogger(AbstractSegmentMetadataCache.class);
+  private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
 
   @Inject
   public CoordinatorSegmentMetadataCache(

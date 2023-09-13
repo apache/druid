@@ -36,7 +36,7 @@ public class DataSourceInformation
 
   @JsonCreator
   public DataSourceInformation(
-      @JsonProperty("datasource") String dataSource,
+      @JsonProperty("dataSource") String dataSource,
       @JsonProperty("rowSignature") RowSignature rowSignature)
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "'dataSource' must be nonnull");
