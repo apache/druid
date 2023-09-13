@@ -48,7 +48,7 @@ public class PhysicalDatasourceMetadataBuilder
    */
   PhysicalDatasourceMetadata build(DataSourceInformation dataSourceInformation)
   {
-    final String dataSource = dataSourceInformation.getDatasource();
+    final String dataSource = dataSourceInformation.getDataSource();
     final TableDataSource tableDataSource;
 
     // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing

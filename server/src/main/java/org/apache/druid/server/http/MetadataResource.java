@@ -75,7 +75,7 @@ public class MetadataResource
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
-  private final @Nullable SegmentMetadataCache segmentMetadataCache;
+  private final @Nullable SegmentMetadataCache<DataSourceInformation> segmentMetadataCache;
 
   @Inject
   public MetadataResource(
@@ -83,7 +83,7 @@ public class MetadataResource
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator,
-      @Nullable SegmentMetadataCache segmentMetadataCache
+      @Nullable SegmentMetadataCache<DataSourceInformation> segmentMetadataCache
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;

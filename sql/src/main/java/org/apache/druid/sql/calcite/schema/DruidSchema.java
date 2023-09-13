@@ -55,7 +55,7 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTable(name);
     } else {
-      DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentMetadataCache.getPhysicalDatasourceMetadata(name);
+      DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentMetadataCache.getDatasource(name);
       return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
     }
   }

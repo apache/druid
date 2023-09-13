@@ -96,7 +96,7 @@ import java.util.stream.StreamSupport;
  * datasources. The cache provides metadata about a dataSource, see {@link DataSourceInformation}.
  */
 @ManageLifecycle
-public class SegmentMetadataCache
+public class SegmentMetadataCache<T extends DataSourceInformation>
 {
   // Newest segments first, so they override older ones.
   private static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
@@ -119,11 +119,10 @@ public class SegmentMetadataCache
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
   /**
-   * Manages tables of DataSourceInformation. This manager is used to retrieve and store
-   * information related to dataSources.
+   * Map of dataSource -> DataSourceInformation
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  private final TableManager<DataSourceInformation> tableManager = new TableManager<>();
+  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -378,6 +377,7 @@ public class SegmentMetadataCache
   @LifecycleStart
   public void start() throws InterruptedException
   {
+    log.info("Starting SegmentMetadataCache.");
     startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
@@ -414,10 +414,10 @@ public class SegmentMetadataCache
       final DataSourceInformation druidTable = buildDruidTable(dataSource);
       if (druidTable == null) {
         log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-        tableManager.removeFromTable(dataSource);
+        tables.remove(dataSource);
         return;
       }
-      final DataSourceInformation oldTable = tableManager.put(dataSource, druidTable);
+      final DataSourceInformation oldTable = tables.put(dataSource, (T) druidTable);
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
         log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
       } else {
@@ -438,19 +438,19 @@ public class SegmentMetadataCache
     initialized.await();
   }
 
-  public DataSourceInformation getDatasource(String name)
+  public T getDatasource(String name)
   {
-    return tableManager.get(name);
+    return tables.get(name);
   }
 
-  public Map<String, DataSourceInformation> getDataSourceInformationMap()
+  public Map<String, T> getDataSourceInformationMap()
   {
-    return tableManager.getAll();
+    return ImmutableMap.copyOf(tables);
   }
 
   public Set<String> getDatasourceNames()
   {
-    return tableManager.getKeySet();
+    return tables.keySet();
   }
 
   @VisibleForTesting
@@ -517,7 +517,7 @@ public class SegmentMetadataCache
             }
         );
       }
-      if (!tableManager.tablesContains(segment.getDataSource())) {
+      if (!tables.containsKey(segment.getDataSource())) {
         refreshImmediately = true;
       }
 
@@ -548,7 +548,7 @@ public class SegmentMetadataCache
                 totalSegments--;
               }
               if (segmentsMap.isEmpty()) {
-                tableManager.removeFromTable(segment.getDataSource());
+                tables.remove(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {
@@ -1109,51 +1109,6 @@ public class SegmentMetadataCache
     public String toString()
     {
       return NAME;
-    }
-  }
-
-  /**
-   * A generic class for managing table.
-   *
-   * @param <T>  The type of data associated with the tables (e.g., DataSourceInformation, PhysicalDataSourceMetadata).
-   */
-  public static class TableManager<T>
-  {
-    private final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
-
-    public void removeFromTable(String s)
-    {
-      tables.remove(s);
-    }
-
-    public boolean tablesContains(String s)
-    {
-      return tables.containsKey(s);
-    }
-
-    public T get(String s)
-    {
-      return tables.get(s);
-    }
-
-    public Set<String> getKeySet()
-    {
-      return tables.keySet();
-    }
-
-    public Map<String, T> getAll()
-    {
-      return ImmutableMap.copyOf(tables);
-    }
-
-    public T put(String key, T value)
-    {
-      return tables.put(key, value);
-    }
-
-    public void putAll(Map<String, T> anotherTable)
-    {
-      tables.putAll(anotherTable);
     }
   }
 }

@@ -278,10 +278,10 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     final Set<String> tableNames = schema.getDatasourceNames();
     Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE, "foo3"), tableNames);
 
-    Assert.assertEquals(dataSource1RowSignature, schema.getPhysicalDatasourceMetadata(DATASOURCE1).rowSignature());
-    Assert.assertEquals(dataSource2RowSignature, schema.getPhysicalDatasourceMetadata(DATASOURCE2).rowSignature());
-    Assert.assertEquals(someDataSourceRowSignature, schema.getPhysicalDatasourceMetadata(SOME_DATASOURCE).rowSignature());
-    Assert.assertEquals(foo3RowSignature, schema.getPhysicalDatasourceMetadata("foo3").rowSignature());
+    Assert.assertEquals(dataSource1RowSignature, schema.getDatasource(DATASOURCE1).getRowSignature());
+    Assert.assertEquals(dataSource2RowSignature, schema.getDatasource(DATASOURCE2).getRowSignature());
+    Assert.assertEquals(someDataSourceRowSignature, schema.getDatasource(SOME_DATASOURCE).getRowSignature());
+    Assert.assertEquals(foo3RowSignature, schema.getDatasource("foo3").getRowSignature());
   }
 
   /**
@@ -355,7 +355,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testGetTableMapFoo() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getPhysicalDatasourceMetadata("foo");
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
     final DruidTable fooTable = new DatasourceTable(fooDs);
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -385,7 +385,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testGetTableMapFoo2() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getPhysicalDatasourceMetadata("foo2");
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo2");
     final DruidTable fooTable = new DatasourceTable(fooDs);
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -417,7 +417,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         },
         new NoopCoordinatorClient()
     );
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getPhysicalDatasourceMetadata(CalciteTests.SOME_DATASOURCE);
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
     final DruidTable table = new DatasourceTable(fooDs);
     final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -460,7 +460,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
     // least restrictive blend across all segments
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getPhysicalDatasourceMetadata(CalciteTests.SOME_DATASOURCE);
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
     final DruidTable table = new DatasourceTable(fooDs);
     final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
@@ -541,7 +541,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getPhysicalDatasourceMetadata("foo");
+    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
@@ -573,7 +573,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     refreshLatch = new CountDownLatch(1);
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
-    fooTable = schema.getPhysicalDatasourceMetadata("foo");
+    fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     Assert.assertTrue(fooTable.dataSource() instanceof GlobalTableDataSource);
@@ -594,7 +594,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     refreshLatch = new CountDownLatch(1);
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
-    fooTable = schema.getPhysicalDatasourceMetadata("foo");
+    fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
@@ -607,7 +607,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getPhysicalDatasourceMetadata("foo");
+    DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
@@ -640,7 +640,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     refreshLatch = new CountDownLatch(1);
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
-    fooTable = schema.getPhysicalDatasourceMetadata("foo");
+    fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     // Should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. Ideally this will be
@@ -662,7 +662,7 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     refreshLatch = new CountDownLatch(1);
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
-    fooTable = schema.getPhysicalDatasourceMetadata("foo");
+    fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
@@ -711,9 +711,9 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Set<SegmentId> segments = new HashSet<>();
     Set<String> datasources = new HashSet<>();
     datasources.add("wat");
-    Assert.assertNull(schema.getPhysicalDatasourceMetadata("wat"));
+    Assert.assertNull(schema.getDatasource("wat"));
     schema.refresh(segments, datasources);
-    Assert.assertNull(schema.getPhysicalDatasourceMetadata("wat"));
+    Assert.assertNull(schema.getDatasource("wat"));
   }
 
   @Test

@@ -21,6 +21,7 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Objects;
@@ -30,22 +31,22 @@ import java.util.Objects;
  */
 public class DataSourceInformation
 {
-  private final String datasource;
+  private final String dataSource;
   private final RowSignature rowSignature;
 
   @JsonCreator
   public DataSourceInformation(
-      @JsonProperty("datasource") String datasource,
+      @JsonProperty("datasource") String dataSource,
       @JsonProperty("rowSignature") RowSignature rowSignature)
   {
-    this.datasource = datasource;
-    this.rowSignature = rowSignature;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "'dataSource' must be nonnull");
+    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
   }
 
   @JsonProperty
-  public String getDatasource()
+  public String getDataSource()
   {
-    return datasource;
+    return dataSource;
   }
 
   @JsonProperty
@@ -64,7 +65,7 @@ public class DataSourceInformation
       return false;
     }
     DataSourceInformation that = (DataSourceInformation) o;
-    return Objects.equals(datasource, that.datasource) && Objects.equals(
+    return Objects.equals(dataSource, that.dataSource) && Objects.equals(
         rowSignature,
         that.rowSignature
     );
@@ -73,14 +74,14 @@ public class DataSourceInformation
   @Override
   public int hashCode()
   {
-    return Objects.hash(datasource, rowSignature);
+    return Objects.hash(dataSource, rowSignature);
   }
 
   @Override
   public String toString()
   {
     return "DataSourceSchema{" +
-           "datasource='" + datasource + '\'' +
+           "dataSource='" + dataSource + '\'' +
            ", rowSignature=" + rowSignature +
            '}';
   }

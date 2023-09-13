@@ -44,9 +44,9 @@ import java.util.Set;
 
 /**
  * Broker-side cache of segment metadata that combines segments to identify
- * datasources which become "tables" in Calcite. This cache provides the "physical"
- * metadata about a datasource which is blended with catalog "logical" metadata
- * to provide the final user-view of each datasource.
+ * dataSources which become "tables" in Calcite. This cache provides the "physical"
+ * metadata about a dataSource which is blended with catalog "logical" metadata
+ * to provide the final user-view of each dataSource.
  * <p>
  * This class extends {@link SegmentMetadataCache} and introduces following changes,
  * <ul>
@@ -57,7 +57,7 @@ import java.util.Set;
  * </ul>
  */
 @ManageLifecycle
-public class BrokerSegmentMetadataCache extends SegmentMetadataCache
+public class BrokerSegmentMetadataCache extends SegmentMetadataCache<PhysicalDatasourceMetadata>
 {
   private static final EmittingLogger log = new EmittingLogger(BrokerSegmentMetadataCache.class);
 
@@ -68,7 +68,7 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
    * information related to dataSources.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  private final TableManager<PhysicalDatasourceMetadata> tableManager = new TableManager<>();
+  //private final TableManager<> tableManager = new TableManager<>();
   private final CoordinatorClient coordinatorClient;
 
   @Inject
@@ -113,7 +113,7 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     try {
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
                  .forEach(item -> polledDataSourceMetadata.put(
-                     item.getDatasource(),
+                     item.getDataSource(),
                      physicalDatasourceMetadataBuilder.build(item)
                  ));
     }
@@ -124,7 +124,7 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     // remove any extra dataSources returned
     polledDataSourceMetadata.keySet().removeIf(Predicates.not(dataSourcesToQuery::contains));
 
-    tableManager.putAll(polledDataSourceMetadata);
+    tables.putAll(polledDataSourceMetadata);
 
     // Remove segments of the dataSource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
@@ -150,39 +150,16 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
       final DataSourceInformation druidTable = buildDruidTable(dataSource);
       if (druidTable == null) {
         log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-        tableManager.removeFromTable(dataSource);
+        tables.remove(dataSource);
         return;
       }
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
-      final PhysicalDatasourceMetadata oldTable = tableManager.put(dataSource, physicalDatasourceMetadata);
-      if (oldTable == null || !oldTable.rowSignature().equals(physicalDatasourceMetadata.rowSignature())) {
+      final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
+      if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
         log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
       } else {
         log.debug("[%s] signature is unchanged.", dataSource);
       }
     }
-  }
-
-  @Override
-  public Set<String> getDatasourceNames()
-  {
-    return tableManager.getKeySet();
-  }
-
-  public PhysicalDatasourceMetadata getPhysicalDatasourceMetadata(String name)
-  {
-    return tableManager.get(name);
-  }
-
-  @Override
-  public DataSourceInformation getDatasource(String name)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Map<String, DataSourceInformation> getDataSourceInformationMap()
-  {
-    throw new UnsupportedOperationException();
   }
 }

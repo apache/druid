@@ -26,6 +26,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 
 import java.util.Objects;
 
@@ -44,34 +45,28 @@ public class DatasourceTable extends DruidTable
    * published in the Coordinator. Used only for datasources, since only
    * datasources are computed from segments.
    */
-  public static class PhysicalDatasourceMetadata
+  public static class PhysicalDatasourceMetadata extends DataSourceInformation
   {
-    private final TableDataSource dataSource;
-    private final RowSignature rowSignature;
+    private final TableDataSource tableDataSource;
     private final boolean joinable;
     private final boolean broadcast;
 
     public PhysicalDatasourceMetadata(
-        final TableDataSource dataSource,
+        final TableDataSource tableDataSource,
         final RowSignature rowSignature,
         final boolean isJoinable,
         final boolean isBroadcast
     )
     {
-      this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-      this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
+      super(tableDataSource.getName(), rowSignature);
+      this.tableDataSource = Preconditions.checkNotNull(tableDataSource, "dataSource");
       this.joinable = isJoinable;
       this.broadcast = isBroadcast;
     }
 
     public TableDataSource dataSource()
     {
-      return dataSource;
-    }
-
-    public RowSignature rowSignature()
-    {
-      return rowSignature;
+      return tableDataSource;
     }
 
     public boolean isJoinable()
@@ -93,20 +88,20 @@ public class DatasourceTable extends DruidTable
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
+      if (!super.equals(o)) {
+        return false;
+      }
 
       PhysicalDatasourceMetadata that = (PhysicalDatasourceMetadata) o;
 
-      if (!Objects.equals(dataSource, that.dataSource)) {
-        return false;
-      }
-      return Objects.equals(rowSignature, that.rowSignature);
+      return Objects.equals(tableDataSource, that.tableDataSource);
     }
 
     @Override
     public int hashCode()
     {
-      int result = dataSource != null ? dataSource.hashCode() : 0;
-      result = 31 * result + (rowSignature != null ? rowSignature.hashCode() : 0);
+      int result = tableDataSource != null ? tableDataSource.hashCode() : 0;
+      result = 31 * result + super.hashCode();
       return result;
     }
 
@@ -114,8 +109,8 @@ public class DatasourceTable extends DruidTable
     public String toString()
     {
       return "DatasourceMetadata{" +
-             "dataSource=" + dataSource +
-             ", rowSignature=" + rowSignature +
+             "dataSource=" + tableDataSource +
+             ", rowSignature=" + getRowSignature() +
              '}';
     }
   }
@@ -126,7 +121,7 @@ public class DatasourceTable extends DruidTable
       final PhysicalDatasourceMetadata physicalMetadata
   )
   {
-    super(physicalMetadata.rowSignature());
+    super(physicalMetadata.getRowSignature());
     this.physicalMetadata = physicalMetadata;
   }
 

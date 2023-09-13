@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataRuleManagerConfig;
@@ -87,9 +88,11 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -125,6 +128,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.server.security.Escalator;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
@@ -363,7 +367,6 @@ public class CliCoordinator extends ServerRunnable
     return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_ENABLED));
   }
 
-
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
   {
     private Properties props;
@@ -481,7 +484,48 @@ public class CliCoordinator extends ServerRunnable
       binder.bind(CoordinatorTimeline.class).to(QueryableCoordinatorServerView.class).in(LazySingleton.class);
       binder.bind(TimelineServerView.class).to(QueryableCoordinatorServerView.class).in(LazySingleton.class);
       LifecycleModule.register(binder, QueryableCoordinatorServerView.class);
-      LifecycleModule.register(binder, SegmentMetadataCache.class);
+      binder.bind(new TypeLiteral<SegmentMetadataCache<DataSourceInformation>>() {})
+          .toProvider(SegmentMetadataCacheProvider.class).in(ManageLifecycle.class);
+    }
+
+    private static class SegmentMetadataCacheProvider implements Provider<SegmentMetadataCache<DataSourceInformation>>
+    {
+      private final QueryLifecycleFactory queryLifecycleFactory;
+      private final TimelineServerView serverView;
+      private final SegmentMetadataCacheConfig config;
+      private final Escalator escalator;
+      private final InternalQueryConfig internalQueryConfig;
+      private final ServiceEmitter emitter;
+
+      @Inject
+      public SegmentMetadataCacheProvider(
+          QueryLifecycleFactory queryLifecycleFactory,
+          TimelineServerView serverView,
+          SegmentMetadataCacheConfig config,
+          Escalator escalator,
+          InternalQueryConfig internalQueryConfig,
+          ServiceEmitter emitter
+      )
+      {
+        this.queryLifecycleFactory = queryLifecycleFactory;
+        this.serverView = serverView;
+        this.config = config;
+        this.escalator = escalator;
+        this.internalQueryConfig = internalQueryConfig;
+        this.emitter = emitter;
+      }
+
+      @Override
+      public SegmentMetadataCache<DataSourceInformation> get()
+      {
+        return new SegmentMetadataCache<>(
+            queryLifecycleFactory,
+            serverView,
+            config,
+            escalator,
+            internalQueryConfig,
+            emitter);
+      }
     }
   }
 }
