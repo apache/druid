@@ -951,4 +951,90 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testJoinWithSubqueries()
+  {
+    cannotVectorize();
+
+    List<Object[]> results = new ArrayList<>(ImmutableList.of(
+        new Object[]{"", NullHandling.defaultStringValue()},
+        new Object[]{"10.1", NullHandling.defaultStringValue()},
+        new Object[]{"2", NullHandling.defaultStringValue()},
+        new Object[]{"1", NullHandling.defaultStringValue()},
+        new Object[]{"def", NullHandling.defaultStringValue()},
+        new Object[]{"abc", NullHandling.defaultStringValue()}
+    ));
+
+    if (NullHandling.replaceWithDefault()) {
+      results.add(new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue()});
+    }
+
+
+    testQuery(
+        "SELECT a.dim1, b.dim2\n"
+        + "FROM (SELECT na.dim1 as dim1, nb.dim2 as dim2 FROM foo na LEFT JOIN foo2 nb ON na.dim1 = nb.dim1) a\n"
+        + "FULL OUTER JOIN\n"
+        + "(SELECT nc.dim1 as dim1, nd.dim2 as dim2 FROM foo nc LEFT JOIN foo2 nd ON nc.dim1 = nd.dim1) b\n"
+        + "ON a.dim1 = b.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        JoinDataSource.create(
+                            new TableDataSource("foo"),
+                            new QueryDataSource(
+                                newScanQueryBuilder()
+                                    .dataSource("foo2")
+                                    .columns("dim1")
+                                    .eternityInterval()
+                                    .build()
+                            ),
+                            "j0.",
+                            "(\"dim1\" == \"j0.dim1\")",
+                            JoinType.LEFT,
+                            null,
+                            ExprMacroTable.nil(),
+                            CalciteTests.createJoinableFactoryWrapper()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(
+                                    JoinDataSource.create(
+                                        new TableDataSource("foo"),
+                                        new QueryDataSource(
+                                            newScanQueryBuilder()
+                                                .dataSource("foo2")
+                                                .columns("dim1", "dim2")
+                                                .eternityInterval()
+                                                .build()
+                                        ),
+                                        "j0.",
+                                        "(\"dim1\" == \"j0.dim1\")",
+                                        JoinType.LEFT,
+                                        null,
+                                        ExprMacroTable.nil(),
+                                        CalciteTests.createJoinableFactoryWrapper()
+                                    )
+                                )
+                                .columns("dim1", "j0.dim2")
+                                .eternityInterval()
+                                .build()
+                        ),
+                        "_j0.",
+                        "(\"dim1\" == \"_j0.dim1\")",
+                        JoinType.FULL,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
+                    )
+                )
+                .columns("_j0.j0.dim2", "dim1")
+                .eternityInterval()
+                .build()
+        ),
+        results
+    );
+  }
 }

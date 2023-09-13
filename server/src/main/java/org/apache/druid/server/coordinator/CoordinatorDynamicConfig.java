@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
@@ -30,7 +29,6 @@ import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.Collection;
@@ -40,7 +38,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class is for users to change their configurations while their Druid cluster is running.
@@ -207,21 +204,6 @@ public class CoordinatorDynamicConfig
     } else {
       return ImmutableSet.of();
     }
-  }
-
-  public static AtomicReference<CoordinatorDynamicConfig> watch(final JacksonConfigManager configManager)
-  {
-    return configManager.watch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class,
-        CoordinatorDynamicConfig.builder().build()
-    );
-  }
-
-  @Nonnull
-  public static CoordinatorDynamicConfig current(final JacksonConfigManager configManager)
-  {
-    return Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")

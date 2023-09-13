@@ -59,6 +59,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -81,7 +82,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @RunWith(Parameterized.class)
-public class DoubleStorageTest
+public class DoubleStorageTest extends InitializedNullHandlingTest
 {
 
   private static final SegmentMetadataQueryRunnerFactory METADATA_QR_FACTORY = new SegmentMetadataQueryRunnerFactory(

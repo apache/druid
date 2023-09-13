@@ -46,6 +46,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
   private final String entryType;
   private final CoordinatorStat cleanupCountStat;
 
+  private final boolean cleanupEnabled;
   private final Duration cleanupPeriod;
   private final Duration retainDuration;
 
@@ -54,6 +55,7 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
   protected MetadataCleanupDuty(
       String entryType,
       String propertyPrefix,
+      boolean cleanupEnabled,
       Duration cleanupPeriod,
       Duration retainDuration,
       CoordinatorStat cleanupCountStat,
@@ -62,23 +64,30 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
   {
     this.propertyPrefix = propertyPrefix;
     this.entryType = entryType;
+    this.cleanupEnabled = cleanupEnabled;
     this.cleanupPeriod = cleanupPeriod;
     this.retainDuration = retainDuration;
     this.cleanupCountStat = cleanupCountStat;
 
-    validatePeriod(cleanupPeriod, coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod());
-    validateRetainDuration(retainDuration);
+    if (this.cleanupEnabled) {
+      validatePeriod(cleanupPeriod, coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod());
+      validateRetainDuration(retainDuration);
 
-    log.debug(
-        "Enabled cleanup of [%s] with period [%s] and durationToRetain [%s].",
-        entryType, cleanupPeriod, retainDuration
-    );
+      log.debug(
+          "Enabled cleanup of [%s] with period [%s] and durationToRetain [%s].",
+          entryType, cleanupPeriod, retainDuration
+      );
+    }
   }
 
   @Nullable
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    if (!cleanupEnabled) {
+      return params;
+    }
+
     final DateTime now = DateTimes.nowUtc();
 
     // Perform cleanup only if cleanup period has elapsed
