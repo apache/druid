@@ -50,9 +50,10 @@ public class RowBasedIndexBuilder
   private static final long INT_ARRAY_SMALL_SIZE_OK = 250_000;
 
   private int currentRow = 0;
-  private int nullKeys = 0;
+  private int nonNullKeys = 0;
   private final ColumnType keyType;
   private final Map<Object, IntSortedSet> index;
+  private IntSortedSet nullIndex;
 
   private long minLongKey = Long.MAX_VALUE;
   private long maxLongKey = Long.MIN_VALUE;
@@ -79,22 +80,30 @@ public class RowBasedIndexBuilder
    */
   public RowBasedIndexBuilder add(@Nullable final Object key)
   {
-    final Object castKey = DimensionHandlerUtils.convertObjectToType(key, keyType);
-
-    if (castKey != null) {
-      final IntSortedSet rowNums = index.computeIfAbsent(castKey, k -> new IntAVLTreeSet());
-      rowNums.add(currentRow);
-
-      // Track min, max long value so we can decide later on if it's appropriate to use an array-backed implementation.
-      if (keyType.is(ValueType.LONG) && (long) castKey < minLongKey) {
-        minLongKey = (long) castKey;
+    if (key == null) {
+      // Use "nullIndex" instead of "index" because "index" may be specialized as Long2ObjectMap, which cannot
+      // accept null keys.
+      if (nullIndex == null) {
+        nullIndex = new IntAVLTreeSet();
       }
 
-      if (keyType.is(ValueType.LONG) && (long) castKey > maxLongKey) {
-        maxLongKey = (long) castKey;
-      }
+      nullIndex.add(currentRow);
     } else {
-      nullKeys++;
+      final Object castKey = DimensionHandlerUtils.convertObjectToType(key, keyType);
+
+      if (castKey != null) {
+        index.computeIfAbsent(castKey, k -> new IntAVLTreeSet()).add(currentRow);
+        nonNullKeys++;
+
+        // Track min, max long value so we can decide later on if it's appropriate to use an array-backed implementation.
+        if (keyType.is(ValueType.LONG) && (long) castKey < minLongKey) {
+          minLongKey = (long) castKey;
+        }
+
+        if (keyType.is(ValueType.LONG) && (long) castKey > maxLongKey) {
+          maxLongKey = (long) castKey;
+        }
+      }
     }
 
     currentRow++;
@@ -107,9 +116,9 @@ public class RowBasedIndexBuilder
    */
   public IndexedTable.Index build()
   {
-    final boolean keysUnique = index.size() == currentRow - nullKeys;
+    final boolean nonNullKeysUnique = index.size() == nonNullKeys;
 
-    if (keyType.is(ValueType.LONG) && keysUnique && index.size() > 0) {
+    if (keyType.is(ValueType.LONG) && nonNullKeysUnique && !index.isEmpty() && nullIndex == null) {
       // May be a good candidate for UniqueLongArrayIndex. Check the range of values as compared to min and max.
       long range;
 
@@ -155,6 +164,6 @@ public class RowBasedIndexBuilder
       }
     }
 
-    return new MapIndex(keyType, index, keysUnique);
+    return new MapIndex(keyType, index, nullIndex, nonNullKeysUnique);
   }
 }

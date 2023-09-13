@@ -125,7 +125,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
                  .map(pair -> makeConditionMatcher(pair.lhs, leftSelectorFactory, pair.rhs))
                  .collect(Collectors.toList());
 
-      this.singleRowMatching = indexes.stream().allMatch(pair -> pair.lhs.areKeysUnique());
+      this.singleRowMatching = indexes.stream().allMatch(pair -> pair.lhs.areKeysUnique(pair.rhs.isIncludeNull()));
     } else {
       throw new IAE(
           "Cannot build hash-join matcher on non-equi-join condition: %s",
@@ -169,7 +169,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     return ColumnProcessors.makeProcessor(
         condition.getLeftExpr(),
         index.keyType(),
-        new ConditionMatcherFactory(index),
+        new ConditionMatcherFactory(index, condition.isIncludeNull()),
         selectorFactory
     );
   }
@@ -374,15 +374,17 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     private final ColumnType keyType;
     private final IndexedTable.Index index;
+    private final boolean includeNull;
 
     // DimensionSelector -> (int) dimension id -> (IntSortedSet) row numbers
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")  // updated via computeIfAbsent
     private final LruLoadingHashMap<DimensionSelector, Int2IntSortedSetMap> dimensionCaches;
 
-    ConditionMatcherFactory(IndexedTable.Index index)
+    ConditionMatcherFactory(IndexedTable.Index index, boolean includeNull)
     {
       this.keyType = index.keyType();
       this.index = index;
+      this.includeNull = includeNull;
 
       this.dimensionCaches = new LruLoadingHashMap<>(
           MAX_NUM_CACHE,
@@ -399,7 +401,11 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     private IntSortedSet getRowNumbers(DimensionSelector selector, int dimensionId)
     {
       final String key = selector.lookupName(dimensionId);
-      return index.find(key);
+      if (includeNull || !NullHandling.isNullOrEquivalent(key)) {
+        return index.find(key);
+      } else {
+        return IntSortedSets.EMPTY_SET;
+      }
     }
 
     private IntSortedSet getAndCacheRowNumbers(DimensionSelector selector, int dimensionId)
@@ -465,6 +471,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     {
       if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getFloat());
+      } else if (includeNull) {
+        return () -> selector.isNull() ? index.find(null) : index.find(selector.getFloat());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getFloat());
       }
@@ -475,6 +483,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     {
       if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getDouble());
+      } else if (includeNull) {
+        return () -> selector.isNull() ? index.find(null) : index.find(selector.getDouble());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getDouble());
       }
@@ -487,6 +497,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
         return makePrimitiveLongMatcher(selector);
       } else if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getLong());
+      } else if (includeNull) {
+        return () -> selector.isNull() ? index.find(null) : index.find(selector.getLong());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getLong());
       }
@@ -541,6 +553,27 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           public IntSortedSet match()
           {
             return index.find(selector.getLong());
+          }
+        };
+      } else if (includeNull) {
+        return new ConditionMatcher()
+        {
+          @Override
+          public int matchSingleRow()
+          {
+            if (selector.isNull()) {
+              final IntSortedSet rowNumbers = index.find(null);
+
+              return rowNumbers == null ? NO_CONDITION_MATCH : rowNumbers.firstInt();
+            } else {
+              return index.findUniqueLong(selector.getLong());
+            }
+          }
+
+          @Override
+          public IntSortedSet match()
+          {
+            return selector.isNull() ? index.find(null) : index.find(selector.getLong());
           }
         };
       } else {

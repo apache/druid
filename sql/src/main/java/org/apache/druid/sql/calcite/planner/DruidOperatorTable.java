@@ -388,6 +388,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                        SqlStdOperatorTable.IS_NOT_FALSE,
                        "> 0"
                    )) // Matches Evals.asBoolean
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_DISTINCT_FROM, "isdistinctfrom"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "notdistinctfrom"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MULTIPLY, "*"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MOD, "%"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.DIVIDE, "/"))
