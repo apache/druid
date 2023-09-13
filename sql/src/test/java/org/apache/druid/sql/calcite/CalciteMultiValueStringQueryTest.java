@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -27,6 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -2189,4 +2191,103 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
     );
   }
+
+  @Test
+  public void testXA1()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testBuilder()
+    .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
+        .sql("SELECT\n"
+            + "  MV_FILTER_ONLY(\n"
+            + "    CAST(\n"
+            + "      LOOKUP(coalesce(t.\"dim2\",'a'),'lookyloo')\n"
+            + "    AS VARCHAR),\n"
+            + "    ARRAY['xa','abc','nosuchkey','6','asd1']\n"
+            + "  ) AS \"COALESC-b7e\",\n"
+            + "count(1)\n"
+            + "FROM druid.foo AS t\n"
+            + " where dim3='x' \n"
+            + "GROUP BY 1\n"
+            + "LIMIT 1000")
+        .expectedQuery(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
+                        ColumnType.STRING
+                    )
+                )
+                .filters(expressionFilter(
+                    "array_contains(string_to_array(concat(array_to_string(\"dim3\",','),',d'),','),'d')"))
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        )
+        .expectedResults(
+            NullHandling.sqlCompatible() ?
+            ImmutableList.of(
+                new Object[]{"[\"a\",\"b\",\"d\"]"},
+                new Object[]{"[\"\",\"d\"]"}
+            ) : ImmutableList.of(
+                new Object[]{"[\"a\",\"b\",\"d\"]"},
+                new Object[]{"[\"\",\"d\"]"}
+            )
+        )
+        .run();
+  }
+  @Test
+  public void testXA1a()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testBuilder()
+        .sql("SELECT\n"
+            + "  MV_FILTER_ONLY(\n"
+            + "    CAST(\n"
+            + "      LOOKUP(t.\"dim3\",'lookyloo')\n"
+            + "    AS VARCHAR),\n"
+            + "    ARRAY['Transparent Inventory','Ads per Page','Social Media Activity','asd','asd1']\n"
+            + "  ) AS \"COALESC-b7e\",\n"
+            + "count(1)\n"
+            + "FROM druid.foo AS t\n"
+            + "GROUP BY 1\n"
+            + "LIMIT 1000")
+//        .expectedQuery(
+//            newScanQueryBuilder()
+//                .dataSource(CalciteTests.DATASOURCE3)
+//                .intervals(querySegmentSpec(Filtration.eternity()))
+//                .virtualColumns(
+//                    expressionVirtualColumn(
+//                        "v0",
+//                        "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
+//                        ColumnType.STRING
+//                    )
+//                )
+//                .filters(expressionFilter(
+//                    "array_contains(string_to_array(concat(array_to_string(\"dim3\",','),',d'),','),'d')"))
+//                .columns("v0")
+//                .context(QUERY_CONTEXT_DEFAULT)
+//                .build()
+//        )
+        .expectedResults(
+            NullHandling.sqlCompatible() ?
+            ImmutableList.of(
+                new Object[]{"[\"a\",\"b\",\"d\"]"},
+                new Object[]{"[\"\",\"d\"]"}
+            ) : ImmutableList.of(
+                new Object[]{"[\"a\",\"b\",\"d\"]"},
+                new Object[]{"[\"\",\"d\"]"}
+            )
+        )
+        .run();
+  }
+
+
 }
