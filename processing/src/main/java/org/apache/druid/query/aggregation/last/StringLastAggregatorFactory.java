@@ -42,9 +42,11 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -156,16 +158,25 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
 
-    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = selectorFactory.makeValueSelector(fieldName);
+      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
+          selectorFactory.getReadableVectorInspector(),
+          fieldName,
+          valueSelector,
+          capabilities.toColumnType(),
+          ColumnType.STRING
+      );
+      return new StringLastVectorAggregator(timeSelector, objectSelector, maxStringBytes);
+    }
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
-    VectorValueSelector timeSelector = selectorFactory.makeValueSelector(
-        timeColumn);
     if (capabilities != null) {
       return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
     } else {
       return new StringLastVectorAggregator(null, vSelector, maxStringBytes);
     }
-
   }
 
   @Override
