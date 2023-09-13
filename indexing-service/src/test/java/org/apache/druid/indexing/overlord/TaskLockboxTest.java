@@ -1793,7 +1793,7 @@ public class TaskLockboxTest
     final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
     testLockbox.add(task);
 
-    SegmentAllocateRequest request = new SegmentAllocateRequest(
+    SegmentAllocateRequest request0 = new SegmentAllocateRequest(
         task,
         new SegmentAllocateAction(
             task.getDataSource(),
@@ -1805,14 +1805,31 @@ public class TaskLockboxTest
             false,
             null,
             null,
-            null
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    SegmentAllocateRequest request1 = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.MONTH,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
         ),
         90
     );
 
     try {
       testLockbox.allocateSegments(
-          ImmutableList.of(request),
+          ImmutableList.of(request0, request1),
           "DS",
           Intervals.of("2023/2024"),
           false,

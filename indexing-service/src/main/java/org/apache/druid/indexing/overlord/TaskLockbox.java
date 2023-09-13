@@ -496,9 +496,11 @@ public class TaskLockbox
       }
       holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
     }
-    finally {
-      holderList.failHoldersForCompletedTasks(this);
+    catch (Exception e) {
       holderList.clearStaleLocks(this);
+      throw e;
+    }
+    finally {
       giant.unlock();
     }
 
@@ -1600,28 +1602,18 @@ public class TaskLockbox
       return pending;
     }
 
-    void failHoldersForCompletedTasks(TaskLockbox taskLockbox)
-    {
-      pending
-          .stream()
-          .filter(holder -> !taskLockbox.getActiveTasks().contains(holder.task.getId()))
-          .forEach(holder -> holder.markFailed("Task[%s] is no longer active.", holder.task.getId()));
-    }
-
+    /**
+     *  When task locks are acquired in an attempt to allocate segments, *  a new lock posse might be created.
+     *  However, the posse is associated with the task only after all the segment allocations have succeeded.
+     *  If there is an exception, unlock all such unassociated locks.
+     */
     void clearStaleLocks(TaskLockbox taskLockbox)
     {
-      // A lock is valid if it has at least one segment allocated with it
-      // OR if it already has tasks associated with it
-      final Set<TaskLock> validLocks = all
-          .stream()
-          .filter(holder -> holder.allocatedSegment != null
-                            || holder.taskLockPosse != null && !holder.taskLockPosse.isTasksEmpty())
-          .map(holder -> holder.acquiredLock)
-          .collect(Collectors.toSet());
-
       all
           .stream()
-          .filter(holder -> holder.acquiredLock != null && !validLocks.contains(holder.acquiredLock))
+          .filter(holder -> holder.acquiredLock != null
+                            && holder.taskLockPosse != null
+                            && !holder.taskLockPosse.containsTask(holder.task))
           .forEach(holder -> {
             holder.taskLockPosse.addTask(holder.task);
             taskLockbox.unlock(
@@ -1629,6 +1621,7 @@ public class TaskLockbox
                 holder.acquiredLock.getInterval(),
                 holder.acquiredLock instanceof SegmentLock ? ((SegmentLock) holder.acquiredLock).getPartitionId() : null
             );
+            log.info("Cleared stale lock[%s] for task[%s]", holder.acquiredLock, holder.task.getId());
           });
     }
 
