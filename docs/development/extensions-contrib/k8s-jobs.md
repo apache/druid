@@ -275,3 +275,17 @@ roleRef:
   name: druid-k8s-task-scheduler
   apiGroup: rbac.authorization.k8s.io
 ```
+
+## Migration/Kubernetes and Worker Task Runner
+If you are running a cluster with tasks running on middle managers or indexers and want to do a zero downtime migration to mm-less ingestion, the mm-less ingestion system is capable of running in migration mode by reading tasks from middle managers/indexers and Kubernetes and writing tasks to either middle managers or to Kubernetes.
+
+To do this, set the following property.
+`druid.indexer.runner.type: k8sAndWorker` (instead of `druid.indexer.runner.type: k8s`)
+
+### Additional Configurations
+
+|Property| Possible Values |Description|Default|required|
+|--------|-----------------|-----------|-------|--------|
+|`druid.indexer.runner.k8sAndWorker.workerTaskRunnerType`|`String`|Determines whether the `httpRemote` or the `remote` task runner should be used in addition to the Kubernetes task runner.|`httpRemote`|No|
+|`druid.indexer.runner.k8sAndWorker.sendAllTasksToWorkerTaskRunner`|`boolean`| Whether to send all the tasks to the worker task runner. If this is set to false all tasks will be sent to Kubernetes|`false`|No|
+

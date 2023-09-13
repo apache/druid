@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
@@ -170,7 +171,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.globalDictionaryIdLookup = new DictionaryIdLookup();
   }
 
   @Override
@@ -231,6 +231,15 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         4
     );
     arrayDictionaryWriter.open();
+    globalDictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            dictionaryWriter,
+            longDictionaryWriter,
+            doubleDictionaryWriter,
+            arrayDictionaryWriter
+        )
+    );
   }
 
   @Override
@@ -329,7 +338,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
     // null is always 0
     dictionaryWriter.write(null);
-    globalDictionaryIdLookup.addString(null);
     for (String value : strings) {
       value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
@@ -337,7 +345,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       }
 
       dictionaryWriter.write(value);
-      globalDictionaryIdLookup.addString(value);
     }
     dictionarySerialized = true;
 
@@ -346,7 +353,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         continue;
       }
       longDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addLong(value);
     }
 
     for (Double value : doubles) {
@@ -354,7 +360,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         continue;
       }
       doubleDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addDouble(value);
     }
 
     for (int[] value : arrays) {
@@ -362,7 +367,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         continue;
       }
       arrayDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addArray(value);
     }
     dictionarySerialized = true;
   }
@@ -433,10 +437,31 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     writeV0Header(channel, columnNameBytes);
     fieldsWriter.writeTo(channel, smoosher);
     fieldsInfoWriter.writeTo(channel, smoosher);
-    writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
+
+
+    if (globalDictionaryIdLookup.getStringBufferMapper() != null) {
+      SmooshedFileMapper fileMapper = globalDictionaryIdLookup.getStringBufferMapper();
+      for (String internalName : fileMapper.getInternalFilenames()) {
+        smoosher.add(internalName, fileMapper.mapFile(internalName));
+      }
+    } else {
+      writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
+    }
+    if (globalDictionaryIdLookup.getLongBuffer() != null) {
+      writeInternal(smoosher, globalDictionaryIdLookup.getLongBuffer(), LONG_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
+    }
+    if (globalDictionaryIdLookup.getDoubleBuffer() != null) {
+      writeInternal(smoosher, globalDictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+    }
+    if (globalDictionaryIdLookup.getArrayBuffer() != null) {
+      writeInternal(smoosher, globalDictionaryIdLookup.getArrayBuffer(), ARRAY_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
+    }
     writeInternal(smoosher, rawWriter, RAW_FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
       writeInternal(smoosher, nullBitmapWriter, NULL_BITMAP_FILE_NAME);
