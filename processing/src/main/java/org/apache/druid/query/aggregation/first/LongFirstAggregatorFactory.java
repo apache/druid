@@ -138,7 +138,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
           timeColumn);
       return new LongFirstVectorAggregator(timeSelector, valueSelector);
     }
-    return NilVectorAggregator.of(NilVectorAggregator.FLOAT_NIL_PAIR);
+    return NilVectorAggregator.of(NilVectorAggregator.LONG_NIL_PAIR);
   }
 
   @Override
