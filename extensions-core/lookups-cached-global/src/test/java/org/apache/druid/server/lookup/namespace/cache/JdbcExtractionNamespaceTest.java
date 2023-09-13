@@ -63,6 +63,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 /**
  *
  */
@@ -328,6 +331,7 @@ public class JdbcExtractionNamespaceTest
         null,
         new Period(0),
         null,
+        0,
         new JdbcAccessSecurityConfig()
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
@@ -361,6 +365,7 @@ public class JdbcExtractionNamespaceTest
         FILTER_COLUMN + "='1'",
         new Period(0),
         null,
+        0,
         new JdbcAccessSecurityConfig()
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
@@ -397,6 +402,46 @@ public class JdbcExtractionNamespaceTest
       }
       assertUpdated(entry, "foo", "bar");
     }
+  }
+
+  @Test
+  public void testRandomJitter()
+  {
+    JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        TABLE_NAME,
+        KEY_NAME,
+        VAL_NAME,
+        tsColumn,
+        FILTER_COLUMN + "='1'",
+        new Period(0),
+        null,
+        120,
+        new JdbcAccessSecurityConfig()
+    );
+    long jitter = extractionNamespace.getJitter();
+    // jitter will be a random value between 0 and 120 seconds.
+    assertTrue(jitter >= 0 && jitter <= 120000);
+  }
+
+  @Test
+  public void testRandomJitterNotSpecified()
+  {
+    JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        TABLE_NAME,
+        KEY_NAME,
+        VAL_NAME,
+        tsColumn,
+        FILTER_COLUMN + "='1'",
+        new Period(0),
+        null,
+        null,
+        new JdbcAccessSecurityConfig()
+    );
+    long jitter = extractionNamespace.getJitter();
+    // jitter will be a random value between 0 and 120 seconds.
+    assertEquals(0, extractionNamespace.getJitter());
   }
 
   @Test(timeout = 60_000L)
@@ -436,6 +481,7 @@ public class JdbcExtractionNamespaceTest
         "some filter",
         new Period(10),
         null,
+        0,
         securityConfig
     );
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -461,6 +507,7 @@ public class JdbcExtractionNamespaceTest
         null,
         new Period(10),
         null,
+        0,
         new JdbcAccessSecurityConfig()
     );
     CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace);
@@ -493,7 +540,7 @@ public class JdbcExtractionNamespaceTest
       log.debug("Waiting for updateLock");
       updateLock.lockInterruptibly();
       try {
-        Assert.assertTrue("Failed waiting for update", System.currentTimeMillis() - startTime < timeout);
+        assertTrue("Failed waiting for update", System.currentTimeMillis() - startTime < timeout);
         post = updates.get();
       }
       finally {
