@@ -147,28 +147,19 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
 
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
-      rebuildDatasource(dataSource);
-    }
-  }
-
-  /**
-   * Build table schema and convert DataSourceInformation to PhysicalDatasourceMetadata.
-   */
-  @Override
-  protected void rebuildDatasource(String dataSource)
-  {
-    final DataSourceInformation druidTable = buildDruidTable(dataSource);
-    if (druidTable == null) {
-      log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-      tableManager.removeFromTable(dataSource);
-      return;
-    }
-    final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
-    final PhysicalDatasourceMetadata oldTable = tableManager.put(dataSource, physicalDatasourceMetadata);
-    if (oldTable == null || !oldTable.rowSignature().equals(physicalDatasourceMetadata.rowSignature())) {
-      log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
-    } else {
-      log.debug("[%s] signature is unchanged.", dataSource);
+      final DataSourceInformation druidTable = buildDruidTable(dataSource);
+      if (druidTable == null) {
+        log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
+        tableManager.removeFromTable(dataSource);
+        return;
+      }
+      final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
+      final PhysicalDatasourceMetadata oldTable = tableManager.put(dataSource, physicalDatasourceMetadata);
+      if (oldTable == null || !oldTable.rowSignature().equals(physicalDatasourceMetadata.rowSignature())) {
+        log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+      } else {
+        log.debug("[%s] signature is unchanged.", dataSource);
+      }
     }
   }
 

@@ -93,7 +93,7 @@ import java.util.stream.StreamSupport;
 
 /**
  * Coordinator-side cache of segment metadata that combines segments to identify
- * datasources.The cache provides metadata about a dataSource, see {@link DataSourceInformation}.
+ * datasources. The cache provides metadata about a dataSource, see {@link DataSourceInformation}.
  */
 @ManageLifecycle
 public class SegmentMetadataCache
@@ -411,23 +411,18 @@ public class SegmentMetadataCache
 
     // Rebuild the dataSources.
     for (String dataSource : dataSourcesToRebuild) {
-      rebuildDatasource(dataSource);
-    }
-  }
-
-  protected void rebuildDatasource(String dataSource)
-  {
-    final DataSourceInformation druidTable = buildDruidTable(dataSource);
-    if (druidTable == null) {
-      log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-      tableManager.removeFromTable(dataSource);
-      return;
-    }
-    final DataSourceInformation oldTable = tableManager.put(dataSource, druidTable);
-    if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-      log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
-    } else {
-      log.debug("[%s] signature is unchanged.", dataSource);
+      final DataSourceInformation druidTable = buildDruidTable(dataSource);
+      if (druidTable == null) {
+        log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
+        tableManager.removeFromTable(dataSource);
+        return;
+      }
+      final DataSourceInformation oldTable = tableManager.put(dataSource, druidTable);
+      if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
+        log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+      } else {
+        log.debug("[%s] signature is unchanged.", dataSource);
+      }
     }
   }
 
@@ -716,7 +711,7 @@ public class SegmentMetadataCache
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.info("Refreshing metadata for dataSource[%s].", dataSource);
+    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -742,7 +737,7 @@ public class SegmentMetadataCache
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.info("Segment[%s] has signature[%s].", segmentId, rowSignature);
+          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
           segmentMetadataInfo.compute(
               dataSource,
               (datasourceKey, dataSourceSegments) -> {
@@ -794,7 +789,7 @@ public class SegmentMetadataCache
 
     emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
 
-    log.info(
+    log.debug(
         "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         refreshDurationMillis,
@@ -934,7 +929,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  public static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
+  static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
@@ -971,7 +966,7 @@ public class SegmentMetadataCache
    * This method is not thread-safe and must be used only in unit tests.
    */
   @VisibleForTesting
-  public void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
+  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
   {
     final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
         .computeIfAbsent(
