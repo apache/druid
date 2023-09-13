@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.audit.TestAuditManager;
+import org.apache.druid.audit.NoopAuditManager;
 import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -80,7 +80,7 @@ public class ConfigManagerTest
         configManager,
         new ObjectMapper(),
         new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
-        new TestAuditManager()
+        new NoopAuditManager()
     );
     configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
   }

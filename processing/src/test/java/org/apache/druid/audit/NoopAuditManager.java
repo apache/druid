@@ -25,7 +25,7 @@ import org.skife.jdbi.v2.Handle;
 
 import java.util.List;
 
-public class TestAuditManager implements AuditManager
+public class NoopAuditManager implements AuditManager
 {
   @Override
   public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
