@@ -218,8 +218,8 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   }
 
   /**
-   * This conversion is required to make the newer {@link org.apache.druid.client.QueryableCoordinatorServerView}
-   * implement methods from {@link org.apache.druid.client.CoordinatorTimeline}
+   * This conversion, allows {@link org.apache.druid.client.QueryableCoordinatorServerView}
+   * to implement methods from {@link org.apache.druid.client.CoordinatorTimeline}.
    *
    * @return {@link SegmentLoadInfo}
    */

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import io.vavr.Predicates;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -32,7 +33,7 @@ import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.SegmentMetadataCache;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
+import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
@@ -40,20 +41,34 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
- *
+ * Broker-side cache of segment metadata that combines segments to identify
+ * datasources which become "tables" in Calcite. This cache provides the "physical"
+ * metadata about a datasource which is blended with catalog "logical" metadata
+ * to provide the final user-view of each datasource.
+ * <p>
+ * This class extends {@link SegmentMetadataCache} and introduces following changes,
+ * <ul>
+ *   <li>The refresh mechanism now includes polling the coordinator for dataSource schema,
+ *       and falling back to running {@link org.apache.druid.query.metadata.metadata.SegmentMetadataQuery}.</li>
+ *   <li>It builds and caches {@link PhysicalDatasourceMetadata} object as table
+ *       schema instead of {@link DataSourceInformation}. </li>
+ * </ul>
  */
 @ManageLifecycle
 public class BrokerSegmentMetadataCache extends SegmentMetadataCache
 {
   private static final EmittingLogger log = new EmittingLogger(BrokerSegmentMetadataCache.class);
+
   private final PhysicalDatasourceMetadataBuilder physicalDatasourceMetadataBuilder;
 
-  private final ConcurrentMap<String, DatasourceTable.PhysicalDatasourceMetadata> tables = new ConcurrentHashMap<>();
-
+  /**
+   * Manages tables of PhysicalDataSourceMetadata. This manager is used to retrieve and store
+   * information related to dataSources.
+   * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
+   */
+  private final TableManager<PhysicalDatasourceMetadata> tableManager = new TableManager<>();
   private final CoordinatorClient coordinatorClient;
 
   @Inject
@@ -80,6 +95,11 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     this.coordinatorClient = coordinatorClient;
   }
 
+  /**
+   * Refreshes the set of segments in two steps:
+   * 1. Polls the coordinator for the dataSource schema to update the {@code tables}.
+   * 2. Refreshes the remaining set of segments by executing a SegmentMetadataQuery.
+   */
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
@@ -87,7 +107,7 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
 
     segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
 
-    Map<String, DatasourceTable.PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
+    Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 
     // Fetch dataSource information from the Coordinator
     try {
@@ -101,7 +121,10 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
       log.warn(e, "Exception querying coordinator to fetch dataSourceInformation.");
     }
 
-    tables.putAll(polledDataSourceMetadata);
+    // remove any extra dataSources returned
+    polledDataSourceMetadata.keySet().removeIf(Predicates.not(dataSourcesToQuery::contains));
+
+    tableManager.putAll(polledDataSourceMetadata);
 
     // Remove segments of the dataSource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
@@ -128,44 +151,47 @@ public class BrokerSegmentMetadataCache extends SegmentMetadataCache
     }
   }
 
+  /**
+   * Build table schema and convert DataSourceInformation to PhysicalDatasourceMetadata.
+   */
   @Override
-  public void rebuildDatasource(String dataSource)
+  protected void rebuildDatasource(String dataSource)
   {
     final DataSourceInformation druidTable = buildDruidTable(dataSource);
     if (druidTable == null) {
       log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-      tables.remove(dataSource);
+      tableManager.removeFromTable(dataSource);
       return;
     }
-    final DatasourceTable.PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
-    final DatasourceTable.PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
+    final PhysicalDatasourceMetadata physicalDatasourceMetadata = physicalDatasourceMetadataBuilder.build(druidTable);
+    final PhysicalDatasourceMetadata oldTable = tableManager.put(dataSource, physicalDatasourceMetadata);
     if (oldTable == null || !oldTable.rowSignature().equals(physicalDatasourceMetadata.rowSignature())) {
       log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
     } else {
-      log.info("[%s] signature is unchanged.", dataSource);
+      log.debug("[%s] signature is unchanged.", dataSource);
     }
   }
 
   @Override
   public Set<String> getDatasourceNames()
   {
-    return tables.keySet();
+    return tableManager.getKeySet();
+  }
+
+  public PhysicalDatasourceMetadata getPhysicalDatasourceMetadata(String name)
+  {
+    return tableManager.get(name);
   }
 
   @Override
-  protected void removeFromTable(String s)
+  public DataSourceInformation getDatasource(String name)
   {
-    tables.remove(s);
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  protected boolean tablesContains(String s)
+  public Map<String, DataSourceInformation> getDataSourceInformationMap()
   {
-    return tables.containsKey(s);
-  }
-
-  public DatasourceTable.PhysicalDatasourceMetadata getPhysicalDatasourceMetadata(String name)
-  {
-    return tables.get(name);
+    throw new UnsupportedOperationException();
   }
 }

@@ -83,6 +83,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -234,6 +235,9 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     return runningSchema;
   }
 
+  /**
+   * Test the case when coordinator returns information for all the requested dataSources
+   */
   @Test
   public void testGetAllDsSchemaFromCoordinator() throws InterruptedException
   {
@@ -280,6 +284,10 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertEquals(foo3RowSignature, schema.getPhysicalDatasourceMetadata("foo3").rowSignature());
   }
 
+  /**
+   * Test the case when Coordinator returns information for a subset of dataSources.
+   * Check if SegmentMetadataQuery is fired for segments of the remaining dataSources.
+   */
   @Test
   public void testGetFewDsSchemaFromCoordinator() throws InterruptedException
   {
@@ -700,7 +708,12 @@ public class BrokerSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    checkStaleDatasourceRefresh(schema);
+    Set<SegmentId> segments = new HashSet<>();
+    Set<String> datasources = new HashSet<>();
+    datasources.add("wat");
+    Assert.assertNull(schema.getPhysicalDatasourceMetadata("wat"));
+    schema.refresh(segments, datasources);
+    Assert.assertNull(schema.getPhysicalDatasourceMetadata("wat"));
   }
 
   @Test

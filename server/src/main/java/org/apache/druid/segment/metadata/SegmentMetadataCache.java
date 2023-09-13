@@ -92,10 +92,8 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * Broker-side cache of segment metadata which combines segments to identify
- * datasources which become "tables" in Calcite. This cache provides the "physical"
- * metadata about a datasource which is blended with catalog "logical" metadata
- * to provide the final user-view of each datasource.
+ * Coordinator-side cache of segment metadata that combines segments to identify
+ * datasources.The cache provides metadata about a dataSource, see {@link DataSourceInformation}.
  */
 @ManageLifecycle
 public class SegmentMetadataCache
@@ -121,10 +119,11 @@ public class SegmentMetadataCache
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
   /**
-   * Map of DataSource -> DruidTable.
-   * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
+   * Manages tables of DataSourceInformation. This manager is used to retrieve and store
+   * information related to dataSources.
+   * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  private final ConcurrentMap<String, DataSourceInformation> tables = new ConcurrentHashMap<>();
+  private final TableManager<DataSourceInformation> tableManager = new TableManager<>();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -281,16 +280,6 @@ public class SegmentMetadataCache
     );
   }
 
-  protected void removeFromTable(String s)
-  {
-    tables.remove(s);
-  }
-
-  protected boolean tablesContains(String s)
-  {
-    return tables.containsKey(s);
-  }
-
   private void startCacheExec()
   {
     cacheExec.submit(
@@ -426,15 +415,15 @@ public class SegmentMetadataCache
     }
   }
 
-  public void rebuildDatasource(String dataSource)
+  protected void rebuildDatasource(String dataSource)
   {
     final DataSourceInformation druidTable = buildDruidTable(dataSource);
     if (druidTable == null) {
       log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-      tables.remove(dataSource);
+      tableManager.removeFromTable(dataSource);
       return;
     }
-    final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
+    final DataSourceInformation oldTable = tableManager.put(dataSource, druidTable);
     if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
       log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
     } else {
@@ -456,17 +445,17 @@ public class SegmentMetadataCache
 
   public DataSourceInformation getDatasource(String name)
   {
-    return tables.get(name);
+    return tableManager.get(name);
   }
 
   public Map<String, DataSourceInformation> getDataSourceInformationMap()
   {
-    return ImmutableMap.copyOf(tables);
+    return tableManager.getAll();
   }
 
   public Set<String> getDatasourceNames()
   {
-    return tables.keySet();
+    return tableManager.getKeySet();
   }
 
   @VisibleForTesting
@@ -533,7 +522,7 @@ public class SegmentMetadataCache
             }
         );
       }
-      if (!tablesContains(segment.getDataSource())) {
+      if (!tableManager.tablesContains(segment.getDataSource())) {
         refreshImmediately = true;
       }
 
@@ -564,7 +553,7 @@ public class SegmentMetadataCache
                 totalSegments--;
               }
               if (segmentsMap.isEmpty()) {
-                removeFromTable(segment.getDataSource());
+                tableManager.removeFromTable(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {
@@ -1125,6 +1114,51 @@ public class SegmentMetadataCache
     public String toString()
     {
       return NAME;
+    }
+  }
+
+  /**
+   * A generic class for managing table.
+   *
+   * @param <T>  The type of data associated with the tables (e.g., DataSourceInformation, PhysicalDataSourceMetadata).
+   */
+  public static class TableManager<T>
+  {
+    private final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
+
+    public void removeFromTable(String s)
+    {
+      tables.remove(s);
+    }
+
+    public boolean tablesContains(String s)
+    {
+      return tables.containsKey(s);
+    }
+
+    public T get(String s)
+    {
+      return tables.get(s);
+    }
+
+    public Set<String> getKeySet()
+    {
+      return tables.keySet();
+    }
+
+    public Map<String, T> getAll()
+    {
+      return ImmutableMap.copyOf(tables);
+    }
+
+    public T put(String key, T value)
+    {
+      return tables.put(key, value);
+    }
+
+    public void putAll(Map<String, T> anotherTable)
+    {
+      tables.putAll(anotherTable);
     }
   }
 }

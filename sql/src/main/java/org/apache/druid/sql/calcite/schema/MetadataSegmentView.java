@@ -53,7 +53,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * This class polls the Coordinator in background to keep the latest segments.
- * Provides {@link #getSegments()} for others to get segments in metadata store.
+ * Provides {@link #getSegments()} for others to get the segments.
  *
  * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
  * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In

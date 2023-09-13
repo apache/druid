@@ -23,14 +23,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.joda.time.Period;
 
+/**
+ * Broker-side configuration class for managing segment polling from the Coordinator and
+ * customizing properties related to the SegmentMetadata cache.
+ * <p>
+ * The property {@link #awaitInitializationOnStart} is overridden in this class with a default value
+ * of {@code true}, which differs from the parent class. This ensures that the SegmentMetadata cache is
+ * fully initialized before other startup processes proceed.
+ */
 public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 {
+  // A flag indicating whether to cache polled segments from the Coordinator.
   @JsonProperty
   private boolean metadataSegmentCacheEnable = true;
 
+  // Interval for polling segments from the coordinator.
   @JsonProperty
   private long metadataSegmentPollPeriod = 60000;
 
+  // A flag indicating whether to wait for cache initialization during startup.
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
@@ -58,6 +69,9 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
+  /**
+   * This property is overriden on the broker, so that the cache initialization blocks startup.
+   */
   @Override
   public boolean isAwaitInitializationOnStart()
   {

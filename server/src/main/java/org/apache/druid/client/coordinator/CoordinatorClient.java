@@ -48,7 +48,7 @@ public interface CoordinatorClient
   ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals);
 
   /**
-   * Fetches information for the given dataSources.
+   * Retrieves detailed metadata information for the specified data sources, which includes {@code RowSignature}.
    */
   ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
 

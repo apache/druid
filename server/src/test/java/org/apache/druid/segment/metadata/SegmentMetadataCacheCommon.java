@@ -80,10 +80,8 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -345,16 +343,6 @@ public abstract class SegmentMetadataCacheCommon
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );
-  }
-
-  public void checkStaleDatasourceRefresh(SegmentMetadataCache schema) throws IOException
-  {
-    Set<SegmentId> segments = new HashSet<>();
-    Set<String> datasources = new HashSet<>();
-    datasources.add("wat");
-    Assert.assertNull(schema.getDatasource("wat"));
-    schema.refresh(segments, datasources);
-    Assert.assertNull(schema.getDatasource("wat"));
   }
 
   public void checkRefreshShouldEmitMetrics(

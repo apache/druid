@@ -49,6 +49,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -905,7 +906,12 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    checkStaleDatasourceRefresh(schema);
+    Set<SegmentId> segments = new HashSet<>();
+    Set<String> datasources = new HashSet<>();
+    datasources.add("wat");
+    Assert.assertNull(schema.getDatasource("wat"));
+    schema.refresh(segments, datasources);
+    Assert.assertNull(schema.getDatasource("wat"));
   }
 
   @Test

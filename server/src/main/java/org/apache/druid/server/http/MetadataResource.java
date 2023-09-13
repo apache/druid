@@ -28,7 +28,6 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.DataSourceInformation;
@@ -72,7 +71,6 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
-  private final Logger log = new Logger(MetadataResource.class);
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -221,11 +219,13 @@ public class MetadataResource
               replicationFactor,
               numRows,
               // published segment can't be realtime
-              false);
+              false
+          );
         });
 
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
+    // conditionally add realtime segments information
     if (null != includeRealtimeSegments && null != segmentMetadataCache) {
       final Stream<SegmentStatusInCluster> realtimeSegmentStatus = segmentMetadataCache
           .getSegmentMetadataSnapshot()
@@ -357,7 +357,7 @@ public class MetadataResource
   }
 
   /**
-   * Return schema for the given dataSources.
+   * API to fetch {@link DataSourceInformation} for the specified dataSources.
    */
   @POST
   @Path("/dataSourceInformation")

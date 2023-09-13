@@ -44,11 +44,12 @@ import java.util.Map;
 /**
  * ServerView of coordinator for the state of segments being loaded in the cluster.
  * <br>
- * This class simply extends {@link BrokerServerView} and implements methods from {@link CoordinatorTimeline}
- * for backward compatibility. This newer implementation is primarily required by
- * {@link org.apache.druid.segment.metadata.SegmentMetadataCache} which will run on the Coordinator.
+ * This class extends {@link BrokerServerView} and implements {@link CoordinatorTimeline}.
+ * The main distinction between this class and {@link CoordinatorServerView} is the maintenance of a timeline
+ * of {@link ServerSelector} objects, while the other class stores {@link SegmentLoadInfo} object in its timeline.
  * <br>
- * Once this class is stable {@link CoordinatorServerView} should be removed.
+ * A new timeline class (implementing {@link TimelineServerView}) is required for
+ * {@link org.apache.druid.segment.metadata.SegmentMetadataCache}, which will run on the Coordinator.
  */
 @ManageLifecycle
 public class QueryableCoordinatorServerView extends BrokerServerView implements CoordinatorTimeline
@@ -78,8 +79,8 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
   }
 
   /**
-   * Internally this class maintains a timeline of {@link ServerSelector}.
-   * This method returns a newline of the object {@link SegmentLoadInfo}.
+   * This class maintains a timeline of {@link ServerSelector} objects.
+   * This method returns a new timeline of the object {@link SegmentLoadInfo}.
    *
    * @param dataSource dataSoruce
    * @return timeline for the given dataSource

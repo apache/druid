@@ -23,10 +23,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.joda.time.Period;
 
+/**
+ * Coordinator-side configuration class for customizing properties related to the SegmentMetadata cache.
+ */
 public class SegmentMetadataCacheConfig
 {
+  // A flag indicating whether to wait for cache initialization during startup.
   @JsonProperty
   private boolean awaitInitializationOnStart = false;
+
+  // Cache refresh interval.
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
 
