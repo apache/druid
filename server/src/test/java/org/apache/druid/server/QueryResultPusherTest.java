@@ -40,38 +40,42 @@ import com.google.common.base.Throwables;
 public class QueryResultPusherTest
 {
   @Test
-  public void saf()
+  public void testResultPusherRetainsNestedExceptionBacktraces()
   {
     HttpServletRequest request = mock(HttpServletRequest.class);
     ObjectMapper jsonMapper = new ObjectMapper();
     ResponseContextConfig responseContextConfig = ResponseContextConfig.newConfig(true);
     DruidNode selfNode = mock(DruidNode.class);
     QueryResource.QueryMetricCounter counter = mock(QueryResource.QueryMetricCounter.class);
-    String queryId = "x";
+    String queryId = "someQuery";
     MediaType contentType = null;
     Map<String, String> extraHeaders = new HashMap<String, String>();
 
     ResultsWriter resultWriter = mock(ResultsWriter.class);
 
-    QueryResultPusher q = new QueryResultPusher(request, jsonMapper, responseContextConfig, selfNode, counter, queryId,
-        contentType, extraHeaders)
+    QueryResultPusher pusher = new QueryResultPusher(
+        request,
+        jsonMapper,
+        responseContextConfig,
+        selfNode,
+        counter,
+        queryId,
+        contentType,
+        extraHeaders)
     {
 
       @Override
       public void writeException(Exception e, OutputStream out) throws IOException
       {
         throw new RuntimeException("Unimplemented!");
-
       }
 
       @Override
       public ResultsWriter start()
       {
         return resultWriter;
-
       }
     };
-
 
     String embeddedExceptionMessage = "Embedded Exception Message!";
     RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
@@ -79,11 +83,10 @@ public class QueryResultPusherTest
 
     when(resultWriter.getQueryResponse()).thenThrow(topException);
 
-    // launch
-    q.push();
+    // run pusher
+    pusher.push();
 
-    verify(resultWriter).recordFailure(argThat( e -> Throwables.getStackTraceAsString ( e ).contains(embeddedExceptionMessage) ));
-
+    verify(resultWriter)
+        .recordFailure(argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)));
   }
-
 }
