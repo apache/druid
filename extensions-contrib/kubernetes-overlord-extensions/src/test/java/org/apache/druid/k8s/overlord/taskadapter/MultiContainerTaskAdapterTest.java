@@ -104,7 +104,7 @@ class MultiContainerTaskAdapterTest
         jsonMapper,
         taskLogs
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,
@@ -153,7 +153,7 @@ class MultiContainerTaskAdapterTest
         jsonMapper,
         taskLogs
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     PodSpec spec = pod.getSpec();
     K8sTaskAdapter.massageSpec(spec, "primary");
     Job actual = adapter.createJobFromPodSpec(
@@ -196,6 +196,7 @@ class MultiContainerTaskAdapterTest
         .withPrimaryContainerName("primary")
         .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
         .build();
+
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
         config,
@@ -205,7 +206,7 @@ class MultiContainerTaskAdapterTest
         jsonMapper,
         taskLogs
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     PodSpec spec = pod.getSpec();
     K8sTaskAdapter.massageSpec(spec, config.getPrimaryContainerName());
     Job actual = adapter.createJobFromPodSpec(

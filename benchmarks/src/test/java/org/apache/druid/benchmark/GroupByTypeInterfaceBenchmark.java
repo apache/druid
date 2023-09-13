@@ -52,13 +52,10 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
@@ -127,9 +124,6 @@ public class GroupByTypeInterfaceBenchmark
 
   @Param({"100000"})
   private int rowsPerSegment;
-
-  @Param({"v2"})
-  private String defaultStrategy;
 
   @Param({"all"})
   private String queryGranularity;
@@ -346,11 +340,6 @@ public class GroupByTypeInterfaceBenchmark
     );
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return defaultStrategy;
-      }
 
       @Override
       public int getBufferGrouperInitialBuckets()
@@ -365,8 +354,6 @@ public class GroupByTypeInterfaceBenchmark
       }
     };
     config.setSingleThreaded(false);
-    config.setMaxIntermediateRows(Integer.MAX_VALUE);
-    config.setMaxResults(Integer.MAX_VALUE);
 
     DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
     {
@@ -385,27 +372,19 @@ public class GroupByTypeInterfaceBenchmark
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        druidProcessingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            druidProcessingConfig,
-            configSupplier,
-            bufferPool,
-            mergePool,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergePool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
 
     factory = new GroupByQueryRunnerFactory(
-        strategySelector,
-        new GroupByQueryQueryToolChest(strategySelector)
+        groupingEngine,
+        new GroupByQueryQueryToolChest(groupingEngine)
     );
   }
 

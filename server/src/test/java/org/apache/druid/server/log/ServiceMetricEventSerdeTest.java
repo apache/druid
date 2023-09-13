@@ -38,7 +38,8 @@ public class ServiceMetricEventSerdeTest
     String timestamp = "2022-08-17T18:51:00.000Z";
     Event event = ServiceMetricEvent.builder()
                                     .setFeed("my-feed")
-                                    .build(DateTimes.of(timestamp), "m1", 1)
+                                    .setCreatedTime(DateTimes.of(timestamp))
+                                    .setMetric("m1", 1)
                                     .build("my-service", "my-host");
 
     String actual = mapper.writeValueAsString(event.toMap());

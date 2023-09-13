@@ -46,6 +46,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final int curatorLoadQueuePeonNumCallbackThreads;
   private final Duration httpLoadQueuePeonHostTimeout;
   private final int httpLoadQueuePeonBatchSize;
+  private final Duration coordinatorKillBufferPeriod;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -70,7 +71,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration httpLoadQueuePeonRepeatDelay,
       Duration httpLoadQueuePeonHostTimeout,
       int httpLoadQueuePeonBatchSize,
-      int curatorLoadQueuePeonNumCallbackThreads
+      int curatorLoadQueuePeonNumCallbackThreads,
+      Duration coordinatorKillBufferPeriod
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -96,6 +98,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.httpLoadQueuePeonHostTimeout = httpLoadQueuePeonHostTimeout;
     this.httpLoadQueuePeonBatchSize = httpLoadQueuePeonBatchSize;
     this.curatorLoadQueuePeonNumCallbackThreads = curatorLoadQueuePeonNumCallbackThreads;
+    this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
   }
 
   @Override
@@ -236,6 +239,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return httpLoadQueuePeonBatchSize;
   }
 
+  @Override
+  public Duration getCoordinatorKillBufferPeriod()
+  {
+    return coordinatorKillBufferPeriod;
+  }
+
   public static class Builder
   {
     private static final Duration DEFAULT_COORDINATOR_START_DELAY = new Duration("PT300s");
@@ -261,6 +270,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final int DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE = 1;
     private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = new Duration("PT86400s");
     private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
+    private static final Duration DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD = new Duration("PT86400s");
 
 
     private Duration coordinatorStartDelay;
@@ -286,6 +296,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Integer httpLoadQueuePeonBatchSize;
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
+    private Duration coordinatorKillBufferPeriod;
 
     public Builder()
     {
@@ -429,6 +440,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
+    public Builder withCoordinatorKillBufferPeriod(Duration coordinatorKillBufferPeriod)
+    {
+      this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
+      return this;
+    }
+
     public TestDruidCoordinatorConfig build()
     {
       return new TestDruidCoordinatorConfig(
@@ -455,7 +472,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           httpLoadQueuePeonHostTimeout == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_HOST_TIMEOUT : httpLoadQueuePeonHostTimeout,
           httpLoadQueuePeonBatchSize == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE : httpLoadQueuePeonBatchSize,
           curatorLoadQueuePeonNumCallbackThreads == null ? DEFAULT_CURATOR_LOAD_QUEUE_PEON_NUM_CALLBACK_THREADS
-                                                         : curatorLoadQueuePeonNumCallbackThreads
+                                                         : curatorLoadQueuePeonNumCallbackThreads,
+          coordinatorKillBufferPeriod == null ? DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD : coordinatorKillBufferPeriod
       );
     }
 

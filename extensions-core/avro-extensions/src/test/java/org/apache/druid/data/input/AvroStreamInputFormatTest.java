@@ -47,7 +47,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -303,15 +303,15 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
 
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         ImmutableList.of(
-            new NestedDataDimensionSchema("someIntValueMap"),
-            new NestedDataDimensionSchema("someStringValueMap"),
-            new NestedDataDimensionSchema("someRecord"),
-            new NestedDataDimensionSchema("someRecordArray"),
+            new AutoTypeColumnSchema("someIntValueMap"),
+            new AutoTypeColumnSchema("someStringValueMap"),
+            new AutoTypeColumnSchema("someRecord"),
+            new AutoTypeColumnSchema("someRecordArray"),
             new LongDimensionSchema("tSomeIntValueMap8"),
             new LongDimensionSchema("tSomeIntValueMap8_2"),
             new StringDimensionSchema("tSomeStringValueMap8"),
             new LongDimensionSchema("tSomeRecordSubLong"),
-            new NestedDataDimensionSchema("tSomeRecordArray0"),
+            new AutoTypeColumnSchema("tSomeRecordArray0"),
             new StringDimensionSchema("tSomeRecordArray0nestedString")
         )
     );

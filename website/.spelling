@@ -53,6 +53,7 @@ Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
+CLI
 DDL
 DML
 DNS
@@ -439,6 +440,7 @@ preemptible
 prefetch
 prefetched
 prefetching
+precached
 prepend
 prepended
 prepending
@@ -746,6 +748,7 @@ TooManyWorkers
 NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
+TIMED_OUT
 # MSQ context parameters
 maxNumTasks
 taskAssignment
@@ -1098,6 +1101,7 @@ numProcessors
 q.size
 repartitionTransitionDuration
 replicastaskCounttaskCount
+resetOffsets
 resetuseEarliestSequenceNumberPOST
 resumePOST
 statusrecentErrorsdruid.supervisor.maxStoredExceptionEventsstatedetailedStatestatedetailedStatestatestatePENDINGRUNNINGSUSPENDEDSTOPPINGUNHEALTHY_SUPERVISORUNHEALTHY_TASKSdetailedStatestatedruid.supervisor.unhealthinessThresholddruid.supervisor.taskUnhealthinessThresholdtaskDurationtaskCountreplicasdetailedStatedetailedStateRUNNINGPOST
@@ -1256,6 +1260,7 @@ KafkaStringHeaderFormat
 kafka.header.
 kafka.key
 kafka.timestamp
+kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
@@ -2034,6 +2039,8 @@ orderbys
 org.apache.druid
 org.apache.druid.jetty.RequestLog
 org.apache.hadoop
+OSHI
+OshiSysMonitor
 overlord.html
 pendingSegments
 pre-flight
@@ -2053,6 +2060,7 @@ slf4j
 sql
 sqlQuery
 successfulSending
+[S]igar
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
@@ -2311,5 +2319,6 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+taskslots
 loadstatus
 sqlQueryId

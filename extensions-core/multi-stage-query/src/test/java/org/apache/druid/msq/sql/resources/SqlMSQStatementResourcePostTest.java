@@ -72,7 +72,6 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         indexingServiceClient,
         localFileStorageConnector
@@ -273,7 +272,6 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     SqlStatementResource resourceWithDurableStorage = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         indexingServiceClient,
         NilStorageConnector.getInstance()

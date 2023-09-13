@@ -364,9 +364,29 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 16.0.1
+version: 31.1-jre
 libraries:
   - com.google.guava: guava
+
+---
+
+name: Failureaccess
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - com.google.guava: failureaccess
+
+---
+
+name: j2objc
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -3792,7 +3812,7 @@ name: ANTLR 4 Runtime
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.5.1
+version: 4.5.3
 copyright: The ANTLR Project
 license_file_path: licenses/bin/antlr4-runtime.BSD3
 libraries:
@@ -3965,8 +3985,8 @@ libraries:
 name: ICU4J
 license_category: binary
 module: java-core
-license_name: ICU License
-version: 55.1
+license_name: Unicode/ICU License
+version: 73.2
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -4402,7 +4422,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20190523-1.26.0
+version: v1-rev20230301-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4412,7 +4432,7 @@ name: Google Compute Engine API
 license_category: binary
 module: extensions/gce-extensions
 license_name: Apache License version 2.0
-version: v1-rev20190523-1.26.0
+version: v1-rev20230606-2.0.0
 libraries:
   - com.google.apis: google-api-services-compute
 
@@ -4422,7 +4442,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.32.1
+version: 2.2.0
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4432,7 +4452,7 @@ name: Google HTTP Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.35.2
+version: 1.42.3
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
@@ -4443,7 +4463,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.0
+version: 1.34.1
 libraries:
   - com.google.oauth-client: google-oauth-client
 
@@ -4854,8 +4874,8 @@ name: "@babel/code-frame"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.12.11
+copyright: The Babel Team
+version: 7.22.10
 license_file_path: licenses/bin/@babel-code-frame.MIT
 
 ---
@@ -4864,9 +4884,19 @@ name: "@babel/helper-module-imports"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Logan Smyth
-version: 7.13.12
+copyright: The Babel Team
+version: 7.22.5
 license_file_path: licenses/bin/@babel-helper-module-imports.MIT
+
+---
+
+name: "@babel/helper-string-parser"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.22.5
+license_file_path: licenses/bin/@babel-helper-string-parser.MIT
 
 ---
 
@@ -4875,7 +4905,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.19.1
+version: 7.22.5
 license_file_path: licenses/bin/@babel-helper-validator-identifier.MIT
 
 ---
@@ -4885,7 +4915,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.18.6
+version: 7.22.10
 license_file_path: licenses/bin/@babel-highlight.MIT
 
 ---
@@ -4904,8 +4934,8 @@ name: "@babel/types"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.14.4
+copyright: The Babel Team
+version: 7.22.11
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -4978,7 +5008,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.20.5
+version: 0.21.1
 
 ---
 

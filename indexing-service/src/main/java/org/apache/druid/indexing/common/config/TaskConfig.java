@@ -126,7 +126,7 @@ public class TaskConfig
   private final long tmpStorageBytesPerTask;
 
   @JsonProperty
-  private final boolean enableTaskPayloadManagerPerTask;
+  private final boolean useDeepStorageForTaskPayload;
 
   @JsonCreator
   public TaskConfig(
@@ -146,7 +146,7 @@ public class TaskConfig
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
       @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask,
-      @JsonProperty("enableTaskPayloadManagerPerTask") @Nullable boolean enableTaskPayloadManagerPerTask
+      @JsonProperty("useDeepStorageForTaskPayload") @Nullable boolean useDeepStorageForTaskPayload
   )
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
@@ -197,7 +197,7 @@ public class TaskConfig
 
     this.storeEmptyColumns = Configs.valueOrDefault(storeEmptyColumns, DEFAULT_STORE_EMPTY_COLUMNS);
     this.tmpStorageBytesPerTask = Configs.valueOrDefault(tmpStorageBytesPerTask, DEFAULT_TMP_STORAGE_BYTES_PER_TASK);
-    this.enableTaskPayloadManagerPerTask = enableTaskPayloadManagerPerTask;
+    this.useDeepStorageForTaskPayload = useDeepStorageForTaskPayload;
   }
 
   private TaskConfig(
@@ -216,7 +216,7 @@ public class TaskConfig
       boolean storeEmptyColumns,
       boolean encapsulatedTask,
       long tmpStorageBytesPerTask,
-      boolean enableTaskPayloadManagerPerTask
+      boolean useDeepStorageForTaskPayload
   )
   {
     this.baseDir = baseDir;
@@ -234,7 +234,7 @@ public class TaskConfig
     this.storeEmptyColumns = storeEmptyColumns;
     this.encapsulatedTask = encapsulatedTask;
     this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
-    this.enableTaskPayloadManagerPerTask = enableTaskPayloadManagerPerTask;
+    this.useDeepStorageForTaskPayload = useDeepStorageForTaskPayload;
   }
 
   @JsonProperty
@@ -346,9 +346,9 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean isEnableTaskPayloadManagerPerTask()
+  public boolean isUseDeepStorageForTaskPayload()
   {
-    return enableTaskPayloadManagerPerTask;
+    return useDeepStorageForTaskPayload;
   }
 
   @JsonProperty
@@ -384,7 +384,7 @@ public class TaskConfig
         storeEmptyColumns,
         encapsulatedTask,
         tmpStorageBytesPerTask,
-        enableTaskPayloadManagerPerTask
+        useDeepStorageForTaskPayload
     );
   }
 
@@ -406,7 +406,7 @@ public class TaskConfig
         storeEmptyColumns,
         encapsulatedTask,
         tmpStorageBytesPerTask,
-        enableTaskPayloadManagerPerTask
+        useDeepStorageForTaskPayload
     );
   }
 }

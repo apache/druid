@@ -143,16 +143,7 @@ public class PodTemplateTaskAdapterTest
         taskLogs
     );
 
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
@@ -185,17 +176,7 @@ public class PodTemplateTaskAdapterTest
         taskLogs
     );
 
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
-
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
 
@@ -242,17 +223,7 @@ public class PodTemplateTaskAdapterTest
         taskLogs
     );
 
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
-
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
@@ -284,8 +255,6 @@ public class PodTemplateTaskAdapterTest
         "datasource",
         0,
         0,
-        null,
-        null,
         null
     );
 
@@ -444,7 +413,7 @@ public class PodTemplateTaskAdapterTest
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
     Task actual = adapter.toTask(job);
-    Task expected = NoopTask.create("id", 1);
+    Task expected = K8sTestUtils.createTask("id", 1);
 
     Assertions.assertEquals(expected, actual);
   }
@@ -458,7 +427,7 @@ public class PodTemplateTaskAdapterTest
     Properties props = new Properties();
     props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Task expected = NoopTask.create("id", 1);
+    Task expected = K8sTestUtils.createTask("id", 1);
     TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
     Mockito.when(mockTestLogs.streamTaskPayload("id")).thenReturn(Optional.of(
         new ByteArrayInputStream(mapper.writeValueAsString(expected).getBytes(Charset.defaultCharset()))
@@ -503,8 +472,6 @@ public class PodTemplateTaskAdapterTest
         "data_source",
         0,
         0,
-        null,
-        null,
         null
     );
 
@@ -565,7 +532,7 @@ public class PodTemplateTaskAdapterTest
     expectedAnnotations.remove(DruidK8sConstants.TASK);
     expected.getSpec().getTemplate().getMetadata().setAnnotations(expectedAnnotations);
 
-    Assertions.assertEquals(actual, expected);
+    Assertions.assertEquals(expected, actual);
     Assertions.assertEquals(
         Base64Compression.decompressBase64(actualTaskAnnotation),
         Base64Compression.decompressBase64(expectedTaskAnnotation)

@@ -523,6 +523,7 @@ class K8sTaskAdapterTest
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
         .build();
+
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -532,7 +533,7 @@ class K8sTaskAdapterTest
         jsonMapper,
         taskLogs
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,
@@ -604,4 +605,5 @@ class K8sTaskAdapterTest
     );
     assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
+
 }

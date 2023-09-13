@@ -44,7 +44,7 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
-  public static final long DEFAULT_MAX_SUBQUERY_BYTES = -1L;
+  public static final String DEFAULT_MAX_SUBQUERY_BYTES = "unlimited";
 
   private static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
@@ -61,7 +61,7 @@ public class ServerConfig
       long defaultQueryTimeout,
       long maxScatterGatherBytes,
       int maxSubqueryRows,
-      long maxSubqueryBytes,
+      String maxSubqueryBytes,
       boolean useNestedForUnknownTypeInSubquery,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
@@ -140,7 +140,7 @@ public class ServerConfig
   private int maxSubqueryRows = 100000;
 
   @JsonProperty
-  private long maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
+  private String maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
 
   @JsonProperty
   private boolean useNestedForUnknownTypeInSubquery = DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
@@ -231,7 +231,7 @@ public class ServerConfig
     return maxSubqueryRows;
   }
 
-  public long getMaxSubqueryBytes()
+  public String getMaxSubqueryBytes()
   {
     return maxSubqueryBytes;
   }
@@ -322,7 +322,7 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxSubqueryRows == that.maxSubqueryRows &&
-           maxSubqueryBytes == that.maxSubqueryBytes &&
+           Objects.equals(maxSubqueryBytes, that.maxSubqueryBytes) &&
            useNestedForUnknownTypeInSubquery == that.useNestedForUnknownTypeInSubquery &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&

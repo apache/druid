@@ -59,6 +59,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.druid.segment.filter.FilterTestUtils.not;
 import static org.apache.druid.segment.filter.FilterTestUtils.selector;
 import static org.apache.druid.segment.filter.Filters.and;
 import static org.apache.druid.segment.filter.Filters.or;
@@ -467,15 +468,54 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   public void test_nested_filters_unnested_and_topLevelAND2sdf()
   {
     final Filter testQueryFilter = and(ImmutableList.of(
-        selector(OUTPUT_COLUMN_NAME, "3"),
+        not(selector(OUTPUT_COLUMN_NAME, "3")),
         selector(COLUMNNAME, "2")
     ));
     testComputeBaseAndPostUnnestFilters(
         testQueryFilter,
-        "(multi-string1 = 3 && multi-string1 = 2)",
-        "(unnested-multi-string1 = 3 && multi-string1 = 2)"
+        "multi-string1 = 2",
+        "(~(unnested-multi-string1 = 3) && multi-string1 = 2)"
     );
   }
+
+  @Test
+  public void test_nested_filters_unnested_and_topLevelOR2sdf()
+  {
+    final Filter testQueryFilter = or(ImmutableList.of(
+        not(selector(OUTPUT_COLUMN_NAME, "3")),
+        selector(COLUMNNAME, "2")
+    ));
+    testComputeBaseAndPostUnnestFilters(
+        testQueryFilter,
+        "(multi-string1 = 2)",
+        "(~(unnested-multi-string1 = 3) || multi-string1 = 2)"
+    );
+  }
+
+  @Test
+  public void test_not_pushdown_not_filter()
+  {
+    final Filter testQueryFilter = and(ImmutableList.of(
+        not(selector(OUTPUT_COLUMN_NAME, "3")),
+        or(ImmutableList.of(
+            or(ImmutableList.of(
+                selector("newcol", "2"),
+                selector(COLUMNNAME, "2"),
+                and(ImmutableList.of(
+                    selector("newcol", "3"),
+                    selector(COLUMNNAME, "7")
+                ))
+            )),
+            selector(OUTPUT_COLUMN_NAME, "1")
+        ))
+    ));
+    testComputeBaseAndPostUnnestFilters(
+        testQueryFilter,
+        "(newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || multi-string1 = 1)",
+        "(~(unnested-multi-string1 = 3) && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
+    );
+  }
+
   @Test
   public void test_pushdown_filters_unnested_dimension_with_unnest_adapters()
   {
