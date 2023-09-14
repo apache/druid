@@ -16,5 +16,5 @@
  * limitations under the License.
  */
 
-export * from './misc';
 export * from './get-auto-granularity';
+export * from './misc';

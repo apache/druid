@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { SqlExpression, fitFilterPattern, SqlMulti } from '@druid-toolkit/query';
-import { Duration, day, hour } from 'chronoshift';
+import type { SqlExpression } from '@druid-toolkit/query';
+import { fitFilterPattern, SqlMulti } from '@druid-toolkit/query';
+import { day, Duration, hour } from 'chronoshift';
 
 function getCanonicalDuration(
   expression: SqlExpression,
@@ -40,6 +41,11 @@ function getCanonicalDuration(
           if (canonicalDuration !== undefined) return canonicalDuration;
         }
       }
+
+      break;
+
+    default:
+      break;
   }
 
   return undefined;

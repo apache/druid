@@ -18,10 +18,10 @@
 
 import { C, F, L, SqlCase, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
+import { Duration, Timezone } from 'chronoshift';
 import * as echarts from 'echarts';
 
 import { getAutoGranularity, getInitQuery } from '../utils';
-import { Duration, Timezone } from 'chronoshift';
 
 const TIME_NAME = '__t__';
 const METRIC_NAME = '__met__';
