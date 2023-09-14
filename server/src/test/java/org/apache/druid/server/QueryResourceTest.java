@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -105,6 +106,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class QueryResourceTest
 {
@@ -360,6 +368,100 @@ public class QueryResourceTest
         new DruidExceptionMatcher(DruidException.Persona.OPERATOR, DruidException.Category.RUNTIME_FAILURE, "general")
             .expectMessageIs("failing for coverage!")
     );
+
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs()
+                                       .get(0)
+                                       .getQuery()
+                                       .getContext()
+                                       .containsKey(overrideConfigKey));
+    Assert.assertEquals(
+        overrideConfigValue,
+        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
+  }
+
+
+  @Test
+  public void testQueryThrowsRuntimeExceptionFromLifecycleExecute() throws IOException
+  {
+    String embeddedExceptionMessage = "Embedded Exception Message!";
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+
+    final List<QueryLifecycle> lifeCycleSpys=new ArrayList<QueryLifecycle>();
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                throw new RuntimeException("something", new RuntimeException(embeddedExceptionMessage));
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(overrideConfig)
+        ) {
+
+          @Override
+          public QueryLifecycle factorize()
+          {
+            QueryLifecycle ret = spy(super.factorize());
+            lifeCycleSpys.add(ret);
+            return ret;
+          }
+        },
+        jsonMapper,
+        smileMapper,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    final Response response = expectSynchronousRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+
+    final ErrorResponse entity = (ErrorResponse) response.getEntity();
+    MatcherAssert.assertThat(
+        entity.getUnderlyingException(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.RUNTIME_FAILURE, "legacyQueryException")
+            .expectMessageIs("something")
+    );
+
+
+    assertEquals(1, lifeCycleSpys.size());
+    verify(lifeCycleSpys.get(0))
+        .emitLogsAndMetrics(
+            argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)),
+            any(),
+            anyLong());
 
     Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
     Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
