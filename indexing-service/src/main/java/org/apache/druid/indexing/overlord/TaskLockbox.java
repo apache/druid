@@ -494,8 +494,11 @@ public class TaskLockbox
         allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
-
       holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
+    }
+    catch (Exception e) {
+      holderList.clearStaleLocks(this);
+      throw e;
     }
     finally {
       giant.unlock();
@@ -711,7 +714,8 @@ public class TaskLockbox
    * for the given requests. Updates the holder with the allocated segment if
    * the allocation succeeds, otherwise marks it as failed.
    */
-  private void allocateSegmentIds(
+  @VisibleForTesting
+  void allocateSegmentIds(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
@@ -1598,6 +1602,28 @@ public class TaskLockbox
       return pending;
     }
 
+    /**
+     *  When task locks are acquired in an attempt to allocate segments, *  a new lock posse might be created.
+     *  However, the posse is associated with the task only after all the segment allocations have succeeded.
+     *  If there is an exception, unlock all such unassociated locks.
+     */
+    void clearStaleLocks(TaskLockbox taskLockbox)
+    {
+      all
+          .stream()
+          .filter(holder -> holder.acquiredLock != null
+                            && holder.taskLockPosse != null
+                            && !holder.taskLockPosse.containsTask(holder.task))
+          .forEach(holder -> {
+            holder.taskLockPosse.addTask(holder.task);
+            taskLockbox.unlock(
+                holder.task,
+                holder.acquiredLock.getInterval(),
+                holder.acquiredLock instanceof SegmentLock ? ((SegmentLock) holder.acquiredLock).getPartitionId() : null
+            );
+            log.info("Cleared stale lock[%s] for task[%s]", holder.acquiredLock, holder.task.getId());
+          });
+    }
 
     List<SegmentAllocateResult> getResults()
     {
@@ -1608,7 +1634,8 @@ public class TaskLockbox
   /**
    * Contains the task, request, lock and final result for a segment allocation.
    */
-  private static class SegmentAllocationHolder
+  @VisibleForTesting
+  static class SegmentAllocationHolder
   {
     final AllocationHolderList list;
 

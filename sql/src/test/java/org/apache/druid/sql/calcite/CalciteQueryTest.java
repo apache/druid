@@ -2461,7 +2461,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 "v0",
                                                 NullHandling.replaceWithDefault()
                                                 ? "(\"cnt\" == 1)"
-                                                : "((\"cnt\" == 1) > 0)",
+                                                : "istrue((\"cnt\" == 1))",
                                                 ColumnType.LONG
                                             ))
                                             .setDimensions(dimensions(

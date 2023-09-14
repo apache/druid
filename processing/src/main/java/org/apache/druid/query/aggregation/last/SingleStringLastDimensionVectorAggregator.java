@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.first;
+package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -29,15 +29,15 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class SingleStringFirstDimensionVectorAggregator implements VectorAggregator
+public class SingleStringLastDimensionVectorAggregator implements VectorAggregator
 {
   private final VectorValueSelector timeSelector;
   private final SingleValueDimensionVectorSelector valueDimensionVectorSelector;
-  private long firstTime;
+  private long lastTime;
   private final int maxStringBytes;
   private final boolean useDefault = NullHandling.replaceWithDefault();
 
-  public SingleStringFirstDimensionVectorAggregator(
+  public SingleStringLastDimensionVectorAggregator(
       VectorValueSelector timeSelector,
       SingleValueDimensionVectorSelector valueDimensionVectorSelector,
       int maxStringBytes
@@ -46,18 +46,18 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
     this.timeSelector = timeSelector;
     this.valueDimensionVectorSelector = valueDimensionVectorSelector;
     this.maxStringBytes = maxStringBytes;
-    this.firstTime = Long.MAX_VALUE;
+    this.lastTime = Long.MIN_VALUE;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MAX_VALUE);
+    buf.putLong(position, Long.MIN_VALUE);
     buf.put(
-        position + NumericFirstVectorAggregator.NULL_OFFSET,
+        position + NumericLastVectorAggregator.NULL_OFFSET,
         useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
     );
-    buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, 0);
+    buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, 0);
   }
 
   @Override
@@ -66,20 +66,20 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
     final long[] timeVector = timeSelector.getLongVector();
     final boolean[] nullTimeVector = timeSelector.getNullVector();
     final int[] valueVector = valueDimensionVectorSelector.getRowVector();
-    firstTime = buf.getLong(position);
+    lastTime = buf.getLong(position);
     int index;
 
-    long earliestTime;
-    for (index = startRow; index < endRow; index++) {
+    long latestTime;
+    for (index = endRow - 1; index >= startRow; index--) {
       if (nullTimeVector != null && nullTimeVector[index]) {
         continue;
       }
-      earliestTime = timeVector[index];
-      if (earliestTime < firstTime) {
-        firstTime = earliestTime;
-        buf.putLong(position, firstTime);
-        buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-        buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, valueVector[index]);
+      latestTime = timeVector[index];
+      if (latestTime > lastTime) {
+        lastTime = latestTime;
+        buf.putLong(position, lastTime);
+        buf.put(position + NumericLastVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+        buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, valueVector[index]);
       }
     }
   }
@@ -90,28 +90,27 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
     final long[] timeVector = timeSelector.getLongVector();
     final boolean[] nullTimeVector = timeSelector.getNullVector();
     final int[] values = valueDimensionVectorSelector.getRowVector();
-    for (int i = 0; i < numRows; i++) {
+    for (int i = numRows - 1; i >= 0; i--) {
       if (nullTimeVector != null && nullTimeVector[i]) {
         continue;
       }
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      long firstTime = buf.getLong(position);
-      if (timeVector[row] < firstTime) {
-        firstTime = timeVector[row];
-        buf.putLong(position, firstTime);
-        buf.put(position + NumericFirstVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-        buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, values[row]);
+      lastTime = buf.getLong(position);
+      if (timeVector[row] > lastTime) {
+        lastTime = timeVector[row];
+        buf.putLong(position, lastTime);
+        buf.put(position + NumericLastVectorAggregator.NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+        buf.putInt(position + NumericLastVectorAggregator.VALUE_OFFSET, values[row]);
       }
     }
-
   }
 
   @Nullable
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    int index = buf.getInt(position + NumericFirstVectorAggregator.VALUE_OFFSET);
+    int index = buf.getInt(position + NumericLastVectorAggregator.VALUE_OFFSET);
     long earliest = buf.getLong(position);
     String strValue = valueDimensionVectorSelector.lookupName(index);
     return new SerializablePairLongString(earliest, StringUtils.chop(strValue, maxStringBytes));
