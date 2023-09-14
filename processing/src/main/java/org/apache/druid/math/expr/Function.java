@@ -21,10 +21,12 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.Expr.ObjectBinding;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
@@ -59,17 +61,27 @@ import java.util.stream.Collectors;
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
-public interface Function extends NamedFunction
+public abstract class Function implements NamedFunction
 {
   /**
    * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
    */
-  ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
+  final ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings) {
+   try {
+     return realApply(args,bindings);
+   } catch (DruidException de) {
+     throw de;
+   } catch (Exception e) {
+     throw DruidException.defensive().build(e, "Invocation of %s encountered exception.", getClass().getName());
+   }
+ }
+
+  protected abstract ExprEval realApply(List<Expr> args, ObjectBinding bindings);
 
   /**
    * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to a scalar value
    */
-  default Set<Expr> getScalarInputs(List<Expr> args)
+  Set<Expr> getScalarInputs(List<Expr> args)
   {
     return ImmutableSet.copyOf(args);
   }
@@ -78,7 +90,7 @@ public interface Function extends NamedFunction
    * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to an array
    * value
    */
-  default Set<Expr> getArrayInputs(List<Expr> args)
+  Set<Expr> getArrayInputs(List<Expr> args)
   {
     return Collections.emptySet();
   }
@@ -86,7 +98,7 @@ public interface Function extends NamedFunction
   /**
    * Returns true if a function expects any array arguments
    */
-  default boolean hasArrayInputs()
+  boolean hasArrayInputs()
   {
     return false;
   }
@@ -95,7 +107,7 @@ public interface Function extends NamedFunction
    * Returns true if function produces an array. All {@link Function} implementations are expected to
    * exclusively produce either scalar or array values.
    */
-  default boolean hasArrayOutput()
+  boolean hasArrayOutput()
   {
     return false;
   }
@@ -105,7 +117,7 @@ public interface Function extends NamedFunction
    * everything that is feasible up front. Note that input type information is typically unavailable at the time
    * {@link Expr} are parsed, and so this method is incapable of performing complete validation.
    */
-  void validateArguments(List<Expr> args);
+  abstract void validateArguments(List<Expr> args);
 
 
   /**
@@ -114,7 +126,7 @@ public interface Function extends NamedFunction
    * @see Expr#getOutputType
    */
   @Nullable
-  ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
+abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
 
   /**
    * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
@@ -124,7 +136,7 @@ public interface Function extends NamedFunction
    * @see Expr#canVectorize(Expr.InputBindingInspector)
    * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, Expr, List)
    */
-  default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+  boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
   {
     return false;
   }
@@ -136,7 +148,7 @@ public interface Function extends NamedFunction
    * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
    * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
    */
-  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+  <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
     throw new UOE("Function[%s] is not vectorized", name());
   }
@@ -144,7 +156,7 @@ public interface Function extends NamedFunction
   /**
    * Base class for a single variable input {@link Function} implementation
    */
-  abstract class UnivariateFunction implements Function
+  static abstract class UnivariateFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -153,7 +165,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public final ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
@@ -165,7 +177,7 @@ public interface Function extends NamedFunction
   /**
    * Base class for a 2 variable input {@link Function} implementation
    */
-  abstract class BivariateFunction implements Function
+  static abstract class BivariateFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -174,7 +186,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
@@ -188,7 +200,7 @@ public interface Function extends NamedFunction
    * Base class for a single variable input mathematical {@link Function}, with specialized 'eval' implementations that
    * that operate on primitive number types
    */
-  abstract class UnivariateMathFunction extends UnivariateFunction
+  static abstract class UnivariateMathFunction extends UnivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval param)
@@ -237,7 +249,7 @@ public interface Function extends NamedFunction
   /**
    * Many math functions always output a {@link Double} primitive, regardless of input type.
    */
-  abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
+  static abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
   {
     @Nullable
     @Override
@@ -251,7 +263,7 @@ public interface Function extends NamedFunction
    * Base class for a 2 variable input mathematical {@link Function}, with specialized 'eval' implementations that
    * operate on primitive number types
    */
-  abstract class BivariateMathFunction extends BivariateFunction
+  static abstract class BivariateMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -368,7 +380,7 @@ public interface Function extends NamedFunction
   /**
    * {@link Function} that takes 1 array operand and 1 scalar operand
    */
-  abstract class ArrayScalarFunction implements Function
+  abstract class ArrayScalarFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -395,7 +407,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arrayExpr = getArrayArgument(args).eval(bindings);
       final ExprEval scalarExpr = getScalarArgument(args).eval(bindings);
@@ -421,7 +433,7 @@ public interface Function extends NamedFunction
   /**
    * {@link Function} that takes 2 array operands
    */
-  abstract class ArraysFunction implements Function
+  abstract class ArraysFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -448,7 +460,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arrayExpr1 = args.get(0).eval(bindings);
       final ExprEval arrayExpr2 = args.get(1).eval(bindings);
@@ -459,7 +471,6 @@ public interface Function extends NamedFunction
       if (arrayExpr2.asArray() == null) {
         return arrayExpr2;
       }
-
       return doApply(arrayExpr1, arrayExpr2);
     }
 
@@ -554,7 +565,7 @@ public interface Function extends NamedFunction
     abstract <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
   }
 
-  abstract class ReduceFunction implements Function
+  static abstract class ReduceFunction extends Function
   {
     private final DoubleBinaryOperator doubleReducer;
     private final LongBinaryOperator longReducer;
@@ -589,7 +600,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.isEmpty()) {
         return ExprEval.of(null);
@@ -650,7 +661,7 @@ public interface Function extends NamedFunction
 
   // ------------------------------ implementations ------------------------------
 
-  class ParseLong implements Function
+  class ParseLong extends Function
   {
     @Override
     public String name()
@@ -672,7 +683,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final int radix = args.size() == 1 ? 10 : args.get(1).eval(bindings).asInt();
 
@@ -717,7 +728,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class Pi implements Function
+  class Pi extends Function
   {
     private static final double PI = Math.PI;
 
@@ -728,7 +739,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       return ExprEval.of(PI);
     }
@@ -1151,7 +1162,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class SafeDivide extends BivariateMathFunction
+  public static class SafeDivide extends BivariateMathFunction
   {
     public static final String NAME = "safe_divide";
 
@@ -1366,7 +1377,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class Log1p extends DoubleUnivariateMathFunction
+  static class Log1p extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1387,7 +1398,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class NextUp extends DoubleUnivariateMathFunction
+  static class NextUp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1408,7 +1419,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class Rint extends DoubleUnivariateMathFunction
+  static class Rint extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1429,7 +1440,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class Round implements Function
+  static class Round extends Function
   {
     //CHECKSTYLE.OFF: Regexp
     private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
@@ -1443,7 +1454,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
 
@@ -2020,7 +2031,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class GreatestFunc extends ReduceFunction
+  public static class GreatestFunc extends ReduceFunction
   {
     public static final String NAME = "greatest";
 
@@ -2040,7 +2051,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class LeastFunc extends ReduceFunction
+  public static class LeastFunc extends ReduceFunction
   {
     public static final String NAME = "least";
 
@@ -2060,7 +2071,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ConditionFunc implements Function
+  class ConditionFunc extends Function
   {
     @Override
     public String name()
@@ -2069,7 +2080,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval x = args.get(0).eval(bindings);
       return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
@@ -2092,7 +2103,7 @@ public interface Function extends NamedFunction
   /**
    * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
    */
-  class CaseSearchedFunc implements Function
+  class CaseSearchedFunc extends Function
   {
     @Override
     public String name()
@@ -2101,7 +2112,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    public ExprEval realApply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
       for (int i = 0; i < args.size(); i += 2) {
         if (i == args.size() - 1) {
@@ -2139,7 +2150,7 @@ public interface Function extends NamedFunction
   /**
    * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
    */
-  class CaseSimpleFunc implements Function
+  class CaseSimpleFunc extends Function
   {
     @Override
     public String name()
@@ -2148,7 +2159,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    public ExprEval realApply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
       for (int i = 1; i < args.size(); i += 2) {
         if (i == args.size() - 1) {
@@ -2183,7 +2194,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class NvlFunc implements Function
+  class NvlFunc extends Function
   {
     @Override
     public String name()
@@ -2192,7 +2203,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval eval = args.get(0).eval(bindings);
       return eval.value() == null ? args.get(1).eval(bindings) : eval;
@@ -2224,7 +2235,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class IsNullFunc implements Function
+  class IsNullFunc extends Function
   {
     @Override
     public String name()
@@ -2233,7 +2244,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(expr.value() == null);
@@ -2265,7 +2276,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class IsNotNullFunc implements Function
+  class IsNotNullFunc extends Function
   {
     @Override
     public String name()
@@ -2274,7 +2285,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(expr.value() != null);
@@ -2307,7 +2318,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ConcatFunc implements Function
+  class ConcatFunc extends Function
   {
     @Override
     public String name()
@@ -2316,7 +2327,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() == 0) {
         return ExprEval.of(null);
@@ -2372,7 +2383,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class StrlenFunc implements Function
+  class StrlenFunc extends Function
   {
     @Override
     public String name()
@@ -2381,7 +2392,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       return arg == null ? ExprEval.ofLong(null) : ExprEval.of(arg.length());
@@ -2401,7 +2412,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class StringFormatFunc implements Function
+  class StringFormatFunc extends Function
   {
     @Override
     public String name()
@@ -2410,7 +2421,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String formatString = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
 
@@ -2440,7 +2451,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class StrposFunc implements Function
+  class StrposFunc extends Function
   {
     @Override
     public String name()
@@ -2449,7 +2460,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String haystack = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
       final String needle = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
@@ -2483,7 +2494,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class SubstringFunc implements Function
+  class SubstringFunc extends Function
   {
     @Override
     public String name()
@@ -2492,7 +2503,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
 
@@ -2588,7 +2599,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ReplaceFunc implements Function
+  class ReplaceFunc extends Function
   {
     @Override
     public String name()
@@ -2597,7 +2608,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       final String pattern = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
@@ -2622,7 +2633,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class LowerFunc implements Function
+  class LowerFunc extends Function
   {
     @Override
     public String name()
@@ -2631,7 +2642,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
@@ -2654,7 +2665,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class UpperFunc implements Function
+  class UpperFunc extends Function
   {
     @Override
     public String name()
@@ -2663,7 +2674,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
@@ -2737,7 +2748,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class LpadFunc implements Function
+  class LpadFunc extends Function
   {
     @Override
     public String name()
@@ -2746,7 +2757,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
@@ -2774,7 +2785,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class RpadFunc implements Function
+  class RpadFunc extends Function
   {
     @Override
     public String name()
@@ -2783,7 +2794,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
@@ -2811,7 +2822,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class TimestampFromEpochFunc implements Function
+  class TimestampFromEpochFunc extends Function
   {
     @Override
     public String name()
@@ -2820,7 +2831,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value = args.get(0).eval(bindings);
       if (!value.type().is(ExprType.STRING)) {
@@ -2885,7 +2896,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class SubMonthFunc implements Function
+  class SubMonthFunc extends Function
   {
     @Override
     public String name()
@@ -2894,7 +2905,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       Long left = args.get(0).eval(bindings).asLong();
       Long right = args.get(1).eval(bindings).asLong();
@@ -2922,7 +2933,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class MultiValueStringToArrayFunction implements Function
+  class MultiValueStringToArrayFunction extends Function
   {
     @Override
     public String name()
@@ -2931,7 +2942,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
     }
@@ -2982,7 +2993,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArrayToMultiValueStringFunction implements Function
+  class ArrayToMultiValueStringFunction extends Function
   {
     @Override
     public String name()
@@ -2991,7 +3002,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
     }
@@ -3042,7 +3053,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArrayConstructorFunction implements Function
+  static class ArrayConstructorFunction extends Function
   {
     @Override
     public String name()
@@ -3051,7 +3062,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       // this is copied from 'BaseMapFunction.applyMap', need to find a better way to consolidate, or construct arrays,
       // or.. something...
@@ -3126,7 +3137,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArrayLengthFunction implements Function
+  class ArrayLengthFunction extends Function
   {
     @Override
     public String name()
@@ -3135,7 +3146,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
@@ -3179,7 +3190,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class StringToArrayFunction implements Function
+  class StringToArrayFunction extends Function
   {
     @Override
     public String name()
@@ -3201,7 +3212,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       final String arrayString = expr.asString();
@@ -3562,7 +3573,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArraySliceFunction implements Function
+  class ArraySliceFunction extends Function
   {
     @Override
     public String name()
@@ -3613,7 +3624,7 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
@@ -3636,12 +3647,12 @@ public interface Function extends NamedFunction
     }
   }
 
-  abstract class SizeFormatFunc implements Function
+  abstract class SizeFormatFunc extends Function
   {
     protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval valueParam = args.get(0).eval(bindings);
       if (NullHandling.sqlCompatible() && valueParam.isNumericNull()) {
