@@ -271,10 +271,12 @@ public class DruidJoinRule extends RelOptRule
 
       RexNode firstOperand;
       RexNode secondOperand;
+      SqlKind comparisonKind;
 
       if (subCondition.isA(SqlKind.INPUT_REF)) {
         firstOperand = rexBuilder.makeLiteral(true);
         secondOperand = subCondition;
+        comparisonKind = SqlKind.EQUALS;
 
         if (!SqlTypeName.BOOLEAN_TYPES.contains(secondOperand.getType().getSqlTypeName())) {
           plannerContext.setPlanningError(
@@ -290,6 +292,7 @@ public class DruidJoinRule extends RelOptRule
         Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
         firstOperand = operands.get(0);
         secondOperand = operands.get(1);
+        comparisonKind = subCondition.getKind();
       } else {
         // If it's not EQUALS or a BOOLEAN input ref, it's not supported.
         plannerContext.setPlanningError(
@@ -300,7 +303,7 @@ public class DruidJoinRule extends RelOptRule
       }
 
       if (isLeftExpression(firstOperand, numLeftFields) && isRightInputRef(secondOperand, numLeftFields)) {
-        equalitySubConditions.add(new RexEquality(firstOperand, (RexInputRef) secondOperand, subCondition.getKind()));
+        equalitySubConditions.add(new RexEquality(firstOperand, (RexInputRef) secondOperand, comparisonKind));
         rightColumns.add((RexInputRef) secondOperand);
       } else if (isRightInputRef(firstOperand, numLeftFields)
                  && isLeftExpression(secondOperand, numLeftFields)) {
