@@ -177,7 +177,6 @@ public class CalciteRulesManager
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
           CoreRules.AGGREGATE_REMOVE,
-          CoreRules.UNION_TO_DISTINCT,
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
           CoreRules.AGGREGATE_PROJECT_MERGE,
