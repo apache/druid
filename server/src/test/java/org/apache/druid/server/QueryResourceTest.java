@@ -391,7 +391,7 @@ public class QueryResourceTest
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
 
-    final List<QueryLifecycle> lifeCycleSpys=new ArrayList<QueryLifecycle>();
+    final List<QueryLifecycle> lifeCycleSpys = new ArrayList<QueryLifecycle>();
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
