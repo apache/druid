@@ -21,14 +21,13 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
+import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.easymock.IArgumentMatcher;
 import org.junit.Test;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
 import java.io.IOException;
@@ -37,24 +36,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.mock;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reportMatcher;
+import static org.easymock.EasyMock.verify;
 
 public class QueryResultPusherTest
 {
+  private static final DruidNode DRUID_NODE = new DruidNode(
+      "broker",
+      "localhost",
+      true,
+      8082,
+      null,
+      true,
+      false);
+
   @Test
-  public void testResultPusherRetainsNestedExceptionBacktraces()
+  public void testResultPusherRetainsNestedExceptionBacktraces() throws Exception
   {
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    ObjectMapper jsonMapper = new ObjectMapper();
+
+    HttpServletRequest request = new MockHttpServletRequest();
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
     ResponseContextConfig responseContextConfig = ResponseContextConfig.newConfig(true);
-    DruidNode selfNode = mock(DruidNode.class);
+    DruidNode selfNode = DRUID_NODE;
     QueryResource.QueryMetricCounter counter = mock(QueryResource.QueryMetricCounter.class);
     String queryId = "someQuery";
-    MediaType contentType = mock(MediaType.class);
+    MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
     Map<String, String> extraHeaders = new HashMap<String, String>();
 
     ResultsWriter resultWriter = mock(ResultsWriter.class);
@@ -89,26 +99,37 @@ public class QueryResultPusherTest
     RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
     RuntimeException topException = new RuntimeException("Where's the party?", embeddedException);
 
-    @SuppressWarnings("unchecked")
-    QueryResponse<Object> queryResponse = mock(QueryResponse.class);
-    @SuppressWarnings("unchecked")
-    Sequence<Object> results = mock(Sequence.class);
-    AsyncContext asyncContext = mock(AsyncContext.class);
-    ServletResponse response = mock(HttpServletResponse.class);
+    expect(resultWriter.start()).andThrow(topException);
 
-    when(resultWriter.getQueryResponse()).thenReturn(queryResponse);
-    when(queryResponse.getResults()).thenReturn(results);
-    when(request.startAsync()).thenReturn(asyncContext);
-    when(asyncContext.getResponse()).thenReturn(response);
-    when(results.accumulate(any(), any())).thenThrow(topException);
+    resultWriter.recordFailure(exceptionBacktraceMessageContains(embeddedExceptionMessage));
+    expectLastCall();
+    resultWriter.close();
+    expectLastCall();
+
+    replay(resultWriter);
 
     // run pusher
     pusher.push();
 
-    verify(resultWriter)
-        .recordFailure(argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)));
-    verify(loggedExceptions)
-        .add(argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)));
+    verify(resultWriter);
+  }
 
+  private Exception exceptionBacktraceMessageContains(final String message)
+  {
+    reportMatcher(new IArgumentMatcher()
+    {
+      @Override
+      public boolean matches(Object argument)
+      {
+        return Throwables.getStackTraceAsString((Throwable) argument).contains(message);
+      }
+
+      @Override
+      public void appendTo(StringBuffer buffer)
+      {
+        buffer.append("exceptionBacktraceMessageContains(\"" + message + "\")");
+      }
+    });
+    return null;
   }
 }

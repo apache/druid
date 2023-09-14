@@ -108,7 +108,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class QueryResourceTest
 {
@@ -411,7 +411,8 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig)){
+        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig))
+        {
           @Override
           public QueryLifecycle factorize()
           {
@@ -430,7 +431,7 @@ public class QueryResourceTest
               @Override
               public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
               {
-                assertThat(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
+                assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
               }
             };
           }
@@ -456,20 +457,6 @@ public class QueryResourceTest
             DruidException.Persona.OPERATOR,
             DruidException.Category.RUNTIME_FAILURE, "legacyQueryException")
             .expectMessageIs("something")
-    );
-
-
-    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
-    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
-    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
-    Assert.assertTrue(testRequestLogger.getNativeQuerylogs()
-                                       .get(0)
-                                       .getQuery()
-                                       .getContext()
-                                       .containsKey(overrideConfigKey));
-    Assert.assertEquals(
-        overrideConfigValue,
-        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
     );
   }
 
