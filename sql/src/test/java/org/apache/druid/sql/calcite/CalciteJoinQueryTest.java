@@ -3679,8 +3679,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         sortIfSortBased(
-            ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of(
                 new Object[]{"", ""},
+                new Object[]{"10.1", "10.1"},
+                new Object[]{"2", "2"},
+                new Object[]{"1", "1"},
+                new Object[]{"def", "def"},
+                new Object[]{"abc", "abc"}
+            )
+            : ImmutableList.of(
                 new Object[]{"10.1", "10.1"},
                 new Object[]{"2", "2"},
                 new Object[]{"1", "1"},

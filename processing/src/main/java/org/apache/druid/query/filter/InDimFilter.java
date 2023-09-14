@@ -663,7 +663,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
      */
     private ValuesSet(final Collection<String> values)
     {
-      if (canWrap(values)) {
+      if (values instanceof SortedSet && Comparators.naturalNullsFirst()
+                                                    .equals(((SortedSet<String>) values).comparator())) {
         this.values = (SortedSet<String>) values;
       } else {
         this.values = new TreeSet<>(Comparators.naturalNullsFirst());
@@ -699,12 +700,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       final TreeSet<String> copyOfValues = new TreeSet<>(Comparators.naturalNullsFirst());
       copyOfValues.addAll(values);
       return new ValuesSet(copyOfValues);
-    }
-
-    private static boolean canWrap(final Collection<String> values)
-    {
-      return values instanceof SortedSet && Comparators.naturalNullsFirst()
-                                                       .equals(((SortedSet<String>) values).comparator());
     }
 
     public SortedSet<ByteBuffer> toUtf8()
