@@ -88,6 +88,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -107,12 +108,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class QueryResourceTest
 {
@@ -391,45 +387,52 @@ public class QueryResourceTest
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
 
-    final List<QueryLifecycle> lifeCycleSpys = new ArrayList<QueryLifecycle>();
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    QuerySegmentWalker querySegmentWalker = new QuerySegmentWalker()
+    {
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForIntervals(
+          Query<T> query,
+          Iterable<Interval> intervals
+      )
+      {
+        throw new RuntimeException("something", new RuntimeException(embeddedExceptionMessage));
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForSegments(
+          Query<T> query,
+          Iterable<SegmentDescriptor> specs
+      )
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+
     queryResource = new QueryResource(
-        new QueryLifecycleFactory(
-            WAREHOUSE,
-            new QuerySegmentWalker()
-            {
-              @Override
-              public <T> QueryRunner<T> getQueryRunnerForIntervals(
-                  Query<T> query,
-                  Iterable<Interval> intervals
-              )
-              {
-                throw new RuntimeException("something", new RuntimeException(embeddedExceptionMessage));
-              }
 
-              @Override
-              public <T> QueryRunner<T> getQueryRunnerForSegments(
-                  Query<T> query,
-                  Iterable<SegmentDescriptor> specs
-              )
-              {
-                throw new UnsupportedOperationException();
-              }
-            },
-            new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
-            testRequestLogger,
-            new AuthConfig(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(overrideConfig)
-        ) {
-
+        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig)){
           @Override
           public QueryLifecycle factorize()
           {
-            QueryLifecycle ret = spy(super.factorize());
-            lifeCycleSpys.add(ret);
-            return ret;
+            return new QueryLifecycle(
+                WAREHOUSE,
+                querySegmentWalker,
+                new DefaultGenericQueryMetricsFactory(),
+                new NoopServiceEmitter(),
+                testRequestLogger,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                overrideConfig,
+                new AuthConfig(),
+                System.currentTimeMillis(),
+                System.nanoTime())
+            {
+              @Override
+              public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
+              {
+                assertThat(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
+              }
+            };
           }
         },
         jsonMapper,
@@ -455,13 +458,6 @@ public class QueryResourceTest
             .expectMessageIs("something")
     );
 
-
-    assertEquals(1, lifeCycleSpys.size());
-    verify(lifeCycleSpys.get(0))
-        .emitLogsAndMetrics(
-            argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)),
-            any(),
-            anyLong());
 
     Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
     Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
