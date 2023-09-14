@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -4804,6 +4805,189 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithCommaButHigherPrecedenceJoinLaterAlongWithAlias()
+  {
+    // CROSS JOIN has a higher precedence over COMMA JOIN
+    // CALCITE would interpret this as
+    // (foo t1) COMMA JOIN (UNNEST(t1.dim3) CROSS JOIN foo t2)
+    // while validating the right, parser does not understand t1.dim3
+    // will throw a table not found validation error
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage("Table 't1' not found (line [2], column [34])");
+    testQuery(
+        "select c1 from \n"
+        + "druid.foo t1, unnest(mv_to_array(t1.dim3)) as u1(c1) CROSS JOIN druid.foo t2 \n",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUnnestWithCrossJoinEarlierToEnforcePrecedence()
+  {
+    testQuery(
+        "select c1 from \n"
+        + "druid.foo CROSS JOIN unnest(mv_to_array(dim3)) as u1(c1) CROSS JOIN druid.foo t2 \n",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      join(
+                          new QueryDataSource(
+                              Druids.newScanQueryBuilder()
+                                    .dataSource(
+                                        UnnestDataSource.create(
+                                            new TableDataSource(CalciteTests.DATASOURCE1),
+                                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                            null
+                                        )
+                                    )
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .legacy(false)
+                                    .columns(
+                                        "__time",
+                                        "cnt",
+                                        "dim1",
+                                        "dim2",
+                                        "dim3",
+                                        "j0.unnest",
+                                        "m1",
+                                        "m2",
+                                        "unique_dim1"
+                                    )
+                                    .context(QUERY_CONTEXT_UNNEST)
+                                    .build()
+                          ),
+                          new QueryDataSource(
+                              Druids.newScanQueryBuilder()
+                                    .dataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                    .legacy(false)
+                                    .context(QUERY_CONTEXT_UNNEST)
+                                    .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                                    .build()
+                          ),
+                          "_j0.",
+                          "1",
+                          JoinType.INNER,
+                          null
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .columns("j0.unnest")
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
         )
     );
   }
