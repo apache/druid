@@ -67,15 +67,18 @@ public abstract class Function implements NamedFunction
   /**
    * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
    */
-  final ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings) {
-   try {
-     return realApply(args,bindings);
-   } catch (DruidException|ExpressionValidationException de) {
-     throw de;
-   } catch (Exception e) {
-     throw DruidException.defensive().build(e, "Invocation of %s encountered exception.", getClass().getName());
-   }
- }
+  final ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+  {
+    try {
+      return realApply(args, bindings);
+    }
+    catch (DruidException | ExpressionValidationException de) {
+      throw de;
+    }
+    catch (Exception e) {
+      throw DruidException.defensive().build(e, "Invocation of %s encountered exception.", getClass().getName());
+    }
+  }
 
   protected abstract ExprEval realApply(List<Expr> args, ObjectBinding bindings);
 
@@ -127,7 +130,7 @@ public abstract class Function implements NamedFunction
    * @see Expr#getOutputType
    */
   @Nullable
-abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
+  abstract ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
 
   /**
    * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
@@ -157,7 +160,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Base class for a single variable input {@link Function} implementation
    */
-  static abstract class UnivariateFunction extends Function
+  public abstract static class UnivariateFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -178,7 +181,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Base class for a 2 variable input {@link Function} implementation
    */
-  static abstract class BivariateFunction extends Function
+  public abstract static class BivariateFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -201,7 +204,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
    * Base class for a single variable input mathematical {@link Function}, with specialized 'eval' implementations that
    * that operate on primitive number types
    */
-  static abstract class UnivariateMathFunction extends UnivariateFunction
+  public abstract static class UnivariateMathFunction extends UnivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval param)
@@ -250,7 +253,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Many math functions always output a {@link Double} primitive, regardless of input type.
    */
-  static abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
+  public abstract static class DoubleUnivariateMathFunction extends UnivariateMathFunction
   {
     @Nullable
     @Override
@@ -264,7 +267,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
    * Base class for a 2 variable input mathematical {@link Function}, with specialized 'eval' implementations that
    * operate on primitive number types
    */
-  static abstract class BivariateMathFunction extends BivariateFunction
+  public abstract static class BivariateMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -316,7 +319,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Many math functions always output a {@link Double} primitive, regardless of input type.
    */
-  public static abstract class DoubleBivariateMathFunction extends BivariateMathFunction
+  public abstract static class DoubleBivariateMathFunction extends BivariateMathFunction
   {
     @Nullable
     @Override
@@ -326,7 +329,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  public static abstract class BivariateBitwiseMathFunction extends BivariateFunction
+  public abstract static class BivariateBitwiseMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -364,7 +367,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
    * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
    * argument is {@link ExprType#LONG}
    */
-  public static abstract class StringLongFunction extends BivariateFunction
+  public abstract static class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -381,7 +384,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * {@link Function} that takes 1 array operand and 1 scalar operand
    */
-  public static abstract class ArrayScalarFunction extends Function
+  public abstract static class ArrayScalarFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -434,7 +437,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * {@link Function} that takes 2 array operands
    */
-  static abstract class ArraysFunction extends Function
+  public abstract static class ArraysFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -482,7 +485,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
    * Scaffolding for a 2 argument {@link Function} which accepts one array and one scalar input and adds the scalar
    * input to the array in some way.
    */
-  public static abstract class ArrayAddElementFunction extends ArrayScalarFunction
+  public abstract static class ArrayAddElementFunction extends ArrayScalarFunction
   {
     @Override
     public boolean hasArrayOutput()
@@ -517,7 +520,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Base scaffolding for functions which accept 2 array arguments and combine them in some way
    */
-  public static abstract class ArraysMergeFunction extends ArraysFunction
+  public abstract static class ArraysMergeFunction extends ArraysFunction
   {
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
@@ -566,7 +569,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     abstract <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
   }
 
-  public static abstract class ReduceFunction extends Function
+  public abstract static class ReduceFunction extends Function
   {
     private final DoubleBinaryOperator doubleReducer;
     private final LongBinaryOperator longReducer;
@@ -3648,7 +3651,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  public static abstract class SizeFormatFunc extends Function
+  public abstract static class SizeFormatFunc extends Function
   {
     protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
 
