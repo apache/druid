@@ -471,10 +471,10 @@ public class CliCoordinator extends ServerRunnable
       binder.install(new JoinableFactoryModule());
 
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.select", TierSelectorStrategy.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.select.tier.custom", CustomTierSelectorStrategyConfig.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.balancer", ServerSelectorStrategy.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.retryPolicy", RetryQueryRunnerConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.select", TierSelectorStrategy.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.select.tier.custom", CustomTierSelectorStrategyConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.balancer", ServerSelectorStrategy.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.retryPolicy", RetryQueryRunnerConfig.class);
 
       binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
       binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
