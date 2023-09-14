@@ -38,6 +38,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ public abstract class Function implements NamedFunction
   final ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings) {
    try {
      return realApply(args,bindings);
-   } catch (DruidException de) {
+   } catch (DruidException|ExpressionValidationException de) {
      throw de;
    } catch (Exception e) {
      throw DruidException.defensive().build(e, "Invocation of %s encountered exception.", getClass().getName());
@@ -315,7 +316,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Many math functions always output a {@link Double} primitive, regardless of input type.
    */
-  abstract class DoubleBivariateMathFunction extends BivariateMathFunction
+  public static abstract class DoubleBivariateMathFunction extends BivariateMathFunction
   {
     @Nullable
     @Override
@@ -325,7 +326,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  abstract class BivariateBitwiseMathFunction extends BivariateFunction
+  public static abstract class BivariateBitwiseMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -363,7 +364,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
    * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
    * argument is {@link ExprType#LONG}
    */
-  abstract class StringLongFunction extends BivariateFunction
+  public static abstract class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -380,7 +381,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * {@link Function} that takes 1 array operand and 1 scalar operand
    */
-  abstract class ArrayScalarFunction extends Function
+  public static abstract class ArrayScalarFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -433,7 +434,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * {@link Function} that takes 2 array operands
    */
-  abstract class ArraysFunction extends Function
+  static abstract class ArraysFunction extends Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -481,7 +482,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
    * Scaffolding for a 2 argument {@link Function} which accepts one array and one scalar input and adds the scalar
    * input to the array in some way.
    */
-  abstract class ArrayAddElementFunction extends ArrayScalarFunction
+  public static abstract class ArrayAddElementFunction extends ArrayScalarFunction
   {
     @Override
     public boolean hasArrayOutput()
@@ -516,7 +517,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * Base scaffolding for functions which accept 2 array arguments and combine them in some way
    */
-  abstract class ArraysMergeFunction extends ArraysFunction
+  public static abstract class ArraysMergeFunction extends ArraysFunction
   {
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
@@ -565,7 +566,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     abstract <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
   }
 
-  static abstract class ReduceFunction extends Function
+  public static abstract class ReduceFunction extends Function
   {
     private final DoubleBinaryOperator doubleReducer;
     private final LongBinaryOperator longReducer;
@@ -661,7 +662,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
 
   // ------------------------------ implementations ------------------------------
 
-  class ParseLong extends Function
+  public static class ParseLong extends Function
   {
     @Override
     public String name()
@@ -728,7 +729,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Pi extends Function
+  public static class Pi extends Function
   {
     private static final double PI = Math.PI;
 
@@ -770,7 +771,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Abs extends UnivariateMathFunction
+  public static class Abs extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -797,7 +798,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Acos extends DoubleUnivariateMathFunction
+  public static class Acos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -818,7 +819,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Asin extends DoubleUnivariateMathFunction
+  public static class Asin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -839,7 +840,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Atan extends DoubleUnivariateMathFunction
+  public static class Atan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -860,7 +861,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseComplement extends UnivariateMathFunction
+  public static class BitwiseComplement extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -888,7 +889,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseConvertLongBitsToDouble extends UnivariateMathFunction
+  public static class BitwiseConvertLongBitsToDouble extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -920,7 +921,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseConvertDoubleToLongBits extends UnivariateMathFunction
+  public static class BitwiseConvertDoubleToLongBits extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -952,7 +953,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseAnd extends BivariateBitwiseMathFunction
+  public static class BitwiseAnd extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -973,7 +974,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseOr extends BivariateBitwiseMathFunction
+  public static class BitwiseOr extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -994,7 +995,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseShiftLeft extends BivariateBitwiseMathFunction
+  public static class BitwiseShiftLeft extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -1015,7 +1016,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseShiftRight extends BivariateBitwiseMathFunction
+  public static class BitwiseShiftRight extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -1036,7 +1037,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class BitwiseXor extends BivariateBitwiseMathFunction
+  public static class BitwiseXor extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -1057,7 +1058,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Cbrt extends DoubleUnivariateMathFunction
+  public static class Cbrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1078,7 +1079,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Ceil extends DoubleUnivariateMathFunction
+  public static class Ceil extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1099,7 +1100,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Cos extends DoubleUnivariateMathFunction
+  public static class Cos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1120,7 +1121,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Cosh extends DoubleUnivariateMathFunction
+  public static class Cosh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1141,7 +1142,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Cot extends DoubleUnivariateMathFunction
+  public static class Cot extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1207,7 +1208,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Div extends BivariateMathFunction
+  public static class Div extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -1244,7 +1245,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Exp extends DoubleUnivariateMathFunction
+  public static class Exp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1265,7 +1266,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Expm1 extends DoubleUnivariateMathFunction
+  public static class Expm1 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1286,7 +1287,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Floor extends DoubleUnivariateMathFunction
+  public static class Floor extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1307,7 +1308,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class GetExponent extends UnivariateMathFunction
+  public static class GetExponent extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -1335,7 +1336,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Log extends DoubleUnivariateMathFunction
+  public static class Log extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1356,7 +1357,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Log10 extends DoubleUnivariateMathFunction
+  public static class Log10 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1440,7 +1441,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  static class Round extends Function
+  public static class Round extends Function
   {
     //CHECKSTYLE.OFF: Regexp
     private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
@@ -1529,7 +1530,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Signum extends DoubleUnivariateMathFunction
+  public static class Signum extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1550,7 +1551,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Sin extends DoubleUnivariateMathFunction
+  public static class Sin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1571,7 +1572,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Sinh extends DoubleUnivariateMathFunction
+  public static class Sinh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1592,7 +1593,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Sqrt extends DoubleUnivariateMathFunction
+  public static class Sqrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1613,7 +1614,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Tan extends DoubleUnivariateMathFunction
+  public static class Tan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1634,7 +1635,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Tanh extends DoubleUnivariateMathFunction
+  public static class Tanh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1655,7 +1656,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ToDegrees extends DoubleUnivariateMathFunction
+  public static class ToDegrees extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1676,7 +1677,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ToRadians extends DoubleUnivariateMathFunction
+  public static class ToRadians extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1697,7 +1698,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Ulp extends DoubleUnivariateMathFunction
+  public static class Ulp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1718,7 +1719,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Atan2 extends DoubleBivariateMathFunction
+  public static class Atan2 extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1739,7 +1740,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class CopySign extends DoubleBivariateMathFunction
+  public static class CopySign extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1760,7 +1761,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Hypot extends DoubleBivariateMathFunction
+  public static class Hypot extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1781,7 +1782,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Remainder extends DoubleBivariateMathFunction
+  public static class Remainder extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1802,7 +1803,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Max extends BivariateMathFunction
+  public static class Max extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -1829,7 +1830,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Min extends BivariateMathFunction
+  public static class Min extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -1856,7 +1857,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class NextAfter extends DoubleBivariateMathFunction
+  public static class NextAfter extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1877,7 +1878,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Pow extends DoubleBivariateMathFunction
+  public static class Pow extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1898,7 +1899,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class Scalb extends BivariateFunction
+  public static class Scalb extends BivariateFunction
   {
     @Override
     public String name()
@@ -1942,7 +1943,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class CastFunc extends BivariateFunction
+  public static class CastFunc extends BivariateFunction
   {
     @Override
     public String name()
@@ -2071,7 +2072,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ConditionFunc extends Function
+  public static class ConditionFunc extends Function
   {
     @Override
     public String name()
@@ -2103,7 +2104,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
    */
-  class CaseSearchedFunc extends Function
+  public static class CaseSearchedFunc extends Function
   {
     @Override
     public String name()
@@ -2150,7 +2151,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
   /**
    * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
    */
-  class CaseSimpleFunc extends Function
+  public static class CaseSimpleFunc extends Function
   {
     @Override
     public String name()
@@ -2194,7 +2195,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class NvlFunc extends Function
+  public static class NvlFunc extends Function
   {
     @Override
     public String name()
@@ -2235,7 +2236,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class IsNullFunc extends Function
+  public static class IsNullFunc extends Function
   {
     @Override
     public String name()
@@ -2276,7 +2277,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class IsNotNullFunc extends Function
+  public static class IsNotNullFunc extends Function
   {
     @Override
     public String name()
@@ -2318,7 +2319,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ConcatFunc extends Function
+  public static class ConcatFunc extends Function
   {
     @Override
     public String name()
@@ -2383,7 +2384,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class StrlenFunc extends Function
+  public static class StrlenFunc extends Function
   {
     @Override
     public String name()
@@ -2412,7 +2413,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class StringFormatFunc extends Function
+  public static class StringFormatFunc extends Function
   {
     @Override
     public String name()
@@ -2451,7 +2452,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class StrposFunc extends Function
+  public static class StrposFunc extends Function
   {
     @Override
     public String name()
@@ -2494,7 +2495,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class SubstringFunc extends Function
+  public static class SubstringFunc extends Function
   {
     @Override
     public String name()
@@ -2542,7 +2543,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class RightFunc extends StringLongFunction
+  public static class RightFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -2571,7 +2572,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class LeftFunc extends StringLongFunction
+  public static class LeftFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -2599,7 +2600,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ReplaceFunc extends Function
+  public static class ReplaceFunc extends Function
   {
     @Override
     public String name()
@@ -2633,7 +2634,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class LowerFunc extends Function
+  public static class LowerFunc extends Function
   {
     @Override
     public String name()
@@ -2665,7 +2666,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class UpperFunc extends Function
+  public static class UpperFunc extends Function
   {
     @Override
     public String name()
@@ -2697,7 +2698,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ReverseFunc extends UnivariateFunction
+  public static class ReverseFunc extends UnivariateFunction
   {
     @Override
     public String name()
@@ -2723,7 +2724,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class RepeatFunc extends StringLongFunction
+  public static class RepeatFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -2748,7 +2749,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class LpadFunc extends Function
+  public static class LpadFunc extends Function
   {
     @Override
     public String name()
@@ -2785,7 +2786,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class RpadFunc extends Function
+  public static class RpadFunc extends Function
   {
     @Override
     public String name()
@@ -2822,7 +2823,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class TimestampFromEpochFunc extends Function
+  public static class TimestampFromEpochFunc extends Function
   {
     @Override
     public String name()
@@ -2881,7 +2882,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class UnixTimestampFunc extends TimestampFromEpochFunc
+  public static class UnixTimestampFunc extends TimestampFromEpochFunc
   {
     @Override
     public String name()
@@ -2896,7 +2897,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class SubMonthFunc extends Function
+  public static class SubMonthFunc extends Function
   {
     @Override
     public String name()
@@ -2933,7 +2934,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class MultiValueStringToArrayFunction extends Function
+  public static class MultiValueStringToArrayFunction extends Function
   {
     @Override
     public String name()
@@ -2993,7 +2994,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayToMultiValueStringFunction extends Function
+  public static class ArrayToMultiValueStringFunction extends Function
   {
     @Override
     public String name()
@@ -3053,7 +3054,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  static class ArrayConstructorFunction extends Function
+  public static class ArrayConstructorFunction extends Function
   {
     @Override
     public String name()
@@ -3137,7 +3138,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayLengthFunction extends Function
+  public static class ArrayLengthFunction extends Function
   {
     @Override
     public String name()
@@ -3190,7 +3191,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class StringToArrayFunction extends Function
+  public static class StringToArrayFunction extends Function
   {
     @Override
     public String name()
@@ -3237,7 +3238,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayToStringFunction extends ArrayScalarFunction
+  public static class ArrayToStringFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3266,7 +3267,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayOffsetFunction extends ArrayScalarFunction
+  public static class ArrayOffsetFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3294,7 +3295,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayOrdinalFunction extends ArrayScalarFunction
+  public static class ArrayOrdinalFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3322,7 +3323,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayOffsetOfFunction extends ArrayScalarFunction
+  public static class ArrayOffsetOfFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3363,7 +3364,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayOrdinalOfFunction extends ArrayScalarFunction
+  public static class ArrayOrdinalOfFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3405,7 +3406,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayAppendFunction extends ArrayAddElementFunction
+  public static class ArrayAppendFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3425,7 +3426,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayPrependFunction extends ArrayAddElementFunction
+  public static class ArrayPrependFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3457,7 +3458,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayConcatFunction extends ArraysMergeFunction
+  public static class ArrayConcatFunction extends ArraysMergeFunction
   {
     @Override
     public String name()
@@ -3479,7 +3480,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArraySetAddFunction extends ArrayAddElementFunction
+  public static class ArraySetAddFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3497,7 +3498,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArraySetAddAllFunction extends ArraysMergeFunction
+  public static class ArraySetAddAllFunction extends ArraysMergeFunction
   {
     @Override
     public String name()
@@ -3515,7 +3516,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayContainsFunction extends ArraysFunction
+  public static class ArrayContainsFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -3545,7 +3546,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArrayOverlapFunction extends ArraysFunction
+  public static class ArrayOverlapFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -3573,7 +3574,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class ArraySliceFunction extends Function
+  public static class ArraySliceFunction extends Function
   {
     @Override
     public String name()
@@ -3647,7 +3648,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  abstract class SizeFormatFunc extends Function
+  public static abstract class SizeFormatFunc extends Function
   {
     protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
 
@@ -3708,7 +3709,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
+  public static class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
@@ -3723,7 +3724,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
+  public static class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
@@ -3738,7 +3739,7 @@ abstract   ExpressionType getOutputType(Expr.InputBindingInspector inspector, Li
     }
   }
 
-  class HumanReadableDecimalFormatFunc extends SizeFormatFunc
+  public static class HumanReadableDecimalFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
