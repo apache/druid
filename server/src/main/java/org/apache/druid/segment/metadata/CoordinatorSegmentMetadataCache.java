@@ -60,8 +60,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
    * Fires SegmentMetadataQuery to fetch schema information for each segment in the refresh list.
    * The schema information for individual segments is combined to construct a table schema, which is then cached.
    *
-   * @param segmentsToRefresh    suspected segments for which the schema might have changed
-   * @param dataSourcesToRebuild suspected dataSources for which the schema might have changed
+   * @param segmentsToRefresh    segments for which the schema might have changed
+   * @param dataSourcesToRebuild dataSources for which the schema might have changed
    * @throws IOException         when querying segment from data nodes and tasks
    */
   @Override
