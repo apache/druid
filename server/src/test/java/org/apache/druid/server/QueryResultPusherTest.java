@@ -31,7 +31,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,7 +51,7 @@ public class QueryResultPusherTest
       false);
 
   @Test
-  public void testResultPusherRetainsNestedExceptionBacktraces() throws Exception
+  public void testResultPusherRetainsNestedExceptionBacktraces()
   {
 
     HttpServletRequest request = new MockHttpServletRequest();
@@ -73,7 +72,7 @@ public class QueryResultPusherTest
     {
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
       }
 
@@ -96,7 +95,7 @@ public class QueryResultPusherTest
       }
 
       @Override
-      public Writer makeWriter(OutputStream out) throws IOException
+      public Writer makeWriter(OutputStream out)
       {
         return null;
       }
@@ -119,7 +118,7 @@ public class QueryResultPusherTest
     {
 
       @Override
-      public void writeException(Exception e, OutputStream out) throws IOException
+      public void writeException(Exception e, OutputStream out)
       {
       }
 
