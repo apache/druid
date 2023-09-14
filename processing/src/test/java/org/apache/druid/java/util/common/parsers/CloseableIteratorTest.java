@@ -123,38 +123,41 @@ public class CloseableIteratorTest
   @Test
   public void testFlatMapInnerClose() throws IOException
   {
-    final int numIterations = 3;
     List<CloseTrackingCloseableIterator<Integer>> innerIterators = new ArrayList<>();
-    final CloseTrackingCloseableIterator<Integer> actual = new CloseTrackingCloseableIterator<>(
-        generateTestIterator(numIterations)
+    // the nested iterators is : [ [], [0], [0, 1] ]
+    try (final CloseTrackingCloseableIterator<Integer> actual = new CloseTrackingCloseableIterator<>(
+        generateTestIterator(3)
             .flatMap(list -> {
               CloseTrackingCloseableIterator<Integer> inner =
                   new CloseTrackingCloseableIterator<>(CloseableIterators.withEmptyBaggage(list.iterator()));
               innerIterators.add(inner);
               return inner;
             })
-    );
+    )) {
+      final Iterator<Integer> expected = IntStream
+          .range(0, 3)
+          .flatMap(i -> IntStream.range(0, i))
+          .iterator();
 
-    // init state
-    Assert.assertEquals(0, innerIterators.size());
-    // check hasNext which will populate 2 iterators (1 of size 0 and one of size 1)
-    Assert.assertTrue(actual.hasNext());
-    Assert.assertEquals(2, innerIterators.size());
-    Assert.assertEquals(1, innerIterators.get(0).closeCount);
-    Assert.assertEquals(0, innerIterators.get(1).closeCount);
-    // fetch the only element from the single sized iterator and check that it is not closed yet
-    Assert.assertEquals(0, actual.next().intValue());
-    Assert.assertEquals(2, innerIterators.size());
-    Assert.assertEquals(1, innerIterators.get(0).closeCount);
-    Assert.assertEquals(0, innerIterators.get(1).closeCount);
-    // check hasNext, it will close the single element iterator and open a new inner iterator with 2 elements
-    Assert.assertTrue(actual.hasNext());
-    Assert.assertEquals(3, innerIterators.size());
-    Assert.assertEquals(1, innerIterators.get(0).closeCount);
-    Assert.assertEquals(1, innerIterators.get(1).closeCount);
-    // check the third iterator and close the overall iterator
-    Assert.assertEquals(0, innerIterators.get(2).closeCount);
-    actual.close();
+      int iterCount = 0, innerIteratorIdx = 0;
+      while (actual.hasNext()) {
+        iterCount++;
+        if (iterCount == 1) {
+          Assert.assertEquals(2, innerIterators.size()); //empty iterator and single element iterator
+          innerIteratorIdx++;
+        } else if (iterCount == 2) {
+          Assert.assertEquals(3, innerIterators.size()); //empty iterator + single element iterator + double element iterator
+          innerIteratorIdx++;
+        }
+        Assert.assertEquals(expected.next(), actual.next()); // assert expected value to the iterator's value
+        for (int i = 0; i < innerIteratorIdx; i++) {
+          Assert.assertEquals(1, innerIterators.get(i).closeCount); // expect all previous iterators to be closed
+        }
+        // never expect the current iterator to be closed, even after doing the last next call on it
+        Assert.assertEquals(0, innerIterators.get(innerIteratorIdx).closeCount);
+      }
+    }
+    // check the last inner iterator is closed
     Assert.assertEquals(1, innerIterators.get(2).closeCount);
   }
 
