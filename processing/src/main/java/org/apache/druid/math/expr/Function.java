@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
@@ -2319,19 +2318,6 @@ public interface Function extends NamedFunction
     {
       return ExpressionType.LONG;
     }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      final Expr expr = args.get(0);
-      return inspector.areNumeric(expr) && expr.canVectorize(inspector);
-    }
-
-    @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
-    {
-      return VectorComparisonProcessors.lessThanOrEqual(inspector, args.get(0), ExprEval.of(0L).toExpr());
-    }
   }
 
   /**
@@ -2363,19 +2349,6 @@ public interface Function extends NamedFunction
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return ExpressionType.LONG;
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      final Expr expr = args.get(0);
-      return inspector.areNumeric(expr) && expr.canVectorize(inspector);
-    }
-
-    @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
-    {
-      return VectorComparisonProcessors.greaterThan(inspector, args.get(0), ExprEval.of(0L).toExpr());
     }
   }
 
