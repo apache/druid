@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
@@ -2326,6 +2327,161 @@ public interface Function extends NamedFunction
       return ExpressionType.LONG;
     }
   }
+
+  /**
+   * SQL function "IS NOT FALSE". Different from "IS TRUE" in that it returns true for NULL as well.
+   */
+  class IsNotFalseFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notfalse";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.value() == null || arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "IS NOT TRUE". Different from "IS FALSE" in that it returns true for NULL as well.
+   */
+  class IsNotTrueFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "nottrue";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.value() == null || !arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "IS FALSE".
+   */
+  class IsFalseFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "isfalse";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.value() != null && !arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      final Expr expr = args.get(0);
+      return inspector.areNumeric(expr) && expr.canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorComparisonProcessors.lessThanOrEqual(inspector, args.get(0), ExprEval.of(0L).toExpr());
+    }
+  }
+
+  /**
+   * SQL function "IS TRUE".
+   */
+  class IsTrueFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "istrue";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      final Expr expr = args.get(0);
+      return inspector.areNumeric(expr) && expr.canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorComparisonProcessors.greaterThan(inspector, args.get(0), ExprEval.of(0L).toExpr());
+    }
+  }
+
   class IsNullFunc implements Function
   {
     @Override
