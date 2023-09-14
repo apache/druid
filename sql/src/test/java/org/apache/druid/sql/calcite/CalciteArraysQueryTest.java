@@ -4807,4 +4807,50 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestVirtualWithColumnsAndNullIf()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select c,m2 from druid.foo, unnest(ARRAY[\"m1\", \"m2\"]) as u(c) where NULLIF(c,m2) IS NULL",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE1),
+                      expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .filters(or(
+                      expressionFilter("(\"j0.unnest\" == \"m2\")"),
+                      and(
+                          isNull("j0.unnest"),
+                          not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
+                      )
+                  ))
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest", "m2"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0f, 1.0D},
+            new Object[]{1.0f, 1.0D},
+            new Object[]{2.0f, 2.0D},
+            new Object[]{2.0f, 2.0D},
+            new Object[]{3.0f, 3.0D},
+            new Object[]{3.0f, 3.0D},
+            new Object[]{4.0f, 4.0D},
+            new Object[]{4.0f, 4.0D},
+            new Object[]{5.0f, 5.0D},
+            new Object[]{5.0f, 5.0D},
+            new Object[]{6.0f, 6.0D},
+            new Object[]{6.0f, 6.0D}
+        )
+    );
+  }
 }
