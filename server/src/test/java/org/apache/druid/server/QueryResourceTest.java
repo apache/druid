@@ -108,8 +108,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertTrue;
-
 public class QueryResourceTest
 {
   private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
@@ -431,7 +429,7 @@ public class QueryResourceTest
               @Override
               public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
               {
-                assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
+                Assert.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
               }
             };
           }
