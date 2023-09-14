@@ -21,17 +21,23 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.junit.Test;
 
+import javax.servlet.AsyncContext;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -48,10 +54,11 @@ public class QueryResultPusherTest
     DruidNode selfNode = mock(DruidNode.class);
     QueryResource.QueryMetricCounter counter = mock(QueryResource.QueryMetricCounter.class);
     String queryId = "someQuery";
-    MediaType contentType = null;
+    MediaType contentType = mock(MediaType.class);
     Map<String, String> extraHeaders = new HashMap<String, String>();
 
     ResultsWriter resultWriter = mock(ResultsWriter.class);
+    List<Exception> loggedExceptions = mock(List.class);
 
     QueryResultPusher pusher = new QueryResultPusher(
         request,
@@ -67,7 +74,7 @@ public class QueryResultPusherTest
       @Override
       public void writeException(Exception e, OutputStream out) throws IOException
       {
-        throw new RuntimeException("Unimplemented!");
+        loggedExceptions.add(e);
       }
 
       @Override
@@ -81,12 +88,24 @@ public class QueryResultPusherTest
     RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
     RuntimeException topException = new RuntimeException("Where's the party?", embeddedException);
 
-    when(resultWriter.getQueryResponse()).thenThrow(topException);
+    QueryResponse<Object> queryResponse = mock(QueryResponse.class);
+    Sequence<Object> results = mock(Sequence.class);
+    AsyncContext asyncContext = mock(AsyncContext.class);
+    ServletResponse response = mock(HttpServletResponse.class);
+
+    when(resultWriter.getQueryResponse()).thenReturn(queryResponse);
+    when(queryResponse.getResults()).thenReturn(results);
+    when(results.accumulate(any(), any())).thenThrow(topException);
+    when(request.startAsync()).thenReturn(asyncContext);
+    when(asyncContext.getResponse()).thenReturn(response);
 
     // run pusher
     pusher.push();
 
     verify(resultWriter)
         .recordFailure(argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)));
+    verify(loggedExceptions)
+        .add(argThat(e -> Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage)));
+
   }
 }
