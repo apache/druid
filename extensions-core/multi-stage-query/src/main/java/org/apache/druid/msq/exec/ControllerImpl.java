@@ -1330,7 +1330,7 @@ public class ControllerImpl implements Controller
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
     final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
-    int tombstoneSize = 0;
+    int numTombstones = 0;
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
@@ -1345,7 +1345,7 @@ public class ControllerImpl implements Controller
               destination.getSegmentGranularity()
           );
           segmentsWithTombstones.addAll(tombstones);
-          tombstoneSize = tombstones.size();
+          numTombstones = tombstones.size();
         }
         catch (IllegalStateException e) {
           throw new MSQException(e, InsertLockPreemptedFault.instance());
@@ -1392,7 +1392,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    task.emitMetric(context.emitter(), "ingest/tombstones/count", tombstoneSize);
+    task.emitMetric(context.emitter(), "ingest/tombstones/count", numTombstones);
     // Include tombstones in the reported segments count
     task.emitMetric(context.emitter(), "ingest/segments/count", segmentsWithTombstones.size());
   }

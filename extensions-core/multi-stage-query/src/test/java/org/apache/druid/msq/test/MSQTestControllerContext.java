@@ -49,6 +49,7 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -83,6 +84,7 @@ public class MSQTestControllerContext implements ControllerContext
   );
   private final Injector injector;
   private final ObjectMapper mapper;
+  private final ServiceEmitter emitter = new NoopServiceEmitter();
 
   private Controller controller;
   private Map<String, TaskReport> report = null;
@@ -219,7 +221,7 @@ public class MSQTestControllerContext implements ControllerContext
   @Override
   public ServiceEmitter emitter()
   {
-    return null;
+    return emitter;
   }
 
   @Override
