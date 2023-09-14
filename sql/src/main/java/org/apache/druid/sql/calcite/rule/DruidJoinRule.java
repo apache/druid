@@ -54,7 +54,6 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
@@ -483,27 +482,6 @@ public class DruidJoinRule extends RelOptRule
     }
 
     @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      ConditionAnalysis that = (ConditionAnalysis) o;
-      return numLeftFields == that.numLeftFields
-             && Objects.equals(equalitySubConditions, that.equalitySubConditions)
-             && Objects.equals(literalSubConditions, that.literalSubConditions);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(numLeftFields, equalitySubConditions, literalSubConditions);
-    }
-
-    @Override
     public String toString()
     {
       return "ConditionAnalysis{" +
@@ -544,25 +522,6 @@ public class DruidJoinRule extends RelOptRule
       }
 
       return builder.makeCall(operator, left, right);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      RexEquality that = (RexEquality) o;
-      return Objects.equals(left, that.left) && Objects.equals(right, that.right) && kind == that.kind;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(left, right, kind);
     }
 
     @Override
