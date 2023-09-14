@@ -1393,7 +1393,7 @@ public class ControllerImpl implements Controller
     }
 
     task.emitMetric(context.emitter(), "ingest/tombstones/count", tombstoneSize);
-    // segments count metric is documented to include tombstones
+    // Include tombstones in the reported segments count
     task.emitMetric(context.emitter(), "ingest/segments/count", segmentsWithTombstones.size());
   }
 
