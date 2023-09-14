@@ -44,7 +44,6 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -690,20 +689,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       final ValuesSet retVal = ValuesSet.create();
       retVal.add(value);
       return retVal;
-    }
-
-    /**
-     * Creates a ValuesSet wrapping the provided collection.
-     *
-     * @throws IllegalStateException if the provided collection cannot be wrapped since it has the wrong comparator
-     */
-    public static ValuesSet wrap(final SortedSet<String> values)
-    {
-      if (canWrap(values)) {
-        return new ValuesSet(values);
-      } else {
-        throw new ISE("Cannot wrap collection with comparator[%s]", values.comparator());
-      }
     }
 
     /**
