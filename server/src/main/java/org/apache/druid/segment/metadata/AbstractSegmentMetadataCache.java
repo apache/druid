@@ -408,8 +408,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * @param name name of the dataSource.
-   * @return schema information for the dataSource.
+   * Fetch schema for the given dataSource.
+   *
+   * @param name dataSource
+   *
+   * @return schema information for the given dataSource
    */
   public T getDatasource(String name)
   {
@@ -425,7 +428,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * @return set of dataSources for which schema information is cached.
+   * @return Set of dataSources for which schema information is cached.
    */
   public Set<String> getDatasourceNames()
   {
@@ -449,8 +452,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
    *
-   * @param datasource dataSource of the given segment
-   * @param segmentId segmentId of the given segment
+   * @param datasource segment dataSource
+   * @param segmentId  segment Id
+   *
    * @return Metadata information for the given segment
    */
   @Nullable
@@ -474,9 +478,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * The child classes must override this method with the logic to build and cache table schema.
    *
-   * @param segmentsToRefresh suspected segments for which the schema might have changed
-   * @param dataSourcesToRebuild suspected dataSources for which the schema might have changed
-   * @throws IOException when querying segment from data nodes and tasks
+   * @param segmentsToRefresh    segments for which the schema might have changed
+   * @param dataSourcesToRebuild dataSources for which the schema might have changed
+   * @throws IOException         when querying segment schema from data nodes and tasks
    */
   public abstract void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild) throws IOException;
 

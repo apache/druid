@@ -94,6 +94,10 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
    *  <li>Refreshes the remaining set of segments by executing a SegmentMetadataQuery and
    *      builds dataSource schema by combining segment schema.</li>
    * </ul>
+   *
+   * @param segmentsToRefresh    segments for which the schema might have changed
+   * @param dataSourcesToRebuild dataSources for which the schema might have changed
+   * @throws IOException         when querying segment schema from data nodes and tasks
    */
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException

@@ -82,4 +82,16 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   {
     return awaitInitializationOnStart;
   }
+
+  @Override
+  public String toString()
+  {
+    return "BrokerSegmentMetadataCacheConfig{" +
+           "metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
+           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
+           ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataRefreshPeriod=" + getMetadataRefreshPeriod() +
+           ", metadataColumnTypeMergePolicy=" + getMetadataColumnTypeMergePolicy() +
+           '}';
+  }
 }

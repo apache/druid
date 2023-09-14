@@ -45,6 +45,11 @@ public class PhysicalDatasourceMetadataFactory
 
   /**
    * Builds physical metadata for the given data source.
+   *
+   * @param dataSource name of the dataSource
+   * @param rowSignature schema of the dataSource
+   *
+   * @return PhysicalDatasourceMetadata which includes information about schema, joinability and broadcast status
    */
   PhysicalDatasourceMetadata build(final String dataSource, final RowSignature rowSignature)
   {
