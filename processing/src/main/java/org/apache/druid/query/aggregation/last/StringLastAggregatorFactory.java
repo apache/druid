@@ -35,6 +35,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -43,6 +44,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -160,6 +163,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
 
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
+
     if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = selectorFactory.makeValueSelector(fieldName);
       VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
@@ -171,6 +175,18 @@ public class StringLastAggregatorFactory extends AggregatorFactory
       );
       return new StringLastVectorAggregator(timeSelector, objectSelector, maxStringBytes);
     }
+
+    if (capabilities != null) {
+      if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
+        if (!capabilities.hasMultipleValues().isTrue()) {
+          SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
+              DefaultDimensionSpec.of(
+                  fieldName));
+          return new SingleStringLastDimensionVectorAggregator(timeSelector, sSelector, maxStringBytes);
+        }
+      }
+    }
+
     VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
     if (capabilities != null) {
       return new StringLastVectorAggregator(timeSelector, vSelector, maxStringBytes);
@@ -296,9 +312,9 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     }
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
     return maxStringBytes == that.maxStringBytes &&
-        Objects.equals(fieldName, that.fieldName) &&
-        Objects.equals(timeColumn, that.timeColumn) &&
-        Objects.equals(name, that.name);
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(timeColumn, that.timeColumn) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
