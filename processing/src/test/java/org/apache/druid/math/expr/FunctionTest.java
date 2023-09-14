@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -42,6 +43,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
@@ -117,6 +122,16 @@ public class FunctionTest extends InitializedNullHandlingTest
         builder.build(), InputBindings.inspectorFromTypeMap(inputTypesBuilder.build())
     );
     allBindings = new Expr.ObjectBinding[]{bestEffortBindings, typedBindings};
+  }
+
+  @Test
+  public void testUnknownErrorsAreWrappedAndReported()
+  {
+    Exception e = assertThrows(DruidException.class, () -> {
+      new Function.Abs().apply(null, null);
+    });
+    assertEquals("Invocation of function 'abs' encountered exception.", e.getMessage());
+    assertNotNull(e.getCause());
   }
 
   @Test

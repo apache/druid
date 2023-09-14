@@ -76,7 +76,7 @@ public abstract class Function implements NamedFunction
       throw de;
     }
     catch (Exception e) {
-      throw DruidException.defensive().build(e, "Invocation of %s encountered exception.", getClass().getName());
+      throw DruidException.defensive().build(e, "Invocation of function '%s' encountered exception.", name());
     }
   }
 
