@@ -4825,13 +4825,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .filters(or(
-                      expressionFilter("(\"j0.unnest\" == \"m2\")"),
-                      and(
-                          isNull("j0.unnest"),
-                          not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
-                      )
-                  ))
+                  .filters(
+                      useDefault ? expressionFilter("(\"j0.unnest\" == \"m2\")") :
+                      or(
+                          expressionFilter("(\"j0.unnest\" == \"m2\")"),
+                          and(
+                              isNull("j0.unnest"),
+                              not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
+                          )
+                      ))
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
                   .columns(ImmutableList.of("j0.unnest", "m2"))
