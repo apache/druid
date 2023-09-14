@@ -23,25 +23,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
+import org.apache.druid.server.QueryResultPusher.Writer;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
-import org.easymock.IArgumentMatcher;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.ResponseBuilder;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.mock;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reportMatcher;
-import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertTrue;
 
 public class QueryResultPusherTest
 {
@@ -66,11 +63,50 @@ public class QueryResultPusherTest
     String queryId = "someQuery";
     MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
     Map<String, String> extraHeaders = new HashMap<String, String>();
+    AtomicBoolean recordFailureInvoked = new AtomicBoolean();
 
-    ResultsWriter resultWriter = mock(ResultsWriter.class);
-    @SuppressWarnings("unchecked")
-    List<Exception> loggedExceptions = mock(List.class);
+    String embeddedExceptionMessage = "Embedded Exception Message!";
+    RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
+    RuntimeException topException = new RuntimeException("Where's the party?", embeddedException);
 
+    ResultsWriter resultWriter = new ResultsWriter()
+    {
+
+      @Override
+      public void close() throws IOException
+      {
+      }
+
+      @Override
+      public ResponseBuilder start()
+      {
+        throw topException;
+      }
+
+      @Override
+      public void recordSuccess(long numBytes)
+      {
+      }
+
+      @Override
+      public void recordFailure(Exception e)
+      {
+        assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
+        recordFailureInvoked.set(true);
+      }
+
+      @Override
+      public Writer makeWriter(OutputStream out) throws IOException
+      {
+        return null;
+      }
+
+      @Override
+      public QueryResponse<Object> getQueryResponse()
+      {
+        return null;
+      }
+    };
     QueryResultPusher pusher = new QueryResultPusher(
         request,
         jsonMapper,
@@ -85,7 +121,6 @@ public class QueryResultPusherTest
       @Override
       public void writeException(Exception e, OutputStream out) throws IOException
       {
-        loggedExceptions.add(e);
       }
 
       @Override
@@ -95,41 +130,8 @@ public class QueryResultPusherTest
       }
     };
 
-    String embeddedExceptionMessage = "Embedded Exception Message!";
-    RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
-    RuntimeException topException = new RuntimeException("Where's the party?", embeddedException);
-
-    expect(resultWriter.start()).andThrow(topException);
-
-    resultWriter.recordFailure(exceptionBacktraceMessageContains(embeddedExceptionMessage));
-    expectLastCall();
-    resultWriter.close();
-    expectLastCall();
-
-    replay(resultWriter);
-
-    // run pusher
     pusher.push();
 
-    verify(resultWriter);
-  }
-
-  private Exception exceptionBacktraceMessageContains(final String message)
-  {
-    reportMatcher(new IArgumentMatcher()
-    {
-      @Override
-      public boolean matches(Object argument)
-      {
-        return Throwables.getStackTraceAsString((Throwable) argument).contains(message);
-      }
-
-      @Override
-      public void appendTo(StringBuffer buffer)
-      {
-        buffer.append("exceptionBacktraceMessageContains(\"" + message + "\")");
-      }
-    });
-    return null;
+    assertTrue("recordFailure(e) should have been invoked!", recordFailureInvoked.get());
   }
 }
