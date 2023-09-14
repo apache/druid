@@ -120,6 +120,44 @@ public class CloseableIteratorTest
     }
   }
 
+  @Test
+  public void testFlatMapInnerClose() throws IOException
+  {
+    final int numIterations = 3;
+    List<CloseTrackingCloseableIterator<Integer>> innerIterators = new ArrayList<>();
+    final CloseTrackingCloseableIterator<Integer> actual = new CloseTrackingCloseableIterator<>(
+        generateTestIterator(numIterations)
+            .flatMap(list -> {
+              CloseTrackingCloseableIterator<Integer> inner =
+                  new CloseTrackingCloseableIterator<>(CloseableIterators.withEmptyBaggage(list.iterator()));
+              innerIterators.add(inner);
+              return inner;
+            })
+    );
+
+    // init state
+    Assert.assertEquals(0, innerIterators.size());
+    // check hasNext which will populate 2 iterators (1 of size 0 and one of size 1)
+    Assert.assertTrue(actual.hasNext());
+    Assert.assertEquals(2, innerIterators.size());
+    Assert.assertEquals(1, innerIterators.get(0).closeCount);
+    Assert.assertEquals(0, innerIterators.get(1).closeCount);
+    // fetch the only element from the single sized iterator and check that it is not closed yet
+    Assert.assertEquals(0, actual.next().intValue());
+    Assert.assertEquals(2, innerIterators.size());
+    Assert.assertEquals(1, innerIterators.get(0).closeCount);
+    Assert.assertEquals(0, innerIterators.get(1).closeCount);
+    // check hasNext, it will close the single element iterator and open a new inner iterator with 2 elements
+    Assert.assertTrue(actual.hasNext());
+    Assert.assertEquals(3, innerIterators.size());
+    Assert.assertEquals(1, innerIterators.get(0).closeCount);
+    Assert.assertEquals(1, innerIterators.get(1).closeCount);
+    // check the third iterator and close the overall iterator
+    Assert.assertEquals(0, innerIterators.get(2).closeCount);
+    actual.close();
+    Assert.assertEquals(1, innerIterators.get(2).closeCount);
+  }
+
   private static CloseableIterator<List<Integer>> generateTestIterator(int numIterates)
   {
     return new CloseableIterator<List<Integer>>()
