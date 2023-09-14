@@ -20,6 +20,8 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -371,5 +373,30 @@ public class MSQFaultsTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedMSQFault(QueryNotSupportedFault.instance())
         .verifyResults();
+  }
+
+  @Test
+  public void testUnionAllIsDisallowedWhilePlanning()
+  {
+    // This results in a planning error however the planning error isn't an accurate representation of the actual error
+    // because Calcite rewrites it using CoreRules.UNION_TO_DISTINCT, which plans it using Union Datasource.
+    // However, this fails since the column names mismatch. Once MSQ is able to support Union datasources, the planning
+    // error would become an accurate representation of the error.
+    testIngestQuery()
+        .setSql(
+            "INSERT INTO druid.dst "
+            + "SELECT dim2, dim1, m1 FROM foo2 "
+            + "UNION ALL "
+            + "SELECT dim1, dim2, m1 FROM foo "
+            + "PARTITIONED BY ALL TIME")
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.ADMIN,
+                DruidException.Category.INVALID_INPUT,
+                "general"
+            ).expectMessageIs("Query planning failed for unknown reason, our best guess is this "
+                              + "[SQL requires union between two tables and column names queried for each table are different "
+                              + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1].]"))
+        .verifyPlanningErrors();
   }
 }
