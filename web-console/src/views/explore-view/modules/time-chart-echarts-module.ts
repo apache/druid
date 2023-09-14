@@ -20,7 +20,8 @@ import { C, F, L, SqlCase, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
 import * as echarts from 'echarts';
 
-import { getInitQuery } from '../utils';
+import { getAutoGranularity, getInitQuery } from '../utils';
+import { Duration, Timezone } from 'chronoshift';
 
 const TIME_NAME = '__t__';
 const METRIC_NAME = '__met__';
@@ -46,14 +47,29 @@ function transformData(data: any[], vs: string[]): Record<string, number>[] {
   return ret;
 }
 
+function snapToGranularity(
+  start: Date,
+  end: Date,
+  granularity: string,
+  timezone?: string,
+): { start: Date; end: Date } {
+  const tz = Timezone.fromJS(timezone || 'Etc/UTC');
+  const duration = Duration.fromJS(granularity);
+  return {
+    start: duration.floor(new Date(start), tz),
+    end: duration.shift(duration.floor(new Date(end), tz), tz, 1),
+  };
+}
+
 export default typedVisualModule({
   parameters: {
     timeGranularity: {
       type: 'option',
-      options: ['PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
-      default: 'PT1H',
+      options: ['auto', 'PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
+      default: 'auto',
       control: {
         optionLabels: {
+          auto: 'Auto',
           PT1M: 'Minute',
           PT5M: '5 minutes',
           PT30M: '30 minutes',
@@ -147,6 +163,15 @@ export default typedVisualModule({
       series: [],
     });
 
+    // auto-enables the brush tool on load
+    myChart.dispatchAction({
+      type: 'takeGlobalCursor',
+      key: 'brush',
+      brushOption: {
+        brushType: 'lineX',
+      },
+    });
+
     const resizeHandler = () => {
       myChart.resize();
     };
@@ -154,8 +179,16 @@ export default typedVisualModule({
     window.addEventListener('resize', resizeHandler);
 
     return {
-      async update({ table, where, parameterValues }) {
-        const { splitColumn, metric, numberToStack, showOthers, timeGranularity } = parameterValues;
+      async update({ table, where, parameterValues, context }) {
+        const { splitColumn, metric, numberToStack, showOthers } = parameterValues;
+
+        // this should probably be a parameter
+        const timeColumnName = '__time';
+
+        const timeGranularity =
+          parameterValues.timeGranularity === 'auto'
+            ? getAutoGranularity(where, timeColumnName)
+            : parameterValues.timeGranularity;
 
         myChart.off('brushend');
 
@@ -176,7 +209,7 @@ export default typedVisualModule({
               table,
               splitColumn && vs && !showOthers ? where.and(splitColumn.expression.in(vs)) : where,
             )
-              .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as(TIME_NAME), {
+              .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
                 addToGroupBy: 'end',
                 addToOrderBy: 'end',
                 direction: 'ASC',
@@ -201,14 +234,19 @@ export default typedVisualModule({
         myChart.on('brushend', (params: any) => {
           if (!params.areas.length) return;
 
-          const [start, end] = params.areas[0].coordRange;
+          const { start, end } = snapToGranularity(
+            params.areas[0].coordRange[0],
+            params.areas[0].coordRange[1],
+            timeGranularity,
+            context.timezone,
+          );
 
           updateWhere(
             where.changeClauseInWhere(
               SqlExpression.parse(
-                `TIME_IN_INTERVAL(${C('__time')}, '${new Date(start).toISOString()}/${new Date(
-                  end,
-                ).toISOString()}')`,
+                `TIME_IN_INTERVAL(${C(
+                  timeColumnName,
+                )}, '${start.toISOString()}/${end.toISOString()}')`,
               ),
             ),
           );

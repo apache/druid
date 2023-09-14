@@ -186,6 +186,8 @@ export const ExploreView = React.memo(function ExploreView() {
     VISUAL_MODULES[0].moduleName,
   );
 
+  const [timezone] = useState('Etc/UTC');
+
   const [columns, setColumns] = useState<ExpressionMeta[]>([]);
 
   const { host, where, table, visualModule, updateWhere, updateTable } = useSingleHost({
@@ -199,6 +201,10 @@ export const ExploreView = React.memo(function ExploreView() {
       where: SqlLiteral.TRUE,
     },
   });
+
+  useEffect(() => {
+    host.store.setState({ context: { timezone } });
+  }, [timezone, host.store]);
 
   const { parameterValues, updateParameterValues, resetParameterValues } = useParameterValues({
     host,
