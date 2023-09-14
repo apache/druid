@@ -46,6 +46,9 @@
   - 'processing/src/main/java/org/apache/druid/java/util/emitter/**'
   - 'extensions-contrib/*-emitter/**'
 
+'Area - MSQ':
+  - 'extensions-core/multi-stage-query/**'
+
 'Area - Querying':
   - 'sql/**'
   - 'extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/sql/**'
@@ -62,6 +65,3 @@
 
 'Kubernetes':
   - 'extensions-contrib/kubernetes-overlord-extensions/**'
-
-'Area - MSQ':
-  - 'extensions-core/multi-stage-query/**'
