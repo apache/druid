@@ -390,7 +390,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           MAX_NUM_CACHE,
           selector -> {
             int cardinality = selector.getValueCardinality();
-            IntFunction<IntSortedSet> loader = dimensionId -> getRowNumbers(selector, dimensionId);
+            IntFunction<IntSortedSet> loader = dimensionId -> getRowNumbers(selector.lookupName(dimensionId));
             return cardinality <= CACHE_MAX_SIZE
                    ? new Int2IntSortedSetLookupTable(cardinality, loader)
                    : new Int2IntSortedSetLruCache(CACHE_MAX_SIZE, loader);
@@ -398,9 +398,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       );
     }
 
-    private IntSortedSet getRowNumbers(DimensionSelector selector, int dimensionId)
+    private IntSortedSet getRowNumbers(@Nullable String key)
     {
-      final String key = selector.lookupName(dimensionId);
       if (includeNull || !NullHandling.isNullOrEquivalent(key)) {
         return index.find(key);
       } else {
@@ -437,9 +436,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
           if (row.size() == 1) {
             int dimensionId = row.get(0);
-            return getRowNumbers(selector, dimensionId);
+            return getRowNumbers(selector.lookupName(dimensionId));
           } else if (row.size() == 0) {
-            return IntSortedSets.EMPTY_SET;
+            return getRowNumbers(null);
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
@@ -456,7 +455,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             int dimensionId = row.get(0);
             return getAndCacheRowNumbers(selector, dimensionId);
           } else if (row.size() == 0) {
-            return IntSortedSets.EMPTY_SET;
+            return getRowNumbers(null);
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done

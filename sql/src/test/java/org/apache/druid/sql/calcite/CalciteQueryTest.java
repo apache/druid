@@ -6759,7 +6759,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         PLANNER_CONFIG_NO_HLL,
-        "SELECT dim2, SUM(m1), COUNT(distinct dim1), COUNT(distinct cnt) FROM druid.foo GROUP BY dim2",
+        "SELECT dim2, COUNT(*), COUNT(distinct dim1), COUNT(distinct cnt) FROM druid.foo GROUP BY dim2",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
@@ -6773,7 +6773,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     .setGranularity(Granularities.ALL)
                                     .setInterval(querySegmentSpec(Filtration.eternity()))
                                     .setDimensions(new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING))
-                                    .setAggregatorSpecs(new DoubleSumAggregatorFactory("a0", "m1"))
+                                    .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                     .build()
                             ),
                             new QueryDataSource(
@@ -6799,7 +6799,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     .setAggregatorSpecs(
                                         new FilteredAggregatorFactory(
                                             new CountAggregatorFactory("a0"),
-                                            new NotDimFilter(new NullFilter("d1", null))
+                                            new NotDimFilter(isNull("d1", null))
                                         )
                                     )
                                     .build()
@@ -6828,10 +6828,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setDimensions(new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING))
                                         .setAggregatorSpecs(
-                                            new FilteredAggregatorFactory(
+                                            NullHandling.sqlCompatible()
+                                            ? new FilteredAggregatorFactory(
                                                 new CountAggregatorFactory("a0"),
-                                                new NotDimFilter(new NullFilter("d1", null))
+                                                new NotDimFilter(isNull("d1", null))
                                             )
+                                            : new CountAggregatorFactory("a0")
                                         )
                                         .build()
                         ),
@@ -6845,10 +6847,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .columns(ImmutableList.of("_j0.a0", "a0", "d0", "j0.a0"))
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"", 3.0, 1L, 1L},
-            new Object[]{"a", 5.0, 2L, 1L},
-            new Object[]{"abc", 5.0, 1L, 1L}
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 2L, 2L, 1L},
+            new Object[]{"", 1L, 1L, 1L},
+            new Object[]{"a", 2L, 2L, 1L},
+            new Object[]{"abc", 1L, 1L, 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 3L, 3L, 1L},
+            new Object[]{"a", 2L, 1L, 1L},
+            new Object[]{"abc", 1L, 1L, 1L}
         )
     );
   }

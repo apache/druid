@@ -1129,6 +1129,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1L, eval("['a','b',null,'c'] >= stringArray", bindings).value());
     Assert.assertEquals(1L, eval("['a','b',null,'c'] == stringArray", bindings).value());
     Assert.assertEquals(0L, eval("['a','b',null,'c'] != stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("notdistinctfrom(['a','b',null,'c'], stringArray)", bindings).value());
+    Assert.assertEquals(0L, eval("isdistinctfrom(['a','b',null,'c'], stringArray)", bindings).value());
     Assert.assertEquals(1L, eval("['a','b',null,'c'] <= stringArray", bindings).value());
     Assert.assertEquals(0L, eval("['a','b',null,'c'] < stringArray", bindings).value());
 
@@ -1136,6 +1138,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1L, eval("[1,null,2,3] >= longArray", bindings).value());
     Assert.assertEquals(1L, eval("[1,null,2,3] == longArray", bindings).value());
     Assert.assertEquals(0L, eval("[1,null,2,3] != longArray", bindings).value());
+    Assert.assertEquals(1L, eval("notdistinctfrom([1,null,2,3], longArray)", bindings).value());
+    Assert.assertEquals(0L, eval("isdistinctfrom([1,null,2,3], longArray)", bindings).value());
     Assert.assertEquals(1L, eval("[1,null,2,3] <= longArray", bindings).value());
     Assert.assertEquals(0L, eval("[1,null,2,3] < longArray", bindings).value());
 
@@ -1143,6 +1147,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] >= doubleArray", bindings).value());
     Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] == doubleArray", bindings).value());
     Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] != doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("notdistinctfrom([1.1,2.2,3.3,null], doubleArray)", bindings).value());
+    Assert.assertEquals(0L, eval("isdistinctfrom([1.1,2.2,3.3,null], doubleArray)", bindings).value());
     Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] <= doubleArray", bindings).value());
     Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] < doubleArray", bindings).value());
   }
