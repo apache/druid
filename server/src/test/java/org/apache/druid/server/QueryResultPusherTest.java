@@ -23,13 +23,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.argThat;
@@ -37,8 +42,29 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@RunWith(Parameterized.class)
 public class QueryResultPusherTest
 {
+
+  private boolean resultWriterPath;
+
+  @Parameters
+  public static List<Object[]> parameters()
+  {
+
+    List<Object[]> params = new ArrayList<>();
+
+    params.add(new Object[] {true});
+    params.add(new Object[] {false});
+
+    return params;
+  }
+
+  public QueryResultPusherTest(boolean resultWriterPath)
+  {
+    this.resultWriterPath = resultWriterPath;
+  }
+
   @Test
   public void testResultPusherRetainsNestedExceptionBacktraces()
   {
@@ -67,13 +93,21 @@ public class QueryResultPusherTest
       @Override
       public void writeException(Exception e, OutputStream out) throws IOException
       {
-        throw new RuntimeException("Unimplemented!");
+        if (resultWriterPath) {
+          throw new RuntimeException("Unexpected");
+        } else {
+          resultWriter.recordFailure(e);
+        }
       }
 
       @Override
       public ResultsWriter start()
       {
-        return resultWriter;
+        if (resultWriterPath) {
+          return resultWriter;
+        } else {
+          return null;
+        }
       }
     };
 
