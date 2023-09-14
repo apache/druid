@@ -58,6 +58,7 @@ public class QueryResultPusherTest
     Map<String, String> extraHeaders = new HashMap<String, String>();
 
     ResultsWriter resultWriter = mock(ResultsWriter.class);
+    @SuppressWarnings("unchecked")
     List<Exception> loggedExceptions = mock(List.class);
 
     QueryResultPusher pusher = new QueryResultPusher(
@@ -88,7 +89,9 @@ public class QueryResultPusherTest
     RuntimeException embeddedException = new RuntimeException(embeddedExceptionMessage);
     RuntimeException topException = new RuntimeException("Where's the party?", embeddedException);
 
+    @SuppressWarnings("unchecked")
     QueryResponse<Object> queryResponse = mock(QueryResponse.class);
+    @SuppressWarnings("unchecked")
     Sequence<Object> results = mock(Sequence.class);
     AsyncContext asyncContext = mock(AsyncContext.class);
     ServletResponse response = mock(HttpServletResponse.class);
