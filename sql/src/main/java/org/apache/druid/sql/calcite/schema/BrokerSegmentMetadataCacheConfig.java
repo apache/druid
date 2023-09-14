@@ -25,11 +25,16 @@ import org.joda.time.Period;
 
 /**
  * Broker-side configuration class for managing segment polling from the Coordinator and
- * customizing properties related to the SegmentMetadata cache.
- * <p>
- * The property {@link #awaitInitializationOnStart} is overridden in this class with a default value
+ * customizing properties related to the SegmentMetadata cache which is used to infer datasources for SQL.
+ *
+ * <p>See {@link BrokerSegmentMetadataCache}, {@link MetadataSegmentView}.</p>
+ *
+ * <p>This class shares the same config root as {@link org.apache.druid.sql.calcite.planner.PlannerConfig}
+ * to maintain backward compatibility for when the properties here resided in {@code PlannerConfig}.</p>
+ *
+ * <p> The property {@link #awaitInitializationOnStart} is overridden in this class with a default value
  * of {@code true}, which differs from the parent class. This ensures that the SegmentMetadata cache is
- * fully initialized before other startup processes proceed.
+ * fully initialized before other startup processes proceed.</p>
  */
 public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 {

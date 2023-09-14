@@ -150,6 +150,11 @@ public class MetadataResource
       @QueryParam("includeRealtimeSegments") final @Nullable String includeRealtimeSegments
   )
   {
+    // realtime segments can be requested only when {@code includeOverShadowedStatus} is set
+    if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
     if (includeOvershadowedStatus != null) {
       return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
     }
@@ -358,6 +363,9 @@ public class MetadataResource
 
   /**
    * API to fetch {@link DataSourceInformation} for the specified dataSources.
+   *
+   * @param dataSources list of dataSources to be queried
+   * @return information including schema details for the specified dataSources
    */
   @POST
   @Path("/dataSourceInformation")
@@ -366,6 +374,7 @@ public class MetadataResource
       List<String> dataSources
   )
   {
+    // if {@code coordinatorSegmentMetadataCache} is null, implies the feature is disabled. Return NOT_FOUND.
     if (null == coordinatorSegmentMetadataCache) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

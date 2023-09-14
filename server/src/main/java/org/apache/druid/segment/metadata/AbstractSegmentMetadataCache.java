@@ -89,13 +89,13 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * An abstract class that listens for segment change events and caches segment metadata.
- * It periodically queries data nodes to fetch segment schemas and combines them to build a data source schema.
+ * An abstract class that listens for segment change events and caches segment metadata and periodically refreshes
+ * the segments and dataSources.
  *
  * <p>This class is generic and is parameterized by a type {@code T} that extends {@link DataSourceInformation}.</p>
  *
  * <p>This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
- * with the logic to get segment schema.</p>
+ * with the logic to build and cache table schema.</p>
  *
  * @param <T> The type of information associated with the data source, which must extend {@link DataSourceInformation}.
  */
@@ -120,12 +120,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   private final ExecutorService callbackExec;
   private final ServiceEmitter emitter;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
-
-  /**
-   * Map of dataSource and generic object extending DataSourceInformation.
-   * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
-   */
-  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -196,6 +190,12 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * and thus there is no concurrency control for this variable.
    */
   private int totalSegments = 0;
+
+  /**
+   * Map of dataSource and generic object extending DataSourceInformation.
+   * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
+   */
+  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
 
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
@@ -395,8 +395,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
-  public abstract void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild) throws IOException;
-
   @LifecycleStop
   public void stop()
   {
@@ -409,20 +407,78 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     initialized.await();
   }
 
+  /**
+   * @param name name of the dataSource.
+   * @return schema information for the dataSource.
+   */
   public T getDatasource(String name)
   {
     return tables.get(name);
   }
 
+  /**
+   * @return Map of dataSource and corresponding schema information.
+   */
   public Map<String, T> getDataSourceInformationMap()
   {
     return ImmutableMap.copyOf(tables);
   }
 
+  /**
+   * @return set of dataSources for which schema information is cached.
+   */
   public Set<String> getDatasourceNames()
   {
     return tables.keySet();
   }
+
+  /**
+   * Get metadata for all the cached segments, which includes information like RowSignature, realtime & numRows etc.
+   *
+   * @return Map of segmentId and corresponding metadata.
+   */
+  public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  {
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
+    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
+      segmentMetadata.putAll(val);
+    }
+    return segmentMetadata;
+  }
+
+  /**
+   * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
+   *
+   * @param datasource dataSource of the given segment
+   * @param segmentId segmentId of the given segment
+   * @return Metadata information for the given segment
+   */
+  @Nullable
+  public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
+  {
+    if (!segmentMetadataInfo.containsKey(datasource)) {
+      return null;
+    }
+    return segmentMetadataInfo.get(datasource).get(segmentId);
+  }
+
+  /**
+   * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
+   * As a result, the returned value might be inexact.
+   */
+  public int getTotalSegments()
+  {
+    return totalSegments;
+  }
+
+  /**
+   * The child classes must override this method with the logic to build and cache table schema.
+   *
+   * @param segmentsToRefresh suspected segments for which the schema might have changed
+   * @param dataSourcesToRebuild suspected dataSources for which the schema might have changed
+   * @throws IOException when querying segment from data nodes and tasks
+   */
+  public abstract void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild) throws IOException;
 
   @VisibleForTesting
   public void addSegment(final DruidServerMetadata server, final DataSegment segment)
@@ -802,33 +858,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     columnTypes.forEach(builder::add);
 
     return builder.build();
-  }
-
-  public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
-  {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
-    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-      segmentMetadata.putAll(val);
-    }
-    return segmentMetadata;
-  }
-
-  @Nullable
-  public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
-  {
-    if (!segmentMetadataInfo.containsKey(datasource)) {
-      return null;
-    }
-    return segmentMetadataInfo.get(datasource).get(segmentId);
-  }
-
-  /**
-   * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
-   * As a result, the returned value might be inexact.
-   */
-  public int getTotalSegments()
-  {
-    return totalSegments;
   }
 
   @VisibleForTesting

@@ -98,11 +98,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    Set<String> dataSourcesToQuery = new HashSet<>();
+    final Set<String> dataSourcesToQuery = new HashSet<>(dataSourcesToRebuild);
 
     segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
 
-    Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
+    final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 
     // Fetch dataSource information from the Coordinator
     try {

@@ -25,6 +25,7 @@ import org.joda.time.Period;
 
 /**
  * Coordinator-side configuration class for customizing properties related to the SegmentMetadata cache.
+ * See {@link CoordinatorSegmentMetadataCache}
  */
 public class SegmentMetadataCacheConfig
 {
@@ -73,5 +74,15 @@ public class SegmentMetadataCacheConfig
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentMetadataCacheConfig{" +
+           "awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataRefreshPeriod=" + metadataRefreshPeriod +
+           ", metadataColumnTypeMergePolicy=" + metadataColumnTypeMergePolicy +
+           '}';
   }
 }

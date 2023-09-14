@@ -79,8 +79,8 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
   }
 
   /**
-   * This class maintains a timeline of {@link ServerSelector} objects.
-   * This method converts and returns a new timeline of the object {@link SegmentLoadInfo}.
+   * Since this class maintains a timeline of {@link ServerSelector} objects,
+   * this method converts and returns a new timeline of the object {@link SegmentLoadInfo}.
    *
    * @param dataSource dataSoruce
    * @return timeline for the given dataSource
