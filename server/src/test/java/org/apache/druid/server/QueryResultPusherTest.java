@@ -95,9 +95,9 @@ public class QueryResultPusherTest
 
     when(resultWriter.getQueryResponse()).thenReturn(queryResponse);
     when(queryResponse.getResults()).thenReturn(results);
-    when(results.accumulate(any(), any())).thenThrow(topException);
     when(request.startAsync()).thenReturn(asyncContext);
     when(asyncContext.getResponse()).thenReturn(response);
+    when(results.accumulate(any(), any())).thenThrow(topException);
 
     // run pusher
     pusher.push();
