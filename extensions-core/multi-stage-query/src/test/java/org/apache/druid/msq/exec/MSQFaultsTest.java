@@ -361,27 +361,32 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testUnionAllIsDisallowed()
+  public void testUnionAllUsingUnionDataSourceDisallowed()
   {
     final RowSignature rowSignature =
         RowSignature.builder().add("__time", ColumnType.LONG).build();
-    testIngestQuery()
+    // This plans the query using DruidUnionDataSourceRule since the DruidUnionDataSourceRule#isCompatible
+    // returns true (column names, types match, and it is a union on the table data sources).
+    // It gets planned correctly, however MSQ engine cannot plan the query correctly
+    testSelectQuery()
         .setSql("SELECT * FROM foo\n"
                 + "UNION ALL\n"
                 + "SELECT * FROM foo\n")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedDataSource("foo1")
         .setExpectedMSQFault(QueryNotSupportedFault.instance())
         .verifyResults();
   }
 
   @Test
-  public void testUnionAllIsDisallowedWhilePlanning()
+  public void testUnionAllUsingTopLevelUnionDisallowedWhilePlanning()
   {
-    // This results in a planning error however the planning error isn't an accurate representation of the actual error
-    // because Calcite rewrites it using CoreRules.UNION_TO_DISTINCT, which plans it using Union Datasource.
-    // However, this fails since the column names mismatch. Once MSQ is able to support Union datasources, the planning
-    // error would become an accurate representation of the error.
+    // This results in a planning error however the planning error isn't an accurate representation of the actual error.
+    // Calcite tries to plan the query using DruidUnionRule, which passes with native, however fails with MSQ (due to engine
+    // feature ALLOW_TOP_LEVEL_UNION_ALL being absent)
+    // Calcite then tries to write it using DruidUnionDataSourceRule. However, the isCompatible check fails because column
+    // names mismatch. But it sets the planning error with this mismatch, which can be misleading since native queries can
+    // plan fine using the DruidUnionRule (that's disabled in MSQ)
+    // Once MSQ is able to support union datasources, we'd be able to execute this query fine in MSQ
     testIngestQuery()
         .setSql(
             "INSERT INTO druid.dst "

@@ -26,7 +26,6 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
-import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.List;
 
@@ -52,13 +51,6 @@ public class DruidUnionRule extends RelOptRule
   @Override
   public boolean matches(RelOptRuleCall call)
   {
-    if (!plannerContext.featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
-      plannerContext.setPlanningError(
-          "Top level 'UNION ALL' is unsupported by SQL engine [%s].",
-          plannerContext.getEngine().name()
-      );
-      return false;
-    }
     // Make DruidUnionRule and DruidUnionDataSourceRule mutually exclusive.
     final Union unionRel = call.rel(0);
     final DruidRel<?> firstDruidRel = call.rel(1);
