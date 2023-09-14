@@ -124,8 +124,18 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         fullyQualifiedStorageDirectory.get(),
         storageDirSuffix
     );
-
-    final String storageDir = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
+    
+    final String outIndexFilePath;
+    if (storageDirSuffix.endsWith("index.zip")) {
+      outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
+    } else {
+      outIndexFilePath = StringUtils.format(
+          "%s/%s/%d_index.zip",
+          fullyQualifiedStorageDirectory.get(),
+          storageDirSuffix.replace(':', '_'),
+          segment.getShardSpec().getPartitionNum()
+      );
+    }
 
     Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",
@@ -145,7 +155,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
         size = CompressionUtils.zip(inDir, out);
       }
-      final Path outIndexFile = new Path(storageDir);
+      final Path outIndexFile = new Path(outIndexFilePath);
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
                            .withSize(size)
                            .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
