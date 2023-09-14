@@ -158,10 +158,10 @@ public abstract class QueryResultPusher
       // to show the user this error even if we didn't get to the step where
       // we did a security check.
       request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-      return handleException(resultsWriter, e);
+      return handleDruidException(resultsWriter, e);
     }
     catch (QueryException e) {
-      return handleException(resultsWriter, e);
+      return handleQueryException(resultsWriter, e);
     }
     catch (RuntimeException re) {
       if (re instanceof ForbiddenException) {
@@ -174,10 +174,10 @@ public abstract class QueryResultPusher
         }
         throw re;
       }
-      return handleException(resultsWriter, re);
+      return handleQueryException(resultsWriter, new QueryInterruptedException(re));
     }
     catch (IOException ioEx) {
-      return handleException(resultsWriter, ioEx);
+      return handleQueryException(resultsWriter, new QueryInterruptedException(ioEx));
     }
     finally {
       if (accumulator != null) {
@@ -205,12 +205,16 @@ public abstract class QueryResultPusher
     return null;
   }
 
-  private Response handleException(ResultsWriter resultsWriter, Exception inputException)
+  @Nullable
+  private Response handleQueryException(ResultsWriter resultsWriter, QueryException e)
   {
-    DruidException e = toDruidException(inputException);
+    return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
+  }
 
+  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  {
     if (resultsWriter != null) {
-      resultsWriter.recordFailure(inputException);
+      resultsWriter.recordFailure(e);
       counter.incrementFailed();
 
       if (accumulator != null && accumulator.isInitialized()) {
@@ -261,7 +265,7 @@ public abstract class QueryResultPusher
       response.setStatus(e.getStatusCode());
       response.setHeader("Content-Type", contentType.toString());
       try (ServletOutputStream out = response.getOutputStream()) {
-        writeException(inputException, out);
+        writeException(e, out);
       }
       catch (IOException ioException) {
         log.warn(
@@ -272,17 +276,6 @@ public abstract class QueryResultPusher
       }
       return null;
     }
-  }
-
-  private DruidException toDruidException(Exception e)
-  {
-    if (e instanceof DruidException) {
-      return (DruidException) e;
-    }
-    if (!(e instanceof QueryException)) {
-      e = new QueryInterruptedException(e);
-    }
-    return DruidException.fromFailure(new QueryExceptionCompat((QueryException) e));
   }
 
   public interface ResultsWriter extends Closeable
