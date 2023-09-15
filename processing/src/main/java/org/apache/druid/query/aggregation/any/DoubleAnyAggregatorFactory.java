@@ -123,7 +123,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
     if (capabilities == null || capabilities.isNumeric()) {
       return new DoubleAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
-      return NumericNilVectorAggregator.doubleNilVectorAggregator();
+      return NilVectorAggregator.doubleNilVectorAggregator();
     }
   }
 
