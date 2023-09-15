@@ -1381,7 +1381,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  static class Log1p extends DoubleUnivariateMathFunction
+  public static class Log1p extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1402,7 +1402,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  static class NextUp extends DoubleUnivariateMathFunction
+  public static class NextUp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1423,7 +1423,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  static class Rint extends DoubleUnivariateMathFunction
+  public static class Rint extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()

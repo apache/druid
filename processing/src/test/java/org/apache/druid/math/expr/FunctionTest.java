@@ -39,6 +39,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
@@ -47,6 +49,7 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
@@ -1218,5 +1221,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
     Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
     Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
+  }
+
+  @Test
+  public void checkAllSubClassesArePublic()
+  {
+    for (Class<?> cl : Function.class.getDeclaredClasses()) {
+      assertTrue("non-public: " + cl.getName(), (cl.getModifiers() & Modifier.PUBLIC) > 0);
+      assertTrue("non-static: " + cl.getName(), (cl.getModifiers() & Modifier.STATIC) > 0);
+    }
   }
 }
