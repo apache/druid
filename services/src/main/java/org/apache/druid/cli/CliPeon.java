@@ -293,7 +293,7 @@ public class CliPeon extends GuiceRunnable
           public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager, TaskConfig taskConfig)
           {
             try {
-              if (!config.getTaskFile().exists()) {
+              if (!config.getTaskFile().exists() || config.getTaskFile().length() == 0) {
                 log.info("Task file not found, trying to pull task payload from deep storage");
                 String task = IOUtils.toString(taskPayloadManager.streamTaskPayload(taskId).get(), Charset.defaultCharset());
                 // write the remote task.json to the task file location for ExecutorLifecycle to pickup
