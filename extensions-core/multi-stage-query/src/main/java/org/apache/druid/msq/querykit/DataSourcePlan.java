@@ -137,10 +137,8 @@ public class DataSourcePlan
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forInline((InlineDataSource) dataSource, broadcast);
     } else if (dataSource instanceof LookupDataSource) {
-      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forLookup((LookupDataSource) dataSource, broadcast);
     } else if (dataSource instanceof FilteredDataSource) {
-      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forFilteredDataSource(
           queryKit,
           queryId,
