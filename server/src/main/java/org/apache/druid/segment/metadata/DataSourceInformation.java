@@ -27,7 +27,7 @@ import org.apache.druid.segment.column.RowSignature;
 import java.util.Objects;
 
 /**
- * Encapsulates information about a dataSource, such as its schema.
+ * Encapsulates information about a datasource, such as its schema.
  */
 public class DataSourceInformation
 {

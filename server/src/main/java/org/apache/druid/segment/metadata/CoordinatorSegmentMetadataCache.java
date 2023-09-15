@@ -61,7 +61,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
    * The schema information for individual segments is combined to construct a table schema, which is then cached.
    *
    * @param segmentsToRefresh    segments for which the schema might have changed
-   * @param dataSourcesToRebuild dataSources for which the schema might have changed
+   * @param dataSourcesToRebuild datasources for which the schema might have changed
    * @throws IOException         when querying segment from data nodes and tasks
    */
   @Override
@@ -74,17 +74,17 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       // Add missing segments back to the refresh list.
       segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
-      // Compute the list of dataSources to rebuild tables for.
+      // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
       dataSourcesNeedingRebuild.clear();
     }
 
-    // Rebuild the dataSources.
+    // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDruidTable(dataSource);
       if (rowSignature == null) {
-        log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
+        log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
         return;
       }

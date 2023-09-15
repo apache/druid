@@ -90,7 +90,7 @@ import java.util.stream.StreamSupport;
 
 /**
  * An abstract class that listens for segment change events and caches segment metadata and periodically refreshes
- * the segments and dataSources.
+ * the segments and datasources.
  *
  * <p>This class is generic and is parameterized by a type {@code T} that extends {@link DataSourceInformation}.</p>
  *
@@ -192,7 +192,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   private int totalSegments = 0;
 
   /**
-   * Map of dataSource and generic object extending DataSourceInformation.
+   * Map of datasource and generic object extending DataSourceInformation.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
@@ -207,7 +207,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   protected final Object lock = new Object();
 
-  // All dataSources that need tables regenerated.
+  // All datasources that need tables regenerated.
   @GuardedBy("lock")
   protected final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
 
@@ -352,7 +352,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                 log.warn(e, "Metadata refresh failed, trying again soon.");
 
                 synchronized (lock) {
-                  // Add our segments and dataSources back to their refresh and rebuild lists.
+                  // Add our segments and datasources back to their refresh and rebuild lists.
                   segmentsNeedingRefresh.addAll(segmentsToRefresh);
                   dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
                   lastFailure = System.currentTimeMillis();
@@ -408,11 +408,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * Fetch schema for the given dataSource.
+   * Fetch schema for the given datasource.
    *
-   * @param name dataSource
+   * @param name datasource
    *
-   * @return schema information for the given dataSource
+   * @return schema information for the given datasource
    */
   public T getDatasource(String name)
   {
@@ -420,7 +420,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * @return Map of dataSource and corresponding schema information.
+   * @return Map of datasource and corresponding schema information.
    */
   public Map<String, T> getDataSourceInformationMap()
   {
@@ -428,7 +428,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * @return Set of dataSources for which schema information is cached.
+   * @return Set of datasources for which schema information is cached.
    */
   public Set<String> getDatasourceNames()
   {
@@ -452,7 +452,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
    *
-   * @param datasource segment dataSource
+   * @param datasource segment datasource
    * @param segmentId  segment Id
    *
    * @return Metadata information for the given segment
@@ -479,7 +479,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * The child classes must override this method with the logic to build and cache table schema.
    *
    * @param segmentsToRefresh    segments for which the schema might have changed
-   * @param dataSourcesToRebuild dataSources for which the schema might have changed
+   * @param dataSourcesToRebuild datasources for which the schema might have changed
    * @throws IOException         when querying segment schema from data nodes and tasks
    */
   public abstract void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild) throws IOException;
@@ -695,7 +695,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   {
     final Set<SegmentId> retVal = new HashSet<>();
 
-    // Organize segments by dataSource.
+    // Organize segments by datasource.
     final Map<String, TreeSet<SegmentId>> segmentMap = new TreeMap<>();
 
     for (SegmentId segmentId : segments) {
@@ -742,7 +742,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
+    log.debug("Refreshing metadata for datasource[%s].", dataSource);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -821,7 +821,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
 
     log.debug(
-        "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
+        "Refreshed metadata for datasource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         refreshDurationMillis,
         retVal.size(),
@@ -899,7 +899,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       final Iterable<SegmentId> segments
   )
   {
-    // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
+    // Sanity check: getOnlyElement of a set, to ensure all segments have the same datasource.
     final String dataSource = Iterables.getOnlyElement(
         StreamSupport.stream(segments.spliterator(), false)
                      .map(SegmentId::getDataSource).collect(Collectors.toSet())

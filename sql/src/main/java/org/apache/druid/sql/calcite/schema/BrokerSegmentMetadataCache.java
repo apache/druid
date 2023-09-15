@@ -90,13 +90,13 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   /**
    * Refreshes the set of segments in two steps:
    * <ul>
-   *  <li>Polls the coordinator for the dataSource schema.</li>
+   *  <li>Polls the coordinator for the datasource schema.</li>
    *  <li>Refreshes the remaining set of segments by executing a SegmentMetadataQuery and
-   *      builds dataSource schema by combining segment schema.</li>
+   *      builds datasource schema by combining segment schema.</li>
    * </ul>
    *
    * @param segmentsToRefresh    segments for which the schema might have changed
-   * @param dataSourcesToRebuild dataSources for which the schema might have changed
+   * @param dataSourcesToRebuild datasources for which the schema might have changed
    * @throws IOException         when querying segment schema from data nodes and tasks
    */
   @Override
@@ -108,7 +108,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
     final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 
-    // Fetch dataSource information from the Coordinator
+    // Fetch datasource information from the Coordinator
     try {
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
                  .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
@@ -120,15 +120,16 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
                  ));
     }
     catch (Exception e) {
-      log.warn("Failed to query dataSource information from the Coordinator.");
+      log.warn("Failed to query datasource information from the Coordinator.");
     }
 
-    // remove any extra dataSources returned
+    // remove any extra datasources returned
     polledDataSourceMetadata.keySet().removeIf(Predicates.not(dataSourcesToQuery::contains));
 
-    tables.putAll(polledDataSourceMetadata);
+    // update datasource metadata in the cache
+    polledDataSourceMetadata.forEach(this::updateDsMetadata);
 
-    // Remove segments of the dataSource from refresh list for which we received schema from the Coordinator.
+    // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
     // Refresh the remaining segments.
@@ -138,31 +139,36 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       // Add missing segments back to the refresh list.
       segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
-      // Compute the list of dataSources to rebuild tables for.
+      // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
 
-      // Remove those dataSource for which we received schema from the Coordinator.
+      // Remove those datasource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
       dataSourcesNeedingRebuild.clear();
     }
 
-    // Rebuild the dataSources.
+    // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDruidTable(dataSource);
       if (rowSignature == null) {
-        log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
+        log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
         return;
       }
 
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
-      final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
-      if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
-        log.info("[%s] has new signature: %s.", dataSource, rowSignature);
-      } else {
-        log.debug("[%s] signature is unchanged.", dataSource);
-      }
+      updateDsMetadata(dataSource, physicalDatasourceMetadata);
+    }
+  }
+
+  private void updateDsMetadata(String dataSource, PhysicalDatasourceMetadata physicalDatasourceMetadata)
+  {
+    final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
+    if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
+      log.info("[%s] has new signature: %s.", dataSource, physicalDatasourceMetadata.getRowSignature());
+    } else {
+      log.debug("[%s] signature is unchanged.", dataSource);
     }
   }
 }
