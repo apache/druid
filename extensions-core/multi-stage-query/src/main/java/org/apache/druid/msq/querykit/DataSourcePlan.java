@@ -150,7 +150,6 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof UnnestDataSource) {
-      checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forUnnest(
           queryKit,
           queryId,

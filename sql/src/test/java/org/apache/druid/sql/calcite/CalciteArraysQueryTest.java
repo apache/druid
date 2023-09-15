@@ -3066,8 +3066,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     skipVectorize();
-    // lotsofcolumns dataset is not loaded into MSQ tests now, once we load it we can remove this
-    notMsqCompatible();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
                  + "           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )"
