@@ -31,6 +31,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -207,7 +208,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final InputRowParser<ByteBuffer> parser;
   private final String stream;
 
-  private final Map<String, SequenceMetadata<PartitionIdType, SequenceOffsetType>> publishingSequences = new ConcurrentHashMap<>();
+  private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
@@ -795,24 +796,33 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
       // the sequence list. If a publish finishes before we finish iterating through the sequence list, we can
       // end up skipping some sequences.
-      List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
-      for (int i = 0; i < sequencesSnapshot.size(); i++) {
-        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
-        if (!publishingSequences.containsKey(sequenceMetadata.getSequenceName())) {
-          final boolean isLast = i == (sequencesSnapshot.size() - 1);
-          if (isLast) {
-            // Shorten endOffsets of the last sequence to match currOffsets.
-            sequenceMetadata.setEndOffsets(currOffsets);
-          }
+      List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> waitForPublishingSequences = new ArrayList<>();
 
-          // Update assignments of the sequence, which should clear them. (This will be checked later, when the
-          // Committer is built.)
-          sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
-          publishingSequences.put(sequenceMetadata.getSequenceName(), sequenceMetadata);
-          // persist already done in finally, so directly add to publishQueue
-          publishAndRegisterHandoff(sequenceMetadata);
+      synchronized (publishingSequences) {
+        List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
+        for (int i = 0; i < sequences.size(); i++) {
+          final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
+          if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
+            final boolean isLast = i == (sequencesSnapshot.size() - 1);
+            if (isLast) {
+              // Shorten endOffsets of the last sequence to match currOffsets.
+              sequenceMetadata.setEndOffsets(currOffsets);
+            }
+
+            // Update assignments of the sequence, which should clear them. (This will be checked later, when the
+            // Committer is built.)
+            sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
+            publishingSequences.add(sequenceMetadata.getSequenceName());
+            waitForPublishingSequences.add(sequenceMetadata);
+          }
         }
       }
+
+      for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : waitForPublishingSequences) {
+        // persist already done in finally, so directly add to publishQueue
+        publishAndRegisterHandoff(sequenceMetadata);
+      }
+
 
       if (backgroundThreadException != null) {
         throw new RuntimeException(backgroundThreadException);
@@ -996,7 +1006,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
-            synchronized (sequences) {
+            synchronized (publishingSequences) {
               sequences.remove(sequenceMetadata);
               publishingSequences.remove(sequenceMetadata.getSequenceName());
             }
@@ -1146,11 +1156,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> waitForPublishingSequences = new ArrayList<>();
 
-    synchronized (sequences) {
-      for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
+    synchronized (publishingSequences) {
+      List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
+      for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequencesSnapshot) {
         sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
-        if (!sequenceMetadata.isOpen() && !publishingSequences.containsKey(sequenceMetadata.getSequenceName())) {
-          publishingSequences.put(sequenceMetadata.getSequenceName(), sequenceMetadata);
+        if (!sequenceMetadata.isOpen() && !publishingSequences.contains(sequenceMetadata.getSequenceName())) {
+          publishingSequences.add(sequenceMetadata.getSequenceName());
           waitForPublishingSequences.add(sequenceMetadata);
         }
       }
