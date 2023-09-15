@@ -322,7 +322,7 @@ you to join arbitrarily many datasources.
 In Druid {{DRUIDVERSION}}, joins in native queries are implemented with a broadcast hash-join algorithm. This means
 that all datasources other than the leftmost "base" datasource must fit in memory. In native queries, the join condition
 must be an equality. In SQL, any join condition is accepted, but only equalities of a certain form
-(see [Joins in SQL](#joins-in-sql) execute as part of a native join. Other kinds of conditions execute as a cross join
+(see [Joins in SQL](#joins-in-sql)) execute as part of a native join. Other kinds of conditions execute as a cross join
 (cartesian product) plus a filter.
 
 This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
