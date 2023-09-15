@@ -20,6 +20,7 @@ import { C, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
 import * as echarts from 'echarts';
 
+import { highlightStore } from '../highlight-store/highlight-store';
 import { getInitQuery } from '../utils';
 
 export default typedVisualModule({
@@ -56,7 +57,7 @@ export default typedVisualModule({
       },
     },
   },
-  module: ({ container, host, getLastUpdateEvent, updateWhere }) => {
+  module: ({ container, host, updateWhere }) => {
     const { sqlQuery } = host;
     const myChart = echarts.init(container, 'dark');
 
@@ -83,26 +84,12 @@ export default typedVisualModule({
       ],
     });
 
-    const resizeHandler = () => {
-      myChart.resize();
-    };
-
-    window.addEventListener('resize', resizeHandler);
-
-    myChart.on('click', 'series', p => {
-      const lastUpdateEvent = getLastUpdateEvent();
-      if (!lastUpdateEvent?.parameterValues.splitColumn) return;
-
-      updateWhere(
-        lastUpdateEvent.where.toggleClauseInWhere(
-          C(lastUpdateEvent.parameterValues.splitColumn.name).equal(p.name),
-        ),
-      );
-    });
-
     return {
       async update({ table, where, parameterValues }) {
         const { splitColumn, metric, metricToSort, limit } = parameterValues;
+
+        myChart.off('click');
+
         if (!splitColumn) return;
 
         const v = await sqlQuery(
@@ -122,9 +109,45 @@ export default typedVisualModule({
             source: v.toObjectArray(),
           },
         });
+
+        myChart.on('click', 'series', p => {
+          const { dim, met } = p.data as any;
+
+          const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, [dim, met]);
+
+          highlightStore.getState().setHighlight({
+            label: p.name,
+            x,
+            y: y - 20,
+            data: [dim, met],
+            onDrop: () => {
+              highlightStore.getState().dropHighlight();
+            },
+            onSave: () => {
+              updateWhere(where.toggleClauseInWhere(C(splitColumn.name).equal(p.name)));
+              highlightStore.getState().dropHighlight();
+            },
+          });
+        });
       },
+
+      resize() {
+        myChart.resize();
+
+        // if there is a highlight, update its x position
+        // by calculating new pixel position from the highlight's data
+        const highlight = highlightStore.getState().highlight;
+        if (highlight) {
+          const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, highlight.data as number[]);
+
+          highlightStore.getState().updateHighlight({
+            x,
+            y: y - 20,
+          });
+        }
+      },
+
       destroy() {
-        window.removeEventListener('resize', resizeHandler);
         myChart.dispose();
       },
     };

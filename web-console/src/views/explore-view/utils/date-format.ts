@@ -16,23 +16,12 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
-
-.droppable-container {
-  position: relative;
-  overflow: hidden;
-
-  &.drop-hover {
-    &::after {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      pointer-events: none;
-      border: 1px solid $druid-brand;
-      border-radius: 3px;
-      content: '';
-    }
-  }
-}
+export const DATE_FORMAT = new Intl.DateTimeFormat('default', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});

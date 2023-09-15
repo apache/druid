@@ -19,6 +19,8 @@
 import type { FilterPattern } from '@druid-toolkit/query';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 
+import { DATE_FORMAT } from '../utils';
+
 export function initPatternForColumn(column: ExpressionMeta): FilterPattern {
   switch (column.sqlType) {
     case 'TIMESTAMP':
@@ -54,20 +56,7 @@ export function formatPatternWithoutNegation(pattern: FilterPattern): string {
       return `${pattern.column} ~ /${pattern.regexp}/`;
 
     case 'timeInterval': {
-      let startString = pattern.start.toISOString().replace(/Z$/, '');
-      let endString = pattern.end.toISOString().replace(/Z$/, '');
-
-      if (startString.endsWith('.000') && endString.endsWith('.000')) {
-        startString = startString.replace(/\.000$/, '');
-        endString = endString.replace(/\.000$/, '');
-      }
-
-      if (startString.endsWith(':00') && endString.endsWith(':00')) {
-        startString = startString.replace(/:00$/, '');
-        endString = endString.replace(/:00$/, '');
-      }
-
-      return `${startString}/${endString}`;
+      return DATE_FORMAT.formatRange(pattern.start, pattern.end);
     }
 
     case 'timeRelative':
