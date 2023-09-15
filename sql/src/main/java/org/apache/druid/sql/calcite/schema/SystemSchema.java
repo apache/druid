@@ -292,8 +292,7 @@ public class SystemSchema extends AbstractSchema
       }
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator.
-      // this may include both published and realtime segments.
+      // Coordinator. This may include both published and realtime segments.
       final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
@@ -305,15 +304,23 @@ public class SystemSchema extends AbstractSchema
             segmentsAlreadySeen.add(segment.getId());
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
             long numReplicas = 0L, numRows = 0L, isRealtime, isAvailable = 0L;
+
             if (partialSegmentData != null) {
               numReplicas = partialSegmentData.getNumReplicas();
-              numRows = partialSegmentData.getNumRows();
               isAvailable = partialSegmentData.isAvailable();
+              numRows = partialSegmentData.getNumRows();
+            }
+
+            // If table schema building is enabled on the Coordinator, SegmentMetadataCache on the
+            // broker might have outdated or no information regarding numRows and rowSignature for a segment.
+            // We should use {@code numRows} from the segment polled from the coordinator.
+            if (null != val.getNumRows()) {
+              numRows = val.getNumRows();
             }
 
             isRealtime = Boolean.TRUE.equals(val.isRealtime()) ? 1 : 0;
 
-            // set of segments returned from coordinator include published and realtime segments
+            // set of segments returned from Coordinator include published and realtime segments
             // so realtime segments are not published and vice versa
             boolean isPublished = !val.isRealtime();
 
@@ -351,6 +358,8 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
+      // When table schema building is enabled on the Coordinator, all the segments in this loop
+      // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
           .from(() -> getAuthorizedAvailableSegments(
               availableSegmentEntries,
@@ -399,7 +408,6 @@ public class SystemSchema extends AbstractSchema
       );
 
       return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
-
     }
 
     private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
