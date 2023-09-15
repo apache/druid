@@ -823,7 +823,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         publishAndRegisterHandoff(sequenceMetadata);
       }
 
-
       if (backgroundThreadException != null) {
         throw new RuntimeException(backgroundThreadException);
       }
