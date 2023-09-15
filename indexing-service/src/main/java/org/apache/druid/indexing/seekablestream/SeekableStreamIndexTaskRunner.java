@@ -31,7 +31,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -208,7 +207,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final InputRowParser<ByteBuffer> parser;
   private final String stream;
 
-  private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
+  private final Map<String, SequenceMetadata<PartitionIdType, SequenceOffsetType>> publishingSequences = new ConcurrentHashMap<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
@@ -799,7 +798,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
       for (int i = 0; i < sequencesSnapshot.size(); i++) {
         final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
-        if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
+        if (!publishingSequences.containsKey(sequenceMetadata.getSequenceName())) {
           final boolean isLast = i == (sequencesSnapshot.size() - 1);
           if (isLast) {
             // Shorten endOffsets of the last sequence to match currOffsets.
@@ -809,7 +808,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           // Update assignments of the sequence, which should clear them. (This will be checked later, when the
           // Committer is built.)
           sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
-          publishingSequences.add(sequenceMetadata.getSequenceName());
+          publishingSequences.put(sequenceMetadata.getSequenceName(), sequenceMetadata);
           // persist already done in finally, so directly add to publishQueue
           publishAndRegisterHandoff(sequenceMetadata);
         }
@@ -1150,8 +1149,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     synchronized (sequences) {
       for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
         sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
-        if (!sequenceMetadata.isOpen() && !publishingSequences.contains(sequenceMetadata.getSequenceName())) {
-          publishingSequences.add(sequenceMetadata.getSequenceName());
+        if (!sequenceMetadata.isOpen() && !publishingSequences.containsKey(sequenceMetadata.getSequenceName())) {
+          publishingSequences.put(sequenceMetadata.getSequenceName(), sequenceMetadata);
           waitForPublishingSequences.add(sequenceMetadata);
         }
       }
