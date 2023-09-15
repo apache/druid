@@ -317,8 +317,8 @@ public class SystemSchema extends AbstractSchema
             // so realtime segments are not published and vice versa
             boolean isPublished = !val.isRealtime();
 
-            // is_active is true for published segments that are not overshadowed
-            boolean isActive = isPublished && !val.isOvershadowed();
+            // is_active is true for published segments that are not overshadowed or else they should be realtime
+            boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
 
             try {
               return new Object[]{
