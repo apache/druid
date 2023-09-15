@@ -25,7 +25,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -62,7 +61,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -318,21 +316,15 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @LifecycleStart
   public void start()
   {
-    List<ListenableFuture<TaskStatus>> tasksStatus = new ArrayList<>();
+    log.info("Starting K8sTaskRunner...");
+    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
     for (Job job : client.getPeonJobs()) {
       try {
-        tasksStatus.add(joinAsync(adapter.toTask(job)));
+        joinAsync(adapter.toTask(job));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
-    }
-    try {
-      Futures.allAsList(tasksStatus).get();
-    }
-    catch (InterruptedException | ExecutionException e) {
-      // log the exception and proceed with startup
-      log.error(e, e.getMessage());
     }
     log.info("Loaded %,d tasks from previous run", tasks.size());
 
