@@ -33,4 +33,9 @@ public interface TaskAdapter
   Task toTask(Job from) throws IOException;
 
   K8sTaskId getTaskId(Job from) throws IOException;
+
+  /**
+   * Method for exposing to external classes whether the task has its task payload bundled by the adapter or relies on a external system
+   */
+  Boolean shouldUseDeepStorageForTaskPayload(Task task) throws IOException;
 }

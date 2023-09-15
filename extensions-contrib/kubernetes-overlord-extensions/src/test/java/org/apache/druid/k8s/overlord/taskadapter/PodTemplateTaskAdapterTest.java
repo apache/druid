@@ -21,9 +21,11 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -241,7 +243,7 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        KubernetesTaskRunnerConfig.builder().withTaskPayloadAsEnvVariable(false).build(),
+        taskRunnerConfig,
         taskConfig,
         node,
         mapper,
@@ -255,7 +257,7 @@ public class PodTemplateTaskAdapterTest
         "datasource",
         0,
         0,
-        null
+        ImmutableMap.of("context", RandomStringUtils.randomAlphanumeric((int) DruidK8sConstants.MAX_ENV_VARIABLE_KBS * 20))
     );
 
     Job actual = adapter.fromTask(task);
@@ -427,7 +429,7 @@ public class PodTemplateTaskAdapterTest
     Properties props = new Properties();
     props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Task expected = K8sTestUtils.createTask("id", 1);
+    Task expected = new NoopTask("id", null, "datasource", 0, 0, ImmutableMap.of());
     TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
     Mockito.when(mockTestLogs.streamTaskPayload("id")).thenReturn(Optional.of(
         new ByteArrayInputStream(mapper.writeValueAsString(expected).getBytes(Charset.defaultCharset()))
@@ -435,7 +437,7 @@ public class PodTemplateTaskAdapterTest
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
-        new TaskConfigBuilder().setEnableTaskPayloadManagerPerTask(true).build(),
+        taskConfig,
         node,
         mapper,
         props,

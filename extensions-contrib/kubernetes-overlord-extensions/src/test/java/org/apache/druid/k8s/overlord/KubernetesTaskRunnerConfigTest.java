@@ -55,7 +55,6 @@ public class KubernetesTaskRunnerConfigTest
     Assert.assertEquals(ImmutableMap.of(), config.getLabels());
     Assert.assertEquals(ImmutableMap.of(), config.getAnnotations());
     Assert.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
-    Assert.assertEquals(Boolean.TRUE, config.isTaskPayloadAsEnvVariable());
   }
 
   @Test
@@ -81,7 +80,6 @@ public class KubernetesTaskRunnerConfigTest
     Assert.assertEquals(ImmutableMap.of(), config.getLabels());
     Assert.assertEquals(ImmutableMap.of(), config.getAnnotations());
     Assert.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
-    Assert.assertEquals(Boolean.TRUE, config.isTaskPayloadAsEnvVariable());
   }
 
   @Test
@@ -104,7 +102,6 @@ public class KubernetesTaskRunnerConfigTest
         .withLabels(ImmutableMap.of("key", "value"))
         .withAnnotations(ImmutableMap.of("key", "value"))
         .withCapacity(1)
-        .withTaskPayloadAsEnvVariable(Boolean.FALSE)
         .build();
 
     Assert.assertEquals("namespace", config.getNamespace());
@@ -122,6 +119,5 @@ public class KubernetesTaskRunnerConfigTest
     Assert.assertEquals(ImmutableMap.of("key", "value"), config.getLabels());
     Assert.assertEquals(ImmutableMap.of("key", "value"), config.getAnnotations());
     Assert.assertEquals(Integer.valueOf(1), config.getCapacity());
-    Assert.assertEquals(Boolean.FALSE, config.isTaskPayloadAsEnvVariable());
   }
 }

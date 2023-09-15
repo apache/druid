@@ -125,9 +125,6 @@ public class TaskConfig
   @JsonProperty
   private final long tmpStorageBytesPerTask;
 
-  @JsonProperty
-  private final boolean useDeepStorageForTaskPayload;
-
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -145,8 +142,7 @@ public class TaskConfig
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
-      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask,
-      @JsonProperty("useDeepStorageForTaskPayload") @Nullable boolean useDeepStorageForTaskPayload
+      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask
   )
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
@@ -197,7 +193,6 @@ public class TaskConfig
 
     this.storeEmptyColumns = Configs.valueOrDefault(storeEmptyColumns, DEFAULT_STORE_EMPTY_COLUMNS);
     this.tmpStorageBytesPerTask = Configs.valueOrDefault(tmpStorageBytesPerTask, DEFAULT_TMP_STORAGE_BYTES_PER_TASK);
-    this.useDeepStorageForTaskPayload = useDeepStorageForTaskPayload;
   }
 
   private TaskConfig(
@@ -215,8 +210,7 @@ public class TaskConfig
       BatchProcessingMode batchProcessingMode,
       boolean storeEmptyColumns,
       boolean encapsulatedTask,
-      long tmpStorageBytesPerTask,
-      boolean useDeepStorageForTaskPayload
+      long tmpStorageBytesPerTask
   )
   {
     this.baseDir = baseDir;
@@ -234,7 +228,6 @@ public class TaskConfig
     this.storeEmptyColumns = storeEmptyColumns;
     this.encapsulatedTask = encapsulatedTask;
     this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
-    this.useDeepStorageForTaskPayload = useDeepStorageForTaskPayload;
   }
 
   @JsonProperty
@@ -346,12 +339,6 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public boolean isUseDeepStorageForTaskPayload()
-  {
-    return useDeepStorageForTaskPayload;
-  }
-
-  @JsonProperty
   public long getTmpStorageBytesPerTask()
   {
     return tmpStorageBytesPerTask;
@@ -383,8 +370,7 @@ public class TaskConfig
         batchProcessingMode,
         storeEmptyColumns,
         encapsulatedTask,
-        tmpStorageBytesPerTask,
-        useDeepStorageForTaskPayload
+        tmpStorageBytesPerTask
     );
   }
 
@@ -405,8 +391,7 @@ public class TaskConfig
         batchProcessingMode,
         storeEmptyColumns,
         encapsulatedTask,
-        tmpStorageBytesPerTask,
-        useDeepStorageForTaskPayload
+        tmpStorageBytesPerTask
     );
   }
 }

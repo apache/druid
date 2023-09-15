@@ -41,6 +41,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
@@ -229,7 +230,6 @@ class K8sTaskAdapterTest
 
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
-        .withTaskPayloadAsEnvVariable(false)
         .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -240,7 +240,14 @@ class K8sTaskAdapterTest
         jsonMapper,
         taskLogs
     );
-    Task task = K8sTestUtils.getTask();
+    Task task = new NoopTask(
+        "id",
+        "id",
+        "datasource",
+        0,
+        0,
+        ImmutableMap.of("context", RandomStringUtils.randomAlphanumeric((int) DruidK8sConstants.MAX_ENV_VARIABLE_KBS * 20))
+    );
     Job job = adapter.fromTask(task);
     // TASK_JSON should not be set in env variables
     Assertions.assertFalse(
@@ -280,7 +287,7 @@ class K8sTaskAdapterTest
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
-        new TaskConfigBuilder().setEnableTaskPayloadManagerPerTask(true).build(),
+        taskConfig,
         startupLoggingConfig,
         node,
         jsonMapper,
@@ -288,9 +295,10 @@ class K8sTaskAdapterTest
     );
 
     Job job = new JobBuilder()
+        .editMetadata().withName("job").endMetadata()
         .editSpec().editTemplate().editMetadata()
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
-        .endMetadata().endTemplate().endSpec().build();
+        .endMetadata().editSpec().addToContainers(new ContainerBuilder().withName("main").build()).endSpec().endTemplate().endSpec().build();
 
     Task taskFromJob = adapter.toTask(job);
     assertEquals(taskInTaskPayloadManager, taskFromJob);

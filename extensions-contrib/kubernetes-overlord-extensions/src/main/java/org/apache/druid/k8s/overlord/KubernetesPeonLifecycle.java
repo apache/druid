@@ -30,7 +30,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -73,9 +72,9 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long, Boolean)} or {@link #join(long)} is called. */
     NOT_STARTED,
-    /** Lifecycle's state since {@link #run(Job, long, long)} is called. */
+    /** Lifecycle's state since {@link #run(Job, long, long, Boolean)} is called. */
     PENDING,
     /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
@@ -90,7 +89,6 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
-  private final TaskConfig taskConfig;
   @MonotonicNonNull
   private LogWatch logWatch;
 
@@ -101,8 +99,7 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener,
-      TaskConfig taskConfig
+      TaskStateListener stateListener
   )
   {
     this.taskId = new K8sTaskId(task);
@@ -111,7 +108,6 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
-    this.taskConfig = taskConfig;
   }
 
   /**
@@ -123,12 +119,12 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout) throws IllegalStateException
+  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, Boolean useDeepStorageForTaskPayload) throws IllegalStateException
   {
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
-      if (taskConfig.isUseDeepStorageForTaskPayload()) {
+      if (useDeepStorageForTaskPayload) {
         writeTaskPayload(task);
       }
 

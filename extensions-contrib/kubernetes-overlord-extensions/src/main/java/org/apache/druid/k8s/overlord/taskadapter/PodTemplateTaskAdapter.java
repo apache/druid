@@ -169,23 +169,27 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Task toTask(Job from) throws IOException
   {
-    if (taskConfig.isUseDeepStorageForTaskPayload()) {
-      com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
-      if (!taskBody.isPresent()) {
-        throw new IOE("Could not find task payload in deep storage for job [%s]", from.getMetadata().getName());
-      }
-      String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
-      return mapper.readValue(task, Task.class);
-    }
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
-      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+      log.info("No annotations found on pod spec for job [%s]. Trying to load task payload from deep storage.", from.getMetadata().getName());
+      return toTaskUsingDeepStorage(from);
     }
     String task = annotations.get(DruidK8sConstants.TASK);
     if (task == null) {
-      throw new IOE("No task annotation found on pod spec for job [%s]", from.getMetadata().getName());
+      log.info("No task annotation found on pod spec for job [%s]. Trying to load task payload from deep storage.", from.getMetadata().getName());
+      return toTaskUsingDeepStorage(from);
     }
     return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
+  }
+
+  private Task toTaskUsingDeepStorage(Job from) throws IOException
+  {
+    com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
+    if (!taskBody.isPresent()) {
+      throw new IOE("Could not load task payload for job [%s]", from.getMetadata().getName());
+    }
+    String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
+    return mapper.readValue(task, Task.class);
   }
 
   @Override
@@ -254,7 +258,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValue(Boolean.toString(task.supportsQueries()))
             .build()
     );
-    if (taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+    if (!shouldUseDeepStorageForTaskPayload(task)) {
       envVars.add(new EnvVarBuilder()
           .withName(DruidK8sConstants.TASK_JSON_ENV)
           .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
@@ -279,7 +283,8 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .put(DruidK8sConstants.TASK_TYPE, task.getType())
         .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
         .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource());
-    if (taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+
+    if (!shouldUseDeepStorageForTaskPayload(task)) {
       podTemplateAnnotationBuilder
           .put(DruidK8sConstants.TASK, Base64Compression.compressBase64(mapper.writeValueAsString(task)));
     }
@@ -312,5 +317,18 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private String getDruidLabel(String baseLabel)
   {
     return DruidK8sConstants.DRUID_LABEL_PREFIX + baseLabel;
+  }
+
+  @Override
+  public Boolean shouldUseDeepStorageForTaskPayload(Task task)
+  {
+    try {
+      String compressedTaskPayload = Base64Compression.compressBase64(mapper.writeValueAsString(task));
+      return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
+    }
+    catch (Exception e) {
+      // In case there's a issue with checking how large the task is, default to using deep storage so we don't lose the task payload.
+      return true;
+    }
   }
 }

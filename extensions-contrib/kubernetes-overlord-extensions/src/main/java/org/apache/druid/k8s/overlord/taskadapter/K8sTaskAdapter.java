@@ -134,23 +134,26 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   @Override
   public Task toTask(Job from) throws IOException
   {
-    if (taskConfig.isUseDeepStorageForTaskPayload()) {
-      com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
-      if (!taskBody.isPresent()) {
-        throw new IOE("Could not find task payload in deep storage for job [%s]", from.getMetadata().getName());
-      }
-      String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
-      return mapper.readValue(task, Task.class);
-    }
     PodSpec podSpec = from.getSpec().getTemplate().getSpec();
     massageSpec(podSpec, "main");
     List<EnvVar> envVars = podSpec.getContainers().get(0).getEnv();
     Optional<EnvVar> taskJson = envVars.stream().filter(x -> "TASK_JSON".equals(x.getName())).findFirst();
     String contents = taskJson.map(envVar -> taskJson.get().getValue()).orElse(null);
     if (contents == null) {
-      throw new IOException("No TASK_JSON environment variable found in pod: " + from.getMetadata().getName());
+      log.info("No TASK_JSON environment variable found in pod: %s. Trying to load task payload from deep storage.", from.getMetadata().getName());
+      return toTaskUsingDeepStorage(from);
     }
     return mapper.readValue(Base64Compression.decompressBase64(contents), Task.class);
+  }
+
+  private Task toTaskUsingDeepStorage(Job from) throws IOException
+  {
+    com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
+    if (!taskBody.isPresent()) {
+      throw new IOE("Could not load task payload for job [%s]", from.getMetadata().getName());
+    }
+    String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
+    return mapper.readValue(task, Task.class);
   }
 
   @Override
@@ -271,11 +274,12 @@ public abstract class K8sTaskAdapter implements TaskAdapter
                 "metadata.name"
             )).build()).build()
     );
-    if (taskRunnerConfig.isTaskPayloadAsEnvVariable()) {
+
+    if (taskContents.length() < DruidK8sConstants.MAX_ENV_VARIABLE_KBS) {
       envVars.add(
           new EnvVarBuilder()
               .withName(DruidK8sConstants.TASK_JSON_ENV)
-              .withValue(taskRunnerConfig.isTaskPayloadAsEnvVariable() ? taskContents : "")
+              .withValue(taskContents)
               .build()
       );
     }
@@ -470,6 +474,19 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       requirements = result.withRequests(resourceMap).withLimits(resourceMap).build();
     }
     return requirements;
+  }
+
+  @Override
+  public Boolean shouldUseDeepStorageForTaskPayload(Task task)
+  {
+    try {
+      String compressedTaskPayload = Base64Compression.compressBase64(mapper.writeValueAsString(task));
+      return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
+    }
+    catch (Exception e) {
+      // In case there's a issue with checking how large the task is, default to using deep storage so we don't lose the task payload.
+      return true;
+    }
   }
 }
 
