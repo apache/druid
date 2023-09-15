@@ -148,7 +148,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  private static final String SEGMENT_METADATA_CACHE_ENABLED = "druid.coordinator.segmentMetadataCache.enabled";
+  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.coordinator.centralizedSchemaManagement.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -360,7 +360,7 @@ public class CliCoordinator extends ServerRunnable
 
   private boolean isSegmentMetadataCacheEnabled()
   {
-    return Boolean.parseBoolean(properties.getProperty(SEGMENT_METADATA_CACHE_ENABLED));
+    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED));
   }
 
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
