@@ -109,6 +109,7 @@ public class MSQSelectTest extends MSQTestBase
   public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
                       MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
@@ -214,16 +215,6 @@ public class MSQSelectTest extends MSQTestBase
             CounterSnapshotMatcher
                 .with().totalFiles(1),
             0, 0, "input0"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher
-                .with().rows(6).frames(1),
-            0, 0, "output"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher
-                .with().rows(6).frames(1),
-            0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, ""},
@@ -340,16 +331,6 @@ public class MSQSelectTest extends MSQTestBase
             CounterSnapshotMatcher
                 .with().totalFiles(1),
             0, 0, "input0"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher
-                .with().rows(6).frames(1),
-            0, 0, "output"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher
-                .with().rows(6).frames(1),
-            0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, ""},

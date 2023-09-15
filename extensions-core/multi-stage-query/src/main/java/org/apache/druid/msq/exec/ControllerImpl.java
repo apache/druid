@@ -1556,8 +1556,13 @@ public class ControllerImpl implements Controller
       shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
       queryToPlan = querySpec.getQuery();
     } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
-      // we add a final stage which generates one partition per worker.
-      shuffleSpecFactory = ShuffleSpecFactories.globalSortWithMaxPartitionCount(tuningConfig.getMaxNumWorkers());
+
+      shuffleSpecFactory = (clusterBy, aggregate) ->
+          new GlobalSortTargetSizeShuffleSpec(
+              clusterBy,
+              MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()),
+              aggregate
+          );
       queryToPlan = querySpec.getQuery();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
@@ -1635,22 +1640,25 @@ public class ControllerImpl implements Controller
       return queryDef;
     } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
 
-      // attaching new query results stage always.
+      // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
-      final QueryDefinitionBuilder builder = QueryDefinition.builder();
-      for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
-        builder.add(StageDefinition.builder(stageDef));
+      if (finalShuffleStageDef.doesSortDuringShuffle()) {
+        final QueryDefinitionBuilder builder = QueryDefinition.builder();
+        for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
+          builder.add(StageDefinition.builder(stageDef));
+        }
+
+        builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
+                                   .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
+                                   .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                                   .signature(finalShuffleStageDef.getSignature())
+                                   .shuffleSpec(null)
+                                   .processorFactory(new QueryResultFrameProcessorFactory())
+        );
+        return builder.build();
+      } else {
+        return queryDef;
       }
-
-      builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
-                                 .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
-                                 .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                                 .signature(finalShuffleStageDef.getSignature())
-                                 .shuffleSpec(null)
-                                 .processorFactory(new QueryResultFrameProcessorFactory())
-      );
-
-      return builder.build();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
