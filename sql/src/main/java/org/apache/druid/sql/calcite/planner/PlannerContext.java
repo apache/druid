@@ -522,9 +522,6 @@ public class PlannerContext
       // Short-circuit: feature requires context flag.
       return false;
     }
-    if (engine == null) {
-      return false;
-    }
     return engine.featureAvailable(feature, this);
   }
 
