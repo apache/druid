@@ -800,7 +800,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       synchronized (publishingSequences) {
         List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
-        for (int i = 0; i < sequences.size(); i++) {
+        for (int i = 0; i < sequencesSnapshot.size(); i++) {
           final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
           if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
             final boolean isLast = i == (sequencesSnapshot.size() - 1);
