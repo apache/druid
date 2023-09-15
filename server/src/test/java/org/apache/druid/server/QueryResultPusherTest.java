@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.server.QueryResource.QueryMetricCounter;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
@@ -36,7 +37,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.easymock.EasyMock.mock;
 import static org.junit.Assert.assertTrue;
 
 public class QueryResultPusherTest
@@ -58,7 +58,7 @@ public class QueryResultPusherTest
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     ResponseContextConfig responseContextConfig = ResponseContextConfig.newConfig(true);
     DruidNode selfNode = DRUID_NODE;
-    QueryResource.QueryMetricCounter counter = mock(QueryResource.QueryMetricCounter.class);
+    QueryResource.QueryMetricCounter counter = new NoopQueryMetricCounter();
     String queryId = "someQuery";
     MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
     Map<String, String> extraHeaders = new HashMap<String, String>();
@@ -132,5 +132,30 @@ public class QueryResultPusherTest
     pusher.push();
 
     assertTrue("recordFailure(e) should have been invoked!", recordFailureInvoked.get());
+  }
+
+  static class NoopQueryMetricCounter implements QueryMetricCounter
+  {
+
+    @Override
+    public void incrementSuccess()
+    {
+    }
+
+    @Override
+    public void incrementFailed()
+    {
+    }
+
+    @Override
+    public void incrementInterrupted()
+    {
+    }
+
+    @Override
+    public void incrementTimedOut()
+    {
+    }
+
   }
 }
