@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
@@ -69,6 +70,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";
+  private static final Logger log = new Logger(MSQControllerTask.class);
 
   private final MSQSpec querySpec;
 
@@ -204,7 +206,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     if (isIngestion(querySpec) && ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
       final List<Interval> intervals =
           ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks();
-
+      log.debug("Task[%s] trying to acquire[%s] locks for intervals [%s] to become ready", getId(), TaskLockType.EXCLUSIVE, intervals);
       for (final Interval interval : intervals) {
         final TaskLock taskLock =
             taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
