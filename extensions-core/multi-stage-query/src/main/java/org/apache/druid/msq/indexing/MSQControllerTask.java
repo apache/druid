@@ -206,7 +206,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     if (isIngestion(querySpec) && ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
       final List<Interval> intervals =
           ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks();
-      log.debug("Task[%s] trying to acquire[%s] locks for intervals [%s] to become ready", getId(), TaskLockType.EXCLUSIVE, intervals);
+      log.debug("Task[%s] trying to acquire[%s] locks for intervals[%s] to become ready", getId(), TaskLockType.EXCLUSIVE, intervals);
       for (final Interval interval : intervals) {
         final TaskLock taskLock =
             taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
