@@ -22,6 +22,7 @@ package org.apache.druid.frame.write;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
@@ -207,7 +208,16 @@ public class FrameWriterUtils
     for (final KeyColumn keyColumn : keyColumns) {
       final ColumnType columnType = signature.getColumnType(keyColumn.columnName()).orElse(null);
 
-      if (columnType == null || !FieldReaders.create(keyColumn.columnName(), columnType).isComparable()) {
+      boolean isIncomparable =
+          columnType == null
+          || !FieldReaders.create(
+                              keyColumn.columnName(),
+                              columnType,
+                              FieldReader.ILLEGAL_FIELD_NUMBER,
+                              FieldReader.ILLEGAL_FIELD_COUNT
+                          )
+                          .isComparable();
+      if (isIncomparable) {
         throw new IAE("Sort column [%s] is not comparable (type = %s)", keyColumn.columnName(), columnType);
       }
     }

@@ -22,6 +22,7 @@ package org.apache.druid.frame.read.columnar;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.ColumnPlus;
 import org.apache.druid.frame.write.columnar.ComplexFrameMaker;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.java.util.common.ISE;

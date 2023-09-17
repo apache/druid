@@ -94,14 +94,18 @@ public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdS
       return new RowMemorySelector(dataRegion, rowPointer);
     } else {
       final int columnNumber = frameSignature.indexOf(columnName);
+      return makeColumnValueSelector(columnNumber);
+    }
+  }
 
-      if (columnNumber < 0) {
-        return NilColumnValueSelector.instance();
-      } else {
-        final RowMemoryFieldPointer fieldPointer =
-            new RowMemoryFieldPointer(dataRegion, rowPointer, columnNumber, fieldReaders.size());
-        return fieldReaders.get(columnNumber).makeColumnValueSelector(dataRegion, fieldPointer);
-      }
+  public ColumnValueSelector makeColumnValueSelector(final int columnNumber)
+  {
+    if (columnNumber < 0) {
+      return NilColumnValueSelector.instance();
+    } else {
+      final RowMemoryFieldPointer fieldPointer =
+          new RowMemoryFieldPointer(dataRegion, rowPointer, columnNumber, fieldReaders.size());
+      return fieldReaders.get(columnNumber).makeColumnValueSelector(dataRegion, fieldPointer);
     }
   }
 

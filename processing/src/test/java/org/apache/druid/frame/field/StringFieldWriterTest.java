@@ -182,7 +182,12 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     final byte[] bytes = new byte[(int) written];
     memory.getByteArray(MEMORY_POSITION, bytes, 0, (int) written);
 
-    final FieldReader fieldReader = FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY);
+    final FieldReader fieldReader = FieldReaders.create(
+        "columnNameDoesntMatterHere",
+        ColumnType.STRING_ARRAY,
+        FieldReader.ILLEGAL_FIELD_NUMBER,
+        FieldReader.ILLEGAL_FIELD_COUNT
+    );
     final ColumnValueSelector<?> selector =
         fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 

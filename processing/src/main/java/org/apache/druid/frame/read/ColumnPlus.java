@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.frame.read.columnar;
+package org.apache.druid.frame.read;
 
+import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -38,7 +39,7 @@ public class ColumnPlus implements ColumnHolder
   private final ColumnCapabilities capabilities;
   private final int length;
 
-  ColumnPlus(final BaseColumn column, final ColumnCapabilities capabilities, final int length)
+  public ColumnPlus(final BaseColumn column, final ColumnCapabilities capabilities, final int length)
   {
     this.column = column;
     this.capabilities = capabilities;

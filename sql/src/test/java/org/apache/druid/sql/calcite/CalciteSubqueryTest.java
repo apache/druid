@@ -662,6 +662,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testMaxSubqueryRows()
   {
+    // TODO (laksh): Cannot vectorize because the vectorize method ooesn't support the vector column selector
+    cannotVectorize();
     if ("without memory limit".equals(testName)) {
       expectedException.expect(ResourceLimitExceededException.class);
       expectedException.expectMessage("Subquery generated results beyond maximum[1]");

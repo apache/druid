@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -50,7 +51,9 @@ import java.nio.ByteBuffer;
 
 public class ComplexFieldReaderTest extends InitializedNullHandlingTest
 {
+  private static final String COMPLEX_TYPE = "testString";
   private static final ComplexMetricSerde SERDE = new StringComplexMetricSerde();
+  private static final ColumnType COLUMN_TYPE = ColumnType.ofComplex(COMPLEX_TYPE);
   private static final long MEMORY_POSITION = 1;
 
   @Rule
@@ -61,6 +64,10 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
+
+  static {
+    ComplexMetrics.registerSerde(COMPLEX_TYPE, SERDE);
+  }
 
   @Before
   public void setUp()
@@ -80,7 +87,11 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
   {
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> ComplexFieldReader.createFromType(ColumnType.LONG)
+        () -> ComplexFieldReader.createFromType(
+            ColumnType.LONG,
+            FieldReader.ILLEGAL_FIELD_NUMBER,
+            FieldReader.ILLEGAL_FIELD_COUNT
+        )
     );
 
     MatcherAssert.assertThat(
@@ -94,7 +105,11 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
   {
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> ComplexFieldReader.createFromType(ColumnType.ofComplex("no-serde"))
+        () -> ComplexFieldReader.createFromType(
+            ColumnType.ofComplex("no-serde"),
+            FieldReader.ILLEGAL_FIELD_NUMBER,
+            FieldReader.ILLEGAL_FIELD_COUNT
+        )
     );
 
     MatcherAssert.assertThat(
@@ -107,14 +122,22 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_null()
   {
     writeToMemory(null);
-    Assert.assertTrue(new ComplexFieldReader(SERDE).isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(ComplexFieldReader.createFromType(
+        COLUMN_TYPE,
+        FieldReader.ILLEGAL_FIELD_NUMBER,
+        FieldReader.ILLEGAL_FIELD_COUNT
+    ).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory("foo");
-    Assert.assertFalse(new ComplexFieldReader(SERDE).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(ComplexFieldReader.createFromType(
+        COLUMN_TYPE,
+        FieldReader.ILLEGAL_FIELD_NUMBER,
+        FieldReader.ILLEGAL_FIELD_COUNT
+    ).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -123,7 +146,11 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(null);
 
     final ColumnValueSelector<?> readSelector =
-        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        ComplexFieldReader.createFromType(
+            COLUMN_TYPE,
+            FieldReader.ILLEGAL_FIELD_NUMBER,
+            FieldReader.ILLEGAL_FIELD_COUNT
+        ).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
   }
@@ -134,7 +161,11 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory("foo");
 
     final ColumnValueSelector<?> readSelector =
-        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        ComplexFieldReader.createFromType(
+            COLUMN_TYPE,
+            FieldReader.ILLEGAL_FIELD_NUMBER,
+            FieldReader.ILLEGAL_FIELD_COUNT
+        ).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals("foo", readSelector.getObject());
   }
@@ -153,7 +184,7 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
     @Override
     public String getTypeName()
     {
-      return "testString";
+      return COMPLEX_TYPE;
     }
 
     @Override

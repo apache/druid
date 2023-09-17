@@ -213,7 +213,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   {
     Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(DATASOURCE_ROWS, ROW_SIGNATURE);
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+        FrameType.ROW_BASED,
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         ROW_SIGNATURE,
         new ArrayList<>()

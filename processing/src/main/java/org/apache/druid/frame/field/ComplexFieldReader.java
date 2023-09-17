@@ -21,12 +21,15 @@ package org.apache.druid.frame.field;
 
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.ColumnPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -45,14 +48,30 @@ import javax.annotation.Nullable;
  */
 public class ComplexFieldReader implements FieldReader
 {
-  private final ComplexMetricSerde serde;
 
-  ComplexFieldReader(final ComplexMetricSerde serde)
+  private final ColumnType columnType;
+  private final ComplexMetricSerde serde;
+  private final int fieldNumber;
+  private final int fieldCount;
+
+  private ComplexFieldReader(
+      final ColumnType columnType,
+      final ComplexMetricSerde serde,
+      final int fieldNumber,
+      final int fieldCount
+  )
   {
+    this.columnType = columnType;
     this.serde = Preconditions.checkNotNull(serde, "serde");
+    this.fieldNumber = fieldNumber;
+    this.fieldCount = fieldCount;
   }
 
-  public static ComplexFieldReader createFromType(final ColumnType columnType)
+  public static ComplexFieldReader createFromType(
+      final ColumnType columnType,
+      final int fieldNumber,
+      final int fieldCount
+  )
   {
     if (columnType == null || columnType.getType() != ValueType.COMPLEX || columnType.getComplexTypeName() == null) {
       throw new ISE("Expected complex type with defined complexTypeName, but got [%s]", columnType);
@@ -64,7 +83,7 @@ public class ComplexFieldReader implements FieldReader
       throw new ISE("No serde for complexTypeName[%s]", columnType.getComplexTypeName());
     }
 
-    return new ComplexFieldReader(serde);
+    return new ComplexFieldReader(columnType, serde, fieldNumber, fieldCount);
   }
 
   @Override
@@ -93,6 +112,16 @@ public class ComplexFieldReader implements FieldReader
   public boolean isComparable()
   {
     return false;
+  }
+
+  @Override
+  public ColumnPlus readColumn(Frame frame)
+  {
+    return new ColumnPlus(
+        new FrameFieldColumn(frame, this, fieldNumber, fieldCount),
+        new ColumnCapabilitiesImpl().setType(columnType).setHasMultipleValues(false),
+        frame.numRows()
+    );
   }
 
   /**

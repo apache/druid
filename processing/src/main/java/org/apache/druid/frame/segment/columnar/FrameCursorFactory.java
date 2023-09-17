@@ -20,8 +20,9 @@
 package org.apache.druid.frame.segment.columnar;
 
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameQueryableIndex;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.read.columnar.FrameColumnReader;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.segment.FrameFilteredOffset;
@@ -53,7 +54,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.List;
 
 /**
  * A {@link CursorFactory} implementation based on a single columnar {@link Frame}.
@@ -65,18 +65,18 @@ import java.util.List;
 public class FrameCursorFactory implements CursorFactory
 {
   private final Frame frame;
+  private final FrameReader frameReader;
   private final RowSignature signature;
-  private final List<FrameColumnReader> columnReaders;
 
   public FrameCursorFactory(
       final Frame frame,
       final RowSignature signature,
-      final List<FrameColumnReader> columnReaders
+      final FrameReader frameReader
   )
   {
     this.frame = FrameType.COLUMNAR.ensureType(frame);
     this.signature = signature;
-    this.columnReaders = columnReaders;
+    this.frameReader = frameReader;
   }
 
   @Override
@@ -97,7 +97,7 @@ public class FrameCursorFactory implements CursorFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
+    final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, frameReader);
 
     if (Granularities.ALL.equals(gran)) {
       final Closer closer = Closer.create();
@@ -133,7 +133,7 @@ public class FrameCursorFactory implements CursorFactory
     }
 
     final Closer closer = Closer.create();
-    final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
+    final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, frameReader);
     final Filter filterToUse = FrameCursorUtils.buildFilter(filter, interval);
     final VectorOffset baseOffset = new NoFilterVectorOffset(vectorSize, 0, frame.numRows());
     final ColumnCache columnCache = new ColumnCache(index, closer);

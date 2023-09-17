@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.frame.segment.columnar;
+package org.apache.druid.frame;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.read.columnar.FrameColumnReader;
+import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.segment.columnar.FrameCursorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
@@ -50,17 +49,17 @@ public class FrameQueryableIndex implements QueryableIndex
 {
   private final Frame frame;
   private final RowSignature signature;
-  private final List<FrameColumnReader> columnReaders;
+  private final FrameReader frameReader;
 
   public FrameQueryableIndex(
       final Frame frame,
       final RowSignature signature,
-      final List<FrameColumnReader> columnReaders
+      FrameReader frameReader
   )
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
+    this.frame = frame;
+    this.frameReader = frameReader;
     this.signature = signature;
-    this.columnReaders = columnReaders;
   }
 
   @Override
@@ -79,13 +78,7 @@ public class FrameQueryableIndex implements QueryableIndex
   @Override
   public ColumnHolder getColumnHolder(final String columnName)
   {
-    final int columnIndex = signature.indexOf(columnName);
-
-    if (columnIndex < 0) {
-      return null;
-    } else {
-      return columnReaders.get(columnIndex).readColumn(frame);
-    }
+    return frameReader.readColumn(frame, columnName);
   }
 
   @Override

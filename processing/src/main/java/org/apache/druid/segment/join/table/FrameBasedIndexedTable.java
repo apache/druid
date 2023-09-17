@@ -19,14 +19,11 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.google.common.base.Preconditions;
 import com.google.common.math.IntMath;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameQueryableIndex;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.read.columnar.FrameColumnReader;
-import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.frame.segment.columnar.FrameQueryableIndex;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -88,7 +85,7 @@ public class FrameBasedIndexedTable implements IndexedTable
       frameQueryableIndexes.add(new FrameQueryableIndex(
           frame,
           frameRowSignature,
-          createColumnReaders(frameRowSignature)
+          FrameReader.create(frameRowSignature)
       ));
       rowCount += frame.numRows();
       cumulativeRowCount.add(rowCount);
@@ -286,22 +283,6 @@ public class FrameBasedIndexedTable implements IndexedTable
         () -> {
         }
     );
-  }
-
-  private List<FrameColumnReader> createColumnReaders(RowSignature rowSignature)
-  {
-    final List<FrameColumnReader> columnReaders = new ArrayList<>(rowSignature.size());
-
-    for (int columnNumber = 0; columnNumber < rowSignature.size(); columnNumber++) {
-      ColumnType columnType = Preconditions.checkNotNull(
-          rowSignature.getColumnType(columnNumber).orElse(null),
-          "Type for column [%s]",
-          rowSignature.getColumnName(columnNumber)
-      );
-      columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
-    }
-
-    return columnReaders;
   }
 
   /**

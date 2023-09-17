@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -85,10 +86,11 @@ public class FrameReader
       throw new IAE("Disallowed field names: %s", disallowedFieldNames);
     }
 
-    final List<FrameColumnReader> columnReaders = new ArrayList<>(signature.size());
-    final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
+    final int signatureSize = signature.size();
+    final List<FrameColumnReader> columnReaders = new ArrayList<>(signatureSize);
+    final List<FieldReader> fieldReaders = new ArrayList<>(signatureSize);
 
-    for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
+    for (int columnNumber = 0; columnNumber < signatureSize; columnNumber++) {
       final ColumnType columnType =
           Preconditions.checkNotNull(
               signature.getColumnType(columnNumber).orElse(null),
@@ -97,7 +99,12 @@ public class FrameReader
           );
 
       columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
-      fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
+      fieldReaders.add(FieldReaders.create(
+          signature.getColumnName(columnNumber),
+          columnType,
+          columnNumber,
+          signatureSize
+      ));
     }
 
     return new FrameReader(signature, columnReaders, fieldReaders);
@@ -141,9 +148,28 @@ public class FrameReader
   {
     switch (frame.type()) {
       case COLUMNAR:
-        return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
+        return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, this);
       case ROW_BASED:
         return new FrameCursorFactory(frame, this, fieldReaders);
+      default:
+        throw new ISE("Unrecognized frame type [%s]", frame.type());
+    }
+  }
+
+  @Nullable
+  public ColumnHolder readColumn(final Frame frame, final String columnName)
+  {
+    int index = signature.indexOf(columnName);
+
+    if (index < 0) {
+      return null;
+    }
+
+    switch (frame.type()) {
+      case COLUMNAR:
+        return columnReaders.get(index).readColumn(frame);
+      case ROW_BASED:
+        return fieldReaders.get(index).readColumn(frame);
       default:
         throw new ISE("Unrecognized frame type [%s]", frame.type());
     }

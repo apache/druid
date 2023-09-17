@@ -127,8 +127,6 @@ public class BroadcastJoinHelper
     return sideChannelNumbers;
   }
 
-
-
   public DataSource inlineChannelData(final DataSource originalDataSource)
   {
     if (originalDataSource instanceof InputNumberDataSource) {

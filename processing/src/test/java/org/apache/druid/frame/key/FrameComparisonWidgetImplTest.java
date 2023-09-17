@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -207,7 +208,9 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
             keyColumn ->
                 FieldReaders.create(
                     keyColumn.columnName(),
-                    RowKeyComparatorTest.SIGNATURE.getColumnType(keyColumn.columnName()).get()
+                    RowKeyComparatorTest.SIGNATURE.getColumnType(keyColumn.columnName()).get(),
+                    FieldReader.ILLEGAL_FIELD_NUMBER,
+                    FieldReader.ILLEGAL_FIELD_COUNT
                 )
         ).collect(Collectors.toList())
     );

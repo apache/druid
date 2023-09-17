@@ -72,14 +72,23 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultLongValue());
-    Assert.assertEquals(NullHandling.sqlCompatible(), new LongFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertEquals(
+        NullHandling.sqlCompatible(),
+        new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).isNull(
+            memory,
+            MEMORY_POSITION
+        )
+    );
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory(5L);
-    Assert.assertFalse(new LongFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).isNull(
+        memory,
+        MEMORY_POSITION
+    ));
   }
 
   @Test
@@ -88,7 +97,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final ColumnValueSelector<?> readSelector =
-        new LongFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).makeColumnValueSelector(
+            memory,
+            new ConstantFieldPointer(MEMORY_POSITION)
+        );
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -103,7 +115,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5L);
 
     final ColumnValueSelector<?> readSelector =
-        new LongFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).makeColumnValueSelector(
+            memory,
+            new ConstantFieldPointer(MEMORY_POSITION)
+        );
 
     Assert.assertEquals(5L, readSelector.getObject());
   }
@@ -114,7 +129,11 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final DimensionSelector readSelector =
-        new LongFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).makeDimensionSelector(
+            memory,
+            new ConstantFieldPointer(MEMORY_POSITION),
+            null
+        );
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -148,7 +167,11 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5L);
 
     final DimensionSelector readSelector =
-        new LongFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).makeDimensionSelector(
+            memory,
+            new ConstantFieldPointer(MEMORY_POSITION),
+            null
+        );
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -175,7 +198,7 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(25L);
 
     final DimensionSelector readSelector =
-        new LongFieldReader().makeDimensionSelector(
+        new LongFieldReader(FieldReader.ILLEGAL_FIELD_NUMBER, FieldReader.ILLEGAL_FIELD_COUNT).makeDimensionSelector(
             memory,
             new ConstantFieldPointer(MEMORY_POSITION),
             new SubstringDimExtractionFn(1, null)

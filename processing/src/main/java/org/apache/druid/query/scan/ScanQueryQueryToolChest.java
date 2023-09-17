@@ -310,7 +310,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+        FrameType.ROW_BASED,
         memoryAllocatorFactory,
         modifiedRowSignature,
         new ArrayList<>()

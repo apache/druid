@@ -59,14 +59,15 @@ public class RowKeyReader
    */
   public static RowKeyReader create(final RowSignature signature)
   {
-    final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
+    final int fieldCount = signature.size();
+    final List<FieldReader> fieldReaders = new ArrayList<>(fieldCount);
 
     for (final String columnName : signature.getColumnNames()) {
       final ColumnCapabilities capabilities = signature.getColumnCapabilities(columnName);
       final ColumnType columnType =
           Preconditions.checkNotNull(capabilities, "Type for column [%s]", columnName).toColumnType();
 
-      fieldReaders.add(FieldReaders.create(columnName, columnType));
+      fieldReaders.add(FieldReaders.create(columnName, columnType, signature.indexOf(columnName), fieldCount));
     }
 
     return new RowKeyReader(signature, new RowReader(fieldReaders));

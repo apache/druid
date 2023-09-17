@@ -21,11 +21,15 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.ColumnPlus;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 
@@ -43,8 +47,14 @@ import javax.annotation.Nullable;
  */
 public class DoubleFieldReader implements FieldReader
 {
-  DoubleFieldReader()
+
+  private final int fieldNumber;
+  private final int fieldCount;
+
+  public DoubleFieldReader(int fieldNumber, int fieldCount)
   {
+    this.fieldNumber = fieldNumber;
+    this.fieldCount = fieldCount;
   }
 
   @Override
@@ -77,6 +87,17 @@ public class DoubleFieldReader implements FieldReader
   public boolean isComparable()
   {
     return true;
+  }
+
+  @Override
+  public ColumnPlus readColumn(Frame frame)
+  {
+    return new ColumnPlus(
+        new FrameFieldColumn(frame, this, fieldNumber, fieldCount),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE)
+                              .setHasNulls(FieldReader.hasNullsForFieldReader()),
+        frame.numRows()
+    );
   }
 
   /**

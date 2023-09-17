@@ -42,27 +42,32 @@ public class FieldReaders
   /**
    * Helper used by {@link org.apache.druid.frame.read.FrameReader}.
    */
-  public static FieldReader create(final String columnName, final ColumnType columnType)
+  public static FieldReader create(
+      final String columnName,
+      final ColumnType columnType,
+      final int fieldNumber,
+      final int fieldCount
+  )
   {
     switch (Preconditions.checkNotNull(columnType, "columnType").getType()) {
       case LONG:
-        return new LongFieldReader();
+        return new LongFieldReader(fieldNumber, fieldCount);
 
       case FLOAT:
-        return new FloatFieldReader();
+        return new FloatFieldReader(fieldNumber, fieldCount);
 
       case DOUBLE:
-        return new DoubleFieldReader();
+        return new DoubleFieldReader(fieldNumber, fieldCount);
 
       case STRING:
-        return new StringFieldReader(false);
+        return new StringFieldReader(false, fieldNumber, fieldCount);
 
       case COMPLEX:
-        return ComplexFieldReader.createFromType(columnType);
+        return ComplexFieldReader.createFromType(columnType, fieldNumber, fieldCount);
 
       case ARRAY:
         if (columnType.getElementType().getType() == ValueType.STRING) {
-          return new StringFieldReader(true);
+          return new StringFieldReader(true, fieldNumber, fieldCount);
         }
         // Fall through to error for other array types
 

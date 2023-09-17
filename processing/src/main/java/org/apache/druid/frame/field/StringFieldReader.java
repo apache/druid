@@ -24,6 +24,8 @@ import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.ColumnPlus;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,6 +36,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -69,6 +73,8 @@ import java.util.List;
 public class StringFieldReader implements FieldReader
 {
   private final boolean asArray;
+  private final int fieldNumber;
+  private final int fieldCount;
 
   /**
    * Create a string reader.
@@ -77,9 +83,11 @@ public class StringFieldReader implements FieldReader
    *                selectors (potentially multi-value ones). If true, selectors from {@link #makeColumnValueSelector}
    *                behave like string array selectors.
    */
-  StringFieldReader(final boolean asArray)
+  StringFieldReader(final boolean asArray, final int fieldNumber, final int fieldCount)
   {
     this.asArray = asArray;
+    this.fieldNumber = fieldNumber;
+    this.fieldCount = fieldCount;
   }
 
   @Override
@@ -116,6 +124,23 @@ public class StringFieldReader implements FieldReader
     } else {
       return false;
     }
+  }
+
+  @Override
+  public ColumnPlus readColumn(Frame frame)
+  {
+    ColumnCapabilities columnCapabilities =
+        new ColumnCapabilitiesImpl().setType(asArray ? ColumnType.STRING_ARRAY : ColumnType.STRING)
+                                    .setDictionaryEncoded(false)
+                                    .setHasBitmapIndexes(false)
+                                    .setHasSpatialIndexes(false)
+                                    .setHasNulls(ColumnCapabilities.Capable.UNKNOWN);
+
+    return new ColumnPlus(
+        new FrameFieldColumn(frame, this, fieldNumber, fieldCount),
+        columnCapabilities,
+        frame.numRows()
+    );
   }
 
   @Override
