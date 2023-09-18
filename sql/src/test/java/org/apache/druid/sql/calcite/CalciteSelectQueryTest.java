@@ -2005,8 +2005,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "select cityName from druid.wikipedia "
-            + "where channel like '#min%' and cityName is not null and cityName != 'some' is true",
+        "with cte AS (\n"
+        + "SELECT *\n"
+        + "FROM druid.wikipedia\n"
+        + "WHERE __time IN ('2016-06-27T00:02:50.739Z','2016-06-27T00:00:34.959Z')\n"
+        + ")\n"
+        + "SELECT MAX(CASE flags WHEN NULL THEN (CASE metroCode WHEN NULL THEN NULL ELSE delta END) ELSE delta END)\n"
+        + "from cte",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                 .dataSource(
@@ -2035,8 +2040,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             + "where channel like '%s%' and channel > 'asd'",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
-                .dataSource(
-"wikipedia")
+                .dataSource("wikipedia")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
                     and(
