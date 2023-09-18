@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -39,7 +40,7 @@ public class SegmentLoadWaiterTest
 {
   private static final String TEST_DATASOURCE = "testDatasource";
 
-  private SegmentLoadWaiter segmentLoadWaiter;
+  private SegmentLoadStatusFetcher segmentLoadWaiter;
 
   private BrokerClient brokerClient;
 
@@ -55,15 +56,31 @@ public class SegmentLoadWaiterTest
     doAnswer(new Answer<String>()
     {
       int timesInvoked = 0;
+
       @Override
       public String answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
-        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, timesInvoked, 0, 5 - timesInvoked, 0);
+        SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
+            5,
+            timesInvoked,
+            0,
+            5
+            - timesInvoked,
+            0
+        );
         return new ObjectMapper().writeValueAsString(loadStatus);
       }
     }).when(brokerClient).sendQuery(any());
-    segmentLoadWaiter = new SegmentLoadWaiter(brokerClient, new ObjectMapper(), TEST_DATASOURCE, ImmutableSet.of("version1"), 5, false);
+    segmentLoadWaiter = new SegmentLoadStatusFetcher(
+        brokerClient,
+        new ObjectMapper(),
+        "id",
+        TEST_DATASOURCE,
+        ImmutableSet.of("version1"),
+        5,
+        false
+    );
     segmentLoadWaiter.waitForSegmentsToLoad();
 
     verify(brokerClient, times(5)).sendQuery(any());
@@ -78,18 +95,81 @@ public class SegmentLoadWaiterTest
     doAnswer(new Answer<String>()
     {
       int timesInvoked = 0;
+
       @Override
       public String answer(InvocationOnMock invocation) throws Throwable
       {
         timesInvoked += 1;
-        SegmentLoadWaiter.VersionLoadStatus loadStatus = new SegmentLoadWaiter.VersionLoadStatus(5, timesInvoked, 0, 5 - timesInvoked, 0);
+        SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
+            5,
+            timesInvoked,
+            0,
+            5
+            - timesInvoked,
+            0
+        );
         return new ObjectMapper().writeValueAsString(loadStatus);
       }
     }).when(brokerClient).sendQuery(any());
-    segmentLoadWaiter = new SegmentLoadWaiter(brokerClient, new ObjectMapper(), TEST_DATASOURCE, ImmutableSet.of("version1"), 5, false);
+    segmentLoadWaiter = new SegmentLoadStatusFetcher(
+        brokerClient,
+        new ObjectMapper(),
+        "id",
+        TEST_DATASOURCE,
+        ImmutableSet.of("version1"),
+        5,
+        false
+    );
     segmentLoadWaiter.waitForSegmentsToLoad();
 
     verify(brokerClient, times(5)).sendQuery(any());
+  }
+
+  @Test
+  public void triggerCancellationFromAnotherThread() throws Exception
+  {
+    brokerClient = mock(BrokerClient.class);
+    doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
+    doAnswer(new Answer<String>()
+    {
+      int timesInvoked = 0;
+
+      @Override
+      public String answer(InvocationOnMock invocation) throws Throwable
+      {
+        // sleeping broker call to simulate a long running query
+        Thread.sleep(1000);
+        timesInvoked++;
+        SegmentLoadStatusFetcher.VersionLoadStatus loadStatus = new SegmentLoadStatusFetcher.VersionLoadStatus(
+            5,
+            timesInvoked,
+            0,
+            5
+            - timesInvoked,
+            0
+        );
+        return new ObjectMapper().writeValueAsString(loadStatus);
+      }
+    }).when(brokerClient).sendQuery(any());
+    segmentLoadWaiter = new SegmentLoadStatusFetcher(
+        brokerClient,
+        new ObjectMapper(),
+        "id",
+        TEST_DATASOURCE,
+        ImmutableSet.of("version1"),
+        5,
+        true
+    );
+
+    Thread t = new Thread(() -> segmentLoadWaiter.waitForSegmentsToLoad());
+    t.start();
+    // call close from main thread
+    segmentLoadWaiter.close();
+    t.join(1000);
+    Assert.assertFalse(t.isAlive());
+
+    Assert.assertTrue(segmentLoadWaiter.status().getState().isFinished());
+    Assert.assertTrue(segmentLoadWaiter.status().getState() == SegmentLoadStatusFetcher.State.FAILED);
   }
 
 }
