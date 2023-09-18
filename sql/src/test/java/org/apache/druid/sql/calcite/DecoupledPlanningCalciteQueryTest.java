@@ -226,14 +226,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   }
 
-
-  @Override
-  @Ignore
-  public void testPostAggWithTopN()
-  {
-
-  }
-
   @Override
   @Ignore
   public void testRequireTimeConditionPositive()
@@ -287,13 +279,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testExactCountDistinctWithGroupingAndOtherAggregators()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testTopNWithSelectProjections()
   {
 
   }
