@@ -2652,7 +2652,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
+  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2738,7 +2738,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
+  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -2810,7 +2810,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.NOT_ENOUGH_RULES)
+  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
   @Test
   public void testUnionAllQueriesWithLimit()
   {
@@ -2883,7 +2883,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.NOT_ENOUGH_RULES)
+  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
   @Test
   public void testJoinUnionAllDifferentTablesWithMapping()
   {
@@ -2947,7 +2947,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @DecoupledIgnore(mode=Modes.NOT_ENOUGH_RULES)
+  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
   @Test
   public void testUnionAllTablesColumnTypeMismatchFloatLong()
   {
@@ -2995,7 +2995,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
@@ -3030,7 +3030,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnionIsUnplannable()
   {
@@ -3041,7 +3041,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
@@ -3101,7 +3101,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.NOT_ENOUGH_RULES)
+  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
   @Test
   public void testUnionAllSameTableTwiceWithSameMapping()
   {
@@ -3145,7 +3145,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllSameTableTwiceWithDifferentMapping()
   {
@@ -4987,7 +4987,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
+  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -5019,7 +5019,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
+  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -5651,7 +5651,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableQueries()
   {
@@ -5723,7 +5723,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableTwoExactCountDistincts()
   {
@@ -5736,7 +5736,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableExactCountDistinctOnSketch()
   {
@@ -8082,7 +8082,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.PLAN_MISMATCH)
+  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
   @Test
   public void testFilterOnCurrentTimestampWithIntervalArithmetic()
   {
@@ -10322,7 +10322,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.PLAN_MISMATCH)
+  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
@@ -11489,7 +11489,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
+  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
   @Test
   public void testPostAggWithTimeseries()
   {
@@ -11977,7 +11977,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
