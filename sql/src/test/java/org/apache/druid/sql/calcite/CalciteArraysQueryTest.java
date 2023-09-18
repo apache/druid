@@ -2206,7 +2206,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                .postAggregators(new ExpressionPostAggregator("s0", "1", null, ExprMacroTable.nil()))
+                .postAggregators(new ExpressionPostAggregator("p0", "1", null, ExprMacroTable.nil()))
                 .build()
         ),
         useDefault ?
