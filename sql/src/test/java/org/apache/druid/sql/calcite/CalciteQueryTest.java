@@ -2776,6 +2776,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore
   @Test
   public void testUnionAllQueries()
   {
@@ -3263,6 +3264,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  @DecoupledIgnore
   @Test
   public void testUnionAllSameTableThreeTimesWithSameMapping()
   {
@@ -4985,7 +4987,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
+  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -5017,7 +5019,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.NOT_ENOUGH_RULES)
+  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
