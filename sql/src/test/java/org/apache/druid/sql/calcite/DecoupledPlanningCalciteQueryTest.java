@@ -57,9 +57,8 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
           Throwable e = assertThrows(
               "Expected that this testcase will fail - it might got fixed?",
               annotation.mode().throwableClass,
-              () -> {
-                base.evaluate();
-              });
+              base::evaluate
+              );
 
           String trace = Throwables.getStackTraceAsString(e);
           Matcher m = annotation.mode().getPattern().matcher(trace);
@@ -90,7 +89,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
             return queryFramework().plannerFixture(DecoupledPlanningCalciteQueryTest.this, plannerConfig, authConfig);
           }
         })
-            .cannotVectorize(cannotVectorize)
-            .skipVectorize(skipVectorize);
+        .cannotVectorize(cannotVectorize)
+        .skipVectorize(skipVectorize);
   }
 }
