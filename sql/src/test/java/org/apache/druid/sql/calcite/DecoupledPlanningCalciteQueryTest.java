@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthConfig;
@@ -31,16 +32,16 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
 
-  @Rule
+  @Rule(order = 0)
   public DecoupledIgnoreProcessor decoupledIgnoreProcessor = new DecoupledIgnoreProcessor();
 
   public static class DecoupledIgnoreProcessor implements TestRule
   {
-
     public Statement apply(Statement base, Description description)
     {
       DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
@@ -50,10 +51,18 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
         public void evaluate() throws Throwable
         {
           if (annotation != null) {
-            Exception e = assertThrows("Expected that this testcase will fail - it might got fixed?", Exception.class,
+            Throwable e = assertThrows(
+                "Expected that this testcase will fail - it might got fixed?",
+                annotation.expected(),
                 () -> {
                   base.evaluate();
                 });
+
+            if (!annotation.regex().isBlank()) {
+              assertTrue(
+                  "Exception stactrace doesn't match regex: " + annotation.regex(),
+                  Throwables.getStackTraceAsString(e).contains(annotation.regex()));
+            }
             throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
           } else {
             base.evaluate();

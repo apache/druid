@@ -2703,7 +2703,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testTopNWithSelectProjections()
   {
@@ -2807,6 +2807,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = DruidException.class, regex="not enough rules")
   @Test
   public void testUnionAllQueriesWithLimit()
   {
@@ -2943,6 +2944,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  @DecoupledIgnore(expected = DruidException.class, regex="not enough rules")
   @Test
   public void testUnionAllTablesColumnTypeMismatchFloatLong()
   {
@@ -2990,7 +2992,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
@@ -3024,6 +3026,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testUnionIsUnplannable()
   {
@@ -3034,7 +3037,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
@@ -3094,6 +3097,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = DruidException.class, regex="not enough rules")
   @Test
   public void testUnionAllSameTableTwiceWithSameMapping()
   {
@@ -5008,6 +5012,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = DruidException.class, regex="Cannot convert query")
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -5638,6 +5643,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testUnplannableQueries()
   {
@@ -5708,7 +5714,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  @DecoupledIgnore
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testUnplannableTwoExactCountDistincts()
   {
@@ -5721,6 +5727,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testUnplannableExactCountDistinctOnSketch()
   {
@@ -8063,6 +8070,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = AssertionError.class, regex="^query #1")
   @Test
   public void testFilterOnCurrentTimestampWithIntervalArithmetic()
   {
@@ -10301,6 +10309,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledIgnore(expected = AssertionError.class, regex="AssertionError: query #1",
+      mode = DecoupledIgnore.Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
@@ -11467,7 +11477,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
+  @DecoupledIgnore(expected = DruidException.class, regex="not enough rules")
   @Test
   public void testPostAggWithTimeseries()
   {
@@ -11953,7 +11963,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of()
     );
   }
-  @DecoupledIgnore
+
+  @DecoupledIgnore(expected = AssertionError.class)
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {

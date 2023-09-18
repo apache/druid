@@ -27,5 +27,22 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface DecoupledIgnore
 {
+  static enum Modes
+  {
+    PLAN_MISMATCH(AssertionError.class);
+
+    private Class<? extends Throwable> throwableClass;
+
+    Modes(Class<? extends Throwable> cl)
+    {
+      this.throwableClass = cl;
+    }
+  };
+
+  Class<? extends Throwable> expected() default Exception.class;
+
+  String regex() default "";
+
+  Modes mode() default Modes.PLAN_MISMATCH;
 
 }
