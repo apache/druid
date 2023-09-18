@@ -2651,7 +2651,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2703,7 +2702,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testTopNWithSelectProjections()
   {
@@ -2736,6 +2734,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
 
   @Test
   public void testTopNWithSelectAndOrderByProjections()
@@ -2835,7 +2834,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testUnionAllDifferentTablesWithMapping()
   {
@@ -2879,7 +2877,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testJoinUnionAllDifferentTablesWithMapping()
   {
@@ -2990,7 +2987,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
@@ -3034,7 +3030,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
@@ -3050,7 +3045,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testUnionAllSameTableTwice()
   {
@@ -3150,7 +3144,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
     );
   }
-  @DecoupledIgnore
+
   @Test
   public void testUnionAllSameTableThreeTimes()
   {
@@ -4975,7 +4969,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{6L, 6L, 6L, 1L, 6L, 8L, 4L, 3L, ((1 + 1.7) / 3)}
         )
     );
-  }@DecoupledIgnore
+  }
 
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
@@ -5050,7 +5044,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  @DecoupledIgnore
+
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
@@ -5708,7 +5702,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  @DecoupledIgnore
+
   @Test
   public void testUnplannableTwoExactCountDistincts()
   {
@@ -11750,7 +11744,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
   @Test
   public void testRequireTimeConditionPositive()
   {
@@ -11953,7 +11946,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of()
     );
   }
-  @DecoupledIgnore
+
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
@@ -14216,7 +14209,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  @DecoupledIgnore
+
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
