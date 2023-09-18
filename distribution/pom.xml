@@ -199,6 +199,8 @@
                                         <argument>org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}</argument>
                                         <argument>-h</argument>
                                         <argument>org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}</argument>
+                                        <argument>-h</argument>
+                                        <argument>com.github.rvesse:airline:3.5.0</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-avro-extensions</argument>
                                         <argument>-c</argument>
