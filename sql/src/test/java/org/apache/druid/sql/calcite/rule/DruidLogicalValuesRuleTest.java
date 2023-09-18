@@ -33,6 +33,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
@@ -56,7 +57,7 @@ public class DruidLogicalValuesRuleTest
   private static final PlannerContext DEFAULT_CONTEXT = Mockito.mock(PlannerContext.class);
 
   @RunWith(Parameterized.class)
-  public static class GetValueFromLiteralSimpleTypesTest
+  public static class GetValueFromLiteralSimpleTypesTest extends InitializedNullHandlingTest
   {
     @Parameters(name = "{1}, {2}")
     public static Iterable<Object[]> constructorFeeder()
@@ -101,7 +102,7 @@ public class DruidLogicalValuesRuleTest
       Mockito.when(dataType.getSqlTypeName()).thenReturn(typeName);
       RexLiteral literal = Mockito.mock(RexLiteral.class);
       try {
-        Field field = literal.getClass().getSuperclass().getDeclaredField("value");
+        Field field = literal.getClass().getDeclaredField("value");
         field.setAccessible(true);
         field.set(literal, val);
       }
