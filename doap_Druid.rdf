@@ -22,7 +22,7 @@
     limitations under the License.
 -->
   <Project rdf:about="https://druid.apache.org/">
-    <created>2023-09-08</created>
+    <created>2012-10-23</created>
     <license rdf:resource="https://spdx.org/licenses/Apache-2.0" />
     <name>Apache Druid</name>
     <homepage rdf:resource="https://druid.apache.org/" />
