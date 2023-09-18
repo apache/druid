@@ -226,12 +226,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   }
 
-  @Override
-  @Ignore
-  public void testPostAggWithTimeseries()
-  {
-
-  }
 
   @Override
   @Ignore
