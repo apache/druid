@@ -32,7 +32,6 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertThrows;
 
@@ -47,37 +46,32 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
     public Statement apply(Statement base, Description description)
     {
       DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
+      if (annotation == null) {
+        return base;
+      }
       return new Statement()
       {
         @Override
         public void evaluate() throws Throwable
         {
-          if (annotation != null) {
-            Throwable e = assertThrows(
-                "Expected that this testcase will fail - it might got fixed?",
-                annotation.mode().throwableClass,
-                () -> {
-                  base.evaluate();
-                });
+          Throwable e = assertThrows(
+              "Expected that this testcase will fail - it might got fixed?",
+              annotation.mode().throwableClass,
+              () -> {
+                base.evaluate();
+              });
 
-            String regex = annotation.mode().regex;
-            String trace = Throwables.getStackTraceAsString(e);
-            Pattern pat = Pattern.compile(regex);
-            Matcher m=pat.matcher(trace);
+          String trace = Throwables.getStackTraceAsString(e);
+          Matcher m = annotation.mode().getPattern().matcher(trace);
 
-            if (!m.find()) {
-//              if(!Throwables.getStackTraceAsString(e).matches(regex)) {
-                throw new AssertionError("Exception stactrace doesn't match regex: " + regex,e);
-//              }
-            }
-            throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
-          } else {
-            base.evaluate();
+          if (!m.find()) {
+            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.mode().regex, e);
           }
+          throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
         }
       };
     }
-  };
+  }
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.of(
       PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
