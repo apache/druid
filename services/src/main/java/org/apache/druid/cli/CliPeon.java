@@ -290,7 +290,7 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager, TaskConfig taskConfig)
+          public Task readTask(@Json ObjectMapper mapper, @Smile ObjectMapper smileMapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager)
           {
             try {
               if (!config.getTaskFile().exists() || config.getTaskFile().length() == 0) {
