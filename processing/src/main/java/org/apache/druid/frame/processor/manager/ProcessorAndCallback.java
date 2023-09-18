@@ -17,38 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.msq.kernel;
+package org.apache.druid.frame.processor.manager;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.frame.processor.FrameProcessor;
-import org.apache.druid.frame.processor.OutputChannels;
-import org.apache.druid.frame.processor.manager.ProcessorManager;
+
+import javax.annotation.Nullable;
+import java.util.function.Consumer;
 
 /**
- * Returned from {@link FrameProcessorFactory#makeProcessors}.
- *
- * Includes a processor sequence and a list of output channels.
+ * Processor and success callback returned by {@link ProcessorManager#next()}.
  */
-public class ProcessorsAndChannels<ProcessorClass extends FrameProcessor<T>, T>
+public class ProcessorAndCallback<T>
 {
-  private final ProcessorManager<T> processors;
-  private final OutputChannels outputChannels;
+  private final FrameProcessor<T> processor;
+  private final Consumer<T> callback;
 
-  public ProcessorsAndChannels(
-      final ProcessorManager<T> processors,
-      final OutputChannels outputChannels
-  )
+  public ProcessorAndCallback(FrameProcessor<T> processor, @Nullable Consumer<T> callback)
   {
-    this.processors = processors;
-    this.outputChannels = outputChannels;
+    this.processor = Preconditions.checkNotNull(processor, "processor");
+    this.callback = callback;
   }
 
-  public ProcessorManager<T> processors()
+  public FrameProcessor<T> processor()
   {
-    return processors;
+    return processor;
   }
 
-  public OutputChannels getOutputChannels()
+  public void onComplete(final T resultObject)
   {
-    return outputChannels;
+    if (callback != null) {
+      callback.accept(resultObject);
+    }
   }
 }

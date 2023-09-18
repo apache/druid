@@ -31,9 +31,9 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -43,7 +43,6 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
-import org.apache.druid.msq.util.SupplierIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -87,12 +86,12 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Long>, Long> makeProcessors(
+  public ProcessorsAndChannels<FrameProcessor<Object>, Object> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
       InputSliceReader inputSliceReader,
-      @Nullable Object extra,
+      @Nullable Unit extra,
       OutputChannelFactory outputChannelFactory,
       FrameContext frameContext,
       int maxOutstandingProcessors,
@@ -110,12 +109,12 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
     final InputSlice slice = Iterables.getOnlyElement(inputSlices);
 
     if (inputSliceReader.numReadableInputs(slice) == 0) {
-      return new ProcessorsAndChannels<>(Sequences.empty(), OutputChannels.none());
+      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
     }
 
     final OutputChannel outputChannel = outputChannelFactory.openChannel(0);
 
-    final Supplier<FrameProcessor<Long>> workerSupplier = () -> {
+    final Supplier<FrameProcessor<Object>> workerSupplier = () -> {
       final ReadableInputs readableInputs = inputSliceReader.attach(0, slice, counters, warningPublisher);
 
       if (!readableInputs.isChannelBased()) {
@@ -135,11 +134,8 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
       );
     };
 
-    final Sequence<FrameProcessor<Long>> processors =
-        Sequences.simple(() -> new SupplierIterator<>(workerSupplier));
-
     return new ProcessorsAndChannels<>(
-        processors,
+        ProcessorManagers.of(workerSupplier),
         OutputChannels.wrapReadOnly(Collections.singletonList(outputChannel))
     );
   }

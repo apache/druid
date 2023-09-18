@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -196,7 +197,7 @@ public class SegmentGeneratorFrameProcessorFactory
         }
     );
 
-    return new ProcessorsAndChannels<>(workers, OutputChannels.none());
+    return new ProcessorsAndChannels<>(ProcessorManagers.of(workers), OutputChannels.none());
   }
 
   @Override

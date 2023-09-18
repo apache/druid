@@ -62,6 +62,8 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.indexer.TaskStatus;
@@ -71,8 +73,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterNames;
@@ -1177,7 +1177,7 @@ public class WorkerImpl implements Worker
               e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
           );
 
-      final Sequence<WorkerClass> processorSequence = processors.processors();
+      final ProcessorManager<T> processorManager = processors.processors();
 
       final int maxOutstandingProcessors;
 
@@ -1191,7 +1191,7 @@ public class WorkerImpl implements Worker
       }
 
       final ListenableFuture<R> workResultFuture = exec.runAllFully(
-          processorSequence,
+          processorManager,
           processorFactory.newAccumulatedResult(),
           processorFactory::accumulateResult,
           maxOutstandingProcessors,
@@ -1716,7 +1716,7 @@ public class WorkerImpl implements Worker
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              Sequences.simple(processors),
+              ProcessorManagers.of(processors),
               stageDefinition.createResultKeyStatisticsCollector(
                   frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
               ),

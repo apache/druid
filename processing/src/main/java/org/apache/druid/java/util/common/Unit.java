@@ -17,38 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.msq.kernel;
+package org.apache.druid.java.util.common;
 
-import org.apache.druid.frame.processor.FrameProcessor;
-import org.apache.druid.frame.processor.OutputChannels;
-import org.apache.druid.frame.processor.manager.ProcessorManager;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
- * Returned from {@link FrameProcessorFactory#makeProcessors}.
+ * A type that has exactly one value. (Not counting null.)
  *
- * Includes a processor sequence and a list of output channels.
+ * Jackson-serializable.
  */
-public class ProcessorsAndChannels<ProcessorClass extends FrameProcessor<T>, T>
+public final class Unit
 {
-  private final ProcessorManager<T> processors;
-  private final OutputChannels outputChannels;
+  private static final Unit INSTANCE = new Unit();
 
-  public ProcessorsAndChannels(
-      final ProcessorManager<T> processors,
-      final OutputChannels outputChannels
-  )
+  private Unit()
   {
-    this.processors = processors;
-    this.outputChannels = outputChannels;
+    // Singleton.
   }
 
-  public ProcessorManager<T> processors()
+  @JsonCreator
+  public static Unit instance()
   {
-    return processors;
+    return INSTANCE;
   }
 
-  public OutputChannels getOutputChannels()
+  @JsonValue
+  private Map<String, Object> asMap()
   {
-    return outputChannels;
+    return Collections.emptyMap();
   }
 }

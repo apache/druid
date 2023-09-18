@@ -35,10 +35,10 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -399,7 +399,7 @@ public class FrameProcessorExecutor
    * Runs a sequence of processors and returns a future that resolves when execution is complete. Returns a value
    * accumulated using the provided {@code accumulateFn}.
    *
-   * @param processors               sequence of processors to run
+   * @param processorManager         processors to run
    * @param initialResult            initial value for result accumulation. If there are no processors at all, this
    *                                 is returned.
    * @param accumulateFn             result accumulator. Applied in a critical section, so it should be something
@@ -411,7 +411,7 @@ public class FrameProcessorExecutor
    * @param cancellationId           optional cancellation id for {@link #runFully}.
    */
   public <T, ResultType> ListenableFuture<ResultType> runAllFully(
-      final Sequence<? extends FrameProcessor<T>> processors,
+      final ProcessorManager<T> processorManager,
       final ResultType initialResult,
       final BiFunction<ResultType, T, ResultType> accumulateFn,
       final int maxOutstandingProcessors,
@@ -421,7 +421,7 @@ public class FrameProcessorExecutor
   {
     // Logic resides in a separate class in order to keep this one simpler.
     return new RunAllFullyWidget<>(
-        processors,
+        processorManager,
         this,
         initialResult,
         accumulateFn,
