@@ -1103,6 +1103,13 @@
                 <artifactId>assertj-core</artifactId>
                 <version>3.24.2</version>
                 <scope>test</scope>
+                <exclusions>
+                  <!-- exclude older byte-buddy until assertj-core depends on 1.14+ for Java 21 -->
+                  <exclusion>
+                    <groupId>net.bytebuddy</groupId>
+                    <artifactId>byte-buddy</artifactId>
+                  </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.ircclouds.irc</groupId>
