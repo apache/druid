@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategy;
 
@@ -153,7 +154,8 @@ public class BuiltInExprMacros
     @Override
     public Expr apply(List<Expr> args)
     {
-      return new StringDecodeBase64UTFExpression(args);
+      validationHelperCheckArgumentCount(args, 1);
+      return new StringDecodeBase64UTFExpression(args.get(0));
     }
 
     @Override
@@ -162,18 +164,17 @@ public class BuiltInExprMacros
       return NAME;
     }
 
-    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarMacroFunctionExpr
+    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
-      public StringDecodeBase64UTFExpression(List<Expr> args)
+      public StringDecodeBase64UTFExpression(Expr arg)
       {
-        super(NAME, args);
-        validationHelperCheckArgumentCount(args, 1);
+        super(NAME, arg);
       }
 
       @Override
       public ExprEval eval(ObjectBinding bindings)
       {
-        ExprEval<?> toDecode = args.get(0).eval(bindings);
+        ExprEval<?> toDecode = arg.eval(bindings);
         if (toDecode.value() == null) {
           return ExprEval.of(null);
         }
@@ -183,7 +184,7 @@ public class BuiltInExprMacros
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
+        return shuttle.visit(apply(shuttle.visitAll(Lists.newArrayList(arg))));
       }
 
       @Nullable
@@ -196,13 +197,13 @@ public class BuiltInExprMacros
       @Override
       public boolean isLiteral()
       {
-        return args.get(0).isLiteral();
+        return arg.isLiteral();
       }
 
       @Override
       public boolean isNullLiteral()
       {
-        return args.get(0).isNullLiteral();
+        return arg.isNullLiteral();
       }
 
       @Nullable
