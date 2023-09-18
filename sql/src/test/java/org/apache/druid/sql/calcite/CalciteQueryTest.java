@@ -2995,7 +2995,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
@@ -3013,7 +3013,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenMappingIsRequired()
   {
@@ -3030,7 +3030,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnionIsUnplannable()
   {
@@ -3041,7 +3041,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
@@ -3145,7 +3145,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllSameTableTwiceWithDifferentMapping()
   {
@@ -5651,7 +5651,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.CANNOT_CONVERT)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableQueries()
   {
@@ -5723,7 +5723,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableTwoExactCountDistincts()
   {
@@ -5736,7 +5736,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableExactCountDistinctOnSketch()
   {
@@ -11977,7 +11977,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode=Modes.TARGET_PERSONA)
+  @DecoupledIgnore(mode=Modes.ERROR_HANDLING)
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
