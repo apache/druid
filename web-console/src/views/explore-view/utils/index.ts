@@ -20,4 +20,3 @@ export * from './date-format';
 export * from './get-auto-granularity';
 export * from './misc';
 export * from './snap-to-granularity';
-export * from './use-resize-observer';

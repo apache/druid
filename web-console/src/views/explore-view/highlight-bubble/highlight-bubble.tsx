@@ -21,8 +21,8 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
 
+import { useResizeObserver } from '../../../hooks';
 import { highlightStore } from '../highlight-store/highlight-store';
-import { useResizeObserver } from '../utils';
 
 import './highlight-bubble.scss';
 

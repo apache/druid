@@ -30,7 +30,7 @@ function getCentroid(chart: echarts.ECharts, dataIndex: number) {
   // see these underscores everywhere? that's because those are private properties
   // I have no real choice but to use them, because there is no public API for this (on pie charts)
   // #no_ragrets
-  const layout = (chart as any)._chartsViews[0]._data._itemLayouts[dataIndex];
+  const layout = (chart as any)._chartsViews?.[0]?._data?._itemLayouts?.[dataIndex];
 
   if (!layout) return;
 
