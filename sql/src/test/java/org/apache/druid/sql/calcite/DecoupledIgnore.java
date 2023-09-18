@@ -18,6 +18,8 @@
 
 package org.apache.druid.sql.calcite;
 
+import org.apache.druid.error.DruidException;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -29,20 +31,22 @@ public @interface DecoupledIgnore
 {
   static enum Modes
   {
-    PLAN_MISMATCH(AssertionError.class);
+    PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
+    NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
+    CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
+    TARGET_PERSONA(AssertionError.class, "(is <ADMIN> was <OPERATOR>|with message a string containing)"),
+    ;
 
-    private Class<? extends Throwable> throwableClass;
+    public Class<? extends Throwable> throwableClass;
+    public String regex;
 
-    Modes(Class<? extends Throwable> cl)
+    Modes(Class<? extends Throwable> cl,String regex)
     {
       this.throwableClass = cl;
+      this.regex = regex;
     }
   };
 
-  Class<? extends Throwable> expected() default Exception.class;
-
-  String regex() default "";
-
-  Modes mode() default Modes.PLAN_MISMATCH;
+  Modes mode() default Modes.NOT_ENOUGH_RULES;
 
 }

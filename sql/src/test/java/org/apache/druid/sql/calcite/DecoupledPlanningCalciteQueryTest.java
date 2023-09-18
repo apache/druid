@@ -31,8 +31,10 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
@@ -53,15 +55,20 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
           if (annotation != null) {
             Throwable e = assertThrows(
                 "Expected that this testcase will fail - it might got fixed?",
-                annotation.expected(),
+                annotation.mode().throwableClass,
                 () -> {
                   base.evaluate();
                 });
 
-            if (!annotation.regex().isBlank()) {
-              assertTrue(
-                  "Exception stactrace doesn't match regex: " + annotation.regex(),
-                  Throwables.getStackTraceAsString(e).contains(annotation.regex()));
+            String regex = annotation.mode().regex;
+            String trace = Throwables.getStackTraceAsString(e);
+            Pattern pat = Pattern.compile(regex);
+            Matcher m=pat.matcher(trace);
+
+            if (!m.find()) {
+//              if(!Throwables.getStackTraceAsString(e).matches(regex)) {
+                throw new AssertionError("Exception stactrace doesn't match regex: " + regex,e);
+//              }
             }
             throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
           } else {
