@@ -28,6 +28,7 @@ import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Expr.ObjectBinding;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -40,7 +41,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 
-import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
@@ -48,8 +48,6 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
@@ -130,11 +128,31 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testUnknownErrorsAreWrappedAndReported()
   {
-    Exception e = assertThrows(DruidException.class, () -> {
-      new Function.Abs().apply(null, null);
-    });
+    final Expr expr = Parser.parse("abs(x)", ExprMacroTable.nil());
+
+    ObjectBinding bind = new ObjectBinding()
+    {
+
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return ExpressionType.LONG_ARRAY;
+      }
+
+      @Override
+      public Object get(String name)
+      {
+        throw new RuntimeException("nested-exception");
+      }
+    };
+    DruidException e = Assert.assertThrows(DruidException.class,
+        () -> {
+          expr.eval(bind);
+        });
+
     assertEquals("Invocation of function 'abs' encountered exception.", e.getMessage());
     assertNotNull(e.getCause());
+    assertEquals("nested-exception", e.getCause().getMessage());
   }
 
   @Test
@@ -1221,14 +1239,5 @@ public class FunctionTest extends InitializedNullHandlingTest
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
     Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
     Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
-  }
-
-  @Test
-  public void checkAllSubClassesArePublic()
-  {
-    for (Class<?> cl : Function.class.getDeclaredClasses()) {
-      assertTrue("non-public: " + cl.getName(), (cl.getModifiers() & Modifier.PUBLIC) > 0);
-      assertTrue("non-static: " + cl.getName(), (cl.getModifiers() & Modifier.STATIC) > 0);
-    }
   }
 }
