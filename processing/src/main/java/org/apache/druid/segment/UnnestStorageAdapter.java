@@ -478,13 +478,16 @@ public class UnnestStorageAdapter implements StorageAdapter
     for (Filter filter : queryFilter.getFilters()) {
       if (filter.getRequiredColumns().contains(outputColumnName)) {
         if (filter instanceof AndFilter) {
-          preFilterList.add(new AndFilter(recursiveRewriteOnUnnestFilters(
+          List<Filter> andChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
               filterSplitter,
               isTopLevelAndFilter
-          )));
+          );
+          if (!andChildFilters.isEmpty()) {
+            preFilterList.add(new AndFilter(andChildFilters));
+          }
         } else if (filter instanceof OrFilter) {
           // in case of Or Fiters, we set isTopLevelAndFilter to false that prevents pushing down any child filters to base
           List<Filter> orChildFilters = recursiveRewriteOnUnnestFilters(

@@ -632,7 +632,6 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestByLatestByWithExpression()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT\n"
             + "  channel\n"
