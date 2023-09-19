@@ -77,6 +77,7 @@ public @interface DecoupledIgnore
    */
   public static class DecoupledIgnoreProcessor implements TestRule
   {
+    @Override
     public Statement apply(Statement base, Description description)
     {
       DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
