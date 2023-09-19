@@ -53,4 +53,5 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
   }
+
 }

@@ -724,7 +724,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("k"), makeColumnExpression("j0.dim2")),
-                                JoinType.RIGHT
+                                JoinType.INNER
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -735,13 +735,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{NULL_STRING, 3L},
-            new Object[]{"xabc", 1L}
-        )
-        : ImmutableList.of(
-            new Object[]{null, 5L},
+        ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
     );
@@ -769,7 +763,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
-                                JoinType.LEFT
+                                JoinType.INNER
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -822,7 +816,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
-                                JoinType.LEFT
+                                JoinType.INNER
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -1966,17 +1960,17 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   .build()
                           ),
                           "_j0.",
-                          "1",
+                          equalsCondition(
+                                  DruidExpression.fromExpression("CAST(\"j0.k\", 'LONG')"),
+                                    DruidExpression.ofColumn(ColumnType.LONG, "_j0.cnt")
+                          ),
                           JoinType.INNER
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .filters(and(
-                      expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
-                      expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
-                  ))
+                  .filters(expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3487,7 +3481,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();
 
-    ScanQuery nullCompatibleModePlan = newScanQueryBuilder()
+    ScanQuery expectedQuery = newScanQueryBuilder()
         .dataSource(
             join(
                 new TableDataSource(CalciteTests.DATASOURCE1),
@@ -3513,33 +3507,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    ScanQuery nonNullCompatibleModePlan = newScanQueryBuilder()
-        .dataSource(
-            join(
-                new TableDataSource(CalciteTests.DATASOURCE1),
-                new QueryDataSource(
-                    GroupByQuery
-                        .builder()
-                        .setDataSource(new LookupDataSource("lookyloo"))
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            expressionVirtualColumn("v0", "concat(\"k\",'')", ColumnType.STRING)
-                        )
-                        .setDimensions(new DefaultDimensionSpec("v0", "d0"))
-                        .build()
-                ),
-                "j0.",
-                equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
-                JoinType.LEFT
-            )
-        )
-        .intervals(querySegmentSpec(Filtration.eternity()))
-        .columns("dim1", "j0.d0")
-        .filters(notNull("j0.d0"))
-        .context(queryContext)
-        .build();
-
     boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
                                                      .toString()
                                                      .equals("true");
@@ -3549,7 +3516,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         + "LEFT JOIN (select k || '' as k from lookup.lookyloo group by 1) l1 ON foo.dim1 = l1.k\n"
         + "WHERE l1.k IS NOT NULL\n",
         queryContext,
-        ImmutableList.of(NullHandling.sqlCompatible() ? nullCompatibleModePlan : nonNullCompatibleModePlan),
+        ImmutableList.of(expectedQuery),
         NullHandling.sqlCompatible() || !isJoinFilterRewriteEnabled
         ? ImmutableList.of(new Object[]{"abc", "abc"})
         : ImmutableList.of(
@@ -4556,6 +4523,107 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
         )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinWithNonEquiCondition(Map<String, Object> queryContext)
+  {
+    // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
+    // cross join with a filter.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 > y.m1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .columns("m1")
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        "1",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("(\"m1\" > \"j0.m1\")"))
+                .columns("j0.m1", "m1")
+                .context(queryContext)
+                .build()
+        ),
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[]{2.0f, 1.0f},
+                new Object[]{3.0f, 1.0f},
+                new Object[]{3.0f, 2.0f},
+                new Object[]{4.0f, 1.0f},
+                new Object[]{4.0f, 2.0f},
+                new Object[]{4.0f, 3.0f},
+                new Object[]{5.0f, 1.0f},
+                new Object[]{5.0f, 2.0f},
+                new Object[]{5.0f, 3.0f},
+                new Object[]{5.0f, 4.0f},
+                new Object[]{6.0f, 1.0f},
+                new Object[]{6.0f, 2.0f},
+                new Object[]{6.0f, 3.0f},
+                new Object[]{6.0f, 4.0f},
+                new Object[]{6.0f, 5.0f}
+            ),
+            1,
+            0
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinWithEquiAndNonEquiCondition(Map<String, Object> queryContext)
+  {
+    // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
+    // cross join with a filter.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 = y.m1 AND x.m1 + y.m1 = 6.0",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .columns("m1")
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("m1"), makeColumnExpression("j0.m1")),
+                        JoinType.INNER
+                    )
+                )
+                .virtualColumns(expressionVirtualColumn("v0", "(\"m1\" + \"j0.m1\")", ColumnType.DOUBLE))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    equality("v0", 6.0, ColumnType.DOUBLE)
+                )
+                .columns("j0.m1", "m1")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{3.0f, 3.0f})
     );
   }
 

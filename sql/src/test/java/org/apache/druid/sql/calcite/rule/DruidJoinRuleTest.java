@@ -195,7 +195,7 @@ public class DruidJoinRuleTest
   @Test
   public void test_decomposeAnd_notAnAnd()
   {
-    final List<RexNode> rexNodes = DruidJoinRule.decomposeAnd(rexBuilder.makeInputRef(leftType, 0));
+    final List<RexNode> rexNodes = JoinRules.decomposeAnd(rexBuilder.makeInputRef(leftType, 0));
 
     Assert.assertEquals(1, rexNodes.size());
     Assert.assertEquals(rexBuilder.makeInputRef(leftType, 0), Iterables.getOnlyElement(rexNodes));
@@ -204,7 +204,7 @@ public class DruidJoinRuleTest
   @Test
   public void test_decomposeAnd_basic()
   {
-    final List<RexNode> decomposed = DruidJoinRule.decomposeAnd(
+    final List<RexNode> decomposed = JoinRules.decomposeAnd(
         rexBuilder.makeCall(
             SqlStdOperatorTable.AND,
             rexBuilder.makeCall(
