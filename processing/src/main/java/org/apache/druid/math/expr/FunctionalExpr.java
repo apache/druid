@@ -189,9 +189,11 @@ class FunctionExpr implements Expr
   {
     try {
       return function.apply(args, bindings);
-    } catch (DruidException | ExpressionValidationException de) {
-      throw de;
-    } catch (Exception e) {
+    }
+    catch (DruidException | ExpressionValidationException e) {
+      throw e;
+    }
+    catch (Exception e) {
       throw DruidException.defensive().build(e, "Invocation of function '%s' encountered exception.", name);
     }
   }
