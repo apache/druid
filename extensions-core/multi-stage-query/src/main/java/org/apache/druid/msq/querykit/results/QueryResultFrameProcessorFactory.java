@@ -69,7 +69,7 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
       int maxOutstandingProcessors,
       CounterTracker counters,
       Consumer<Throwable> warningPublisher
-  ) throws IOException
+  )
   {
     // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);

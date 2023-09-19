@@ -27,7 +27,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.query.Query;
 import org.apache.druid.segment.SegmentReference;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -64,13 +63,12 @@ public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<Segm
 
   @Override
   public ReturnOrAwait<Function<SegmentReference, SegmentReference>> runIncrementally(final IntSet readableInputs)
-      throws InterruptedException, IOException
   {
     return ReturnOrAwait.returnObject(query.getDataSource().createSegmentMapFunction(query, new AtomicLong()));
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void cleanup()
   {
     // Nothing to do.
   }
