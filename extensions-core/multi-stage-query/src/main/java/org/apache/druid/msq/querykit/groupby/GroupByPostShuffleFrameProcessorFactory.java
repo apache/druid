@@ -31,7 +31,6 @@ import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -72,18 +71,18 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Object>, Object> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
       InputSliceReader inputSliceReader,
-      @Nullable Unit extra,
+      @Nullable Object extra,
       OutputChannelFactory outputChannelFactory,
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
       Consumer<Throwable> warningPublisher
-  )
+  ) throws IOException
   {
     // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);

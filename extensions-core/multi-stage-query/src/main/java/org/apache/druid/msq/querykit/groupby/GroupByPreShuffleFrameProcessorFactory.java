@@ -55,7 +55,7 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   }
 
   @Override
-  protected FrameProcessor<Unit> makeProcessor(
+  protected FrameProcessor<Object> makeProcessor(
       final ReadableInput baseInput,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,

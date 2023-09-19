@@ -20,9 +20,7 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.kernel.ExtraInfoHolder;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
@@ -33,39 +31,23 @@ import javax.annotation.Nullable;
  * Basic abstract {@link FrameProcessorFactory} that yields workers that do not require extra info and that
  * ignore the return values of their processors. This base class isn't used for every worker factory, but it is used
  * for many of them.
- *
- * The return value is always {@link Unit#instance()}.
  */
-public abstract class BaseFrameProcessorFactory
-    implements FrameProcessorFactory<Unit, FrameProcessor<Object>, Object, Object>
+public abstract class BaseFrameProcessorFactory implements FrameProcessorFactory<Object, Long, Object>
 {
   @Override
-  public TypeReference<Object> getAccumulatedResultTypeReference()
+  public TypeReference<Long> getResultTypeReference()
   {
-    return (TypeReference) new TypeReference<Unit>() {};
+    return new TypeReference<Long>() {};
   }
 
   @Override
-  public Object newAccumulatedResult()
+  public Long mergeAccumulatedResult(Long accumulated, Long otherAccumulated)
   {
-    return Unit.instance();
-  }
-
-  @Nullable
-  @Override
-  public Object accumulateResult(Object accumulated, Object current)
-  {
-    return accumulated;
+    return accumulated + otherAccumulated;
   }
 
   @Override
-  public Object mergeAccumulatedResult(Object accumulated, Object otherAccumulated)
-  {
-    return accumulated;
-  }
-
-  @Override
-  public ExtraInfoHolder<?> makeExtraInfoHolder(@Nullable Unit extra)
+  public ExtraInfoHolder makeExtraInfoHolder(@Nullable Object extra)
   {
     if (extra != null) {
       throw new ISE("Expected null 'extra'");

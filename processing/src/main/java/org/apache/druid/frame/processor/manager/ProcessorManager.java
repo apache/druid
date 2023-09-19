@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 
 import java.io.Closeable;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 /**
  * Used by {@link FrameProcessorExecutor#runAllFully} to manage the launching of processors. Processors returned by
@@ -36,7 +37,7 @@ import java.util.Optional;
  *
  * Implementations do not need to be thread-safe.
  */
-public interface ProcessorManager<T> extends Closeable
+public interface ProcessorManager<T, R> extends Closeable
 {
   /**
    * Returns the next processor that should be run, along with a callback. The callback is called when the processor
@@ -52,6 +53,11 @@ public interface ProcessorManager<T> extends Closeable
   ListenableFuture<Optional<ProcessorAndCallback<T>>> next();
 
   /**
+   * Called after all procesors are done, prior to {@link #close()}, to retrieve the result of this computation.
+   */
+  R result();
+
+  /**
    * Called when all processors are done, or when one has failed.
    *
    * This method releases all resources associated with this manager. After this method is called, no other methods
@@ -59,4 +65,12 @@ public interface ProcessorManager<T> extends Closeable
    */
   @Override
   void close();
+
+  default <R2> ProcessorManager<T, R2> withAccumulation(
+      R2 initialResult,
+      BiFunction<R2, T, R2> accumulateFn
+  )
+  {
+    return new AccumulatingProcessorManager<>(this, initialResult, accumulateFn);
+  }
 }

@@ -40,7 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public abstract class BaseLeafFrameProcessor implements FrameProcessor<Unit>
+public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableInput baseInput;
   private final ResourceHolder<WritableFrameChannel> outputChannelHolder;
@@ -77,13 +77,18 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Unit>
   }
 
   @Override
-  public ReturnOrAwait<Unit> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
+    final ReturnOrAwait<Unit> retVal;
+
     if (baseInput.hasSegment()) {
-      return runWithSegment(baseInput.getSegment());
+      retVal = runWithSegment(baseInput.getSegment());
     } else {
-      return runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
+      retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
+
+    //noinspection rawtypes,unchecked
+    return (ReturnOrAwait) retVal;
   }
 
   @Override

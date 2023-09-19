@@ -142,10 +142,8 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   @Test
   public void test_runAllFully_emptyChannel() throws Exception
   {
-    final ListenableFuture<String> future = exec.<String, String>runAllFully(
-        possiblyDelay(ensureClose(ProcessorManagers.none())),
-        "xyzzy",
-        (s1, s2) -> s1 + s2,
+    final ListenableFuture<String> future = exec.runAllFully(
+        possiblyDelay(ensureClose(ProcessorManagers.none().withAccumulation("xyzzy", (s1, s2) -> s1 + s2))),
         maxOutstandingProcessors,
         bouncer,
         null
@@ -168,7 +166,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                                 .toList()
         );
 
-    final ProcessorManager<Long> processors = ProcessorManagers.of(
+    final ProcessorManager<Long, Long> processors = ProcessorManagers.of(
         Iterables.transform(
             IntStream.range(0, numProcessors)::iterator,
             i -> {
@@ -187,12 +185,10 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
               );
             }
         )
-    );
+    ).withAccumulation(0L, Long::sum);
 
     final ListenableFuture<Long> future = exec.runAllFully(
         possiblyDelay(ensureClose(processors)),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -220,11 +216,9 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                             )
 
                     )
-                )
+                ).withAccumulation(0L, Long::sum)
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -250,13 +244,9 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                         IntStream.range(0, 100)::iterator,
                         i -> new ChompingFrameProcessor(Collections.emptyList())
                     )
-                )
+                ).withAccumulation(0L, (x, y) -> {throw new ISE("error!");})
             )
         ),
-        0L,
-        (x, y) -> {
-          throw new ISE("error!");
-        },
         maxOutstandingProcessors,
         bouncer,
         null
@@ -279,13 +269,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                             IntStream.generate(() -> 0)::iterator /* Infinite stream */,
                             i -> new ChompingFrameProcessor(Collections.emptyList())
                         )
-                    )
+                    ).withAccumulation(0L, Long::sum)
                 ),
                 0
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -308,13 +296,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                             IntStream.generate(() -> 0)::iterator /* Infinite stream */,
                             i -> new ChompingFrameProcessor(Collections.emptyList())
                         )
-                    )
+                    ).withAccumulation(0L, Long::sum)
                 ),
                 1
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -337,13 +323,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                             IntStream.generate(() -> 0)::iterator /* Infinite stream */,
                             i -> new ChompingFrameProcessor(Collections.emptyList())
                         )
-                    )
+                    ).withAccumulation(0L, Long::sum)
                 ),
                 100
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -366,12 +350,10 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                             IntStream.range(0, 101)::iterator,
                             i -> new ChompingFrameProcessor(Collections.emptyList())
                         )
-                    )
+                    ).withAccumulation(0L, Long::sum)
                 )
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -395,14 +377,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                                 IntStream.range(0, 101)::iterator,
                                 i -> new ChompingFrameProcessor(Collections.emptyList())
                             )
-                        )
+                        ).withAccumulation(0L, Long::sum)
                     ),
                     1
                 )
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -428,10 +408,9 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         possiblyDelay(
             ensureClose(
                 ProcessorManagers.of(Sequences.simple(processors).map(ConcurrencyTrackingFrameProcessor::new))
+                                 .withAccumulation(0L, Long::sum)
             )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         "xyzzy"
@@ -455,7 +434,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   /**
    * Wrap in {@link DelayedProcessorManager} if {@link #delayed} is set.
    */
-  private <T> ProcessorManager<T> possiblyDelay(final ProcessorManager<T> processorManager)
+  private <T, R> ProcessorManager<T, R> possiblyDelay(final ProcessorManager<T, R> processorManager)
   {
     return delayed ? new DelayedProcessorManager<>(processorManager) : processorManager;
   }
@@ -463,7 +442,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   /**
    * Ensure that the provided processor manager is closed once, and only once. Must be called once per test case.
    */
-  private <T> ProcessorManager<T> ensureClose(final ProcessorManager<T> processorManager)
+  private <T, R> ProcessorManager<T, R> ensureClose(final ProcessorManager<T, R> processorManager)
   {
     return new EnsureCloseProcessorManager<>(processorManager);
   }
@@ -530,11 +509,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     }
   }
 
-  private class EnsureCloseProcessorManager<T> implements ProcessorManager<T>
+  private class EnsureCloseProcessorManager<T, R> implements ProcessorManager<T, R>
   {
-    private final ProcessorManager<T> delegate;
+    private final ProcessorManager<T, R> delegate;
 
-    public EnsureCloseProcessorManager(ProcessorManager<T> delegate)
+    public EnsureCloseProcessorManager(ProcessorManager<T, R> delegate)
     {
       this.delegate = delegate;
     }
@@ -543,6 +522,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
     {
       return delegate.next();
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
     }
 
     @Override
@@ -556,12 +541,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   /**
    * Processor manager that throws an error on the Nth element.
    */
-  private static class ThrowOnNextProcessorManager<T> implements ProcessorManager<T>
+  private static class ThrowOnNextProcessorManager<T, R> implements ProcessorManager<T, R>
   {
-    private final ProcessorManager<T> delegate;
+    private final ProcessorManager<T, R> delegate;
     private int i;
 
-    public ThrowOnNextProcessorManager(final ProcessorManager<T> delegate, final int i)
+    public ThrowOnNextProcessorManager(final ProcessorManager<T, R> delegate, final int i)
     {
       this.delegate = delegate;
       this.i = i;
@@ -579,6 +564,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     }
 
     @Override
+    public R result()
+    {
+      return delegate.result();
+    }
+
+    @Override
     public void close()
     {
       delegate.close();
@@ -588,11 +579,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   /**
    * Processor manager that throws an error on {@link #close()}.
    */
-  private static class ThrowOnCloseProcessorManager<T> implements ProcessorManager<T>
+  private static class ThrowOnCloseProcessorManager<T, R> implements ProcessorManager<T, R>
   {
-    private final ProcessorManager<T> delegate;
+    private final ProcessorManager<T, R> delegate;
 
-    public ThrowOnCloseProcessorManager(ProcessorManager<T> delegate)
+    public ThrowOnCloseProcessorManager(ProcessorManager<T, R> delegate)
     {
       this.delegate = delegate;
     }
@@ -601,6 +592,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
     {
       return delegate.next();
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
     }
 
     @Override
@@ -616,11 +613,11 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
    * Especially useful on single-threaded test cases. This helps us ensure that things work when channels don't have
    * processors immediately ready upon a call to {@link FrameProcessorExecutor#runAllFully}.
    */
-  private class DelayedProcessorManager<T> implements ProcessorManager<T>
+  private class DelayedProcessorManager<T, R> implements ProcessorManager<T, R>
   {
-    private final ProcessorManager<T> delegate;
+    private final ProcessorManager<T, R> delegate;
 
-    public DelayedProcessorManager(ProcessorManager<T> delegate)
+    public DelayedProcessorManager(ProcessorManager<T, R> delegate)
     {
       this.delegate = delegate;
     }
@@ -651,6 +648,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
       );
 
       return retVal;
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
     }
 
     @Override

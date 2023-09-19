@@ -1152,7 +1152,7 @@ public class WorkerImpl implements Worker
           );
     }
 
-    private <FactoryType extends FrameProcessorFactory<I, WorkerClass, T, R>, I, WorkerClass extends FrameProcessor<T>, T, R> void makeAndRunWorkProcessors()
+    private <FactoryType extends FrameProcessorFactory<T, R, I>, T, R, I> void makeAndRunWorkProcessors()
         throws IOException
     {
       if (workResultAndOutputChannels != null) {
@@ -1163,7 +1163,7 @@ public class WorkerImpl implements Worker
       final FactoryType processorFactory = (FactoryType) kernel.getStageDefinition().getProcessorFactory();
 
       @SuppressWarnings("unchecked")
-      final ProcessorsAndChannels<WorkerClass, T> processors =
+      final ProcessorsAndChannels<T, R> processors =
           processorFactory.makeProcessors(
               kernel.getStageDefinition(),
               kernel.getWorkOrder().getWorkerNumber(),
@@ -1177,7 +1177,7 @@ public class WorkerImpl implements Worker
               e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
           );
 
-      final ProcessorManager<T> processorManager = processors.processors();
+      final ProcessorManager<T, R> processorManager = processors.getProcessorManager();
 
       final int maxOutstandingProcessors;
 
@@ -1192,8 +1192,6 @@ public class WorkerImpl implements Worker
 
       final ListenableFuture<R> workResultFuture = exec.runAllFully(
           processorManager,
-          processorFactory.newAccumulatedResult(),
-          processorFactory::accumulateResult,
           maxOutstandingProcessors,
           processorBouncer,
           cancellationId
@@ -1716,11 +1714,13 @@ public class WorkerImpl implements Worker
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              ProcessorManagers.of(processors),
-              stageDefinition.createResultKeyStatisticsCollector(
-                  frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
-              ),
-              ClusterByStatisticsCollector::addAll,
+              ProcessorManagers.of(processors)
+                               .withAccumulation(
+                                   stageDefinition.createResultKeyStatisticsCollector(
+                                       frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                   ),
+                                   ClusterByStatisticsCollector::addAll
+                               ),
               // Run all processors simultaneously. They are lightweight and this keeps things moving.
               processors.size(),
               Bouncer.unlimited(),

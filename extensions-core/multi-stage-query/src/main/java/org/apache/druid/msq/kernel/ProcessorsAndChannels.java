@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.kernel;
 
-import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 
@@ -28,23 +27,23 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
  *
  * Includes a processor sequence and a list of output channels.
  */
-public class ProcessorsAndChannels<ProcessorClass extends FrameProcessor<T>, T>
+public class ProcessorsAndChannels<T, R>
 {
-  private final ProcessorManager<T> processors;
+  private final ProcessorManager<T, R> processorManager;
   private final OutputChannels outputChannels;
 
   public ProcessorsAndChannels(
-      final ProcessorManager<T> processors,
+      final ProcessorManager<T, R> processorManager,
       final OutputChannels outputChannels
   )
   {
-    this.processors = processors;
+    this.processorManager = processorManager;
     this.outputChannels = outputChannels;
   }
 
-  public ProcessorManager<T> processors()
+  public ProcessorManager<T, R> getProcessorManager()
   {
-    return processors;
+    return processorManager;
   }
 
   public OutputChannels getOutputChannels()

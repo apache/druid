@@ -37,7 +37,7 @@ import java.util.function.Function;
  * Manager that chains processors: runs {@link #first} first, then based on its result, creates {@link #restFuture}
  * using {@link #restFactory} and runs that next.
  */
-public class ChainedProcessorManager<A, B> implements ProcessorManager<Object>
+public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object, R>
 {
   /**
    * First processor. This one blocks all the others. The reference is set to null once the processor has been
@@ -49,16 +49,16 @@ public class ChainedProcessorManager<A, B> implements ProcessorManager<Object>
   /**
    * Produces {@link #restFuture}.
    */
-  private final Function<A, ProcessorManager<B>> restFactory;
+  private final Function<A, ProcessorManager<B, R>> restFactory;
 
   /**
    * The rest of the processors. Produced by {@link #restFactory} once {@link #first} has completed.
    */
-  private final SettableFuture<ProcessorManager<B>> restFuture = SettableFuture.create();
+  private final SettableFuture<ProcessorManager<B, R>> restFuture = SettableFuture.create();
 
   public ChainedProcessorManager(
       final FrameProcessor<A> first,
-      final Function<A, ProcessorManager<B>> restFactory
+      final Function<A, ProcessorManager<B, R>> restFactory
   )
   {
     this.first = Preconditions.checkNotNull(first, "first");
@@ -85,6 +85,12 @@ public class ChainedProcessorManager<A, B> implements ProcessorManager<Object>
   {
     //noinspection unchecked
     restFuture.set(restFactory.apply((A) firstResult));
+  }
+
+  @Override
+  public R result()
+  {
+    return FutureUtils.getUncheckedImmediately(restFuture).result();
   }
 
   @Override

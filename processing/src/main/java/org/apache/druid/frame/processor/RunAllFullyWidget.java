@@ -42,7 +42,6 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 
 /**
  * Helper for {@link FrameProcessorExecutor#runAllFully}. See the javadoc for that method for details about the
@@ -58,20 +57,16 @@ public class RunAllFullyWidget<T, ResultType>
 {
   private static final Logger log = new Logger(RunAllFullyWidget.class);
 
-  private final ProcessorManager<T> processorManager;
+  private final ProcessorManager<T, ResultType> processorManager;
   private final FrameProcessorExecutor exec;
-  private final ResultType initialResult;
-  private final BiFunction<ResultType, T, ResultType> accumulateFn;
   private final int maxOutstandingProcessors;
   private final Bouncer bouncer;
   @Nullable
   private final String cancellationId;
 
   RunAllFullyWidget(
-      ProcessorManager<T> processorManager,
+      ProcessorManager<T, ResultType> processorManager,
       FrameProcessorExecutor exec,
-      ResultType initialResult,
-      BiFunction<ResultType, T, ResultType> accumulateFn,
       int maxOutstandingProcessors,
       Bouncer bouncer,
       @Nullable String cancellationId
@@ -79,8 +74,6 @@ public class RunAllFullyWidget<T, ResultType>
   {
     this.processorManager = processorManager;
     this.exec = exec;
-    this.initialResult = initialResult;
-    this.accumulateFn = accumulateFn;
     this.maxOutstandingProcessors = maxOutstandingProcessors;
     this.bouncer = bouncer;
     this.cancellationId = cancellationId;
@@ -94,8 +87,9 @@ public class RunAllFullyWidget<T, ResultType>
       nextProcessorFuture = processorManager.next();
       if (nextProcessorFuture.isDone() && !nextProcessorFuture.get().isPresent()) {
         // Save some time and return immediately.
+        final ResultType retVal = processorManager.result();
         processorManager.close();
-        return Futures.immediateFuture(initialResult);
+        return Futures.immediateFuture(retVal);
       }
     }
     catch (Throwable e) {
@@ -122,9 +116,6 @@ public class RunAllFullyWidget<T, ResultType>
 
     @GuardedBy("runAllFullyLock")
     ListenableFuture<Optional<ProcessorAndCallback<T>>> nextProcessorFuture;
-
-    @GuardedBy("runAllFullyLock")
-    ResultType currentResult = initialResult;
 
     /**
      * Number of processors currently outstanding. Final cleanup is done when there are no more processors in
@@ -213,7 +204,7 @@ public class RunAllFullyWidget<T, ResultType>
             if (!maybeNextProcessor.isPresent()) {
               // Finished.
               if (outstandingProcessors == 0) {
-                finished.compareAndSet(null, Either.value(currentResult));
+                finished.compareAndSet(null, Either.value(processorManager.result()));
                 cleanupIfNoMoreProcessors();
               }
               return;
@@ -291,22 +282,15 @@ public class RunAllFullyWidget<T, ResultType>
               public void onSuccess(T result)
               {
                 final boolean isDone;
-                ResultType retVal = null;
 
                 try {
                   synchronized (runAllFullyLock) {
                     outstandingProcessors--;
                     outstandingFutures.remove(future);
 
-                    currentResult = accumulateFn.apply(currentResult, result);
-
                     isDone = outstandingProcessors == 0
                              && nextProcessorFuture.isDone()
                              && !nextProcessorFuture.get().isPresent();
-
-                    if (isDone) {
-                      retVal = currentResult;
-                    }
 
                     nextProcessor.onComplete(result);
                   }
@@ -322,7 +306,7 @@ public class RunAllFullyWidget<T, ResultType>
                 }
 
                 if (isDone) {
-                  finished.compareAndSet(null, Either.value(retVal));
+                  finished.compareAndSet(null, Either.value(processorManager.result()));
 
                   synchronized (runAllFullyLock) {
                     cleanupIfNoMoreProcessors();

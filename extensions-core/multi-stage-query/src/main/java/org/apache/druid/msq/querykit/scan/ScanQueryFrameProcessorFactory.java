@@ -68,7 +68,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   }
 
   @Override
-  protected FrameProcessor<Unit> makeProcessor(
+  protected FrameProcessor<Object> makeProcessor(
       ReadableInput baseInput,
       Function<SegmentReference, SegmentReference> segmentMapFn,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,

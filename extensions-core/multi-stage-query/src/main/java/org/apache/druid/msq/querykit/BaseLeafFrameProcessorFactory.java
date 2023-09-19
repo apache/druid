@@ -34,7 +34,6 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -74,12 +73,12 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Object>, Object> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
       InputSliceReader inputSliceReader,
-      @Nullable Unit extra,
+      @Nullable Object extra,
       OutputChannelFactory outputChannelFactory,
       FrameContext frameContext,
       int maxOutstandingProcessors,
@@ -147,7 +146,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
         );
 
     // Function to generate a processor manger for the regular processors, which run after the segmentMapFnProcessor.
-    final Function<Function<SegmentReference, SegmentReference>, ProcessorManager<Unit>> processorManagerFn =
+    final Function<Function<SegmentReference, SegmentReference>, ProcessorManager<Object, Long>> processorManagerFn =
         segmentMapFn ->
             new BaseLeafFrameProcessorManager(
                 processorBaseInputs,
@@ -173,7 +172,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     return new ProcessorsAndChannels<>(processorManager, OutputChannels.wrapReadOnly(outputChannels));
   }
 
-  protected abstract FrameProcessor<Unit> makeProcessor(
+  protected abstract FrameProcessor<Object> makeProcessor(
       ReadableInput baseInput,
       Function<SegmentReference, SegmentReference> segmentMapFn,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,

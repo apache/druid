@@ -33,7 +33,6 @@ import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -86,12 +85,12 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Object>, Object> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
       InputSliceReader inputSliceReader,
-      @Nullable Unit extra,
+      @Nullable Object extra,
       OutputChannelFactory outputChannelFactory,
       FrameContext frameContext,
       int maxOutstandingProcessors,

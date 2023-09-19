@@ -37,33 +37,33 @@ public class ProcessorManagers
   }
 
   /**
-   * Manager with zero processors.
+   * Manager with zero processors. Returns the number of processors run.
    */
-  public static <T> ProcessorManager<T> none()
+  public static <T> ProcessorManager<T, Long> none()
   {
     return new SequenceProcessorManager<>(Sequences.empty());
   }
 
   /**
-   * Manager with processors derived from a {@link Sequence}.
+   * Manager with processors derived from a {@link Sequence}. Returns the number of processors run.
    */
-  public static <T> ProcessorManager<T> of(final Sequence<? extends FrameProcessor<T>> processors)
+  public static <T> ProcessorManager<T, Long> of(final Sequence<? extends FrameProcessor<T>> processors)
   {
     return new SequenceProcessorManager<>(processors);
   }
 
   /**
-   * Manager with processors derived from an {@link Iterable}.
+   * Manager with processors derived from an {@link Iterable}. Returns the number of processors run.
    */
-  public static <T> ProcessorManager<T> of(final Iterable<? extends FrameProcessor<T>> processors)
+  public static <T> ProcessorManager<T, Long> of(final Iterable<? extends FrameProcessor<T>> processors)
   {
     return new SequenceProcessorManager<>(Sequences.simple(processors));
   }
 
   /**
-   * Manager with a single processor derived from a {@link Supplier}.
+   * Manager with a single processor derived from a {@link Supplier}. Returns the number of processors run.
    */
-  public static <T> ProcessorManager<T> of(final Supplier<? extends FrameProcessor<T>> processors)
+  public static <T> ProcessorManager<T, Long> of(final Supplier<? extends FrameProcessor<T>> processors)
   {
     return new SequenceProcessorManager<>(Sequences.simple(() -> Iterators.singletonIterator(processors.get())));
   }

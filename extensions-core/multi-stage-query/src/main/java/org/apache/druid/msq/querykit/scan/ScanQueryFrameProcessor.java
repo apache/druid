@@ -88,7 +88,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
 
-  private long rowsOutput = 0;
   private Cursor cursor;
   private Segment segment;
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
@@ -129,7 +128,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  public ReturnOrAwait<Unit> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
@@ -295,7 +294,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
       frameWriter.close();
       frameWriter = null;
-      rowsOutput += frame.numRows();
       return frame.numRows();
     } else {
       if (frameWriter != null) {

@@ -27,7 +27,6 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
@@ -46,7 +45,7 @@ import java.util.function.Function;
 /**
  * Manager for processors created by {@link BaseLeafFrameProcessorFactory}.
  */
-public class BaseLeafFrameProcessorManager implements ProcessorManager<Unit>
+public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, Long>
 {
   private static final Logger log = new Logger(BaseLeafFrameProcessorManager.class);
 
@@ -106,14 +105,14 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Unit>
   }
 
   @Override
-  public ListenableFuture<Optional<ProcessorAndCallback<Unit>>> next()
+  public ListenableFuture<Optional<ProcessorAndCallback<Object>>> next()
   {
     if (baseInputIterator == null) {
       // Prior call would have returned empty Optional.
       throw new NoSuchElementException();
     } else if (baseInputIterator.hasNext()) {
       final ReadableInput baseInput = baseInputIterator.next();
-      final FrameProcessor<Unit> processor = parentFactory.makeProcessor(
+      final FrameProcessor<Object> processor = parentFactory.makeProcessor(
           baseInput,
           segmentMapFn,
           makeLazyResourceHolder(
@@ -136,6 +135,13 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Unit>
       baseInputIterator = null;
       return Futures.immediateFuture(Optional.empty());
     }
+  }
+
+  @Override
+  public Long result()
+  {
+    // Return value isn't used for anything. Must be a Long for backwards-compatibility.
+    return 0L;
   }
 
   @Override

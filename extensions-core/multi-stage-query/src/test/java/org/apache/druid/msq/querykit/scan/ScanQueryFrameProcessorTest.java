@@ -152,7 +152,7 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
         new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
     );
 
-    ListenableFuture<Unit> retVal = exec.runFully(processor, null);
+    ListenableFuture<Object> retVal = exec.runFully(processor, null);
 
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
         outputChannel.readable(),

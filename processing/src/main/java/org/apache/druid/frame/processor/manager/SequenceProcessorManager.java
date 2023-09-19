@@ -31,11 +31,15 @@ import org.apache.druid.utils.CloseableUtils;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-public class SequenceProcessorManager<T, P extends FrameProcessor<T>> implements ProcessorManager<T>
+/**
+ * Processor manager based on a {@link Sequence}. Returns the number of processors run.
+ */
+public class SequenceProcessorManager<T, P extends FrameProcessor<T>> implements ProcessorManager<T, Long>
 {
   private final Sequence<P> sequence;
   private Yielder<P> yielder;
   private boolean done;
+  private long numProcessors;
 
   SequenceProcessorManager(final Sequence<P> sequence)
   {
@@ -66,8 +70,14 @@ public class SequenceProcessorManager<T, P extends FrameProcessor<T>> implements
         throw e;
       }
 
-      return Futures.immediateFuture(Optional.of(new ProcessorAndCallback<>(retVal, null)));
+      return Futures.immediateFuture(Optional.of(new ProcessorAndCallback<>(retVal, r -> numProcessors++)));
     }
+  }
+
+  @Override
+  public Long result()
+  {
+    return numProcessors;
   }
 
   @Override
