@@ -47,7 +47,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.m2/repository
-        key: maven-codeql-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+        key: maven-codeql-${{ hashFiles('**/pom.xml') }}
 
     - run: |
         echo "Building using custom commands"
