@@ -21,12 +21,10 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.math.expr.Expr.ObjectBinding;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
@@ -39,7 +37,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -63,30 +60,17 @@ import java.util.stream.Collectors;
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
-public abstract class Function implements NamedFunction
+public interface Function extends NamedFunction
 {
   /**
    * Evaluate the function, given a list of arguments and a set of bindings to provide values for {@link IdentifierExpr}.
    */
-  final ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-  {
-    try {
-      return realApply(args, bindings);
-    }
-    catch (DruidException | ExpressionValidationException de) {
-      throw de;
-    }
-    catch (Exception e) {
-      throw DruidException.defensive().build(e, "Invocation of function '%s' encountered exception.", name());
-    }
-  }
-
-  protected abstract ExprEval realApply(List<Expr> args, ObjectBinding bindings);
+  ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings);
 
   /**
    * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to a scalar value
    */
-  Set<Expr> getScalarInputs(List<Expr> args)
+  default Set<Expr> getScalarInputs(List<Expr> args)
   {
     return ImmutableSet.copyOf(args);
   }
@@ -95,7 +79,7 @@ public abstract class Function implements NamedFunction
    * Given a list of arguments to this {@link Function}, get the set of arguments that must evaluate to an array
    * value
    */
-  Set<Expr> getArrayInputs(List<Expr> args)
+  default Set<Expr> getArrayInputs(List<Expr> args)
   {
     return Collections.emptySet();
   }
@@ -103,7 +87,7 @@ public abstract class Function implements NamedFunction
   /**
    * Returns true if a function expects any array arguments
    */
-  boolean hasArrayInputs()
+  default boolean hasArrayInputs()
   {
     return false;
   }
@@ -112,7 +96,7 @@ public abstract class Function implements NamedFunction
    * Returns true if function produces an array. All {@link Function} implementations are expected to
    * exclusively produce either scalar or array values.
    */
-  boolean hasArrayOutput()
+  default boolean hasArrayOutput()
   {
     return false;
   }
@@ -122,7 +106,7 @@ public abstract class Function implements NamedFunction
    * everything that is feasible up front. Note that input type information is typically unavailable at the time
    * {@link Expr} are parsed, and so this method is incapable of performing complete validation.
    */
-  abstract void validateArguments(List<Expr> args);
+  void validateArguments(List<Expr> args);
 
 
   /**
@@ -131,7 +115,7 @@ public abstract class Function implements NamedFunction
    * @see Expr#getOutputType
    */
   @Nullable
-  abstract ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
+  ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
 
   /**
    * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
@@ -141,7 +125,7 @@ public abstract class Function implements NamedFunction
    * @see Expr#canVectorize(Expr.InputBindingInspector)
    * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, Expr, List)
    */
-  boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+  default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
   {
     return false;
   }
@@ -153,7 +137,7 @@ public abstract class Function implements NamedFunction
    * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
    * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
    */
-  <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+  default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
     throw new UOE("Function[%s] is not vectorized", name());
   }
@@ -161,7 +145,7 @@ public abstract class Function implements NamedFunction
   /**
    * Base class for a single variable input {@link Function} implementation
    */
-  public abstract static class UnivariateFunction extends Function
+  abstract class UnivariateFunction implements Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -170,7 +154,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public final ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       Expr expr = args.get(0);
       return eval(expr.eval(bindings));
@@ -182,7 +166,7 @@ public abstract class Function implements NamedFunction
   /**
    * Base class for a 2 variable input {@link Function} implementation
    */
-  public abstract static class BivariateFunction extends Function
+  abstract class BivariateFunction implements Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -191,7 +175,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       Expr expr1 = args.get(0);
       Expr expr2 = args.get(1);
@@ -205,7 +189,7 @@ public abstract class Function implements NamedFunction
    * Base class for a single variable input mathematical {@link Function}, with specialized 'eval' implementations that
    * that operate on primitive number types
    */
-  public abstract static class UnivariateMathFunction extends UnivariateFunction
+  abstract class UnivariateMathFunction extends UnivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval param)
@@ -254,7 +238,7 @@ public abstract class Function implements NamedFunction
   /**
    * Many math functions always output a {@link Double} primitive, regardless of input type.
    */
-  public abstract static class DoubleUnivariateMathFunction extends UnivariateMathFunction
+  abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
   {
     @Nullable
     @Override
@@ -268,7 +252,7 @@ public abstract class Function implements NamedFunction
    * Base class for a 2 variable input mathematical {@link Function}, with specialized 'eval' implementations that
    * operate on primitive number types
    */
-  public abstract static class BivariateMathFunction extends BivariateFunction
+  abstract class BivariateMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -320,7 +304,7 @@ public abstract class Function implements NamedFunction
   /**
    * Many math functions always output a {@link Double} primitive, regardless of input type.
    */
-  public abstract static class DoubleBivariateMathFunction extends BivariateMathFunction
+  abstract class DoubleBivariateMathFunction extends BivariateMathFunction
   {
     @Nullable
     @Override
@@ -330,7 +314,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public abstract static class BivariateBitwiseMathFunction extends BivariateFunction
+  abstract class BivariateBitwiseMathFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -368,7 +352,7 @@ public abstract class Function implements NamedFunction
    * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
    * argument is {@link ExprType#LONG}
    */
-  public abstract static class StringLongFunction extends BivariateFunction
+  abstract class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
@@ -385,7 +369,7 @@ public abstract class Function implements NamedFunction
   /**
    * {@link Function} that takes 1 array operand and 1 scalar operand
    */
-  public abstract static class ArrayScalarFunction extends Function
+  abstract class ArrayScalarFunction implements Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -412,7 +396,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arrayExpr = getArrayArgument(args).eval(bindings);
       final ExprEval scalarExpr = getScalarArgument(args).eval(bindings);
@@ -438,7 +422,7 @@ public abstract class Function implements NamedFunction
   /**
    * {@link Function} that takes 2 array operands
    */
-  public abstract static class ArraysFunction extends Function
+  abstract class ArraysFunction implements Function
   {
     @Override
     public void validateArguments(List<Expr> args)
@@ -465,7 +449,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arrayExpr1 = args.get(0).eval(bindings);
       final ExprEval arrayExpr2 = args.get(1).eval(bindings);
@@ -476,6 +460,7 @@ public abstract class Function implements NamedFunction
       if (arrayExpr2.asArray() == null) {
         return arrayExpr2;
       }
+
       return doApply(arrayExpr1, arrayExpr2);
     }
 
@@ -486,7 +471,7 @@ public abstract class Function implements NamedFunction
    * Scaffolding for a 2 argument {@link Function} which accepts one array and one scalar input and adds the scalar
    * input to the array in some way.
    */
-  public abstract static class ArrayAddElementFunction extends ArrayScalarFunction
+  abstract class ArrayAddElementFunction extends ArrayScalarFunction
   {
     @Override
     public boolean hasArrayOutput()
@@ -521,7 +506,7 @@ public abstract class Function implements NamedFunction
   /**
    * Base scaffolding for functions which accept 2 array arguments and combine them in some way
    */
-  public abstract static class ArraysMergeFunction extends ArraysFunction
+  abstract class ArraysMergeFunction extends ArraysFunction
   {
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
@@ -570,7 +555,7 @@ public abstract class Function implements NamedFunction
     abstract <T> Object[] merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
   }
 
-  public abstract static class ReduceFunction extends Function
+  abstract class ReduceFunction implements Function
   {
     private final DoubleBinaryOperator doubleReducer;
     private final LongBinaryOperator longReducer;
@@ -605,7 +590,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.isEmpty()) {
         return ExprEval.of(null);
@@ -666,7 +651,7 @@ public abstract class Function implements NamedFunction
 
   // ------------------------------ implementations ------------------------------
 
-  public static class ParseLong extends Function
+  class ParseLong implements Function
   {
     @Override
     public String name()
@@ -688,7 +673,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final int radix = args.size() == 1 ? 10 : args.get(1).eval(bindings).asInt();
 
@@ -733,7 +718,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Pi extends Function
+  class Pi implements Function
   {
     private static final double PI = Math.PI;
 
@@ -744,7 +729,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       return ExprEval.of(PI);
     }
@@ -775,7 +760,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Abs extends UnivariateMathFunction
+  class Abs extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -802,7 +787,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Acos extends DoubleUnivariateMathFunction
+  class Acos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -823,7 +808,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Asin extends DoubleUnivariateMathFunction
+  class Asin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -844,7 +829,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Atan extends DoubleUnivariateMathFunction
+  class Atan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -865,7 +850,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseComplement extends UnivariateMathFunction
+  class BitwiseComplement extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -893,7 +878,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseConvertLongBitsToDouble extends UnivariateMathFunction
+  class BitwiseConvertLongBitsToDouble extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -925,7 +910,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseConvertDoubleToLongBits extends UnivariateMathFunction
+  class BitwiseConvertDoubleToLongBits extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -957,7 +942,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseAnd extends BivariateBitwiseMathFunction
+  class BitwiseAnd extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -978,7 +963,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseOr extends BivariateBitwiseMathFunction
+  class BitwiseOr extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -999,7 +984,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseShiftLeft extends BivariateBitwiseMathFunction
+  class BitwiseShiftLeft extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -1020,7 +1005,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseShiftRight extends BivariateBitwiseMathFunction
+  class BitwiseShiftRight extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -1041,7 +1026,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class BitwiseXor extends BivariateBitwiseMathFunction
+  class BitwiseXor extends BivariateBitwiseMathFunction
   {
     @Override
     public String name()
@@ -1062,7 +1047,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Cbrt extends DoubleUnivariateMathFunction
+  class Cbrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1083,7 +1068,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Ceil extends DoubleUnivariateMathFunction
+  class Ceil extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1104,7 +1089,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Cos extends DoubleUnivariateMathFunction
+  class Cos extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1125,7 +1110,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Cosh extends DoubleUnivariateMathFunction
+  class Cosh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1146,7 +1131,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Cot extends DoubleUnivariateMathFunction
+  class Cot extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1167,7 +1152,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class SafeDivide extends BivariateMathFunction
+  class SafeDivide extends BivariateMathFunction
   {
     public static final String NAME = "safe_divide";
 
@@ -1212,7 +1197,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Div extends BivariateMathFunction
+  class Div extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -1249,7 +1234,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Exp extends DoubleUnivariateMathFunction
+  class Exp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1270,7 +1255,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Expm1 extends DoubleUnivariateMathFunction
+  class Expm1 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1291,7 +1276,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Floor extends DoubleUnivariateMathFunction
+  class Floor extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1312,7 +1297,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class GetExponent extends UnivariateMathFunction
+  class GetExponent extends UnivariateMathFunction
   {
     @Override
     public String name()
@@ -1340,7 +1325,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Log extends DoubleUnivariateMathFunction
+  class Log extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1361,7 +1346,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Log10 extends DoubleUnivariateMathFunction
+  class Log10 extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1382,7 +1367,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Log1p extends DoubleUnivariateMathFunction
+  class Log1p extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1403,7 +1388,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class NextUp extends DoubleUnivariateMathFunction
+  class NextUp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1424,7 +1409,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Rint extends DoubleUnivariateMathFunction
+  class Rint extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1445,7 +1430,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Round extends Function
+  class Round implements Function
   {
     //CHECKSTYLE.OFF: Regexp
     private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
@@ -1459,7 +1444,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
 
@@ -1534,7 +1519,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Signum extends DoubleUnivariateMathFunction
+  class Signum extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1555,7 +1540,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Sin extends DoubleUnivariateMathFunction
+  class Sin extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1576,7 +1561,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Sinh extends DoubleUnivariateMathFunction
+  class Sinh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1597,7 +1582,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Sqrt extends DoubleUnivariateMathFunction
+  class Sqrt extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1618,7 +1603,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Tan extends DoubleUnivariateMathFunction
+  class Tan extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1639,7 +1624,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Tanh extends DoubleUnivariateMathFunction
+  class Tanh extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1660,7 +1645,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ToDegrees extends DoubleUnivariateMathFunction
+  class ToDegrees extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1681,7 +1666,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ToRadians extends DoubleUnivariateMathFunction
+  class ToRadians extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1702,7 +1687,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Ulp extends DoubleUnivariateMathFunction
+  class Ulp extends DoubleUnivariateMathFunction
   {
     @Override
     public String name()
@@ -1723,7 +1708,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Atan2 extends DoubleBivariateMathFunction
+  class Atan2 extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1744,7 +1729,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class CopySign extends DoubleBivariateMathFunction
+  class CopySign extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1765,7 +1750,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Hypot extends DoubleBivariateMathFunction
+  class Hypot extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1786,7 +1771,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Remainder extends DoubleBivariateMathFunction
+  class Remainder extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1807,7 +1792,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Max extends BivariateMathFunction
+  class Max extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -1834,7 +1819,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Min extends BivariateMathFunction
+  class Min extends BivariateMathFunction
   {
     @Override
     public String name()
@@ -1861,7 +1846,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class NextAfter extends DoubleBivariateMathFunction
+  class NextAfter extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1882,7 +1867,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Pow extends DoubleBivariateMathFunction
+  class Pow extends DoubleBivariateMathFunction
   {
     @Override
     public String name()
@@ -1903,7 +1888,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class Scalb extends BivariateFunction
+  class Scalb extends BivariateFunction
   {
     @Override
     public String name()
@@ -1947,7 +1932,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class CastFunc extends BivariateFunction
+  class CastFunc extends BivariateFunction
   {
     @Override
     public String name()
@@ -2036,7 +2021,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class GreatestFunc extends ReduceFunction
+  class GreatestFunc extends ReduceFunction
   {
     public static final String NAME = "greatest";
 
@@ -2056,7 +2041,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class LeastFunc extends ReduceFunction
+  class LeastFunc extends ReduceFunction
   {
     public static final String NAME = "least";
 
@@ -2076,7 +2061,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ConditionFunc extends Function
+  class ConditionFunc implements Function
   {
     @Override
     public String name()
@@ -2085,7 +2070,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval x = args.get(0).eval(bindings);
       return x.asBoolean() ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
@@ -2108,7 +2093,7 @@ public abstract class Function implements NamedFunction
   /**
    * "Searched CASE" function, similar to {@code CASE WHEN boolean_expr THEN result [ELSE else_result] END} in SQL.
    */
-  public static class CaseSearchedFunc extends Function
+  class CaseSearchedFunc implements Function
   {
     @Override
     public String name()
@@ -2117,7 +2102,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
       for (int i = 0; i < args.size(); i += 2) {
         if (i == args.size() - 1) {
@@ -2155,7 +2140,7 @@ public abstract class Function implements NamedFunction
   /**
    * "Simple CASE" function, similar to {@code CASE expr WHEN value THEN result [ELSE else_result] END} in SQL.
    */
-  public static class CaseSimpleFunc extends Function
+  class CaseSimpleFunc implements Function
   {
     @Override
     public String name()
@@ -2164,7 +2149,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(final List<Expr> args, final Expr.ObjectBinding bindings)
+    public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
       for (int i = 1; i < args.size(); i += 2) {
         if (i == args.size() - 1) {
@@ -2199,7 +2184,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class NvlFunc extends Function
+  class NvlFunc implements Function
   {
     @Override
     public String name()
@@ -2208,7 +2193,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval eval = args.get(0).eval(bindings);
       return eval.value() == null ? args.get(1).eval(bindings) : eval;
@@ -2243,7 +2228,7 @@ public abstract class Function implements NamedFunction
   /**
    * SQL function "IS NOT FALSE". Different from "IS TRUE" in that it returns true for NULL as well.
    */
-  public static class IsNotFalseFunc extends Function
+  class IsNotFalseFunc implements Function
   {
     @Override
     public String name()
@@ -2252,7 +2237,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arg = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(arg.value() == null || arg.asBoolean());
@@ -2275,7 +2260,7 @@ public abstract class Function implements NamedFunction
   /**
    * SQL function "IS NOT TRUE". Different from "IS FALSE" in that it returns true for NULL as well.
    */
-  public static class IsNotTrueFunc extends Function
+  class IsNotTrueFunc implements Function
   {
     @Override
     public String name()
@@ -2284,7 +2269,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arg = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(arg.value() == null || !arg.asBoolean());
@@ -2307,7 +2292,7 @@ public abstract class Function implements NamedFunction
   /**
    * SQL function "IS FALSE".
    */
-  public static class IsFalseFunc extends Function
+  class IsFalseFunc implements Function
   {
     @Override
     public String name()
@@ -2316,7 +2301,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arg = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(arg.value() != null && !arg.asBoolean());
@@ -2352,7 +2337,7 @@ public abstract class Function implements NamedFunction
   /**
    * SQL function "IS TRUE".
    */
-  public static class IsTrueFunc extends Function
+  class IsTrueFunc implements Function
   {
     @Override
     public String name()
@@ -2361,7 +2346,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval arg = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(arg.asBoolean());
@@ -2394,7 +2379,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class IsNullFunc extends Function
+  class IsNullFunc implements Function
   {
     @Override
     public String name()
@@ -2403,7 +2388,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(expr.value() == null);
@@ -2435,7 +2420,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class IsNotNullFunc extends Function
+  class IsNotNullFunc implements Function
   {
     @Override
     public String name()
@@ -2444,7 +2429,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       return ExprEval.ofLongBoolean(expr.value() != null);
@@ -2477,7 +2462,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ConcatFunc extends Function
+  class ConcatFunc implements Function
   {
     @Override
     public String name()
@@ -2486,7 +2471,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.size() == 0) {
         return ExprEval.of(null);
@@ -2542,7 +2527,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class StrlenFunc extends Function
+  class StrlenFunc implements Function
   {
     @Override
     public String name()
@@ -2551,7 +2536,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       return arg == null ? ExprEval.ofLong(null) : ExprEval.of(arg.length());
@@ -2571,7 +2556,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class StringFormatFunc extends Function
+  class StringFormatFunc implements Function
   {
     @Override
     public String name()
@@ -2580,7 +2565,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String formatString = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
 
@@ -2610,7 +2595,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class StrposFunc extends Function
+  class StrposFunc implements Function
   {
     @Override
     public String name()
@@ -2619,7 +2604,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String haystack = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
       final String needle = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
@@ -2653,7 +2638,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class SubstringFunc extends Function
+  class SubstringFunc implements Function
   {
     @Override
     public String name()
@@ -2662,7 +2647,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
 
@@ -2701,7 +2686,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class RightFunc extends StringLongFunction
+  class RightFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -2730,7 +2715,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class LeftFunc extends StringLongFunction
+  class LeftFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -2758,7 +2743,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ReplaceFunc extends Function
+  class ReplaceFunc implements Function
   {
     @Override
     public String name()
@@ -2767,7 +2752,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       final String pattern = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
@@ -2792,7 +2777,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class LowerFunc extends Function
+  class LowerFunc implements Function
   {
     @Override
     public String name()
@@ -2801,7 +2786,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
@@ -2824,7 +2809,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class UpperFunc extends Function
+  class UpperFunc implements Function
   {
     @Override
     public String name()
@@ -2833,7 +2818,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
@@ -2856,7 +2841,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ReverseFunc extends UnivariateFunction
+  class ReverseFunc extends UnivariateFunction
   {
     @Override
     public String name()
@@ -2882,7 +2867,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class RepeatFunc extends StringLongFunction
+  class RepeatFunc extends StringLongFunction
   {
     @Override
     public String name()
@@ -2907,7 +2892,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class LpadFunc extends Function
+  class LpadFunc implements Function
   {
     @Override
     public String name()
@@ -2916,7 +2901,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
@@ -2944,7 +2929,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class RpadFunc extends Function
+  class RpadFunc implements Function
   {
     @Override
     public String name()
@@ -2953,7 +2938,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
@@ -2981,7 +2966,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class TimestampFromEpochFunc extends Function
+  class TimestampFromEpochFunc implements Function
   {
     @Override
     public String name()
@@ -2990,7 +2975,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value = args.get(0).eval(bindings);
       if (!value.type().is(ExprType.STRING)) {
@@ -3040,7 +3025,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class UnixTimestampFunc extends TimestampFromEpochFunc
+  class UnixTimestampFunc extends TimestampFromEpochFunc
   {
     @Override
     public String name()
@@ -3055,7 +3040,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class SubMonthFunc extends Function
+  class SubMonthFunc implements Function
   {
     @Override
     public String name()
@@ -3064,7 +3049,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       Long left = args.get(0).eval(bindings).asLong();
       Long right = args.get(1).eval(bindings).asLong();
@@ -3092,7 +3077,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class MultiValueStringToArrayFunction extends Function
+  class MultiValueStringToArrayFunction implements Function
   {
     @Override
     public String name()
@@ -3101,7 +3086,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
     }
@@ -3152,7 +3137,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayToMultiValueStringFunction extends Function
+  class ArrayToMultiValueStringFunction implements Function
   {
     @Override
     public String name()
@@ -3161,7 +3146,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
     }
@@ -3212,7 +3197,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayConstructorFunction extends Function
+  class ArrayConstructorFunction implements Function
   {
     @Override
     public String name()
@@ -3221,7 +3206,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       // this is copied from 'BaseMapFunction.applyMap', need to find a better way to consolidate, or construct arrays,
       // or.. something...
@@ -3296,7 +3281,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayLengthFunction extends Function
+  class ArrayLengthFunction implements Function
   {
     @Override
     public String name()
@@ -3305,7 +3290,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
@@ -3349,7 +3334,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class StringToArrayFunction extends Function
+  class StringToArrayFunction implements Function
   {
     @Override
     public String name()
@@ -3371,7 +3356,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       final String arrayString = expr.asString();
@@ -3396,7 +3381,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayToStringFunction extends ArrayScalarFunction
+  class ArrayToStringFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3425,7 +3410,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayOffsetFunction extends ArrayScalarFunction
+  class ArrayOffsetFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3453,7 +3438,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayOrdinalFunction extends ArrayScalarFunction
+  class ArrayOrdinalFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3481,7 +3466,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayOffsetOfFunction extends ArrayScalarFunction
+  class ArrayOffsetOfFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3522,7 +3507,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayOrdinalOfFunction extends ArrayScalarFunction
+  class ArrayOrdinalOfFunction extends ArrayScalarFunction
   {
     @Override
     public String name()
@@ -3564,7 +3549,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayAppendFunction extends ArrayAddElementFunction
+  class ArrayAppendFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3584,7 +3569,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayPrependFunction extends ArrayAddElementFunction
+  class ArrayPrependFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3616,7 +3601,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayConcatFunction extends ArraysMergeFunction
+  class ArrayConcatFunction extends ArraysMergeFunction
   {
     @Override
     public String name()
@@ -3638,7 +3623,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArraySetAddFunction extends ArrayAddElementFunction
+  class ArraySetAddFunction extends ArrayAddElementFunction
   {
     @Override
     public String name()
@@ -3656,7 +3641,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArraySetAddAllFunction extends ArraysMergeFunction
+  class ArraySetAddAllFunction extends ArraysMergeFunction
   {
     @Override
     public String name()
@@ -3674,7 +3659,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayContainsFunction extends ArraysFunction
+  class ArrayContainsFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -3704,7 +3689,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArrayOverlapFunction extends ArraysFunction
+  class ArrayOverlapFunction extends ArraysFunction
   {
     @Override
     public String name()
@@ -3732,7 +3717,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class ArraySliceFunction extends Function
+  class ArraySliceFunction implements Function
   {
     @Override
     public String name()
@@ -3783,7 +3768,7 @@ public abstract class Function implements NamedFunction
     }
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
@@ -3806,12 +3791,12 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public abstract static class SizeFormatFunc extends Function
+  abstract class SizeFormatFunc implements Function
   {
     protected abstract HumanReadableBytes.UnitSystem getUnitSystem();
 
     @Override
-    public ExprEval realApply(List<Expr> args, Expr.ObjectBinding bindings)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval valueParam = args.get(0).eval(bindings);
       if (NullHandling.sqlCompatible() && valueParam.isNumericNull()) {
@@ -3867,7 +3852,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
+  class HumanReadableDecimalByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
@@ -3882,7 +3867,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
+  class HumanReadableBinaryByteFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
@@ -3897,7 +3882,7 @@ public abstract class Function implements NamedFunction
     }
   }
 
-  public static class HumanReadableDecimalFormatFunc extends SizeFormatFunc
+  class HumanReadableDecimalFormatFunc extends SizeFormatFunc
   {
     @Override
     public String name()
