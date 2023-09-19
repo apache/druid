@@ -19,11 +19,11 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -184,7 +184,7 @@ public class BuiltInExprMacros
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        return shuttle.visit(apply(shuttle.visitAll(Lists.newArrayList(arg))));
+        return shuttle.visit(apply(shuttle.visitAll(Collections.singletonList(arg))));
       }
 
       @Nullable
