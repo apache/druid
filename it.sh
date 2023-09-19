@@ -232,17 +232,17 @@ case $CMD in
     mvn -q clean install dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
-    mvn -B clean install -P dist $MAVEN_IGNORE -T1.0C $*
+    mvn clean install -P dist $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
-    mvn -B install -P dist $MAVEN_IGNORE -pl :distribution
+    mvn install -P dist $MAVEN_IGNORE -pl :distribution
     ;;
   "tools" )
-    mvn -B install -pl :druid-it-tools
+    mvn install -pl :druid-it-tools
     ;;
   "image" )
     cd $DRUID_DEV/integration-tests-ex/image
-    mvn -B install -P test-image $MAVEN_IGNORE
+    mvn install -P test-image $MAVEN_IGNORE
     ;;
   "gen")
     # Generate the docker-compose.yaml files. Mostly for debugging
@@ -264,7 +264,7 @@ case $CMD in
   "run" )
     require_category
     reuse_override
-    mvn -B $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
+    mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
     ;;
   "test" )
     require_category
@@ -275,7 +275,7 @@ case $CMD in
     # Run the test. On failure, still shut down the cluster.
     # Return Maven's return code as the script's return code.
     set +e
-    mvn -B $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
+    mvn $TEST_OPTIONS -P IT-$CATEGORY -pl $MAVEN_PROJECT
     RESULT=$?
     set -e
     $IT_CASES_DIR/cluster.sh down $CATEGORY
