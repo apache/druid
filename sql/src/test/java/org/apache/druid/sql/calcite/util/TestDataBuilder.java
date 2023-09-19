@@ -254,7 +254,7 @@ public class TestDataBuilder
                   .put("m2", "2.0")
                   .put("dim1", "10.1")
                   .put("dim2", ImmutableList.of())
-                  .put("dim3", ImmutableList.of("b", "c"))
+                  .put("dim3", ImmutableList.of("b", "c", "c"))
                   .build(),
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-03")
@@ -262,7 +262,7 @@ public class TestDataBuilder
                   .put("m2", "3.0")
                   .put("dim1", "2")
                   .put("dim2", ImmutableList.of(""))
-                  .put("dim3", ImmutableList.of("d"))
+                  .put("dim3", ImmutableList.of("d","c"))
                   .build(),
       ImmutableMap.<String, Object>builder()
                   .put("t", "2001-01-01")

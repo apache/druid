@@ -113,9 +113,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     if (retVal == null) {
                                       throw new ISE("Got a null list of results");
                                     }
-                                    if(true) {
-                                      throw new RuntimeException("jaja");
-                                    }
+//                                    if(true) {
+//                                      throw new RuntimeException("jaja");
+//                                    }
 
                                     return retVal;
                                   }

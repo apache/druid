@@ -2199,48 +2199,18 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testBuilder()
-    .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
-        .sql("SELECT\n"
-            + "  MV_FILTER_ONLY(\n"
-            + "    CAST(\n"
-            + "      LOOKUP(coalesce(t.\"dim2\",'a'),'lookyloo')\n"
-            + "    AS VARCHAR),\n"
-            + "    ARRAY['xa','abc','nosuchkey','6','asd1']\n"
-            + "  ) AS \"COALESC-b7e\",\n"
-            + "count(1)\n"
-            + "FROM druid.foo AS t\n"
-            + " where dim3='x' \n"
-            + "GROUP BY 1\n"
+        .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
+        .sql("SELECT \n"
+            + "  MV_FILTER_ONLY("
+            + "LOOKUP(dim3,'lookyloo'),\n"
+            + "    ARRAY[null]\n"
+            + "  ) AS \"COALESC-b7e\"\n,"
+            + "count(1)"
+            + "FROM druid.foo AS t group by 1\n"
             + "LIMIT 1000")
-        .expectedQuery(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE3)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(
-                    expressionVirtualColumn(
-                        "v0",
-                        "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
-                        ColumnType.STRING
-                    )
-                )
-                .filters(expressionFilter(
-                    "array_contains(string_to_array(concat(array_to_string(\"dim3\",','),',d'),','),'d')"))
-                .columns("v0")
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        )
-        .expectedResults(
-            NullHandling.sqlCompatible() ?
-            ImmutableList.of(
-                new Object[]{"[\"a\",\"b\",\"d\"]"},
-                new Object[]{"[\"\",\"d\"]"}
-            ) : ImmutableList.of(
-                new Object[]{"[\"a\",\"b\",\"d\"]"},
-                new Object[]{"[\"\",\"d\"]"}
-            )
-        )
         .run();
   }
+
   @Test
   public void testXA1a()
   {
