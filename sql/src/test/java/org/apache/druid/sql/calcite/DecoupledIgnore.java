@@ -69,7 +69,12 @@ public @interface DecoupledIgnore
     }
   };
 
-
+  /**
+   * Processes {@link DecoupledIgnore} annotations.
+   *
+   * Ensures that test cases disabled with that annotation can still not pass.
+   * If the error is as expected; the testcase is marked as "ignored".
+   */
   public static class DecoupledIgnoreProcessor implements TestRule
   {
     public Statement apply(Statement base, Description description)
