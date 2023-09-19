@@ -244,7 +244,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                         IntStream.range(0, 100)::iterator,
                         i -> new ChompingFrameProcessor(Collections.emptyList())
                     )
-                ).withAccumulation(0L, (x, y) -> {throw new ISE("error!");})
+                ).withAccumulation(
+                    0L,
+                    (x, y) -> {
+                      throw new ISE("error!");
+                    }
+                )
             )
         ),
         maxOutstandingProcessors,

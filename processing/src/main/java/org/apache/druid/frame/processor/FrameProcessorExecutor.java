@@ -38,7 +38,6 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 
