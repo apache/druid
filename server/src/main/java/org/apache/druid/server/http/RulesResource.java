@@ -25,11 +25,15 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.rules.Rules;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -108,6 +112,7 @@ public class RulesResource
   )
   {
     try {
+      validateRules(rules);
       final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
       if (databaseRuleManager.overrideRule(dataSourceName, rules, auditInfo)) {
         return Response.ok().build();
@@ -181,4 +186,37 @@ public class RulesResource
     return auditManager.fetchAuditHistory(AUDIT_HISTORY_TYPE, theInterval);
   }
 
+  /**
+   * Validate rules. Throws an exception if a rule contain an interval that will overshadow another rules' interval.
+   * Rules that will be evaluated at some point are considered to be non-overshadowing.
+   * @param rules Datasource rules.
+   */
+  private void validateRules(final List<Rule> rules)
+  {
+    if (rules == null) {
+      return;
+    }
+    final DateTime now = DateTimes.nowUtc();
+    for (int i = 0; i < rules.size() - 1; i++) {
+      final Rule currRule = rules.get(i);
+      final Rule nextRule = rules.get(i + 1);
+      final Interval currInterval = currRule.getInterval(now);
+      final Interval nextInterval = nextRule.getInterval(now);
+      if (currInterval.contains(nextInterval)) {
+        // If the current rule overshaows the next rule even at the intervals' boundaries, then we know that the next
+        // rule will always be a no-op. Also, a forever rule spans eternity and overshadows everything that follows it.
+        if (Rules.FOREVER_INTERVAL.equals(currInterval) ||
+                    (currRule.getInterval(currInterval.getStart()).contains(nextRule.getInterval(currInterval.getStart()))
+                     && currRule.getInterval(currInterval.getEnd()).contains(nextRule.getInterval(currInterval.getEnd())))) {
+          throw InvalidInput.exception(
+              "Rule[%s] has an interval that contains interval for rule[%s]. The interval[%s] also covers interval[%s].",
+              currRule,
+              nextRule,
+              currInterval,
+              nextInterval
+          );
+        }
+      }
+    }
+  }
 }

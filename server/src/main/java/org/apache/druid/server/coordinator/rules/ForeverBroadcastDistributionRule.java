@@ -57,6 +57,12 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
   }
 
   @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return Rules.FOREVER_INTERVAL;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -74,5 +80,11 @@ public class ForeverBroadcastDistributionRule extends BroadcastDistributionRule
   public int hashCode()
   {
     return Objects.hash(getType());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ForeverBroadcastDistributionRule{}";
   }
 }

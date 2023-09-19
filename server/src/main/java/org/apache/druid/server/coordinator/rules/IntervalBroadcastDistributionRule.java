@@ -66,6 +66,12 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   }
 
   @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return interval;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -82,5 +88,13 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   public int hashCode()
   {
     return Objects.hash(getInterval());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IntervalBroadcastDistributionRule{" +
+           "interval=" + interval +
+           '}';
   }
 }

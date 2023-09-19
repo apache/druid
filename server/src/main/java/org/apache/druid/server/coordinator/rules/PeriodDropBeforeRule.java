@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -62,5 +63,19 @@ public class PeriodDropBeforeRule extends DropRule
   {
     final DateTime periodAgo = referenceTimestamp.minus(period);
     return theInterval.getEndMillis() <= periodAgo.getMillis();
+  }
+
+  @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return new Interval(DateTimes.utc(Long.MIN_VALUE), referenceTimestamp.minus(period));
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PeriodDropBeforeRule{" +
+           "period=" + period +
+           '}';
   }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -34,8 +33,6 @@ import java.util.Objects;
  */
 public class IntervalLoadRule extends LoadRule
 {
-  private static final Logger log = new Logger(IntervalLoadRule.class);
-
   private final Interval interval;
 
   @JsonCreator
@@ -75,6 +72,12 @@ public class IntervalLoadRule extends LoadRule
   }
 
   @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return interval;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -94,5 +97,15 @@ public class IntervalLoadRule extends LoadRule
   public int hashCode()
   {
     return Objects.hash(super.hashCode(), interval);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IntervalLoadRule{" +
+           "interval=" + interval +
+           ", tieredReplicants=" + getTieredReplicants() +
+           ", useDefaultTierForNull=" + useDefaultTierForNull() +
+           '}';
   }
 }

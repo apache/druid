@@ -50,4 +50,6 @@ public interface Rule
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
   void run(DataSegment segment, SegmentActionHandler segmentHandler);
+
+  Interval getInterval(DateTime referenceTimestamp);
 }

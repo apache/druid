@@ -19,12 +19,15 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
 public class Rules
 {
+  public static final Interval FOREVER_INTERVAL = new Interval(DateTimes.utc(Long.MIN_VALUE), DateTimes.utc(Long.MAX_VALUE));
+
   public static boolean eligibleForLoad(Interval src, Interval target)
   {
     return src.overlaps(target);

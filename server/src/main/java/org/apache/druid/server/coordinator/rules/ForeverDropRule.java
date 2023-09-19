@@ -46,4 +46,16 @@ public class ForeverDropRule extends DropRule
   {
     return true;
   }
+
+  @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return Rules.FOREVER_INTERVAL;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ForeverDropRule{}";
+  }
 }

@@ -80,4 +80,19 @@ public class PeriodDropRule extends DropRule
       return currInterval.contains(theInterval);
     }
   }
+
+  @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return new Interval(referenceTimestamp.minus(period), referenceTimestamp);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PeriodDropRule{" +
+           "period=" + period +
+           ", includeFuture=" + includeFuture +
+           '}';
+  }
 }

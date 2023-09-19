@@ -60,4 +60,18 @@ public class ForeverLoadRule extends LoadRule
     return true;
   }
 
+  @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return Rules.FOREVER_INTERVAL;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ForeverLoadRule{" +
+           "tieredReplicants=" + getTieredReplicants() +
+           ", useDefaultTierForNull=" + useDefaultTierForNull() +
+           '}';
+  }
 }

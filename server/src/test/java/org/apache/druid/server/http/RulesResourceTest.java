@@ -23,16 +23,31 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.ForeverDropRule;
+import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.IntervalBroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.PeriodBroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.PeriodDropBeforeRule;
+import org.apache.druid.server.coordinator.rules.PeriodDropRule;
+import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -149,6 +164,278 @@ public class RulesResourceTest
     Assert.assertEquals("Limit must be greater than zero!", rulesHistory.get("error"));
 
     EasyMock.verify(auditManager);
+  }
+
+  @Test
+  public void testSetDatasourceRulesWithEffectivelyNoRule()
+  {
+    EasyMock.expect(databaseRuleManager.overrideRule(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+                .andReturn(true).times(2);
+    EasyMock.replay(databaseRuleManager);
+
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    final Response resp1 = rulesResource.setDatasourceRules("dataSource1", null, null, null, EasyMock.createMock(HttpServletRequest.class));
+    Assert.assertEquals(200, resp1.getStatus());
+
+    final Response resp2 = rulesResource.setDatasourceRules("dataSource1", new ArrayList<>(), null, null, EasyMock.createMock(HttpServletRequest.class));
+    Assert.assertEquals(200, resp2.getStatus());
+    EasyMock.verify(databaseRuleManager);
+  }
+
+  @Test
+  public void testSetDatasourceRulesWithInvalidLoadRules()
+  {
+    EasyMock.replay(auditManager);
+
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+
+    final IntervalLoadRule loadInterval1 = new IntervalLoadRule(
+        Intervals.of("2023-07-29T01:00:00Z/2023-12-30T01:00:00Z"),
+        null,
+        null
+    );
+    final IntervalLoadRule loadInterval2 = new IntervalLoadRule(
+        Intervals.of("2023-09-29T01:00:00Z/2023-10-30T01:00:00Z"),
+        null,
+        null
+    );
+    final PeriodLoadRule loadPT1H = new PeriodLoadRule(new Period("PT1H"), null, null, null);
+    final PeriodLoadRule loadP3M = new PeriodLoadRule(new Period("P3M"), null, null, null);
+    final PeriodLoadRule loadP6M = new PeriodLoadRule(new Period("P6M"), null, null, null);
+    final ForeverLoadRule loadForever = new ForeverLoadRule(null, null);
+
+    final List<Rule> rules = new ArrayList<>();
+    rules.add(loadP6M);
+    rules.add(loadP3M);
+    rules.add(loadForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadP6M, loadP3M)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(loadP3M);
+    rules.add(loadForever);
+    rules.add(loadP6M);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadForever, loadP6M)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(loadForever);
+    rules.add(loadPT1H);
+    rules.add(loadInterval2);
+    rules.add(loadP6M);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadForever, loadPT1H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(loadInterval1);
+    rules.add(loadInterval2);
+    rules.add(loadP6M);
+    rules.add(loadForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadInterval1, loadInterval2)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(loadP6M);
+    rules.add(loadInterval1);
+    rules.add(loadForever);
+    rules.add(loadInterval2);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadForever, loadInterval2)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+  }
+
+  @Test
+  public void testDatasourceRulesWithInvalidDropRules()
+  {
+    EasyMock.replay(auditManager);
+
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+
+    final PeriodDropBeforeRule dropBeforeP3M = new PeriodDropBeforeRule(new Period("P3M"));
+    final PeriodDropBeforeRule dropBeforeP6M = new PeriodDropBeforeRule(new Period("P6M"));
+    final PeriodDropRule dropByP1M = new PeriodDropRule(new Period("P1M"), true);
+    final PeriodDropRule dropByP2M = new PeriodDropRule(new Period("P2M"), true);
+    final ForeverDropRule dropForever = new ForeverDropRule();
+
+    final List<Rule> rules = new ArrayList<>();
+    rules.add(dropBeforeP3M);
+    rules.add(dropBeforeP6M);
+    rules.add(dropByP1M);
+    rules.add(dropForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", dropBeforeP3M, dropBeforeP6M)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(dropByP2M);
+    rules.add(dropByP1M);
+    rules.add(dropForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", dropByP2M, dropByP1M)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(dropForever);
+    rules.add(dropByP1M);
+    rules.add(dropByP2M);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", dropForever, dropByP1M)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+  }
+
+  @Test
+  public void testDatasourceRulesWithInvalidBroadcastRules()
+  {
+    EasyMock.replay(auditManager);
+
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+
+    final ForeverBroadcastDistributionRule broadcastForever = new ForeverBroadcastDistributionRule();
+    final PeriodBroadcastDistributionRule broadcastPeriodPT1H = new PeriodBroadcastDistributionRule(new Period("PT1H"), true);
+    final PeriodBroadcastDistributionRule broadcastPeriodPT2H = new PeriodBroadcastDistributionRule(new Period("PT2H"), true);
+    final IntervalBroadcastDistributionRule broadcastInterval1 = new IntervalBroadcastDistributionRule(
+        Intervals.of("2000-09-29T01:00:00Z/2050-10-30T01:00:00Z")
+    );
+    final IntervalBroadcastDistributionRule broadcastInterval2 = new IntervalBroadcastDistributionRule(
+        Intervals.of("2010-09-29T01:00:00Z/2020-10-30T01:00:00Z")
+    );
+
+    final List<Rule> rules = new ArrayList<>();
+    rules.add(broadcastInterval1);
+    rules.add(broadcastInterval2);
+    rules.add(broadcastForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastInterval1, broadcastInterval2)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(broadcastPeriodPT2H);
+    rules.add(broadcastPeriodPT1H);
+    rules.add(broadcastForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastPeriodPT2H, broadcastPeriodPT1H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+
+    rules.clear();
+    rules.add(broadcastPeriodPT1H);
+    rules.add(broadcastPeriodPT2H);
+    rules.add(broadcastInterval2);
+    rules.add(broadcastForever);
+    rules.add(broadcastInterval1);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastForever, broadcastInterval1)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+  }
+
+  @Test
+  public void testSetDatasourceRulesWithDifferentInvalidRules()
+  {
+    EasyMock.replay(auditManager);
+
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+
+    final IntervalLoadRule loadLargeInteval = new IntervalLoadRule(
+        Intervals.of("1980-07-29T01:00:00Z/2050-12-30T01:00:00Z"),
+        null,
+        null
+    );
+    final IntervalLoadRule loadSmallInterval = new IntervalLoadRule(
+        Intervals.of("2020-09-29T01:00:00Z/2025-10-30T01:00:00Z"),
+        null,
+        null
+    );
+    final PeriodLoadRule periodPT1H = new PeriodLoadRule(new Period("PT1H"), null, null, null);
+    final PeriodLoadRule periodP3M = new PeriodLoadRule(new Period("P3M"), null, null, null);
+    final PeriodLoadRule periodP6M = new PeriodLoadRule(new Period("P6M"), null, null, null);
+    final ForeverLoadRule foreverLoadRule = new ForeverLoadRule(null, null);
+    final ForeverDropRule foreverDropRule = new ForeverDropRule();
+    final PeriodBroadcastDistributionRule broadcastPeriodPT15m = new PeriodBroadcastDistributionRule(new Period("PT15m"), true);
+
+    final List<Rule> rules = new ArrayList<>();
+    rules.add(loadSmallInterval);
+    rules.add(loadLargeInteval);
+    rules.add(broadcastPeriodPT15m);
+    rules.add(periodPT1H);
+    rules.add(periodP3M);
+    rules.add(periodP6M);
+    rules.add(foreverLoadRule);
+    rules.add(foreverDropRule);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", foreverLoadRule, foreverDropRule)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+  }
+
+  @Test
+  public void testSetDatasourceRulesWithValidRules()
+  {
+    EasyMock.expect(databaseRuleManager.overrideRule(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(true).anyTimes();
+    EasyMock.replay(databaseRuleManager);
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+
+    final IntervalLoadRule loadLargeInteval = new IntervalLoadRule(
+        Intervals.of("1980-07-29T01:00:00Z/2050-12-30T01:00:00Z"),
+        null,
+        null
+    );
+    final IntervalLoadRule loadSmallInterval = new IntervalLoadRule(
+        Intervals.of("2020-09-29T01:00:00Z/2025-10-30T01:00:00Z"),
+        null,
+        null
+    );
+    final PeriodLoadRule periodPT1H = new PeriodLoadRule(new Period("PT1H"), null, null, null);
+    final PeriodLoadRule periodP3M = new PeriodLoadRule(new Period("P3M"), null, null, null);
+    final PeriodLoadRule periodP6M = new PeriodLoadRule(new Period("P6M"), null, null, null);
+    final ForeverLoadRule foreverLoadRule = new ForeverLoadRule(null, null);
+    final ForeverDropRule foreverDropRule = new ForeverDropRule();
+    final PeriodBroadcastDistributionRule broadcastPeriodPT15m = new PeriodBroadcastDistributionRule(new Period("PT15m"), true);
+
+    final List<Rule> rules = new ArrayList<>();
+    rules.add(loadSmallInterval);
+    rules.add(loadLargeInteval);
+    rules.add(broadcastPeriodPT15m);
+    rules.add(periodPT1H);
+    rules.add(periodP3M);
+    rules.add(periodP6M);
+    rules.add(foreverLoadRule);
+
+    final Response resp = rulesResource.setDatasourceRules("dataSource1", rules, null, null, EasyMock.createMock(HttpServletRequest.class));
+    Assert.assertEquals(200, resp.getStatus());
+    EasyMock.verify(databaseRuleManager);
+
+    rules.clear();
+    rules.add(broadcastPeriodPT15m);
+    rules.add(periodPT1H);
+    rules.add(periodP3M);
+    rules.add(periodP6M);
+    rules.add(loadSmallInterval);
+    rules.add(loadLargeInteval);
+    rules.add(foreverDropRule);
+
+    final Response resp2 = rulesResource.setDatasourceRules("dataSource1", rules, null, null, EasyMock.createMock(HttpServletRequest.class));
+    Assert.assertEquals(200, resp2.getStatus());
+    EasyMock.verify(databaseRuleManager);
   }
 
   @Test

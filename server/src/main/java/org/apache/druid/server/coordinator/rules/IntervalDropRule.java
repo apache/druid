@@ -67,6 +67,12 @@ public class IntervalDropRule extends DropRule
   }
 
   @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return interval;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -83,5 +89,13 @@ public class IntervalDropRule extends DropRule
   public int hashCode()
   {
     return Objects.hash(interval);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IntervalDropRule{" +
+           "interval=" + interval +
+           '}';
   }
 }

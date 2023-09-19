@@ -65,6 +65,12 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     return Rules.eligibleForLoad(period, interval, referenceTimestamp, includeFuture);
   }
 
+  @Override
+  public Interval getInterval(DateTime referenceTimestamp)
+  {
+    return new Interval(referenceTimestamp.minus(period), referenceTimestamp);
+  }
+
   @JsonProperty
   public Period getPeriod()
   {
@@ -95,5 +101,14 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   public int hashCode()
   {
     return Objects.hash(getPeriod(), isIncludeFuture());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PeriodBroadcastDistributionRule{" +
+           "period=" + period +
+           ", includeFuture=" + includeFuture +
+           '}';
   }
 }
