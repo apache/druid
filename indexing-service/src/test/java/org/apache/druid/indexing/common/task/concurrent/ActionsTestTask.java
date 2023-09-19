@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -58,12 +57,12 @@ public class ActionsTestTask extends CommandQueueTask
 
   public TaskLock acquireReplaceLockOn(Interval interval)
   {
-    return tryTimeChunkLock(interval, TaskLockType.REPLACE);
+    return runAction(new TimeChunkLockTryAcquireAction(TaskLockType.REPLACE, interval));
   }
 
   public TaskLock acquireAppendLockOn(Interval interval)
   {
-    return tryTimeChunkLock(interval, TaskLockType.APPEND);
+    return runAction(new TimeChunkLockTryAcquireAction(TaskLockType.APPEND, interval));
   }
 
   public SegmentPublishResult commitReplaceSegments(DataSegment... segments)
@@ -96,18 +95,6 @@ public class ActionsTestTask extends CommandQueueTask
             TaskLockType.APPEND
         )
     );
-  }
-
-  private TaskLock tryTimeChunkLock(Interval interval, TaskLockType lockType)
-  {
-    final TaskLock lock = runAction(new TimeChunkLockTryAcquireAction(lockType, interval));
-    if (lock == null) {
-      throw new ISE("Could not acquire [%s] lock on interval[%s] for task[%s]", lockType, interval, getId());
-    } else if (lock.isRevoked()) {
-      throw new ISE("Acquired [%s] lock on interval[%s] for task[%s] has been revoked.", lockType, interval, getId());
-    }
-
-    return lock;
   }
 
   private <T> T runAction(TaskAction<T> action)
