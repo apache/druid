@@ -20,20 +20,20 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.compress.utils.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -43,6 +43,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -2193,71 +2194,43 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testXA1()
+  public void testMultiValuedFilterOnlyWhenLookupPullsInDuplicates()
   {
-    // Cannot vectorize due to usage of expressions.
     cannotVectorize();
-
     testBuilder()
-        .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
         .sql("SELECT \n"
-            + "  MV_FILTER_ONLY("
-            + "LOOKUP(dim3,'lookyloo'),\n"
-            + "    ARRAY[null]\n"
-            + "  ) AS \"COALESC-b7e\"\n,"
-            + "count(1)"
-            + "FROM druid.foo AS t group by 1\n"
-            + "LIMIT 1000")
-        .run();
-  }
-
-  @Test
-  public void testXA1a()
-  {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
-    testBuilder()
-        .sql("SELECT\n"
-            + "  MV_FILTER_ONLY(\n"
-            + "    CAST(\n"
-            + "      LOOKUP(t.\"dim3\",'lookyloo')\n"
-            + "    AS VARCHAR),\n"
-            + "    ARRAY['Transparent Inventory','Ads per Page','Social Media Activity','asd','asd1']\n"
-            + "  ) AS \"COALESC-b7e\",\n"
-            + "count(1)\n"
-            + "FROM druid.foo AS t\n"
-            + "GROUP BY 1\n"
-            + "LIMIT 1000")
-//        .expectedQuery(
-//            newScanQueryBuilder()
-//                .dataSource(CalciteTests.DATASOURCE3)
-//                .intervals(querySegmentSpec(Filtration.eternity()))
-//                .virtualColumns(
-//                    expressionVirtualColumn(
-//                        "v0",
-//                        "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
-//                        ColumnType.STRING
-//                    )
-//                )
-//                .filters(expressionFilter(
-//                    "array_contains(string_to_array(concat(array_to_string(\"dim3\",','),',d'),','),'d')"))
-//                .columns("v0")
-//                .context(QUERY_CONTEXT_DEFAULT)
-//                .build()
-//        )
+            + "  MV_FILTER_ONLY(LOOKUP(dim3,'lookyloo'),ARRAY[null]),count(1) \n"
+            + "FROM druid.foo AS t group by 1\n")
+        .expectedQuery(
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    new ListFilteredVirtualColumn(
+                        "v0",
+                        new ExtractionDimensionSpec(
+                            "dim3",
+                            "dim3",
+                            ColumnType.STRING,
+                            new RegisteredLookupExtractionFn(
+                                null,
+                                "lookyloo",
+                                false,
+                                null,
+                                null,
+                                true)),
+                        Sets.newHashSet((String) null),
+                        true))
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build())
         .expectedResults(
-            NullHandling.sqlCompatible() ?
-            ImmutableList.of(
-                new Object[]{"[\"a\",\"b\",\"d\"]"},
-                new Object[]{"[\"\",\"d\"]"}
-            ) : ImmutableList.of(
-                new Object[]{"[\"a\",\"b\",\"d\"]"},
-                new Object[]{"[\"\",\"d\"]"}
-            )
-        )
+            ImmutableList.of(new Object[] {null, 7l}))
         .run();
   }
-
 
 }
