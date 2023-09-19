@@ -42,11 +42,12 @@ jobs:
         # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         queries: +security-and-quality
 
+    # No idea which maven version is used; but cache based on pom file hashes
     - name: Cache Maven packages
       uses: actions/cache@v2
       with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        path: ~/.m2/repository
+        key: maven-codeql-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
 
     - run: |
         echo "Building using custom commands"
