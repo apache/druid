@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-static-checks-${{ runner.os }}-${{ matrix.java }}-${{ hashFiles('**/pom.xml') }}
+          key: maven-static-checks-${{ matrix.java }}-${{ hashFiles('**/pom.xml') }}
 
       - name: packaging check
         run: |
