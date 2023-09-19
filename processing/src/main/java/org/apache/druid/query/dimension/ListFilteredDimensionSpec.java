@@ -92,8 +92,9 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       IndexedGetter<String> fn
   )
   {
-    final IdMapping.Builder builder = IdMapping.Builder.ofCardinality(cardinality);
+    IdMapping.Builder builder;
     if (idLookup != null) {
+      builder = IdMapping.Builder.ofCardinality(values.size());
       for (String value : values) {
         int i = idLookup.lookupId(value);
         if (i >= 0) {
@@ -101,6 +102,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
         }
       }
     } else {
+      builder = IdMapping.Builder.ofCardinality(cardinality);
       for (int i = 0; i < cardinality; i++) {
         if (values.contains(NullHandling.nullToEmptyIfNeeded(fn.get(i)))) {
           builder.addMapping(i);
