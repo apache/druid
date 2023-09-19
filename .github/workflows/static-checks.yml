@@ -133,6 +133,12 @@ jobs:
         run: |
           echo "JAVA_HOME=$JAVA_HOME_8_X64" >> $GITHUB_ENV
 
+      - name: Cache Maven packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: maven-static-checks-jdk8-${{ hashFiles('**/pom.xml') }}
+
       - name: maven install
         run: |
           echo 'Running Maven install...' &&
