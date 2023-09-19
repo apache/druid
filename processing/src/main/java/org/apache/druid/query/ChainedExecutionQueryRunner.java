@@ -113,6 +113,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     if (retVal == null) {
                                       throw new ISE("Got a null list of results");
                                     }
+                                    if(true) {
+                                      throw new RuntimeException("jaja");
+                                    }
 
                                     return retVal;
                                   }
@@ -123,7 +126,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     throw e;
                                   }
                                   catch (Exception e) {
-                                    log.noStackTrace().error(e, "Exception with one of the sequences!");
+                                    log.withStackTraceIf(query.context().isDebug()).error(e, "Exception with one of the sequences!");
+
                                     Throwables.propagateIfPossible(e);
                                     throw new RuntimeException(e);
                                   }

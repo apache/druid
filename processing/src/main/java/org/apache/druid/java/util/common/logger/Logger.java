@@ -111,6 +111,14 @@ public class Logger
     return noStackTraceLogger;
   }
 
+  /**
+   * Helps to retain stacktraces in logs in case debug is enabled.
+   */
+  public Logger withStackTraceIf(boolean debug)
+  {
+    return debug ? this : noStackTraceLogger;
+  }
+
   public void trace(String message, Object... formatArgs)
   {
     if (log.isTraceEnabled()) {
