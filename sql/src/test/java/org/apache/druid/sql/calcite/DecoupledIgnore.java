@@ -19,21 +19,34 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
+import org.junit.AssumptionViolatedException;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.junit.Assert.assertThrows;
 
 /**
  * Can be used to mark tests which are not-yet supported in decoupled mode.
+ *
+ * In case a testcase marked with this annotation fails - it may mean that the
+ * testcase no longer needs that annotation.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface DecoupledIgnore
 {
+  Modes mode() default Modes.NOT_ENOUGH_RULES;
+
   enum Modes
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
@@ -56,6 +69,37 @@ public @interface DecoupledIgnore
     }
   };
 
-  Modes mode() default Modes.NOT_ENOUGH_RULES;
+
+  public static class DecoupledIgnoreProcessor implements TestRule
+  {
+    public Statement apply(Statement base, Description description)
+    {
+      DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
+      if (annotation == null) {
+        return base;
+      }
+      return new Statement()
+      {
+        @Override
+        public void evaluate() throws Throwable
+        {
+          Throwable e = assertThrows(
+              "Expected that this testcase will fail - it might got fixed?",
+              annotation.mode().throwableClass,
+              base::evaluate
+              );
+
+          String trace = Throwables.getStackTraceAsString(e);
+          Matcher m = annotation.mode().getPattern().matcher(trace);
+
+          if (!m.find()) {
+            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.mode().regex, e);
+          }
+          throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
+        }
+      };
+    }
+  }
+
 
 }
