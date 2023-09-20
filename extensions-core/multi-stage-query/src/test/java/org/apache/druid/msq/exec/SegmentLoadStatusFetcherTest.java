@@ -142,8 +142,7 @@ public class SegmentLoadStatusFetcherTest
             5,
             timesInvoked,
             0,
-            5
-            - timesInvoked,
+            5 - timesInvoked,
             0
         );
         return new ObjectMapper().writeValueAsString(loadStatus);
