@@ -2229,7 +2229,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build())
         .expectedResults(
-            ImmutableList.of(new Object[] {null, 7l}))
+            ImmutableList.of(new Object[] {NullHandling.replaceWithDefault()?"":null, 7l}))
         .run();
   }
 
