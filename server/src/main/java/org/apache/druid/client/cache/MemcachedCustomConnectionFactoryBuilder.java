@@ -19,7 +19,18 @@
 
 package org.apache.druid.client.cache;
 
-import net.spy.memcached.*;
+import net.spy.memcached.ArrayModNodeLocator;
+import net.spy.memcached.ClientMode;
+import net.spy.memcached.ConnectionFactory;
+import net.spy.memcached.ConnectionFactoryBuilder;
+import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.DefaultConnectionFactory;
+import net.spy.memcached.FailureMode;
+import net.spy.memcached.HashAlgorithm;
+import net.spy.memcached.KetamaNodeLocator;
+import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.NodeLocator;
+import net.spy.memcached.OperationFactory;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.metrics.MetricCollector;
 import net.spy.memcached.metrics.MetricType;

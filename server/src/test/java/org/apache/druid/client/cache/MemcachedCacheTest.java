@@ -62,7 +62,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
 
 import java.net.SocketAddress;
 import java.security.KeyManagementException;
@@ -280,7 +279,9 @@ public class MemcachedCacheTest
         return "invalid-name";
       }
     };
-    RuntimeException exception = Assert.assertThrows(RuntimeException.class, () -> {MemcachedCache.createConnectionFactory(config, null, null, null);});
+    RuntimeException exception = Assert.assertThrows(RuntimeException.class, () -> {
+      MemcachedCache.createConnectionFactory(config, null, null, null);
+    });
     Assert.assertEquals(exception.getMessage(), "Invalid value provided for `druid.cache.clientMode`. Value must be 'static' or 'dynamic'.");
   }
   @Test
