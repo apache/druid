@@ -23,11 +23,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.inject.Binder;
+import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
@@ -66,15 +68,23 @@ import static org.testng.Assert.assertEquals;
 public class AbstractQueryResourceTestClientTest
 {
 
-  static class LocalModule implements Module
+  static class LocalModule extends AbstractModule
   {
 
     DruidTestModule delegate = new DruidTestModule();
 
     @Override
-    public void configure(Binder binder)
+    public void configure()
     {
-      delegate.configure(binder);
+      bindConstant().annotatedWith(Names.named("druid.test.config.dockerIp")).to("localhost");
+      delegate.configure(binder());
+    }
+
+    @Provides
+    @Named("druid.test.config.dockerIp")
+    public String injectedValue()
+    {
+      return "localhost";
     }
 
     @Provides
