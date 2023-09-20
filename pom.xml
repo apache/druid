@@ -1813,6 +1813,16 @@
     </build>
 
     <profiles>
+        <!-- mockito 5.x dropped support for Java 8, but is necessary to test against Java >17 -->
+        <profile>
+          <id>pre-java-11</id>
+          <activation>
+            <jdk>(,11)</jdk>
+          </activation>
+          <properties>
+            <mockito.version>4.11.0</mockito.version>
+          </properties>
+        </profile>
         <profile>
             <id>java-9+</id>
             <activation>

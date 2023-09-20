@@ -146,7 +146,19 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
     <profiles>
+        <!-- mockito-inline was removed in mockito 5.3, but is necessary when running against mockito 4.x for Java 8 -->
+        <profile>
+            <id>pre-java-11</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mockito</groupId>
+                    <artifactId>mockito-inline</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>hadoop3</id>
             <activation>
