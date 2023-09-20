@@ -75,7 +75,7 @@ public @interface DecoupledIgnore
    * Ensures that test cases disabled with that annotation can still not pass.
    * If the error is as expected; the testcase is marked as "ignored".
    */
-  public static class DecoupledIgnoreProcessor implements TestRule
+  class DecoupledIgnoreProcessor implements TestRule
   {
     @Override
     public Statement apply(Statement base, Description description)
@@ -87,7 +87,7 @@ public @interface DecoupledIgnore
       return new Statement()
       {
         @Override
-        public void evaluate() throws Throwable
+        public void evaluate()
         {
           Throwable e = assertThrows(
               "Expected that this testcase will fail - it might got fixed?",
