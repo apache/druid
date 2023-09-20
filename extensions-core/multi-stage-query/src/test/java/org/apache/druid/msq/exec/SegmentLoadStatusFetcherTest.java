@@ -36,7 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class SegmentLoadWaiterTest
+public class SegmentLoadStatusFetcherTest
 {
   private static final String TEST_DATASOURCE = "testDatasource";
 
@@ -65,8 +65,7 @@ public class SegmentLoadWaiterTest
             5,
             timesInvoked,
             0,
-            5
-            - timesInvoked,
+            5 - timesInvoked,
             0
         );
         return new ObjectMapper().writeValueAsString(loadStatus);
@@ -104,8 +103,7 @@ public class SegmentLoadWaiterTest
             5,
             timesInvoked,
             0,
-            5
-            - timesInvoked,
+            5 - timesInvoked,
             0
         );
         return new ObjectMapper().writeValueAsString(loadStatus);
