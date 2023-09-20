@@ -62,8 +62,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.testng.Assert.assertEquals;
 
-@Guice(moduleFactory = AbstractQueryResourceTestClientTest.LocalModuleFactory.class)
-public class AbstractQueryResourceTestClientTest
+@Test(groups = TestNGGroup.HTTP_ENDPOINT)
+@Guice(moduleFactory = ITAbstractQueryResourceTestClientTest.LocalModuleFactory.class)
+public class ITAbstractQueryResourceTestClientTest
 {
 
   static class LocalModule implements Module
@@ -90,7 +91,7 @@ public class AbstractQueryResourceTestClientTest
           @Nullable
           Final val = null;
 
-          int counter = AbstractQueryResourceTestClientTest.requestCounter.getAndIncrement();
+          int counter = ITAbstractQueryResourceTestClientTest.requestCounter.getAndIncrement();
           HttpResponse response = new DefaultHttpResponse(
               HttpVersion.HTTP_1_1,
               counter == 0 ? HttpResponseStatus.INTERNAL_SERVER_ERROR : HttpResponseStatus.OK);
