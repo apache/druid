@@ -25,7 +25,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.Ignore;
-import org.junit.Test;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
@@ -256,42 +255,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testSubqueryTypeMismatchWithLiterals()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testGroupBySortPushDown()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testGroupingWithNullInFilter()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  @Test
-  public void testStringAggExpressionNonConstantSeparator()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testOrderByAlongWithInternalScanQuery()
   {
 
@@ -299,28 +262,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testSortProjectAfterNestedGroupBy()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testNestedGroupBy()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
 
   }
