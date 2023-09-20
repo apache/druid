@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.IAE;
 
 /**
@@ -79,7 +81,7 @@ public class IdMapping
       final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap(cardinality);
       forwardMapping.defaultReturnValue(-1);
 
-      final int[] reverseMapping = new int[cardinality];
+      IntArrayList reverseMapping = new IntArrayList(cardinality);
       return new Builder(forwardMapping, reverseMapping, true);
     }
 
@@ -95,17 +97,17 @@ public class IdMapping
       final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
       forwardMapping.defaultReturnValue(-1);
 
-      return new Builder(forwardMapping, new int[0], false);
+      return new Builder(forwardMapping, new IntArrayList(), false);
     }
 
     private final Int2IntOpenHashMap forwardMapping;
-    private final int[] reverseMapping;
+    private final IntList reverseMapping;
     private int count = 0;
     private final boolean knownCardinality;
 
     private Builder(
         Int2IntOpenHashMap forwardMapping,
-        int[] reverseMapping,
+        IntList reverseMapping,
         boolean knownCardinality
     )
     {
@@ -125,7 +127,7 @@ public class IdMapping
         throw new IAE("Cannot call addMapping on unknown cardinality, use addForwardMapping instead");
       }
       forwardMapping.put(forwardId, count);
-      reverseMapping[count++] = forwardId;
+      reverseMapping.add(forwardId);
     }
 
     /**
@@ -145,7 +147,7 @@ public class IdMapping
     public IdMapping build()
     {
       if (knownCardinality) {
-        return new IdMapping(forwardMapping, reverseMapping);
+        return new IdMapping(forwardMapping, reverseMapping.toIntArray());
       } else {
         final int[] reverseMapping = new int[forwardMapping.size()];
         for (Int2IntMap.Entry e : forwardMapping.int2IntEntrySet()) {
