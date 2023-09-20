@@ -1845,7 +1845,7 @@
 
                     <!-- required for certain EqualsVerifier tests (not required in production) -->
                     --add-opens=java.base/java.util=ALL-UNNAMED
-                    <!-- required for system-rules https://github.com/stefanbirkner/system-rules/issues/85 -->
+                    <!-- required for system-rules with Java >= 18 https://github.com/stefanbirkner/system-rules/issues/85 -->
                     -Djava.security.manager=allow
                 </jdk.strong.encapsulation.argLine>
             </properties>
