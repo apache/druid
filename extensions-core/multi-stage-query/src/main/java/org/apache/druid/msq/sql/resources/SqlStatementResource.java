@@ -630,14 +630,13 @@ public class SqlStatementResource
 
 
   /**
-   * This method contacts the overlord for the controller task and returns it if the requested user has the necessary
-   * permissions to do so. A user has the necessary permissions if they satisfy one of the following criterias:
-   * 1. They are the one who has submitted the query
-   * 2. They belong to a role containing the READ or WRITE permissions over the STATE resource. For endpoints like GET,
-   *   the user should have READ permission for the STATE resource, while for endpoints like POST and DELETE, the user
-   *   should have WRITE permission for the STATE resource (note: POST is only required when the user submits the query
-   *   so the currentUser should be equal to the queryUser, and we won't need to check the permissions for STATE resource
-   *   for them anyway)
+   * This method contacts the overlord for the controller task and checks if the requested user has the
+   * necessary permissions. A user has the necessary permissions if one of the following criteria is satisfied:
+   * 1. The user is the one who submitted the query
+   * 2. The user belongs to a role containing the READ or WRITE permissions over the STATE resource. For endpoints like GET,
+   *   the user should have READ permission for the STATE resource, while for endpoints like DELETE, the user should
+   *   have WRITE permission for the STATE resource. (Note: POST API does not need to check the state permissions since
+   *   the currentUser always equal to the queryUser)
    */
   private MSQControllerTask getMSQControllerTaskAndCheckPermission(
       String queryId,
