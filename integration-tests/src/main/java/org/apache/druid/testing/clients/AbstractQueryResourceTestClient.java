@@ -167,6 +167,8 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
           if (ce != null) {
             LOG.info(ce, "Encountered a channel exception. Retrying the query request");
             return false;
+          } else {
+            throw new RuntimeException("non-retriable exception", t);
           }
         }
         return true;
