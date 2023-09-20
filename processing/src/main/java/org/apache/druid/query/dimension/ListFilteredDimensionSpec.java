@@ -79,7 +79,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     }
 
     if (isWhitelist) {
-      return filterAllowList(values, selector);
+      return filterAllowList(values, selector, delegate.getExtractionFn() != null);
     } else {
       return filterDenyList(values, selector);
     }
@@ -125,9 +125,9 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
     return builder.build();
   }
 
-  public static DimensionSelector filterAllowList(Set<String> values, DimensionSelector selector)
+  public static DimensionSelector filterAllowList(Set<String> values, DimensionSelector selector, boolean forcePredicateFilter)
   {
-    if (selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
+    if (forcePredicateFilter || selector.getValueCardinality() < 0 || !selector.nameLookupPossibleInAdvance()) {
       return new PredicateFilteredDimensionSelector(selector, Predicates.in(values));
     }
     final IdMapping idMapping = buildAllowListIdMapping(
