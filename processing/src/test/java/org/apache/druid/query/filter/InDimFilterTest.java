@@ -92,7 +92,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetValuesWithValuesSetIncludingEmptyString()
   {
-    final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet(ImmutableSet.of("v1", "", "v3"));
+    final InDimFilter.ValuesSet values = InDimFilter.ValuesSet.copyOf(ImmutableSet.of("v1", "", "v3"));
     final InDimFilter filter = new InDimFilter("dim", values);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertSame(values, filter.getValues());

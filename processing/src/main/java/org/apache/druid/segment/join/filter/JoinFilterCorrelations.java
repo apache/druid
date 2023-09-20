@@ -22,6 +22,7 @@ package org.apache.druid.segment.join.filter;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinableClause;
@@ -155,7 +156,7 @@ public class JoinFilterCorrelations
           correlationForPrefix.getValue().getCorrelatedValuesMap().computeIfAbsent(
               Pair.of(rhsRewriteCandidate.getRhsColumn(), rhsRewriteCandidate.getValueForRewrite()),
               (rhsVal) -> {
-                Optional<Set<String>> correlatedValues = getCorrelatedValuesForPushDown(
+                Optional<InDimFilter.ValuesSet> correlatedValues = getCorrelatedValuesForPushDown(
                     rhsRewriteCandidate.getRhsColumn(),
                     rhsRewriteCandidate.getValueForRewrite(),
                     correlationForPrefix.getValue().getJoinColumn(),
@@ -244,7 +245,7 @@ public class JoinFilterCorrelations
    * @return A list of values of the correlatedJoinColumn that appear in rows where filterColumn = filterValue
    * Returns absent if we cannot determine the correlated values.
    */
-  private static Optional<Set<String>> getCorrelatedValuesForPushDown(
+  private static Optional<InDimFilter.ValuesSet> getCorrelatedValuesForPushDown(
       String filterColumn,
       String filterValue,
       String correlatedJoinColumn,
