@@ -187,13 +187,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testUnplannableQueries()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testUnplannableTwoExactCountDistincts()
   {
 
@@ -202,6 +195,13 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testUnplannableExactCountDistinctOnSketch()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testUnplannableScanOrderByNonTime()
   {
 
   }
@@ -338,6 +338,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   {
 
   }
+
   // When run through decoupled, it expects
   // dimensions=[DefaultDimensionSpec{dimension='dim2', outputName='d0', outputType='STRING'},
   // DefaultDimensionSpec{dimension='dim1', outputName='d1', outputType='STRING'}]

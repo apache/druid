@@ -27,6 +27,7 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
@@ -150,6 +151,18 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
+    if (indexer instanceof NestedDataColumnIndexerV4) {
+      NestedDataColumnIndexerV4 nestedDataColumnIndexer = (NestedDataColumnIndexerV4) indexer;
+
+      return new NestedColumnMergable(
+          nestedDataColumnIndexer.getSortedValueLookups(),
+          nestedDataColumnIndexer.getFieldTypeInfo(),
+          true,
+          false,
+          null
+      );
+    }
+
     if (indexer instanceof AutoTypeColumnIndexer) {
       AutoTypeColumnIndexer autoIndexer = (AutoTypeColumnIndexer) indexer;
       return new NestedColumnMergable(

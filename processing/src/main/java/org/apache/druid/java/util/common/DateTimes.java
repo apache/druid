@@ -20,7 +20,9 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Ordering;
 import io.netty.util.SuppressForbidden;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -30,6 +32,7 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
@@ -192,6 +195,34 @@ public final class DateTimes
     return dateTime.getMillis() >= COMPARE_DATE_AS_STRING_MIN.getMillis()
            && dateTime.getMillis() <= COMPARE_DATE_AS_STRING_MAX.getMillis()
            && ISOChronology.getInstanceUTC().equals(dateTime.getChronology());
+  }
+
+  /**
+   * Returns the earlier of the two given dates. When passed a null and a non-null
+   * date, this method simply returns the non-null value.
+   */
+  public static DateTime earlierOf(DateTime a, DateTime b)
+  {
+    // Put nulls last to select the smaller non-null value
+    if (Objects.compare(a, b, Ordering.natural().nullsLast()) < 0) {
+      return a;
+    } else {
+      return b;
+    }
+  }
+
+  /**
+   * Returns the later of the two given dates. When passed a null and a non-null
+   * date, this method simply returns the non-null value.
+   */
+  public static DateTime laterOf(DateTime a, DateTime b)
+  {
+    // Put nulls first to select the bigger non-null value
+    if (Objects.compare(a, b, Comparators.naturalNullsFirst()) > 0) {
+      return a;
+    } else {
+      return b;
+    }
   }
 
   private DateTimes()

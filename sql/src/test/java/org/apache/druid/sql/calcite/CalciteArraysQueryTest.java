@@ -3686,19 +3686,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
-        // The result as incorrect because of pushing the not filter
-        // into the base. I would expect this result to be 'a'
-        // Putting the not on the direct mapped column from unnest
-        // makes it eatup the values from MVD.
-        // For example select dim3 from numFoo where dim2='a' AND dim1 <> 'foo'
-        // Has 2 rows
-        // ["a","b"]
-        // empty
-        // if dim3 <> 'b' is pushed down to base it eats up the first row and the
-        // result only has empty.
-        // Future developer should ensure not filters involving direct mapping of unnested
-        // column should not be pushed to base but should onluy appear in the post filter
         ImmutableList.of(
+            new Object[]{"a"},
             new Object[]{""}
         )
     );
@@ -4815,6 +4804,54 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestVirtualWithColumnsAndNullIf()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select c,m2 from druid.foo, unnest(ARRAY[\"m1\", \"m2\"]) as u(c) where NULLIF(c,m2) IS NULL",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE1),
+                      expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .filters(
+                      useDefault ? expressionFilter("(\"j0.unnest\" == \"m2\")") :
+                      or(
+                          expressionFilter("(\"j0.unnest\" == \"m2\")"),
+                          and(
+                              isNull("j0.unnest"),
+                              not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
+                          )
+                      ))
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest", "m2"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0f, 1.0D},
+            new Object[]{1.0f, 1.0D},
+            new Object[]{2.0f, 2.0D},
+            new Object[]{2.0f, 2.0D},
+            new Object[]{3.0f, 3.0D},
+            new Object[]{3.0f, 3.0D},
+            new Object[]{4.0f, 4.0D},
+            new Object[]{4.0f, 4.0D},
+            new Object[]{5.0f, 5.0D},
+            new Object[]{5.0f, 5.0D},
+            new Object[]{6.0f, 6.0D},
+            new Object[]{6.0f, 6.0D}
         )
     );
   }

@@ -137,9 +137,11 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
         ).iterator(),
         temporaryFolder.newFolder()
     );
-    String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
-    Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
 
-    Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+    try (CloseableIterator<InputRow> readIterator = firehose.read()) {
+      String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
+      Exception exception = Assert.assertThrows(RuntimeException.class, readIterator::hasNext);
+      Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+    }
   }
 }

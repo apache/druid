@@ -99,6 +99,7 @@
         "label": "Druid SQL",
         "items": [
           "querying/sql",
+          "querying/tips-good-queries",
           "querying/query-deep-storage",
           "querying/sql-data-types",
           "querying/sql-operators",

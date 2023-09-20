@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 
@@ -28,24 +29,28 @@ import java.nio.ByteBuffer;
 /**
  * A vector aggregator that returns the default numeric value.
  */
-public class NumericNilVectorAggregator implements VectorAggregator
+public class NilVectorAggregator implements VectorAggregator
 {
-  private static final NumericNilVectorAggregator DOUBLE_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+  private static final NilVectorAggregator DOUBLE_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
       NullHandling.defaultDoubleValue()
   );
 
-  private static final NumericNilVectorAggregator FLOAT_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+  private static final NilVectorAggregator FLOAT_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
       NullHandling.defaultFloatValue()
   );
 
-  private static final NumericNilVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+  private static final NilVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
       NullHandling.defaultLongValue()
   );
+
+  public static final SerializablePair<Long, Double> DOUBLE_NIL_PAIR = new SerializablePair<>(0L, NullHandling.defaultDoubleValue());
+  public static final SerializablePair<Long, Long> LONG_NIL_PAIR = new SerializablePair<>(0L, NullHandling.defaultLongValue());
+  public static final SerializablePair<Long, Float> FLOAT_NIL_PAIR = new SerializablePair<>(0L, NullHandling.defaultFloatValue());
 
   /**
    * @return A vectorized aggregator that returns the default double value.
    */
-  public static NumericNilVectorAggregator doubleNilVectorAggregator()
+  public static NilVectorAggregator doubleNilVectorAggregator()
   {
     return DOUBLE_NIL_VECTOR_AGGREGATOR;
   }
@@ -53,7 +58,7 @@ public class NumericNilVectorAggregator implements VectorAggregator
   /**
    * @return A vectorized aggregator that returns the default float value.
    */
-  public static NumericNilVectorAggregator floatNilVectorAggregator()
+  public static NilVectorAggregator floatNilVectorAggregator()
   {
     return FLOAT_NIL_VECTOR_AGGREGATOR;
   }
@@ -61,7 +66,7 @@ public class NumericNilVectorAggregator implements VectorAggregator
   /**
    * @return A vectorized aggregator that returns the default long value.
    */
-  public static NumericNilVectorAggregator longNilVectorAggregator()
+  public static NilVectorAggregator longNilVectorAggregator()
   {
     return LONG_NIL_VECTOR_AGGREGATOR;
   }
@@ -69,7 +74,12 @@ public class NumericNilVectorAggregator implements VectorAggregator
   @Nullable
   private final Object returnValue;
 
-  private NumericNilVectorAggregator(@Nullable Object returnValue)
+  public static NilVectorAggregator of(Object returnValue)
+  {
+    return new NilVectorAggregator(returnValue);
+  }
+
+  private NilVectorAggregator(@Nullable Object returnValue)
   {
     this.returnValue = returnValue;
   }
