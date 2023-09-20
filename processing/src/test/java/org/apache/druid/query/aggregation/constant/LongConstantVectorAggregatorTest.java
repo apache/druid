@@ -37,7 +37,8 @@ public class LongConstantVectorAggregatorTest
   {
     randomVal = RandomUtils.nextLong();
     aggregator = new LongConstantVectorAggregator(randomVal);
-    byteBuffer = ByteBuffer.allocate(Long.BYTES);
+    // mark byteBuffer null to verify no methods ever get called on it.
+    byteBuffer = null;
   }
 
   @Test
