@@ -200,9 +200,10 @@ public class RulesResourceTest
         null,
         null
     );
-    final PeriodLoadRule loadPT1H = new PeriodLoadRule(new Period("PT1H"), null, null, null);
-    final PeriodLoadRule loadP3M = new PeriodLoadRule(new Period("P3M"), null, null, null);
-    final PeriodLoadRule loadP6M = new PeriodLoadRule(new Period("P6M"), null, null, null);
+    final PeriodLoadRule loadPT1H = new PeriodLoadRule(new Period("PT1H"), true, null, null);
+    final PeriodLoadRule loadPT1HNoFuture = new PeriodLoadRule(new Period("PT1H"), false, null, null);
+    final PeriodLoadRule loadP3M = new PeriodLoadRule(new Period("P3M"), true, null, null);
+    final PeriodLoadRule loadP6M = new PeriodLoadRule(new Period("P6M"), true, null, null);
     final ForeverLoadRule loadForever = new ForeverLoadRule(null, null);
 
     final List<Rule> rules = new ArrayList<>();
@@ -231,6 +232,15 @@ public class RulesResourceTest
 
     DruidExceptionMatcher.invalidInput().expectMessageContains(
         StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadForever, loadPT1H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(loadPT1H);
+    rules.add(loadPT1HNoFuture);
+    rules.add(loadP6M);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadPT1H, loadPT1HNoFuture)
     ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
 
     rules.clear();
@@ -274,6 +284,7 @@ public class RulesResourceTest
     final PeriodDropBeforeRule dropBeforeP3M = new PeriodDropBeforeRule(new Period("P3M"));
     final PeriodDropBeforeRule dropBeforeP6M = new PeriodDropBeforeRule(new Period("P6M"));
     final PeriodDropRule dropByP1M = new PeriodDropRule(new Period("P1M"), true);
+    final PeriodDropRule dropByP1MNoFuture = new PeriodDropRule(new Period("P1M"), false);
     final PeriodDropRule dropByP2M = new PeriodDropRule(new Period("P2M"), true);
     final ForeverDropRule dropForever = new ForeverDropRule();
 
@@ -297,6 +308,16 @@ public class RulesResourceTest
     ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
 
     rules.clear();
+    rules.add(dropByP1M);
+    rules.add(dropByP1MNoFuture);
+    rules.add(dropForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", dropByP1M, dropByP1MNoFuture)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+
+    rules.clear();
     rules.add(dropForever);
     rules.add(dropByP1M);
     rules.add(dropByP2M);
@@ -316,6 +337,7 @@ public class RulesResourceTest
 
     final ForeverBroadcastDistributionRule broadcastForever = new ForeverBroadcastDistributionRule();
     final PeriodBroadcastDistributionRule broadcastPeriodPT1H = new PeriodBroadcastDistributionRule(new Period("PT1H"), true);
+    final PeriodBroadcastDistributionRule broadcastPeriodPT1HNoFuture = new PeriodBroadcastDistributionRule(new Period("PT1H"), false);
     final PeriodBroadcastDistributionRule broadcastPeriodPT2H = new PeriodBroadcastDistributionRule(new Period("PT2H"), true);
     final IntervalBroadcastDistributionRule broadcastInterval1 = new IntervalBroadcastDistributionRule(
         Intervals.of("2000-09-29T01:00:00Z/2050-10-30T01:00:00Z")
@@ -340,6 +362,25 @@ public class RulesResourceTest
 
     DruidExceptionMatcher.invalidInput().expectMessageContains(
         StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastPeriodPT2H, broadcastPeriodPT1H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
+    rules.add(broadcastPeriodPT1H);
+    rules.add(broadcastPeriodPT1H);
+    rules.add(broadcastForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastPeriodPT1H, broadcastPeriodPT1H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    // Same interval with and without future.
+    rules.clear();
+    rules.add(broadcastPeriodPT1H);
+    rules.add(broadcastPeriodPT1HNoFuture);
+    rules.add(broadcastForever);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastPeriodPT1H, broadcastPeriodPT1HNoFuture)
     ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
 
     rules.clear();
@@ -412,18 +453,25 @@ public class RulesResourceTest
         null,
         null
     );
-    final PeriodLoadRule periodPT1H = new PeriodLoadRule(new Period("PT1H"), null, null, null);
-    final PeriodLoadRule periodP3M = new PeriodLoadRule(new Period("P3M"), null, null, null);
-    final PeriodLoadRule periodP6M = new PeriodLoadRule(new Period("P6M"), null, null, null);
+    final PeriodLoadRule periodPT1H = new PeriodLoadRule(new Period("PT1H"), true, null, null);
+    final PeriodLoadRule periodPT1HNoFuture = new PeriodLoadRule(new Period("PT1H"), false, null, null);
+    final PeriodLoadRule periodP3M = new PeriodLoadRule(new Period("P3M"), true, null, null);
+    final PeriodLoadRule periodP6M = new PeriodLoadRule(new Period("P6M"), true, null, null);
+    final PeriodDropRule dropByP1M = new PeriodDropRule(new Period("P1M"), true);
+    final PeriodDropRule dropByP1MNoFuture = new PeriodDropRule(new Period("P1M"), false);
     final ForeverLoadRule foreverLoadRule = new ForeverLoadRule(null, null);
     final ForeverDropRule foreverDropRule = new ForeverDropRule();
     final PeriodBroadcastDistributionRule broadcastPeriodPT15m = new PeriodBroadcastDistributionRule(new Period("PT15m"), true);
+    final PeriodBroadcastDistributionRule broadcastPeriodPT15mNoFuture = new PeriodBroadcastDistributionRule(new Period("PT15m"), false);
 
     final List<Rule> rules = new ArrayList<>();
     rules.add(loadSmallInterval);
     rules.add(loadLargeInteval);
     rules.add(broadcastPeriodPT15m);
+    rules.add(periodPT1HNoFuture);
     rules.add(periodPT1H);
+    rules.add(dropByP1MNoFuture);
+    rules.add(dropByP1M);
     rules.add(periodP3M);
     rules.add(periodP6M);
     rules.add(foreverLoadRule);
@@ -433,8 +481,12 @@ public class RulesResourceTest
     EasyMock.verify(databaseRuleManager);
 
     rules.clear();
+    rules.add(broadcastPeriodPT15mNoFuture);
     rules.add(broadcastPeriodPT15m);
+    rules.add(periodPT1HNoFuture);
     rules.add(periodPT1H);
+    rules.add(dropByP1MNoFuture);
+    rules.add(dropByP1M);
     rules.add(periodP3M);
     rules.add(periodP6M);
     rules.add(loadSmallInterval);
