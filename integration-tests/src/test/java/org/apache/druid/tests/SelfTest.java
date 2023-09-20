@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -40,7 +41,9 @@ import org.apache.druid.testing.clients.QueryResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModule;
 import org.apache.druid.testing.guice.TestClient;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -50,9 +53,12 @@ import org.testng.ITestContext;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.ws.rs.core.MediaType;
 
 import static org.testng.Assert.assertEquals;
 
@@ -87,9 +93,18 @@ public class SelfTest
           int counter = SelfTest.requestCounter.getAndIncrement();
           HttpResponse response = new DefaultHttpResponse(
               HttpVersion.HTTP_1_1,
-              counter == 0 ? HttpResponseStatus.INTERNAL_SERVER_ERROR : HttpResponseStatus.OK);
+              counter == 0 ? HttpResponseStatus.INTERNAL_SERVER_ERROR : HttpResponseStatus.OK)
+          {
+            public org.jboss.netty.buffer.ChannelBuffer getContent()
+            {
+              return new ByteBufferBackedChannelBuffer(ByteBuffer.wrap("[{}]".getBytes()));
+            }
+          };
+          response.headers().add(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON);
 
-          val = (@Nullable Final) new BytesFullResponseHolder(response);
+          BytesFullResponseHolder bytesFullResponseHolder = new BytesFullResponseHolder(response);
+          bytesFullResponseHolder.addChunk("[{}]".getBytes());
+          val = (@Nullable Final) bytesFullResponseHolder;
           return Futures.<Final> immediateFuture(val);
         }
 
@@ -138,8 +153,16 @@ public class SelfTest
   private static AtomicInteger requestCounter = new AtomicInteger();
 
   @Test
-  public void testInternalServerErrorAtFirstTry()
+  public void testInternalServerErrorAtFirstTry() throws JsonProcessingException
   {
+
+//List<Map<String, Object>> v=new ArrayList<Map<String,Object>>();
+//v.add(new HashMap<String, Object>());
+//String s = new ObjectMapper().writeValueAsString(v);
+//if(true) {
+//  throw new RuntimeException(s);
+//}
+
     requestCounter.set(0);
     queryClient.query("http://192.168.99.99/asd", null);
     assertEquals(2, requestCounter.get());
