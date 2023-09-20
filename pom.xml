@@ -1021,12 +1021,12 @@
                 <version>${datasketches.memory.version}</version>
             </dependency>
             <dependency>
-				<groupId>org.junit</groupId>
-				<artifactId>junit-bom</artifactId>
-				<version>5.10.0</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>5.10.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-testkit</artifactId>
