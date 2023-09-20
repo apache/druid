@@ -186,7 +186,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testUnplannableTwoExactCountDistincts()
+  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
 
   }
