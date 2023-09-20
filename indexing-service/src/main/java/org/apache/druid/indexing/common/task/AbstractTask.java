@@ -197,10 +197,8 @@ public abstract class AbstractTask implements Task
   @Override
   public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
   {
-    if (Thread.currentThread().isInterrupted()) {
-      // clears the interrupted status so the subsequent cleanup work can continue without interruption
-      Thread.interrupted();
-    }
+    // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
+    Thread.interrupted();
 
     if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
@@ -238,12 +236,13 @@ public abstract class AbstractTask implements Task
     try {
       if (cleanupCompletionLatch != null) {
         // block until the cleanup process completes
-        return cleanupCompletionLatch.await(30, TimeUnit.SECONDS);
+        return cleanupCompletionLatch.await(60, TimeUnit.SECONDS);
       }
 
       return true;
     }
     catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for task cleanUp to finish!");
       Thread.currentThread().interrupt();
       return false;
     }
