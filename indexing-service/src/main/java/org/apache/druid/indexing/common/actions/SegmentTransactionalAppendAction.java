@@ -43,9 +43,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
 {
   private final Set<DataSegment> segments;
 
-  public static SegmentTransactionalAppendAction create(
-      Set<DataSegment> segments
-  )
+  public static SegmentTransactionalAppendAction create(Set<DataSegment> segments)
   {
     return new SegmentTransactionalAppendAction(segments);
   }

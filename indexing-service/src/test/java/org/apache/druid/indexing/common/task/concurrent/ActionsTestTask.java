@@ -49,9 +49,9 @@ public class ActionsTestTask extends CommandQueueTask
   private final TaskActionClient client;
   private final AtomicInteger sequenceId = new AtomicInteger(0);
 
-  public ActionsTestTask(String datasource, TaskActionClientFactory factory)
+  public ActionsTestTask(String datasource, String groupId, TaskActionClientFactory factory)
   {
-    super(datasource, null);
+    super(datasource, groupId);
     this.client = factory.create(this);
   }
 

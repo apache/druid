@@ -1092,19 +1092,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         Segments.INCLUDING_OVERSHADOWED
     );
 
-    final Set<String> committedVersions = new HashSet<>();
+    final Map<String, Set<Interval>> committedVersionToIntervals = new HashMap<>();
     final Map<Interval, Set<DataSegment>> committedIntervalToSegments = new HashMap<>();
     for (DataSegment segment : overlappingSegments) {
-      committedVersions.add(segment.getVersion());
+      committedVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
+                                 .add(segment.getInterval());
       committedIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
                                  .add(segment);
     }
 
     final Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds = new HashMap<>();
-    for (String upgradeVersion : committedVersions) {
+    for (String upgradeVersion : committedVersionToIntervals.keySet()) {
       Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
           upgradeVersion,
-          committedIntervalToSegments.keySet(),
+          committedVersionToIntervals.get(upgradeVersion),
           appendVersionToSegments
       );
       for (Map.Entry<Interval, Set<DataSegment>> entry : segmentsToUpgrade.entrySet()) {
