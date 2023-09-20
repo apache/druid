@@ -66,9 +66,9 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   }
 
   @Override
-  public Interval getInterval(DateTime referenceTimestamp)
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
-    return new Interval(referenceTimestamp.minus(period), referenceTimestamp);
+    return new Interval(period, referenceTimestamp);
   }
 
   @JsonProperty

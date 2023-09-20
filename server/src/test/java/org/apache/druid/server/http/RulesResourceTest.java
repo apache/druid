@@ -234,6 +234,15 @@ public class RulesResourceTest
     ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
 
     rules.clear();
+    rules.add(loadPT1H);
+    rules.add(loadPT1H);
+    rules.add(loadP6M);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", loadPT1H, loadPT1H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
+
+    rules.clear();
     rules.add(loadInterval1);
     rules.add(loadInterval2);
     rules.add(loadP6M);
@@ -332,7 +341,6 @@ public class RulesResourceTest
     DruidExceptionMatcher.invalidInput().expectMessageContains(
         StringUtils.format("Rule[%s] has an interval that contains interval for rule[%s].", broadcastPeriodPT2H, broadcastPeriodPT1H)
     ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
 
     rules.clear();
     rules.add(broadcastPeriodPT1H);

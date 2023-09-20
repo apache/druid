@@ -72,7 +72,7 @@ public class IntervalLoadRule extends LoadRule
   }
 
   @Override
-  public Interval getInterval(DateTime referenceTimestamp)
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
     return interval;
   }

@@ -66,7 +66,7 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   }
 
   @Override
-  public Interval getInterval(DateTime referenceTimestamp)
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
     return interval;
   }

@@ -66,7 +66,7 @@ public class PeriodDropBeforeRule extends DropRule
   }
 
   @Override
-  public Interval getInterval(DateTime referenceTimestamp)
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
     return new Interval(DateTimes.utc(Long.MIN_VALUE), referenceTimestamp.minus(period));
   }

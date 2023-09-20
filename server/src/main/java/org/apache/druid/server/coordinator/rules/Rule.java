@@ -51,5 +51,11 @@ public interface Rule
 
   void run(DataSegment segment, SegmentActionHandler segmentHandler);
 
-  Interval getInterval(DateTime referenceTimestamp);
+  /**
+   * Return an eligible interval from the reference timestamp. Implemntations
+   * must return a valid interval based on the rule type.
+   * @param referenceTimestamp base timestamp
+   * @return
+   */
+  Interval getEligibleInterval(DateTime referenceTimestamp);
 }

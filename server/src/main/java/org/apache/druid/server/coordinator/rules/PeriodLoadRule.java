@@ -84,7 +84,7 @@ public class PeriodLoadRule extends LoadRule
   }
 
   @Override
-  public Interval getInterval(DateTime referenceTimestamp)
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
     return new Interval(referenceTimestamp.minus(period), referenceTimestamp);
   }

@@ -67,7 +67,7 @@ public class IntervalDropRule extends DropRule
   }
 
   @Override
-  public Interval getInterval(DateTime referenceTimestamp)
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
     return interval;
   }
