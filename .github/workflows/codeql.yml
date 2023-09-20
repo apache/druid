@@ -29,6 +29,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '8'
+        cache: 'maven'
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
@@ -41,13 +47,6 @@ jobs:
 
         # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         queries: +security-and-quality
-
-    # No idea which maven version is used; but cache based on pom file hashes
-    - name: Cache Maven packages
-      uses: actions/cache@v2
-      with:
-        path: ~/.m2/repository
-        key: maven-codeql-${{ hashFiles('**/pom.xml') }}
 
     - run: |
         echo "Building using custom commands"
