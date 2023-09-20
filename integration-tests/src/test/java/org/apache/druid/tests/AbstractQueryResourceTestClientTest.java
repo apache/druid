@@ -52,16 +52,18 @@ import org.testng.ITestContext;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.ws.rs.core.MediaType;
+
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.ws.rs.core.MediaType;
 
 import static org.testng.Assert.assertEquals;
 
-@Guice(moduleFactory = SelfTest.LocalModuleFactory.class)
-public class SelfTest
+@Guice(moduleFactory = AbstractQueryResourceTestClientTest.LocalModuleFactory.class)
+public class AbstractQueryResourceTestClientTest
 {
 
   static class LocalModule implements Module
@@ -88,16 +90,16 @@ public class SelfTest
           @Nullable
           Final val = null;
 
-          int counter = SelfTest.requestCounter.getAndIncrement();
+          int counter = AbstractQueryResourceTestClientTest.requestCounter.getAndIncrement();
           HttpResponse response = new DefaultHttpResponse(
               HttpVersion.HTTP_1_1,
               counter == 0 ? HttpResponseStatus.INTERNAL_SERVER_ERROR : HttpResponseStatus.OK);
           response.headers().add(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON);
 
           BytesFullResponseHolder bytesFullResponseHolder = new BytesFullResponseHolder(response);
-          bytesFullResponseHolder.addChunk("[{}]".getBytes());
+          bytesFullResponseHolder.addChunk("[{}]".getBytes(Charset.defaultCharset()));
           val = (@Nullable Final) bytesFullResponseHolder;
-          return Futures.<Final> immediateFuture(val);
+          return Futures.<Final>immediateFuture(val);
         }
 
         @Override
@@ -151,5 +153,4 @@ public class SelfTest
     queryClient.query("http://192.168.99.99/asd", null);
     assertEquals(2, requestCounter.get());
   }
-
 }
