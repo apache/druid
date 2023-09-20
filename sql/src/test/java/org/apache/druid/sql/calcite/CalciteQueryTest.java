@@ -5719,7 +5719,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
   @Test
   public void testIsNotDistinctFromLiteral()
   {
