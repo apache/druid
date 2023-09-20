@@ -84,6 +84,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
@@ -5633,32 +5634,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableQueries()
+  public void testUnplannableScanOrderByNonTime()
   {
+    // Scan can ORDER BY non-time in MSQ.
     notMsqCompatible();
-    // All of these queries are unplannable because they rely on features Druid doesn't support.
-    // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
-    // It's also here so when we do support these features, we can have "real" tests for these queries.
 
-    final Map<String, String> queries = ImmutableMap.of(
-        // SELECT query with order by non-__time.
+    assertQueryIsUnplannable(
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported.",
-
-        // JOIN condition with not-equals (<>).
-        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
-        + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
-        "SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
-
-        // JOIN condition with a function of both sides.
-        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
-        + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
-        "SQL requires a join with 'GREATER_THAN' condition that is not supported."
+        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported."
     );
-
-    for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
-      assertQueryIsUnplannable(queryErrorPair.getKey(), queryErrorPair.getValue());
-    }
   }
 
   @Test
@@ -5704,18 +5688,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableTwoExactCountDistincts()
-  {
-    // Requires GROUPING SETS + GROUPING to be translated by AggregateExpandDistinctAggregatesRule.
-
-    assertQueryIsUnplannable(
-        PLANNER_CONFIG_NO_HLL,
-        "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2",
-        "SQL requires a join with 'IS_NOT_DISTINCT_FROM' condition that is not supported."
-    );
-  }
-
-  @Test
   public void testUnplannableExactCountDistinctOnSketch()
   {
     // COUNT DISTINCT on a sketch cannot be exact.
@@ -5723,6 +5695,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_NO_HLL,
         "SELECT COUNT(distinct unique_dim1) FROM druid.foo",
         "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
+    );
+  }
+
+  @Test
+  public void testIsNotDistinctFromLiteral()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE (dim1 >= 'a' and dim1 < 'b') OR dim1 IS NOT DISTINCT FROM 'ab'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(range("dim1", ColumnType.STRING, "a", "b", false, true))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
     );
   }
 
@@ -6743,7 +6736,117 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators()
+  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
+  {
+    // When HLL is disabled, do multiple exact count distincts through joins of nested queries.
+
+    testQuery(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT dim2, COUNT(*), COUNT(distinct dim1), COUNT(distinct cnt) FROM druid.foo GROUP BY dim2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            new QueryDataSource(
+                                GroupByQuery
+                                    .builder()
+                                    .setDataSource(CalciteTests.DATASOURCE1)
+                                    .setGranularity(Granularities.ALL)
+                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                    .setDimensions(new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING))
+                                    .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                                    .build()
+                            ),
+                            new QueryDataSource(
+                                GroupByQuery
+                                    .builder()
+                                    .setDataSource(
+                                        new QueryDataSource(
+                                            GroupByQuery
+                                                .builder()
+                                                .setDataSource(CalciteTests.DATASOURCE1)
+                                                .setGranularity(Granularities.ALL)
+                                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                .setDimensions(
+                                                    new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
+                                                    new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
+                                                )
+                                                .build()
+                                        )
+                                    )
+                                    .setGranularity(Granularities.ALL)
+                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                    .setDimensions(new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING))
+                                    .setAggregatorSpecs(
+                                        new FilteredAggregatorFactory(
+                                            new CountAggregatorFactory("a0"),
+                                            new NotDimFilter(isNull("d1", null))
+                                        )
+                                    )
+                                    .build()
+                            ),
+                            "j0.",
+                            "notdistinctfrom(\"d0\",\"j0._d0\")",
+                            JoinType.INNER
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(
+                                            new QueryDataSource(
+                                                GroupByQuery
+                                                    .builder()
+                                                    .setDataSource(CalciteTests.DATASOURCE1)
+                                                    .setGranularity(Granularities.ALL)
+                                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                    .setDimensions(
+                                                        new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
+                                                        new DefaultDimensionSpec("cnt", "d1", ColumnType.LONG)
+                                                    )
+                                                    .build()
+                                            )
+                                        )
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setDimensions(new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING))
+                                        .setAggregatorSpecs(
+                                            NullHandling.sqlCompatible()
+                                            ? new FilteredAggregatorFactory(
+                                                new CountAggregatorFactory("a0"),
+                                                new NotDimFilter(isNull("d1", null))
+                                            )
+                                            : new CountAggregatorFactory("a0")
+                                        )
+                                        .build()
+                        ),
+                        "_j0.",
+                        "notdistinctfrom(\"d0\",\"_j0._d0\")",
+                        JoinType.INNER
+                    )
+                )
+                .context(QUERY_CONTEXT_DEFAULT)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("_j0.a0", "a0", "d0", "j0.a0"))
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 2L, 2L, 1L},
+            new Object[]{"", 1L, 1L, 1L},
+            new Object[]{"a", 2L, 2L, 1L},
+            new Object[]{"abc", 1L, 1L, 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"", 3L, 3L, 1L},
+            new Object[]{"a", 2L, 1L, 1L},
+            new Object[]{"abc", 1L, 1L, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultipleExactCountDistinctWithGroupingUsingGroupingSets()
   {
     notMsqCompatible();
     requireMergeBuffers(4);
@@ -12802,6 +12905,42 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     testQuery(
         "SELECT dim2 ,lookup(dim2,'lookyloo') from foo where dim2 is null",
+        ImmutableList.of(
+            new Druids.ScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "null", ColumnType.STRING)
+                )
+                .columns("v0")
+                .legacy(false)
+                .filters(isNull("dim2"))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testLookupWithIsNotDistinctFromNull()
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.<Object[]>builder().add(
+          new Object[]{NULL_STRING, NULL_STRING},
+          new Object[]{NULL_STRING, NULL_STRING},
+          new Object[]{NULL_STRING, NULL_STRING}
+      ).build();
+    } else {
+      expected = ImmutableList.<Object[]>builder().add(
+          new Object[]{NULL_STRING, NULL_STRING},
+          new Object[]{NULL_STRING, NULL_STRING}
+      ).build();
+    }
+    testQuery(
+        "SELECT dim2 ,lookup(dim2,'lookyloo') from foo where dim2 is not distinct from null",
         ImmutableList.of(
             new Druids.ScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
