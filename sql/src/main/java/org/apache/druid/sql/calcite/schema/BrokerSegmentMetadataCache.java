@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.base.Predicates;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.InternalQueryConfig;
@@ -29,6 +30,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -41,6 +43,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Broker-side cache of segment metadata that combines segments to identify
@@ -106,22 +109,8 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
     segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
 
-    final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
-
     // Fetch datasource information from the Coordinator
-    try {
-      FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
-                 .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
-                     dataSourceInformation.getDataSource(),
-                     dataSourceMetadataFactory.build(
-                         dataSourceInformation.getDataSource(),
-                         dataSourceInformation.getRowSignature()
-                     )
-                 ));
-    }
-    catch (Exception e) {
-      log.warn("Failed to query datasource information from the Coordinator.");
-    }
+    Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = queryDataSourceInformation(dataSourcesToQuery);
 
     // remove any extra datasources returned
     polledDataSourceMetadata.keySet().removeIf(Predicates.not(dataSourcesToQuery::contains));
@@ -160,6 +149,33 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDsMetadata(dataSource, physicalDatasourceMetadata);
     }
+  }
+
+  private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)
+  {
+    final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
+
+    Stopwatch stopwatch = Stopwatch.createStarted();
+
+    try {
+      FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
+                 .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
+                     dataSourceInformation.getDataSource(),
+                     dataSourceMetadataFactory.build(
+                         dataSourceInformation.getDataSource(),
+                         dataSourceInformation.getRowSignature()
+                     )
+                 ));
+    }
+    catch (Exception e) {
+      log.warn("Failed to query datasource information from the Coordinator.");
+    }
+
+    emitter.emit(ServiceMetricEvent.builder().setMetric(
+        "metadatacache/schemaPoll/time",
+        stopwatch.elapsed(TimeUnit.MILLISECONDS)));
+
+    return polledDataSourceMetadata;
   }
 
   private void updateDsMetadata(String dataSource, PhysicalDatasourceMetadata physicalDatasourceMetadata)

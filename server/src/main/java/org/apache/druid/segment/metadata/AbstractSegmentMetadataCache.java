@@ -118,7 +118,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
-  private final ServiceEmitter emitter;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
   /**
@@ -190,6 +189,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * and thus there is no concurrency control for this variable.
    */
   private int totalSegments = 0;
+
+  protected final ServiceEmitter emitter;
 
   /**
    * Map of datasource and generic object extending DataSourceInformation.
