@@ -19,34 +19,130 @@
 
 package org.apache.druid.tests;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
+import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.guice.DruidTestModule;
 import org.apache.druid.testing.guice.TestClient;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.joda.time.Duration;
+import org.testng.IModuleFactory;
+import org.testng.ITestContext;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.testng.Assert.assertEquals;
 
 @Guice(moduleFactory = SelfTest.LocalModuleFactory.class)
 public class SelfTest
 {
 
-  static class LocalModuleFactory extends DruidTestModuleFactory
+  static class LocalModule implements Module
   {
 
+    DruidTestModule delegate = new DruidTestModule();
+
+    @Override
+    public void configure(Binder binder)
+    {
+      delegate.configure(binder);
+    }
+
+    @Provides
+    @TestClient
+    public HttpClient getHttpClient()
+    {
+      return new HttpClient()
+      {
+        @Override
+        public <Intermediate, Final> ListenableFuture<Final> go(Request request,
+            HttpResponseHandler<Intermediate, Final> handler)
+        {
+          @Nullable
+          Final val = null;
+
+          int counter = SelfTest.requestCounter.getAndIncrement();
+          HttpResponse response = new DefaultHttpResponse(
+              HttpVersion.HTTP_1_1,
+              counter == 0 ? HttpResponseStatus.INTERNAL_SERVER_ERROR : HttpResponseStatus.OK);
+
+          val = (@Nullable Final) new BytesFullResponseHolder(response);
+          return Futures.<Final> immediateFuture(val);
+        }
+
+        @Override
+        public <Intermediate, Final> ListenableFuture<Final> go(Request request,
+            HttpResponseHandler<Intermediate, Final> handler, Duration readTimeout)
+        {
+          throw new RuntimeException("Unimplemented!");
+        }
+      };
+    }
   }
 
-  @TestClient
-  HttpClient httpClient;
+  static class LocalModuleFactory implements IModuleFactory
+  {
+    private static final Module MODULE = new DruidTestModule();
+    private static final Injector INJECTOR = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        getModules());
+
+    public static Injector getInjector()
+    {
+      return INJECTOR;
+    }
+
+    private static List<? extends Module> getModules()
+    {
+      return ImmutableList.of(
+          new LocalModule(),
+          new IndexingServiceFirehoseModule(),
+          new IndexingServiceInputSourceModule(),
+          new IndexingServiceTuningConfigModule());
+    }
+
+    @Override
+    public Module createModule(ITestContext context, Class<?> testClass)
+    {
+      context.addInjector(Collections.singletonList(MODULE), INJECTOR);
+      return MODULE;
+    }
+  }
 
   @Inject
   private QueryResourceTestClient queryClient;
 
+  private static AtomicInteger requestCounter = new AtomicInteger();
+
   @Test
-  public void asd()
+  public void testInternalServerErrorAtFirstTry()
   {
-    queryClient.query("httpfds", null);
-    // que
+    requestCounter.set(0);
+    queryClient.query("http://192.168.99.99/asd", null);
+    assertEquals(2, requestCounter.get());
   }
 
 }

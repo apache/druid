@@ -161,6 +161,11 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
               request,
               new BytesFullResponseHandler()
           ).get());
+
+          if (responseRef.get().getStatus().getCode() == 500) {
+            LOG.info("Server returned HTTP-500. Retrying the query request");
+            return false;
+          }
         }
         catch (Throwable t) {
           ChannelException ce = Throwables.getCauseOfType(t, ChannelException.class);
