@@ -88,7 +88,6 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
     catch (EOFException eof) {
-      // waiting for avro v1.9.0 (#AVRO-813)
       throw new ParseException(
           null,
           eof,
