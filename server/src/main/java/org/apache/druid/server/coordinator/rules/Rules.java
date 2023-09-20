@@ -25,7 +25,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.joda.time.base.BaseInterval;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Rules
@@ -60,6 +64,7 @@ public class Rules
     if (rules == null) {
       return;
     }
+
     final DateTime now = DateTimes.nowUtc();
     for (int i = 0; i < rules.size() - 1; i++) {
       final Rule currRule = rules.get(i);
