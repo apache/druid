@@ -34,7 +34,7 @@ public class SuiteListener implements ISuiteListener
   @Override
   public void onStart(ISuite suite)
   {
-    Injector injector = new DruidTestModuleFactory().getInjector();
+    Injector injector = DruidTestModuleFactory.getInjector();
     IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
     DruidClusterAdminClient druidClusterAdminClient = injector.getInstance(DruidClusterAdminClient.class);
 
@@ -58,7 +58,7 @@ public class SuiteListener implements ISuiteListener
   @Override
   public void onFinish(ISuite suite)
   {
-    Injector injector = new DruidTestModuleFactory().getInjector();
+    Injector injector = DruidTestModuleFactory.getInjector();
     Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.stop();
   }

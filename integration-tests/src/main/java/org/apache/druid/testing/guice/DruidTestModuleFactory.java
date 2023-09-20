@@ -35,29 +35,31 @@ import java.util.List;
 
 public class DruidTestModuleFactory implements IModuleFactory
 {
-  private final Module module = new DruidTestModule();
-  private final Injector injector = Initialization.makeInjectorWithModules(
+  private static final Module MODULE = new DruidTestModule();
+  private static final Injector INJECTOR = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
-      getModules());
+      getModules()
+  );
 
-  public Injector getInjector()
+  public static Injector getInjector()
   {
-    return injector;
+    return INJECTOR;
   }
 
-  protected static List<? extends Module> getModules()
+  private static List<? extends Module> getModules()
   {
     return ImmutableList.of(
         new DruidTestModule(),
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
-        new IndexingServiceTuningConfigModule());
+        new IndexingServiceTuningConfigModule()
+    );
   }
 
   @Override
   public Module createModule(ITestContext context, Class<?> testClass)
   {
-    context.addInjector(Collections.singletonList(module), injector);
-    return module;
+    context.addInjector(Collections.singletonList(MODULE), INJECTOR);
+    return MODULE;
   }
 }
