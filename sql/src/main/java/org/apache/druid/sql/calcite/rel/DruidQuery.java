@@ -48,10 +48,12 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
@@ -788,6 +790,24 @@ public class DruidQuery
   {
     if (!canUseIntervalFiltering(dataSource)) {
       return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), false));
+    } else if (dataSource instanceof UnnestDataSource) {
+      // UnnestDataSource can have another unnest data source
+      // join datasource, filtered data source, etc as base
+      Pair<DataSource, Filtration> pair = getFiltration(
+          ((UnnestDataSource) dataSource).getBase(),
+          filter,
+          virtualColumnRegistry,
+          joinableFactoryWrapper
+      );
+      return Pair.of(dataSource, pair.rhs);
+    } else if (dataSource instanceof FilteredDataSource) {
+      final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
+      final Filtration baseFiltration = Filtration.create(filteredDataSource.getFilter())
+                                                  .optimize(virtualColumnRegistry.getFullRowSignature());
+      // Adds the intervals from the filter of filtered data source to query filtration
+      final Filtration queryFiltration = Filtration.create(filter, baseFiltration.getIntervals())
+                                                   .optimize(virtualColumnRegistry.getFullRowSignature());
+      return Pair.of(filteredDataSource, queryFiltration);
     } else if (dataSource instanceof JoinDataSource && ((JoinDataSource) dataSource).getLeftFilter() != null) {
       final JoinDataSource joinDataSource = (JoinDataSource) dataSource;
 
