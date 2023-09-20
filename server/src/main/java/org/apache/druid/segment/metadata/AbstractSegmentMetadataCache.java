@@ -285,6 +285,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   {
     cacheExec.submit(
         () -> {
+          final Stopwatch stopwatch = Stopwatch.createStarted();
           long lastRefresh = 0L;
           long lastFailure = 0L;
 
@@ -322,7 +323,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                     if (isServerViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
-                      initialized.countDown();
+                      setInitialized(stopwatch);
                     }
 
                     // Wait some more, we'll wake up when it might be time to do another refresh.
@@ -342,7 +343,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
                 refresh(segmentsToRefresh, dataSourcesToRebuild);
 
-                initialized.countDown();
+                setInitialized(stopwatch);
               }
               catch (InterruptedException e) {
                 // Fall through.
@@ -376,22 +377,26 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     );
   }
 
+  private void setInitialized(Stopwatch stopwatch)
+  {
+    // report the cache init time
+    if (initialized.getCount() == 1) {
+      long elapsedTime = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+      emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/init/time", elapsedTime));
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), elapsedTime);
+      stopwatch.stop();
+    }
+    initialized.countDown();
+  }
+
   @LifecycleStart
   public void start() throws InterruptedException
   {
-    log.info("Starting SegmentMetadataCache.");
+    log.info("%s waiting for initialization.", getClass().getSimpleName());
     startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
-      final long startMillis = System.currentTimeMillis();
-      log.info("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      final long endMillis = System.currentTimeMillis();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
-      emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/init/time",
-          endMillis - startMillis
-      ));
     }
   }
 
