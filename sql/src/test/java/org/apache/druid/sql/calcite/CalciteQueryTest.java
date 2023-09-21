@@ -2733,7 +2733,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
   @Test
   public void testTopNWithSelectProjections()
   {
@@ -11620,7 +11619,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
   @Test
   public void testPostAggWithTimeseries()
   {
@@ -11664,7 +11662,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
   @Test
   public void testPostAggWithTopN()
   {
