@@ -85,7 +85,7 @@
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
              default_config.fmpp
           -->
-        <calcite.version>1.35.0</calcite.version>
+        <calcite.version>1.36.0-SNAPSHOT</calcite.version>
         <datasketches.version>4.1.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
