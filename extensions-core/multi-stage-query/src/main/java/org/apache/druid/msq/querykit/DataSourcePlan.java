@@ -381,7 +381,6 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
     final DataSourcePlan basePlan = forDataSource(
         queryKit,
         queryId,
@@ -395,7 +394,6 @@ public class DataSourcePlan
     );
 
     DataSource newDataSource = basePlan.getNewDataSource();
-    basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
     newDataSource = FilteredDataSource.create(newDataSource, dataSource.getFilter());
@@ -403,7 +401,7 @@ public class DataSourcePlan
         newDataSource,
         inputSpecs,
         basePlan.getBroadcastInputs(),
-        subQueryDefBuilder
+        basePlan.getSubQueryDefBuilder().orElse(null)
     );
 
   }
@@ -422,7 +420,6 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
     // Find the plan for base data source by recursing
     final DataSourcePlan basePlan = forDataSource(
         queryKit,
@@ -436,7 +433,6 @@ public class DataSourcePlan
         broadcast
     );
     DataSource newDataSource = basePlan.getNewDataSource();
-    basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
 
@@ -452,7 +448,7 @@ public class DataSourcePlan
         newDataSource,
         inputSpecs,
         basePlan.getBroadcastInputs(),
-        subQueryDefBuilder
+        basePlan.getSubQueryDefBuilder().orElse(null)
     );
   }
 
