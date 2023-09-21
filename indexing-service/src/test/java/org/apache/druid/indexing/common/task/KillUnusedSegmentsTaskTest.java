@@ -104,7 +104,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     KillTaskReport.Stats stats = getReportedStats();
-    Assert.assertEquals(2L, stats.getNumBatchesProcessed());
+    Assert.assertEquals(2, stats.getNumBatchesProcessed());
     Assert.assertEquals(1, stats.getNumSegmentsKilled());
   }
 
@@ -379,11 +379,11 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
       Object payload = getObjectMapper().readValue(
           taskRunner.getTaskReportsFile(),
           new TypeReference<Map<String, TaskReport>>() { }
-      ).get(KillTaskReport.REPORT_KEY);
+      ).get(KillTaskReport.REPORT_KEY).getPayload();
       return getObjectMapper().convertValue(payload, KillTaskReport.Stats.class);
     }
     catch (Exception e) {
-      throw new ISE("Error while reading task report");
+      throw new ISE(e, "Error while reading task report");
     }
   }
 

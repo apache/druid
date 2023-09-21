@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class KillTaskReport implements TaskReport
 {
-  public static final String REPORT_KEY = "killUnusedStats";
+  public static final String REPORT_KEY = "killUnusedSegments";
 
   private final String taskId;
   private final Stats stats;
