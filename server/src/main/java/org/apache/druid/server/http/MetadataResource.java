@@ -371,6 +371,7 @@ public class MetadataResource
   @Path("/dataSourceInformation")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDataSourceInformation(
+      HttpServletRequest req,
       List<String> dataSources
   )
   {
@@ -389,6 +390,15 @@ public class MetadataResource
       }
     }
 
-    return Response.status(Response.Status.OK).entity(results).build();
+    final Function<DataSourceInformation, Iterable<ResourceAction>> raGenerator = dataSourceInformation -> Collections
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSourceInformation.getDataSource()));
+
+    final Iterable<DataSourceInformation> authorizedDataSourceInformation = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        results,
+        raGenerator,
+        authorizerMapper
+    );
+    return Response.status(Response.Status.OK).entity(authorizedDataSourceInformation).build();
   }
 }

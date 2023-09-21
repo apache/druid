@@ -274,7 +274,7 @@ public class MetadataResourceTest
         coordinatorSegmentMetadataCache
     );
 
-    Response response = metadataResource.getDataSourceInformation(Collections.singletonList(DATASOURCE1));
+    Response response = metadataResource.getDataSourceInformation(request, Collections.singletonList(DATASOURCE1));
 
     List<DataSourceInformation> dataSourceInformations = extractResponseList(response);
     Assert.assertEquals(dataSourceInformations.size(), 1);
