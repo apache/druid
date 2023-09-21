@@ -4902,7 +4902,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE1),
                           and(
-                              equality("m1", 2.0f, ColumnType.FLOAT),
+                              useDefault ? equality("m1", 2, ColumnType.FLOAT) :
+                              equality("m1", 2.0, ColumnType.FLOAT),
                               range("__time", ColumnType.LONG, 946771200000L, 946858200000L, false, false)
                           )
                       ),
@@ -4936,7 +4937,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE1),
                           or(
-                              equality("m1", 2.0f, ColumnType.FLOAT),
+                              useDefault ? equality("m1", 2, ColumnType.FLOAT) :
+                              equality("m1", 2.0, ColumnType.FLOAT),
                               range("__time", ColumnType.LONG, 946771200000L, 946858200000L, false, false)
                           )
                       ),
@@ -4953,6 +4955,95 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"b"},
             new Object[]{"c"},
+            new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithTimeFilterOnlyNested()
+  {
+    testQuery(
+        "select c from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
+        + " where __time >= TIMESTAMP '2000-01-02 00:00:00' and __time <= TIMESTAMP '2000-01-03 00:10:00'",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      UnnestDataSource.create(
+                          FilteredDataSource.create(
+                              new TableDataSource(CalciteTests.DATASOURCE1),
+                              range("__time", ColumnType.LONG, 946771200000L, 946858200000L, false, false)
+                          ),
+                          expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
+                          null
+                      ),
+                      expressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("_j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithTimeFilterOnlyNestedAndNestedAgain()
+  {
+    testQuery(
+        "select c from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN UNNEST(ARRAY[dim1,dim2]) as ud(a) "
+        + " CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
+        + " where __time >= TIMESTAMP '2000-01-02 00:00:00' and __time <= TIMESTAMP '2000-01-03 00:10:00'",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      UnnestDataSource.create(
+                          UnnestDataSource.create(
+                              FilteredDataSource.create(
+                                  new TableDataSource(CalciteTests.DATASOURCE1),
+                                  range("__time", ColumnType.LONG, 946771200000L, 946858200000L, false, false)
+                              ),
+                              expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
+                              null
+                          ),
+                          expressionVirtualColumn("_j0.unnest", "array(\"dim1\",\"dim2\")", ColumnType.STRING_ARRAY),
+                          null
+                      ),
+                      expressionVirtualColumn("__j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("__j0.unnest"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{"d"},
+            new Object[]{"d"},
             new Object[]{"d"}
         )
     );
