@@ -35,7 +35,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
@@ -87,8 +86,8 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
-    catch (IOException e) {
-      throw new ParseException(null, e, "Failed to decode Avro message");
+    catch (Exception e) {
+      throw new ParseException(null, e, "Failed to read Avro message");
     }
   }
 }

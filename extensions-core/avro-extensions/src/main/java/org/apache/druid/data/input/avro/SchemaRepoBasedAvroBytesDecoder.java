@@ -34,7 +34,6 @@ import org.schemarepo.Repository;
 import org.schemarepo.api.TypedSchemaRepository;
 import org.schemarepo.api.converter.AvroSchemaConverter;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Objects;
@@ -82,8 +81,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
-    catch (IOException e) {
-      throw new ParseException(null, e, "Failed to decode Avro message");
+    catch (Exception e) {
+      throw new ParseException(null, e, "Failed to read Avro message");
     }
   }
 

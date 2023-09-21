@@ -109,7 +109,7 @@ public class InlineSchemasAvroBytesDecoderTest
   }
 
   @Test
-  public void testParseWithInvalidVersion() throws Exception
+  public void testParseInvalidVersion() throws Exception
   {
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
@@ -128,11 +128,11 @@ public class InlineSchemasAvroBytesDecoderTest
             )
         ).parse(ByteBuffer.wrap(out.toByteArray()))
     );
-    Assert.assertTrue(parseException.getMessage().contains("found record of arbitrary version"));
+    Assert.assertTrue(parseException.getMessage().contains("Found record of arbitrary version"));
   }
 
   @Test
-  public void testParseWithInvalidSchemaId() throws Exception
+  public void testParseInvalidSchemaId() throws Exception
   {
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
@@ -156,7 +156,7 @@ public class InlineSchemasAvroBytesDecoderTest
   }
 
   @Test
-  public void testParseWithBadData() throws Exception
+  public void testParseInvalidData() throws Exception
   {
     GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
@@ -178,6 +178,6 @@ public class InlineSchemasAvroBytesDecoderTest
             )
         ).parse(ByteBuffer.wrap(out.toByteArray()))
     );
-    Assert.assertTrue(parseException.getMessage().contains("Failed to decode Avro message with schema id[10]"));
+    Assert.assertTrue(parseException.getMessage().contains("Failed to read Avro message with schema id[10]"));
   }
 }
