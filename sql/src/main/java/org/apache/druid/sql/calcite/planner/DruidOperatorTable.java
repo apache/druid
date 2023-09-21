@@ -78,6 +78,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64Operat
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.DecodeBase64UTFOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
@@ -231,6 +232,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new CastOperatorConversion())
                    .add(new ReinterpretOperatorConversion())
                    .add(new ComplexDecodeBase64OperatorConversion())
+                   .add(new DecodeBase64UTFOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> ARRAY_OPERATOR_CONVERSIONS =
@@ -371,6 +373,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.UNARY_MINUS, "-"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NOT_NULL, "notnull"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_DISTINCT_FROM, "isdistinctfrom"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "notdistinctfrom"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_FALSE, "isfalse"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_TRUE, "istrue"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_FALSE, "notfalse"))
