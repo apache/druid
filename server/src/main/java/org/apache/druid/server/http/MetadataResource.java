@@ -372,7 +372,7 @@ public class MetadataResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDataSourceInformation(
       @Context final HttpServletRequest req,
-      List<String> dataSources
+      final List<String> dataSources
   )
   {
     // if {@code coordinatorSegmentMetadataCache} is null, implies the feature is disabled. Return NOT_FOUND.
