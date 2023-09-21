@@ -34,7 +34,6 @@ import org.schemarepo.Repository;
 import org.schemarepo.api.TypedSchemaRepository;
 import org.schemarepo.api.converter.AvroSchemaConverter;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
