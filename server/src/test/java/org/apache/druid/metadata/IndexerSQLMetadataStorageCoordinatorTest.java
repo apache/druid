@@ -454,7 +454,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleAnnounce() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     for (DataSegment segment : SEGMENTS) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -496,7 +496,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       );
     }
 
-    coordinator.announceHistoricalSegments(segments);
+    coordinator.commitSegments(segments);
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
           mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
@@ -525,7 +525,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final ImmutableSet<DataSegment> segments = ImmutableSet.of(defaultSegment, defaultSegment2, defaultSegment4);
 
-    coordinator.announceHistoricalSegments(segments);
+    coordinator.commitSegments(segments);
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
@@ -546,7 +546,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testTransactionalAnnounceSuccess() throws IOException
   {
     // Insert first segment.
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
@@ -564,7 +564,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
 
     // Insert second segment.
-    final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
@@ -620,7 +620,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     };
 
     // Insert first segment.
-    final SegmentPublishResult result1 = failOnceCoordinator.announceHistoricalSegments(
+    final SegmentPublishResult result1 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
@@ -641,7 +641,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     attemptCounter.set(0);
 
     // Insert second segment.
-    final SegmentPublishResult result2 = failOnceCoordinator.announceHistoricalSegments(
+    final SegmentPublishResult result2 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
@@ -671,7 +671,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testTransactionalAnnounceFailDbNullWantNotNull() throws IOException
   {
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
@@ -688,14 +688,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testTransactionalAnnounceFailDbNotNullWantNull() throws IOException
   {
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
-    final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
@@ -727,14 +727,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
   {
-    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
-    final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
+    final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
@@ -751,7 +751,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUsedList() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -767,8 +767,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testMultiIntervalUsedList() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
-    coordinator.announceHistoricalSegments(ImmutableSet.of(defaultSegment3));
+    coordinator.commitSegments(SEGMENTS);
+    coordinator.commitSegments(ImmutableSet.of(defaultSegment3));
 
     Assertions.assertThat(
         coordinator.retrieveUsedSegmentsForIntervals(
@@ -810,7 +810,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUnusedList() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -826,7 +826,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSimpleUnusedListWithLimit() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     int limit = SEGMENTS.size() - 1;
     Set<DataSegment> retreivedUnusedSegments = ImmutableSet.copyOf(
@@ -843,7 +843,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOverlapLow() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -861,7 +861,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOverlapHigh() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -877,7 +877,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOutOfBoundsLow() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -891,7 +891,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOutOfBoundsHigh() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Assert.assertTrue(
         coordinator.retrieveUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
@@ -904,7 +904,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedWithinBoundsEnd() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -920,7 +920,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedOverlapEnd() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     Assert.assertEquals(
         SEGMENTS,
         ImmutableSet.copyOf(
@@ -937,7 +937,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedOverlapLow() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -953,7 +953,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedUnderlapLow() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -967,7 +967,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedUnderlapHigh() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -980,7 +980,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedOverlapHigh() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
@@ -993,7 +993,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedBigOverlap() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -1009,7 +1009,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedLowRange() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -1034,7 +1034,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUnusedHighRange() throws IOException
   {
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
     markAllSegmentsUnused();
     Assert.assertEquals(
         SEGMENTS,
@@ -1059,7 +1059,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedHugeTimeRangeEternityFilter() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             hugeTimeRangeSegment1,
             hugeTimeRangeSegment2,
@@ -1082,7 +1082,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedHugeTimeRangeTrickyFilter1() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             hugeTimeRangeSegment1,
             hugeTimeRangeSegment2,
@@ -1105,7 +1105,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testUsedHugeTimeRangeTrickyFilter2() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             hugeTimeRangeSegment1,
             hugeTimeRangeSegment2,
@@ -1129,7 +1129,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testEternitySegmentWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             eternitySegment
         )
@@ -1150,7 +1150,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testEternityMultipleSegmentWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             numberedSegment0of0,
             eternitySegment
@@ -1172,7 +1172,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testFirstHalfEternitySegmentWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             firstHalfEternityRangeSegment
         )
@@ -1193,7 +1193,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testFirstHalfEternityMultipleSegmentWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             numberedSegment0of0,
             firstHalfEternityRangeSegment
@@ -1215,7 +1215,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSecondHalfEternitySegmentWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             secondHalfEternityRangeSegment
         )
@@ -1238,7 +1238,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testLargeIntervalWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             hugeTimeRangeSegment4
         )
@@ -1259,7 +1259,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testSecondHalfEternityMultipleSegmentWithStringComparison() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         ImmutableSet.of(
             numberedSegment0of0,
             secondHalfEternityRangeSegment
@@ -1281,7 +1281,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testDeleteDataSourceMetadata() throws IOException
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
@@ -1302,7 +1302,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testDeleteSegmentsInMetaDataStorage() throws IOException
   {
     // Published segments to MetaDataStorage
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
 
     // check segments Published
     Assert.assertEquals(
@@ -1335,7 +1335,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testUpdateSegmentsInMetaDataStorage() throws IOException
   {
     // Published segments to MetaDataStorage
-    coordinator.announceHistoricalSegments(SEGMENTS);
+    coordinator.commitSegments(SEGMENTS);
 
     // check segments Published
     Assert.assertEquals(
@@ -1397,7 +1397,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void additionalNumberedShardTest(Set<DataSegment> segments) throws IOException
   {
-    coordinator.announceHistoricalSegments(segments);
+    coordinator.commitSegments(segments);
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
@@ -1989,7 +1989,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               10L
           )
       );
-      final Set<DataSegment> announced = coordinator.announceHistoricalSegments(toBeAnnounced);
+      final Set<DataSegment> announced = coordinator.commitSegments(toBeAnnounced);
 
       Assert.assertEquals(toBeAnnounced, announced);
     }
@@ -2042,7 +2042,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(0, shardSpec.getNumCorePartitions());
     Assert.assertEquals(5, shardSpec.getNumBuckets());
 
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         Collections.singleton(
             new DataSegment(
                 id.getDataSource(),
@@ -2073,7 +2073,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(0, shardSpec.getNumCorePartitions());
     Assert.assertEquals(5, shardSpec.getNumBuckets());
 
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegments(
         Collections.singleton(
             new DataSegment(
                 id.getDataSource(),
@@ -2135,7 +2135,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           )
       );
     }
-    coordinator.announceHistoricalSegments(originalSegments);
+    coordinator.commitSegments(originalSegments);
     final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
         datasource,
         "seq",
@@ -2180,7 +2180,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           )
       );
     }
-    coordinator.announceHistoricalSegments(originalSegments);
+    coordinator.commitSegments(originalSegments);
     final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
         datasource,
         "seq",
@@ -2196,7 +2196,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testRemoveDataSourceMetadataOlderThanDatasourceActiveShouldNotBeDeleted() throws Exception
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
@@ -2224,7 +2224,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveAndOlderThanTimeShouldBeDeleted() throws Exception
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
@@ -2249,7 +2249,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveButNotOlderThanTimeShouldNotBeDeleted()
       throws Exception
   {
-    coordinator.announceHistoricalSegments(
+    coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar"))
@@ -2278,7 +2278,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testMarkSegmentsAsUnusedWithinIntervalOneYear() throws IOException
   {
-    coordinator.announceHistoricalSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2));
 
     // interval covers existingSegment1 and partially overlaps existingSegment2,
     // only existingSegment1 will be dropped
@@ -2310,7 +2310,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testMarkSegmentsAsUnusedWithinIntervalTwoYears() throws IOException
   {
-    coordinator.announceHistoricalSegments(ImmutableSet.of(existingSegment1, existingSegment2));
+    coordinator.commitSegments(ImmutableSet.of(existingSegment1, existingSegment2));
 
     // interval covers existingSegment1 and partially overlaps existingSegment2,
     // only existingSegment1 will be dropped

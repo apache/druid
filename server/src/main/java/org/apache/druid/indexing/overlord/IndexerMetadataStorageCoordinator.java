@@ -166,7 +166,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -271,7 +271,7 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
    * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
-  SegmentPublishResult announceHistoricalSegments(
+  SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
@@ -321,11 +321,11 @@ public interface IndexerMetadataStorageCoordinator
   int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
 
   /**
-   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * Similar to {@link #commitSegments}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.
    *
-   * The metadata should undergo the same validation checks as performed by {@link #announceHistoricalSegments}.
+   * The metadata should undergo the same validation checks as performed by {@link #commitSegments}.
    *
    *
    * @param dataSource the datasource
