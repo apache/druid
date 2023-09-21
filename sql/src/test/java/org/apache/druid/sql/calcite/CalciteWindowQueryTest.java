@@ -32,7 +32,9 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,6 +48,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
+
+import static org.junit.Assume.assumeThat;
 
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
@@ -116,11 +120,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       }
     };
 
-    if ("failingTest".equals(input.type)) {
-      return;
-    }
+    assumeThat(input.type, Matchers.not(TestType.failingTest));
 
-    if ("operatorValidation".equals(input.type)) {
+    if (input.type == TestType.operatorValidation) {
       testBuilder()
           .skipVectorize(true)
           .sql(input.sql)
@@ -212,8 +214,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   public static class WindowQueryTestInputClass
   {
+    enum TestType {
+      failingTest,
+      operatorValidation
+    }
     @JsonProperty
-    public String type;
+    public TestType type;
 
     @JsonProperty
     public String sql;
