@@ -284,10 +284,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static SqlTestFramework queryFramework;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
-  @Rule
+  @Rule(order = 1)
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Rule
+  @Rule(order = 2)
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;

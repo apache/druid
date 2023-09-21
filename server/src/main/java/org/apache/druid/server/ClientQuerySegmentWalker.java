@@ -31,8 +31,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
-import org.apache.druid.guice.annotations.Client;
-import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -123,7 +121,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       LookupExtractorFactoryContainerProvider lookupManager,
-      DruidHttpClientConfig httpClientConfig,
       SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
@@ -140,7 +137,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.subqueryGuardrailHelper = new SubqueryGuardrailHelper(
         lookupManager,
         Runtime.getRuntime().maxMemory(),
-        httpClientConfig.getNumConnections()
+        serverConfig.getNumThreads()
     );
     this.subqueryStatsProvider = subqueryStatsProvider;
   }
@@ -158,7 +155,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       LookupExtractorFactoryContainerProvider lookupManager,
-      @Client DruidHttpClientConfig httpClientConfig,
       SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
@@ -174,7 +170,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         cache,
         cacheConfig,
         lookupManager,
-        httpClientConfig,
         subqueryStatsProvider
     );
   }

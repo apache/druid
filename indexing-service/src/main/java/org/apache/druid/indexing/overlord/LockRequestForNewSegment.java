@@ -191,7 +191,7 @@ public class LockRequestForNewSegment implements LockRequest
            ", partialShardSpec=" + partialShardSpec +
            ", priority=" + priority +
            ", sequenceName='" + sequenceName + '\'' +
-           ", previsousSegmentId='" + previousSegmentId + '\'' +
+           ", previousSegmentId='" + previousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
            '}';
   }

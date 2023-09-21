@@ -346,7 +346,7 @@ public interface IndexerMetadataStorageCoordinator
   int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
 
   /**
-   * Similar to {@link #commitSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * Similar to {@link #commitSegments}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.
    *

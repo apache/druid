@@ -2010,8 +2010,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return SUCCESS if dataSource metadata was updated from matching startMetadata to matching endMetadata, FAILURE or
    * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
-   * {@link #commitSegmentsAndMetadata} (Set, DataSourceMetadata, DataSourceMetadata)}
-   * achieve its own guarantee.
+   * {@link #commitSegmentsAndMetadata} achieve its own guarantee.
    *
    * @throws RuntimeException if state is unknown after this call
    */
