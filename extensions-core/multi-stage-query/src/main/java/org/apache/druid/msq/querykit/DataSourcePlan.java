@@ -390,7 +390,7 @@ public class DataSourcePlan
         querySegmentSpec,
         null,
         maxWorkerCount,
-        Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+        minStageNumber,
         broadcast
     );
 
@@ -432,7 +432,7 @@ public class DataSourcePlan
         querySegmentSpec,
         null,
         maxWorkerCount,
-        Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
+        minStageNumber,
         broadcast
     );
     DataSource newDataSource = basePlan.getNewDataSource();
@@ -482,7 +482,6 @@ public class DataSourcePlan
         null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
-
         broadcast
     );
 

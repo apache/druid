@@ -108,8 +108,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     } else {
       baseDataSource = dataSource;
     }
-    if (!(dataSource instanceof JoinDataSource
-          || baseDataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
+    if (!(baseDataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
       throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
     }
 
@@ -119,9 +118,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     if (baseInput.hasChannel()) {
       inputChannels.add(baseInput.getChannel());
     }
-
-
-    if (dataSource instanceof JoinDataSource || baseDataSource instanceof JoinDataSource) {
+    
+    if (baseDataSource instanceof JoinDataSource) {
       final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
       final List<FrameReader> channelReaders = new ArrayList<>();
 

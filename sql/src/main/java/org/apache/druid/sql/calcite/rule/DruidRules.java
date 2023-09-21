@@ -124,7 +124,6 @@ public class DruidRules
       retVal.add(DruidFilterUnnestRule.DruidProjectOnUnnestRule.instance());
     }
 
-
     return retVal;
   }
 
