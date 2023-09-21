@@ -371,7 +371,7 @@ public class MetadataResource
   @Path("/dataSourceInformation")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDataSourceInformation(
-      HttpServletRequest req,
+      @Context final HttpServletRequest req,
       List<String> dataSources
   )
   {
