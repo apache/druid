@@ -2217,6 +2217,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testDECODE_BASE64_UTF8()
+  {
+    testQuery(
+        "SELECT DECODE_BASE64_UTF8('aGVsbG8=') FROM druid.foo limit 1",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "'hello'",
+                          ColumnType.STRING
+                      )
+                  )
+                  .limit(1)
+                  .columns(ImmutableList.of("v0"))
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"hello"}
+        )
+    );
+  }
+  @Test
   public void testFilterOnDouble()
   {
     testQuery(
