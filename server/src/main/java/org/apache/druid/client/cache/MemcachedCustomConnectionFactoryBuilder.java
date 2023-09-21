@@ -244,7 +244,7 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
       {
         // MURMUR_128 cannot be cast to DefaultHashAlgorithm
         return "Failure Mode: " + getFailureMode().name() + ", Hash Algorithm: "
-                + getHashAlg().toString() + " Max Reconnect Delay: "
+                + getHashAlg() + " Max Reconnect Delay: "
                 + getMaxReconnectDelay() + ", Max Op Timeout: " + getOperationTimeout()
                 + ", Op Queue Length: " + getOpQueueLen() + ", Op Max Queue Block Time"
                 + getOpQueueMaxBlockTime() + ", Max Timeout Exception Threshold: "
@@ -252,7 +252,7 @@ class MemcachedCustomConnectionFactoryBuilder extends ConnectionFactoryBuilder
                 + getReadBufSize() + ", Transcoder: " + getDefaultTranscoder()
                 + ", Operation Factory: " + getOperationFactory() + " isDaemon: "
                 + isDaemon() + ", Optimized: " + shouldOptimize() + ", Using Nagle: "
-                + useNagleAlgorithm() + ", KeepAlive: " + getKeepAlive() + ", SSLContext: " + getSSLContext() + ", ConnectionFactory: " + getName();
+                + useNagleAlgorithm() + ", KeepAlive: " + getKeepAlive() + ", SSLContext: " + getSSLContext().getProtocol() + ", ConnectionFactory: " + getName();
       }
     };
   }
