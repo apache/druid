@@ -22,29 +22,25 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Objects;
-
-public class IngestionStatsAndErrorsTaskReport implements TaskReport
+public class KillTaskReport implements TaskReport
 {
-  public static final String REPORT_KEY = "ingestionStatsAndErrors";
+  public static final String REPORT_KEY = "killUnusedStats";
 
-  @JsonProperty
   private final String taskId;
-
-  @JsonProperty
-  private final IngestionStatsAndErrorsTaskReportData payload;
+  private final Stats stats;
 
   @JsonCreator
-  public IngestionStatsAndErrorsTaskReport(
+  public KillTaskReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("payload") IngestionStatsAndErrorsTaskReportData payload
+      @JsonProperty("payload") Stats stats
   )
   {
     this.taskId = taskId;
-    this.payload = payload;
+    this.stats = stats;
   }
 
   @Override
+  @JsonProperty
   public String getTaskId()
   {
     return taskId;
@@ -57,37 +53,46 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   }
 
   @Override
+  @JsonProperty
   public Object getPayload()
   {
-    return payload;
+    return stats;
   }
 
-  @Override
-  public boolean equals(Object o)
+  public static class Stats
   {
-    if (this == o) {
-      return true;
+    private final int numSegmentsKilled;
+    private final int numBatchesProcessed;
+    private final int numSegmentsMarkedAsUnused;
+
+    @JsonCreator
+    public Stats(
+        @JsonProperty("numSegmentsKilled") int numSegmentsKilled,
+        @JsonProperty("numBatchesProcessed") int numBatchesProcessed,
+        @JsonProperty("numSegmentsMarkedAsUnused") int numSegmentsMarkedAsUnused
+    )
+    {
+      this.numSegmentsKilled = numSegmentsKilled;
+      this.numBatchesProcessed = numBatchesProcessed;
+      this.numSegmentsMarkedAsUnused = numSegmentsMarkedAsUnused;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+
+    @JsonProperty
+    public int getNumSegmentsKilled()
+    {
+      return numSegmentsKilled;
     }
-    IngestionStatsAndErrorsTaskReport that = (IngestionStatsAndErrorsTaskReport) o;
-    return Objects.equals(getTaskId(), that.getTaskId()) &&
-           Objects.equals(getPayload(), that.getPayload());
-  }
 
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(getTaskId(), getPayload());
-  }
+    @JsonProperty
+    public int getNumBatchesProcessed()
+    {
+      return numBatchesProcessed;
+    }
 
-  @Override
-  public String toString()
-  {
-    return "IngestionStatsAndErrorsTaskReport{" +
-           "taskId='" + taskId + '\'' +
-           ", payload=" + payload +
-           '}';
+    @JsonProperty
+    public int getNumSegmentsMarkedAsUnused()
+    {
+      return numSegmentsMarkedAsUnused;
+    }
   }
 }
