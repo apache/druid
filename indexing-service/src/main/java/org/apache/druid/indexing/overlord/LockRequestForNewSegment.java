@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -142,7 +143,7 @@ public class LockRequestForNewSegment implements LockRequest
   public String getVersion()
   {
     if (version == null) {
-      version = DateTimes.nowUtc().toString();
+      version = TaskLocks.defaultLockVersion(lockType);
     }
     return version;
   }

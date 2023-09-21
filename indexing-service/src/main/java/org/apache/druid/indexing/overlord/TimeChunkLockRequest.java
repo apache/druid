@@ -23,15 +23,14 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
 public class TimeChunkLockRequest implements LockRequest
 {
-  private static final String MIN_VERSION = "1970-01-01T00:00:00.000Z";
   private final TaskLockType lockType;
   private final String groupId;
   private final String dataSource;
@@ -78,10 +77,8 @@ public class TimeChunkLockRequest implements LockRequest
     this.groupId = groupId;
     this.dataSource = dataSource;
     this.interval = interval;
-    if (lockType.equals(TaskLockType.APPEND) && preferredVersion == null) {
-      this.preferredVersion = MIN_VERSION;
-    } else if (preferredVersion == null) {
-      this.preferredVersion = DateTimes.nowUtc().toString();
+    if (preferredVersion == null) {
+      this.preferredVersion = TaskLocks.defaultLockVersion(lockType);
     } else {
       this.preferredVersion = preferredVersion;
     }

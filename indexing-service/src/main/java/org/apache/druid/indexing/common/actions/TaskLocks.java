@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -81,6 +82,13 @@ public class TaskLocks
     }
 
     return isLockCoversSegments(taskLockMap, segments);
+  }
+
+  public static String defaultLockVersion(TaskLockType lockType)
+  {
+    return lockType == TaskLockType.APPEND
+           ? DateTimes.EPOCH.toString()
+           : DateTimes.nowUtc().toString();
   }
 
   public static boolean isLockCoversSegments(

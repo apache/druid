@@ -121,6 +121,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     temporaryFolder.create();
+    baseDir = temporaryFolder.newFolder();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();

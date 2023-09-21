@@ -45,6 +45,7 @@ import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -90,7 +91,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   /**
    * The version used by append jobs when no previous replace job has run on an interval.
    */
-  private static final String SEGMENT_V0 = "1970-01-01T00:00:00.000Z";
+  private static final String SEGMENT_V0 = DateTimes.EPOCH.toString();
 
   private static final Interval YEAR_23 = Intervals.of("2023/2024");
   private static final Interval JAN_23 = Intervals.of("2023-01/2023-02");
@@ -506,7 +507,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   }
 
   @Test
-  public void negativeTestLockAllocateAppendMonthReplaceDay_appendedSegmentOvershadowsReplace()
+  public void testLockAllocateAppendMonthReplaceDay()
   {
     final String v1 = replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23).getVersion();
 
@@ -514,37 +515,33 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     TaskLock appendLock = appendTask.acquireAppendLockOn(JAN_23);
     Assert.assertNull(appendLock);
 
-    // Verify that the segment is allocated for DAY granularity but version is neither v0 nor v1
+    // Verify that the segment is allocated for DAY granularity
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    final String vAppend = pendingSegment.getVersion();
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
-    Assert.assertTrue(vAppend.compareTo(SEGMENT_V0) > 0);
-    Assert.assertTrue(vAppend.compareTo(v1) > 0);
+    Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
 
-    final DataSegment appendedSegment = asSegment(pendingSegment);
-    appendTask.commitAppendSegments(appendedSegment);
+    final DataSegment segmentV01 = asSegment(pendingSegment);
+    appendTask.commitAppendSegments(segmentV01);
 
-    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, appendedSegment);
-    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, appendedSegment);
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV01);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV01);
 
     final DataSegment segmentV10 = createSegment(FIRST_OF_JAN_23, v1);
     replaceTask.commitReplaceSegments(segmentV10);
 
     // Verify that append segment gets upgraded to replace version
-    final DataSegment segmentV11 = DataSegment.builder(appendedSegment)
+    final DataSegment segmentV11 = DataSegment.builder(segmentV01)
                                               .version(v1)
                                               .interval(segmentV10.getInterval())
                                               .shardSpec(new NumberedShardSpec(1, 1))
                                               .build();
-    verifyIntervalHasUsedSegments(JAN_23, appendedSegment, segmentV10, segmentV11);
-
-    // Fix this: Appended segment incorrectly overshadows replace segment
-    verifyIntervalHasVisibleSegments(JAN_23, appendedSegment);
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV01, segmentV10, segmentV11);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV10, segmentV11);
   }
 
   @Test
-  public void negativeTestLockAllocateReplaceDayAppendMonth_appendedSegmentOvershadowsReplace()
+  public void testLockAllocateReplaceDayAppendMonth()
   {
     final String v1 = replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23).getVersion();
 
@@ -552,13 +549,11 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     TaskLock appendLock = appendTask.acquireAppendLockOn(JAN_23);
     Assert.assertNull(appendLock);
 
-    // Verify that the segment is allocated for DAY granularity but version is neither v0 nor v1
+    // Verify that the segment is allocated for DAY granularity instead of MONTH
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
-    final String vAppend = pendingSegment.getVersion();
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
-    Assert.assertTrue(vAppend.compareTo(SEGMENT_V0) > 0);
-    Assert.assertTrue(vAppend.compareTo(v1) > 0);
+    Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
 
     final DataSegment segmentV10 = createSegment(FIRST_OF_JAN_23, v1);
     replaceTask.commitReplaceSegments(segmentV10);
@@ -566,12 +561,17 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV10);
     verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV10);
 
-    final DataSegment appendedSegment = asSegment(pendingSegment);
-    appendTask.commitAppendSegments(appendedSegment);
+    final DataSegment segmentV01 = asSegment(pendingSegment);
+    appendTask.commitAppendSegments(segmentV01);
 
-    // Fix this: Appended segment incorrectly overshadows replace segment
-    verifyIntervalHasUsedSegments(JAN_23, appendedSegment, segmentV10);
-    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, appendedSegment);
+    final DataSegment segmentV11 = DataSegment.builder(segmentV01)
+                                              .interval(FIRST_OF_JAN_23)
+                                              .version(v1)
+                                              .shardSpec(new NumberedShardSpec(1, 1))
+                                              .build();
+
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV01, segmentV10, segmentV11);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV10, segmentV11);
   }
 
   @Test
