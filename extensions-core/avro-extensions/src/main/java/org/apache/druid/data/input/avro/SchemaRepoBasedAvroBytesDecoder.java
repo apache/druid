@@ -83,16 +83,8 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
-    catch (EOFException eof) {
-      throw new ParseException(
-          null,
-          eof,
-          "Avro's unnecessary EOFException, detail: [%s]",
-          "https://issues.apache.org/jira/browse/AVRO-813"
-      );
-    }
     catch (IOException e) {
-      throw new ParseException(null, e, "Fail to decode avro message!");
+      throw new ParseException(null, e, "Failed to decode Avro message");
     }
   }
 

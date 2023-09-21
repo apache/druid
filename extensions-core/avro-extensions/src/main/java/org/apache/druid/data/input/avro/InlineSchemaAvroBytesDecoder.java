@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
@@ -87,16 +88,8 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
-    catch (EOFException eof) {
-      throw new ParseException(
-          null,
-          eof,
-          "Avro's unnecessary EOFException, detail: [%s]",
-          "https://issues.apache.org/jira/browse/AVRO-813"
-      );
-    }
-    catch (Exception e) {
-      throw new ParseException(null, e, "Fail to decode avro message!");
+    catch (IOException e) {
+      throw new ParseException(null, e, "Failed to decode Avro message");
     }
   }
 }
