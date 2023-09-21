@@ -59,7 +59,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         newSegment(Intervals.of("2019-03-01/2019-04-01"), version),
         newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
 
     Assert.assertEquals(segments, announced);
 
@@ -114,7 +114,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         newSegment(Intervals.of("2019-03-01/2019-04-01"), version),
         newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
 
     Assert.assertEquals(segments, announced);
 
@@ -178,7 +178,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             newSegment(Intervals.of("2019-03-01/2019-04-01"), version),
             newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
 
     Assert.assertEquals(segments, announced);
 
@@ -223,7 +223,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             newSegment(Intervals.of("2019-03-01/2019-04-01"), version),
             newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().announceHistoricalSegments(segments);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
 
     Assert.assertEquals(segments, announced);
 

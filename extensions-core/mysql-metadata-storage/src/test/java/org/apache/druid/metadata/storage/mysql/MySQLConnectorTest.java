@@ -45,7 +45,7 @@ public class MySQLConnectorTest
   private static final Supplier<MetadataStorageConnectorConfig> CONNECTOR_CONFIG_SUPPLIER =
       MetadataStorageConnectorConfig::new;
   private static final Supplier<MetadataStorageTablesConfig> TABLES_CONFIG_SUPPLIER =
-      () -> new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null, null, null);
+      () -> MetadataStorageTablesConfig.fromBase(null);
 
 
   @Test
