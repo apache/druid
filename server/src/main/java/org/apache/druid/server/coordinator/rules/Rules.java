@@ -25,11 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.joda.time.base.BaseInterval;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.List;
 
 public class Rules
@@ -55,7 +51,7 @@ public class Rules
 
   /**
    * Validate rules. This method throws an exception if a rule contain an interval that
-   * will fully cover the next rules' interval in the list. Rules that will be evaluated at some point
+   * fully covers another subsequent rules' interval in the list. Rules that will be evaluated at some point
    * are considered to be legitimate.
    * @param rules Datasource rules.
    */
@@ -66,25 +62,31 @@ public class Rules
     }
 
     final DateTime now = DateTimes.nowUtc();
-    for (int i = 0; i < rules.size() - 1; i++) {
+    for (int i = 0; i < rules.size(); i++) {
       final Rule currRule = rules.get(i);
-      final Rule nextRule = rules.get(i + 1);
       final Interval currInterval = currRule.getEligibleInterval(now);
-      final Interval nextInterval = nextRule.getEligibleInterval(now);
-      if (currInterval.contains(nextInterval)) {
-        // If the current rule has an eternity interval, it covers everything following it.
-        // Or if the current rule still covers the next rule at the current interval boundaries, then the
-        // next rule will never fire at any time, so throw an exception.
-        if (Intervals.ETERNITY.equals(currInterval) ||
-            (currRule.getEligibleInterval(currInterval.getStart()).contains(nextRule.getEligibleInterval(currInterval.getStart()))
-             && currRule.getEligibleInterval(currInterval.getEnd()).contains(nextRule.getEligibleInterval(currInterval.getEnd())))) {
-          throw InvalidInput.exception(
-              "Rule[%s] has an interval that contains interval for rule[%s]. The interval[%s] also covers interval[%s].",
-              currRule,
-              nextRule,
-              currInterval,
-              nextInterval
-          );
+
+      for (int j = i + 1; j < rules.size(); j++) {
+        final Rule nextRule = rules.get(j);
+        final Interval nextInterval = nextRule.getEligibleInterval(now);
+        if (currInterval.contains(nextInterval)) {
+          // If the current rule has eternity, it covers everything following it.
+          // Or if the current rule still covers the next rule at the current interval boundaries, then the
+          // next rule will never fire at any time, so throw an exception.
+          if (Intervals.ETERNITY.equals(currInterval) ||
+              (currRule.getEligibleInterval(currInterval.getStart())
+                       .contains(nextRule.getEligibleInterval(currInterval.getStart()))
+               && currRule.getEligibleInterval(currInterval.getEnd())
+                          .contains(nextRule.getEligibleInterval(currInterval.getEnd())))) {
+            throw InvalidInput.exception(
+                "Rule[%s] has an interval that fully contains the interval for rule[%s]."
+                + " i.e., interval[%s] hides interval[%s]. Please fix the rules and retry.",
+                currRule,
+                nextRule,
+                currInterval,
+                nextInterval
+            );
+          }
         }
       }
     }
