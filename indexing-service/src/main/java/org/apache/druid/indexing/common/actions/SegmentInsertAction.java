@@ -65,7 +65,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 
   /**
    * Behaves similarly to
-   * {@link org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments},
+   * {@link org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#commitSegments},
    * with startMetadata and endMetadata both null.
    */
   @Override

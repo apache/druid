@@ -107,7 +107,7 @@ public class SegmentInsertActionTest
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
     actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
-        Collections.singletonList(INTERVAL),
+        Collections.singleton(INTERVAL),
         CriticalAction.builder()
                       .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
                       .onInvalidLocks(
@@ -137,7 +137,7 @@ public class SegmentInsertActionTest
     thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
     final Set<DataSegment> segments = actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
-        Collections.singletonList(INTERVAL),
+        Collections.singleton(INTERVAL),
         CriticalAction.<Set<DataSegment>>builder()
             .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
             .onInvalidLocks(

@@ -134,7 +134,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+  public Set<DataSegment> commitSegments(Set<DataSegment> segments)
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -157,14 +157,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public SegmentPublishResult announceHistoricalSegments(
+  public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
-      DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata
   )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(announceHistoricalSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(segments));
   }
 
   @Override
