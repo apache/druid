@@ -802,8 +802,12 @@ public class DruidQuery
       return Pair.of(dataSource, pair.rhs);
     } else if (dataSource instanceof FilteredDataSource) {
       final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
-      final Filtration baseFiltration = Filtration.create(filteredDataSource.getFilter())
-                                                  .optimize(virtualColumnRegistry.getFullRowSignature());
+      final boolean useIntervalFiltering = canUseIntervalFiltering(filteredDataSource);
+      final Filtration baseFiltration = toFiltration(
+          filteredDataSource.getFilter(),
+          virtualColumnRegistry.getFullRowSignature(),
+          useIntervalFiltering
+      );
       // Adds the intervals from the filter of filtered data source to query filtration
       final Filtration queryFiltration = Filtration.create(filter, baseFiltration.getIntervals())
                                                    .optimize(virtualColumnRegistry.getFullRowSignature());
