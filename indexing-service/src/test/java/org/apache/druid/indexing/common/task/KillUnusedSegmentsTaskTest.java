@@ -103,9 +103,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
 
-    KillTaskReport.Stats stats = getReportedStats();
-    Assert.assertEquals(2, stats.getNumBatchesProcessed());
-    Assert.assertEquals(1, stats.getNumSegmentsKilled());
+    Assert.assertEquals(new KillTaskReport.Stats(1, 2, 0), getReportedStats());
   }
 
 
@@ -154,9 +152,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         newSegment(Intervals.of("2019-04-01/2019-05-01"), version)
     );
 
-    KillTaskReport.Stats stats = getReportedStats();
-    Assert.assertEquals(2L, stats.getNumBatchesProcessed());
-    Assert.assertEquals(1, stats.getNumSegmentsKilled());
+    Assert.assertEquals(new KillTaskReport.Stats(1, 2, 1), getReportedStats());
   }
 
   @Test
@@ -216,10 +212,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, Intervals.of("2019/2020"));
 
     Assert.assertEquals(Collections.emptyList(), unusedSegments);
-
-    KillTaskReport.Stats stats = getReportedStats();
-    Assert.assertEquals(4L, stats.getNumBatchesProcessed());
-    Assert.assertEquals(4, stats.getNumSegmentsKilled());
+    Assert.assertEquals(new KillTaskReport.Stats(4, 4, 0), getReportedStats());
   }
 
   @Test
@@ -256,9 +249,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(Collections.emptyList(), unusedSegments);
 
-    KillTaskReport.Stats stats = getReportedStats();
-    Assert.assertEquals(3L, stats.getNumBatchesProcessed());
-    Assert.assertEquals(4, stats.getNumSegmentsKilled());
+    Assert.assertEquals(new KillTaskReport.Stats(4, 3, 4), getReportedStats());
   }
 
   @Test
@@ -371,6 +362,24 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             10
         );
     Assert.assertEquals(2, (int) task.getNumTotalBatches());
+  }
+
+  @Test
+  public void testKillTaskReportSerde() throws Exception
+  {
+    final String taskId = "test_serde_task";
+
+    final KillTaskReport.Stats stats = new KillTaskReport.Stats(1, 2, 3);
+    KillTaskReport report = new KillTaskReport(taskId, stats);
+
+    String json = getObjectMapper().writeValueAsString(report);
+    TaskReport deserializedReport = getObjectMapper().readValue(json, TaskReport.class);
+    Assert.assertTrue(deserializedReport instanceof KillTaskReport);
+
+    KillTaskReport deserializedKillReport = (KillTaskReport) deserializedReport;
+    Assert.assertEquals(KillTaskReport.REPORT_KEY, deserializedKillReport.getReportKey());
+    Assert.assertEquals(taskId, deserializedKillReport.getTaskId());
+    Assert.assertEquals(stats, deserializedKillReport.getPayload());
   }
 
   private KillTaskReport.Stats getReportedStats()

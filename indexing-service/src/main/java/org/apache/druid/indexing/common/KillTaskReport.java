@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class KillTaskReport implements TaskReport
 {
   public static final String REPORT_KEY = "killUnusedSegments";
@@ -93,6 +95,37 @@ public class KillTaskReport implements TaskReport
     public int getNumSegmentsMarkedAsUnused()
     {
       return numSegmentsMarkedAsUnused;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Stats stats = (Stats) o;
+      return numSegmentsKilled == stats.numSegmentsKilled
+             && numBatchesProcessed == stats.numBatchesProcessed
+             && numSegmentsMarkedAsUnused == stats.numSegmentsMarkedAsUnused;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(numSegmentsKilled, numBatchesProcessed, numSegmentsMarkedAsUnused);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Stats{" +
+             "numSegmentsKilled=" + numSegmentsKilled +
+             ", numBatchesProcessed=" + numBatchesProcessed +
+             ", numSegmentsMarkedAsUnused=" + numSegmentsMarkedAsUnused +
+             '}';
     }
   }
 }
