@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -102,20 +103,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   public static Object parametersForWindowQueryTest() throws Exception
   {
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
-    File windowFolder = new File(windowQueriesUrl.toURI());
-    int windowFolderPrefixSize = windowFolder.getAbsolutePath().length() + 1 /*
-                                                                              * 1
-                                                                              * for
-                                                                              * the
-                                                                              * ending
-                                                                              * slash
-                                                                              */;
+    Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
 
     return FileUtils
-        .streamFiles(windowFolder, true, "q")
+        .streamFiles(windowFolder.toFile(), true, "q")
         .map(file -> {
-          final String filePath = file.getAbsolutePath();
-          return filePath.substring(windowFolderPrefixSize, filePath.length() - 2);
+          Path rel = windowFolder.relativize(file.toPath());
+          return rel.toString().replaceFirst("..$", "");
         })
         .sorted()
         .toArray();
