@@ -77,18 +77,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * These test cases are borrowed from the drill-test-framework at
- * https://github.com/apache/drill-test-framework
+ * These test cases are borrowed from the drill-test-framework at https://github.com/apache/drill-test-framework
  * <p>
- * The Drill data sources are just accessing parquet files directly, we ingest
- * and index the data first via JSON (so that we avoid pulling in the parquet
- * dependencies here) and then run the queries over that.
+ * The Drill data sources are just accessing parquet files directly, we ingest and index the data first via JSON
+ * (so that we avoid pulling in the parquet dependencies here) and then run the queries over that.
  * <p>
- * The setup of the ingestion is done via code in this class, so any new data
- * source needs to be added through that manner. That said, these tests are
- * primarily being added to bootstrap our own test coverage of window functions,
- * so it is believed that most iteration on tests will happen through the
- * CalciteWindowQueryTest instead of this class.
+ * The setup of the ingestion is done via code in this class, so any new data source needs to be added through that
+ * manner.  That said, these tests are primarily being added to bootstrap our own test coverage of window
+ * functions, so it is believed that most iteration on tests will happen through the CalciteWindowQueryTest
+ * instead of this class.
  */
 @RunWith(Parameterized.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
@@ -98,6 +95,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   static {
     NullHandling.initializeForTests();
   }
+
+
+
 
   @Parameterized.Parameters(name = "{0}")
   public static Object parametersForWindowQueryTest() throws Exception
