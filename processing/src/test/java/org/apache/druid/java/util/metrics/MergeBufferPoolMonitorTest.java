@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,16 +55,31 @@ public class MergeBufferPoolMonitorTest
     BlockingPool<ByteBuffer> pool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 1);
     MergeBufferPoolMonitor monitor = new MergeBufferPoolMonitor(pool);
 
+    CountDownLatch latch = new CountDownLatch(1);
     executorService.submit(() -> {
+      latch.countDown();
       pool.takeBatch(10);
     });
 
-    StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
-    boolean ret = monitor.doMonitor(emitter);
-    Assert.assertTrue(ret);
+    try {
+      // the latch returns from await() guarantees the above lamda to take buffer from the pool starting to run in the
+      // executorService thread
+      latch.await();
 
-    List<Number> numbers = emitter.getMetricValues("mergebuffer/pendingQueries", Collections.emptyMap());
-    Assert.assertEquals(numbers.size(), 1);
-    Assert.assertEquals(numbers.get(0).intValue(), 1);
+      // give 1 sec for pool.takeBatch to run and blocking at the pool
+      Thread.sleep(1000);
+
+      StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
+      boolean ret = monitor.doMonitor(emitter);
+      Assert.assertTrue(ret);
+
+      List<Number> numbers = emitter.getMetricValues("mergebuffer/pendingQueries", Collections.emptyMap());
+      Assert.assertEquals(numbers.size(), 1);
+      Assert.assertEquals(numbers.get(0).intValue(), 1);
+    }
+    catch (InterruptedException e) {
+      // do nothing
+    }
+
   }
 }
