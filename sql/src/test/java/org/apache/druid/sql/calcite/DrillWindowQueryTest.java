@@ -232,7 +232,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     @Override
     public void verify(String sql, List<Object[]> results)
     {
-      boolean unsorted = !sql.toLowerCase().contains("order");
+//      SqlToRelConverter.isOrdered(null)
+
+      boolean unsorted = !sql.toLowerCase()
+          .replaceAll("\n", " ")
+          .replaceFirst(".*\\)","")
+          . contains("order");
 
       List<Object[]> parsedExpectedResults = parseResults(currentRowSignature, expectedResults);
       try {
@@ -251,6 +256,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           assertResultsEquals(sql, parsedExpectedResults, results);
         }
       } catch (AssertionError e) {
+        displayResults(parsedExpectedResults);
         System.out.println("query: " + sql);
         displayResults(results);
         throw e;
