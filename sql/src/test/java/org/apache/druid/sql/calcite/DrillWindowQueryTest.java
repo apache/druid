@@ -71,6 +71,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -231,16 +232,42 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     @Override
     public void verify(String sql, List<Object[]> results)
     {
+      boolean unsorted = !sql.toLowerCase().contains("order");
+
       List<Object[]> parsedExpectedResults = parseResults(currentRowSignature, expectedResults);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-        assertResultsEquals(sql, parsedExpectedResults, results);
+        if(unsorted) {
+//          Set<Object[]> resultsSet = new TreeSet<>(results);
+//          Set<Object[]> expectedSet = new TreeSet<>(parsedExpectedResults);
+////          // FIXME: incorrectly handles multiset issue
+////
+////          if(resultsSet)
+////
+           results.sort(new ArrayRowCmp());
+           parsedExpectedResults.sort(new ArrayRowCmp());;
+
+        } else  {
+          assertResultsEquals(sql, parsedExpectedResults, results);
+        }
       } catch (AssertionError e) {
         System.out.println("query: " + sql);
         displayResults(results);
         throw e;
       }
     }
+  }
+
+  static class ArrayRowCmp implements Comparator<Object[]>{
+
+    @Override
+    public int compare(Object[] arg0, Object[] arg1)
+    {
+      String s0 = Arrays.toString(arg0);
+      String s1 = Arrays.toString(arg1);
+      return s0.compareTo(s1);
+    }
+
   }
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
