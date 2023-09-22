@@ -1311,6 +1311,29 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
+#### Response Description 
+The response payload contains the following structure:
+
+|Property|Type|Description|
+|---|---|---|
+|`dataSource`|String|The target datasource.|
+|`stream`|String|Name of the topic or stream that the ingestion is reading from.|
+|`partitions`|Integer|Number of partitions in the source stream.|
+|`replicas`|Integer|Number of replicas being used per task for high availability where 1 means no redundancy.|
+|`durationSeconds`|Integer|Seconds that each task spends reading before moving to a publishing state.|
+|`activeTasks`|Array of Object|Lists the tasks that are reading from the stream, each with: <table><tbody><tr><td>`startTime`</td><td>String</td><td>Task start time.</td></tr><tr><td>`remainingTime`</td><td>Integer</td><td>The time remaining in the reading state</td><tr><tr><td>`currentOffsets`</td><td>Map < String , Integer ></td><td>The list of partitions that the task is reading from with the latest offset consumed from each.</td></tr><tr><td>`lag`</td><td>Map < String , Integer ></td><td>The number of messages pending to read from each partition.</td></tr></tbody></table> | 
+|`publishingTasks`|Array of Object|Lists the tasks that are publishing segments to Deep Storage and awaiting handoff confirmation. For detailed structure see `activeTasks` above.|
+|`latestOffsets`|Map < String, Integer >|The lastest offset consumed from the stream by partition.|
+|`minimumLag`|Map < String, Integer >|The number of messages pending to read from stream by partition.|
+|`aggregateLag`|Integer|The sum of minimum lags (see above) across all partitions.|
+|`offsetLastUpdated`|String|Contains the timestamp of when the stream offsets were last inspected.|
+|`suspended`|Boolean|True if the supervisor is in a SUSPENDED state.|
+|`healthy`|Boolean|True if the supervisor and its tasks are currently healthy.|
+|`state`|String|Overall state of the supervisor. (see)|
+|`detailedState`|String|Current stage of processing for the supervisor.|
+|`recentErrors`|Array of String|Errors reported recently by supervisor managed tasks.|
+
+
 ## Audit history
 
 An audit history provides a comprehensive log of events, including supervisor configuration, creation, suspension, and modification history.
