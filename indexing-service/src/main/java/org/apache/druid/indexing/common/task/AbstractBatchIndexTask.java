@@ -299,10 +299,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     // Respect task context value most.
     if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
       log.info(
-          "forceTimeChunkLock[%s] is set to true or mode[%s] is replace. Use timeChunk lock",
+          "Using time chunk lock since forceTimeChunkLock is [%s] and mode is [%s].",
           forceTimeChunkLock, ingestionMode
       );
-      taskLockHelper = new TaskLockHelper(false, getContext(), ingestionMode);
+      taskLockHelper = createLockHelper(LockGranularity.TIME_CHUNK);
       if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
       } else {
@@ -311,11 +311,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       if (!intervals.isEmpty()) {
         final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
-        taskLockHelper = new TaskLockHelper(
-            result.lockGranularity == LockGranularity.SEGMENT,
-            getContext(),
-            ingestionMode
-        );
+        taskLockHelper = createLockHelper(result.lockGranularity);
         return tryLockWithDetermineResult(client, result);
       } else {
         // This branch is the only one that will not initialize taskLockHelper.
@@ -343,11 +339,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    final IngestionMode ingestionMode = getIngestionMode();
 
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = new TaskLockHelper(false, getContext(), ingestionMode);
+      taskLockHelper = createLockHelper(LockGranularity.TIME_CHUNK);
       segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
@@ -355,11 +350,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = new TaskLockHelper(
-          result.lockGranularity == LockGranularity.SEGMENT,
-          getContext(),
-          ingestionMode
-      );
+      taskLockHelper = createLockHelper(result.lockGranularity);
       segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
@@ -435,7 +426,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
 
       prev = cur;
-      final TaskLockType taskLockType = TaskLockHelper.lockTypeFrom(false, getContext(), getIngestionMode());
+      final TaskLockType taskLockType = determineLockType(LockGranularity.TIME_CHUNK);
       final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(taskLockType, cur));
       if (lock == null) {
         return false;
@@ -447,6 +438,42 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       intervalToVersion.put(cur, lock.getVersion());
     }
     return true;
+  }
+
+  private TaskLockHelper createLockHelper(LockGranularity lockGranularity)
+  {
+    return new TaskLockHelper(
+        lockGranularity == LockGranularity.SEGMENT,
+        determineLockType(lockGranularity)
+    );
+  }
+
+  /**
+   * Determines the type of lock to use with the given lock granularity.
+   */
+  private TaskLockType determineLockType(LockGranularity lockGranularity)
+  {
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return TaskLockType.EXCLUSIVE;
+    }
+
+    final String contextLockType = getContextValue(Tasks.TASK_LOCK_TYPE);
+    final TaskLockType lockType;
+    if (contextLockType == null) {
+      lockType = getContextValue(Tasks.USE_SHARED_LOCK, false)
+                 ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    } else {
+      lockType = TaskLockType.valueOf(contextLockType);
+    }
+
+    final IngestionMode ingestionMode = getIngestionMode();
+    if ((lockType == TaskLockType.SHARED || lockType == TaskLockType.APPEND)
+        && ingestionMode != IngestionMode.APPEND) {
+      // Lock types SHARED and APPEND are allowed only in APPEND ingestion mode
+      return Tasks.DEFAULT_TASK_LOCK_TYPE;
+    } else {
+      return lockType;
+    }
   }
 
   private LockGranularityDetermineResult determineSegmentGranularity(List<DataSegment> segments)

@@ -25,7 +25,9 @@ import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.DateTimes;
@@ -123,6 +125,26 @@ public class TaskLocks
           );
         }
     );
+  }
+
+  /**
+   * Determines the type of time chunk lock to use for appending segments.
+   * <p>
+   * This method should be de-duplicated with {@link AbstractBatchIndexTask#determineLockType}
+   * by passing the ParallelIndexSupervisorTask instance into the
+   * SinglePhaseParallelIndexTaskRunner.
+   */
+  public static TaskLockType determineLockTypeForAppend(
+      Map<String, Object> context
+  )
+  {
+    final Object lockType = context.get(Tasks.TASK_LOCK_TYPE);
+    if (lockType == null) {
+      final boolean useSharedLock = (boolean) context.getOrDefault(Tasks.USE_SHARED_LOCK, false);
+      return useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    } else {
+      return TaskLockType.valueOf(lockType.toString());
+    }
   }
 
   /**

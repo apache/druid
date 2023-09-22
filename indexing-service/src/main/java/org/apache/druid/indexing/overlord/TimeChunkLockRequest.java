@@ -77,11 +77,7 @@ public class TimeChunkLockRequest implements LockRequest
     this.groupId = groupId;
     this.dataSource = dataSource;
     this.interval = interval;
-    if (preferredVersion == null) {
-      this.preferredVersion = TaskLocks.defaultLockVersion(lockType);
-    } else {
-      this.preferredVersion = preferredVersion;
-    }
+    this.preferredVersion = preferredVersion;
     this.priority = priority;
     this.revoked = revoked;
   }
@@ -119,7 +115,7 @@ public class TimeChunkLockRequest implements LockRequest
   @Override
   public String getVersion()
   {
-    return preferredVersion;
+    return preferredVersion == null ? TaskLocks.defaultLockVersion(lockType) : preferredVersion;
   }
 
   @Override

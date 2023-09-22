@@ -163,7 +163,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Set<ReplaceTaskLock> locksHeldByReplaceTask
   )
   {
-    // Don't actually compare metadata, just do it!
     return SegmentPublishResult.ok(commitSegments(replaceSegments));
   }
 

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.SegmentLockTryAcquireAction;
@@ -92,10 +91,10 @@ public class TaskLockHelper
     }
   }
 
-  public TaskLockHelper(boolean useSegmentLock, Map<String, Object> context, AbstractTask.IngestionMode mode)
+  public TaskLockHelper(boolean useSegmentLock, TaskLockType taskLockType)
   {
     this.useSegmentLock = useSegmentLock;
-    this.taskLockType = lockTypeFrom(useSegmentLock, context, mode);
+    this.taskLockType = taskLockType;
   }
 
   public boolean isUseSegmentLock()
@@ -309,33 +308,6 @@ public class TaskLockHelper
           sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize(),
           atomicUpdateGroupSize
       );
-    }
-  }
-
-  public static TaskLockType lockTypeFrom(
-      boolean useSegmentLock,
-      Map<String, Object> context,
-      AbstractTask.IngestionMode mode
-  )
-  {
-    if (useSegmentLock) {
-      return Tasks.DEFAULT_TASK_LOCK_TYPE;
-    }
-
-    final TaskLockType lockTypeVal;
-    final Object lockTypeName = context.get(Tasks.TASK_LOCK_TYPE);
-    if (lockTypeName == null) {
-      final Object useSharedLock = context.getOrDefault(Tasks.USE_SHARED_LOCK, false);
-      lockTypeVal = (boolean) useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
-    } else {
-      lockTypeVal = TaskLockType.valueOf(lockTypeName.toString());
-    }
-
-    final Set<TaskLockType> appendModeCompatible = ImmutableSet.of(TaskLockType.SHARED, TaskLockType.APPEND);
-    if (!mode.equals(AbstractTask.IngestionMode.APPEND) && appendModeCompatible.contains(lockTypeVal)) {
-      return Tasks.DEFAULT_TASK_LOCK_TYPE;
-    } else {
-      return lockTypeVal;
     }
   }
 }

@@ -34,12 +34,12 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -51,8 +51,8 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
-import org.apache.druid.utils.CollectionUtils;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -63,6 +63,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
+import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
@@ -464,11 +465,30 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  private Map<String, String> getAppendedSegmentIds(Set<ReplaceTaskLock> replaceLocks)
+  private Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId)
   {
-    return derbyConnector.retryWithHandle(
-        handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, replaceLocks)
-    );
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentVersionsTable();
+    return derbyConnector.retryWithHandle(handle -> {
+      final String sql = StringUtils.format(
+          "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
+          table
+      );
+
+      ResultIterator<Pair<String, String>> resultIterator = handle
+          .createQuery(sql)
+          .bind("task_id", taskId)
+          .map(
+              (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
+          )
+          .iterator();
+
+      final Map<String, String> segmentIdToLockVersion = new HashMap<>();
+      while (resultIterator.hasNext()) {
+        Pair<String, String> result = resultIterator.next();
+        segmentIdToLockVersion.put(result.lhs, result.rhs);
+      }
+      return segmentIdToLockVersion;
+    });
   }
 
   private Boolean insertIntoSegmentVersionsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap)
@@ -505,233 +525,78 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testAllocateNewSegmentIds()
-  {
-    final String v0 = "1970-01-01";
-    final String v1 = "2023-01-03";
-    final String v2 = "2023-02-01";
-
-    final Set<DataSegment> day1 = new HashSet<>();
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-01-02"),
-          v0,
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      day1.add(segment);
-    }
-    final Set<DataSegment> day2 = new HashSet<>();
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-02/2023-01-03"),
-          v0,
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      day2.add(segment);
-    }
-    final Set<DataSegment> day3 = new HashSet<>();
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-03/2023-01-04"),
-          v0,
-          ImmutableMap.of("path", "c-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      day3.add(segment);
-    }
-
-    final Set<DataSegment> month2 = new HashSet<>();
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-02-01/2023-03-01"),
-          v0,
-          ImmutableMap.of("path", "x-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      month2.add(segment);
-    }
-
-    final Set<DataSegment> higherVersionUsedSegments = new HashSet<>();
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-01-02"),
-          v1,
-          ImmutableMap.of("path", "d-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 5),
-          9,
-          100
-      );
-      higherVersionUsedSegments.add(segment);
-    }
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-02/2023-01-03"),
-          v1,
-          ImmutableMap.of("path", "e-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 0),
-          9,
-          100
-      );
-      higherVersionUsedSegments.add(segment);
-    }
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-02-01"),
-          v2,
-          ImmutableMap.of("path", "f-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 10),
-          9,
-          100
-      );
-      higherVersionUsedSegments.add(segment);
-    }
-    insertUsedSegments(higherVersionUsedSegments);
-
-    final Set<DataSegment> segmentsToBeProcessed = new HashSet<>();
-    final Set<DataSegment> month1 = new HashSet<>();
-    month1.addAll(day1);
-    month1.addAll(day2);
-    month1.addAll(day3);
-    segmentsToBeProcessed.addAll(month1);
-    segmentsToBeProcessed.addAll(month2);
-    final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewIds = derbyConnector.retryWithHandle(
-        handle -> coordinator.getSegmentsToUpgradeOnAppend(handle, "foo", segmentsToBeProcessed)
-    );
-
-    for (DataSegment segment : day1) {
-      final Set<SegmentIdWithShardSpec> newIds = segmentToNewIds.get(segment);
-
-      Assert.assertEquals(2, newIds.size());
-      Assert.assertEquals(
-          ImmutableSet.of(v1, v2),
-          newIds.stream().map(SegmentIdWithShardSpec::getVersion).collect(Collectors.toSet())
-      );
-    }
-    for (DataSegment segment : day2) {
-      final Set<SegmentIdWithShardSpec> newIds = segmentToNewIds.get(segment);
-
-      Assert.assertEquals(2, newIds.size());
-      Assert.assertEquals(
-          ImmutableSet.of(v1, v2),
-          newIds.stream().map(SegmentIdWithShardSpec::getVersion).collect(Collectors.toSet())
-      );
-    }
-    for (DataSegment segment : day3) {
-      final Set<SegmentIdWithShardSpec> newIds = segmentToNewIds.get(segment);
-      Assert.assertEquals(2, newIds.size());
-      Assert.assertEquals(
-          ImmutableSet.of(v1, v2),
-          newIds.stream().map(SegmentIdWithShardSpec::getVersion).collect(Collectors.toSet())
-      );
-    }
-    for (DataSegment segment : month2) {
-      Assert.assertTrue(CollectionUtils.isNullOrEmpty(segmentToNewIds.get(segment)));
-    }
-  }
-
-  @Test
   public void testCommitAppendSegments()
   {
-    final Set<DataSegment> allSegments = new HashSet<>();
-    final Set<String> segmentIdsToBeCarriedForward = new HashSet<>();
-    final ReplaceTaskLock lock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-01-03"), "2024-01-01");
-    final Map<DataSegment, ReplaceTaskLock> segmentLockMap = new HashMap<>();
+    final String v1 = "2023-01-01";
+    final String v2 = "2023-01-02";
+    final String v3 = "2023-01-03";
+    final String lockVersion = "2024-01-01";
 
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-01-02"),
-          "2023-01-01",
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      allSegments.add(segment);
-      segmentIdsToBeCarriedForward.add(segment.getId().toString());
-      segmentLockMap.put(segment, lock);
-    }
-
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-02/2023-01-03"),
-          "2023-01-02",
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      allSegments.add(segment);
-      segmentIdsToBeCarriedForward.add(segment.getId().toString());
-      segmentLockMap.put(segment, lock);
-    }
-
-    for (int i = 0; i < 10; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-03/2023-01-04"),
-          "2023-01-03",
-          ImmutableMap.of("path", "c-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
-      allSegments.add(segment);
-    }
-
-    coordinator.commitAppendSegments(allSegments, segmentLockMap);
-
-    Assert.assertEquals(
-        allSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet()),
-        ImmutableSet.copyOf(retrieveUsedSegmentIds())
+    final String replaceTaskId = "replaceTask1";
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
+        replaceTaskId,
+        Intervals.of("2023-01-01/2023-01-03"),
+        lockVersion
     );
 
-    final Set<ReplaceTaskLock> replaceLocks = Collections.singleton(lock);
-    final Map<String, String> segmentLockMetadata = getAppendedSegmentIds(replaceLocks);
-    Assert.assertEquals(segmentIdsToBeCarriedForward, segmentLockMetadata.keySet());
+    final Set<DataSegment> appendSegments = new HashSet<>();
+    final Set<DataSegment> expectedSegmentsToUpgrade = new HashSet<>();
+    for (int i = 0; i < 10; i++) {
+      final DataSegment segment = createSegment(
+          Intervals.of("2023-01-01/2023-01-02"),
+          v1,
+          new LinearShardSpec(i)
+      );
+      appendSegments.add(segment);
+      expectedSegmentsToUpgrade.add(segment);
+    }
 
-    final Set<String> lockVersions = new HashSet<>(segmentLockMetadata.values());
-    Assert.assertEquals(lock.getVersion(), Iterables.getOnlyElement(lockVersions));
+    for (int i = 0; i < 10; i++) {
+      final DataSegment segment = createSegment(
+          Intervals.of("2023-01-02/2023-01-03"),
+          v2,
+          new LinearShardSpec(i)
+      );
+      appendSegments.add(segment);
+      expectedSegmentsToUpgrade.add(segment);
+    }
+
+    for (int i = 0; i < 10; i++) {
+      final DataSegment segment = createSegment(
+          Intervals.of("2023-01-03/2023-01-04"),
+          v3,
+          new LinearShardSpec(i)
+      );
+      appendSegments.add(segment);
+    }
+
+    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock = expectedSegmentsToUpgrade.stream().collect(
+        Collectors.toMap(s -> s, s -> replaceLock)
+    );
+
+    // Commit the segment and verify the results
+    SegmentPublishResult commitResult = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock);
+    Assert.assertTrue(commitResult.isSuccess());
+    Assert.assertEquals(appendSegments, commitResult.getSegments());
+
+    // Verify the segments present in the metadata store
+    Assert.assertEquals(
+        appendSegments,
+        ImmutableSet.copyOf(retrieveUsedSegments())
+    );
+
+    final Set<String> expectedUpgradeSegmentIds = expectedSegmentsToUpgrade.stream()
+                                                                           .map(s -> s.getId().toString())
+                                                                           .collect(Collectors.toSet());
+    final Map<String, String> observedSegmentToLock = getSegmentsCommittedDuringReplaceTask(replaceTaskId);
+    Assert.assertEquals(expectedUpgradeSegmentIds, observedSegmentToLock.keySet());
+
+    final Set<String> observedLockVersions = new HashSet<>(observedSegmentToLock.values());
+    Assert.assertEquals(
+        replaceLock.getVersion(),
+        Iterables.getOnlyElement(observedLockVersions)
+    );
   }
-
 
   @Test
   public void testCommitReplaceSegments()
@@ -2687,5 +2552,21 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             )
         )
     );
+  }
+
+  private static class DS
+  {
+    static final String WIKI = "wiki";
+  }
+
+  private DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
+  {
+    return DataSegment.builder()
+                      .dataSource(DS.WIKI)
+                      .interval(interval)
+                      .version(version)
+                      .shardSpec(shardSpec)
+                      .size(100)
+                      .build();
   }
 }

@@ -63,7 +63,6 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
@@ -443,7 +442,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     verifySegmentsToCommit(appendSegments);
 
     final String dataSource = appendSegments.iterator().next().getDataSource();
-    final Map<DataSegment, Set<SegmentIdWithShardSpec>> segmentToNewIds = connector.retryTransaction(
+    final Set<DataSegment> upgradedSegments = connector.retryTransaction(
         (handle, transactionStatus)
             -> getSegmentsToUpgradeOnAppend(handle, dataSource, appendSegments),
         0,
@@ -452,17 +451,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Create entries for all required versions of the append segments
     final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
-    for (Map.Entry<DataSegment, Set<SegmentIdWithShardSpec>> entry : segmentToNewIds.entrySet()) {
-      final DataSegment segment = entry.getKey();
-      for (SegmentIdWithShardSpec newId : entry.getValue()) {
-        DataSegment newSegment = DataSegment.builder(segment)
-                                            .interval(newId.getInterval())
-                                            .version(newId.getVersion())
-                                            .shardSpec(newId.getShardSpec())
-                                            .build();
-        allSegmentsToInsert.add(newSegment);
-      }
-    }
+    allSegmentsToInsert.addAll(upgradedSegments);
 
     try {
       return connector.retryTransaction(
@@ -1066,15 +1055,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * there would be some used segments in the DB with versions higher than these
    * append segments.
    */
-  @VisibleForTesting
-  Map<DataSegment, Set<SegmentIdWithShardSpec>> getSegmentsToUpgradeOnAppend(
+  private Set<DataSegment> getSegmentsToUpgradeOnAppend(
       Handle handle,
       String dataSource,
       Set<DataSegment> segmentsToAppend
   ) throws IOException
   {
     if (segmentsToAppend.isEmpty()) {
-      return Collections.emptyMap();
+      return Collections.emptySet();
     }
 
     final Set<Interval> appendIntervals = new HashSet<>();
@@ -1101,7 +1089,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                  .add(segment);
     }
 
-    final Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds = new HashMap<>();
+    final Set<DataSegment> upgradedSegments = new HashSet<>();
     for (String upgradeVersion : committedVersionToIntervals.keySet()) {
       Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
           upgradeVersion,
@@ -1109,18 +1097,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           appendVersionToSegments
       );
       for (Map.Entry<Interval, Set<DataSegment>> entry : segmentsToUpgrade.entrySet()) {
-        computeNewAppendIdsForVersion(
+        Set<DataSegment> segmentsUpgradedToVersion = upgradeSegmentsToVersion(
             handle,
             upgradeVersion,
             entry.getKey(),
             entry.getValue(),
-            committedIntervalToSegments,
-            appendSegmentToNewIds
+            committedIntervalToSegments
         );
+        log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);
+        upgradedSegments.addAll(segmentsUpgradedToVersion);
       }
     }
 
-    return appendSegmentToNewIds;
+    return upgradedSegments;
   }
 
   /**
@@ -1164,13 +1153,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Computes new Segment IDs for the {@code segmentsToUpgrade} being upgraded
    * to the given {@code upgradeVersion}.
    */
-  private void computeNewAppendIdsForVersion(
+  private Set<DataSegment> upgradeSegmentsToVersion(
       Handle handle,
       String upgradeVersion,
       Interval interval,
       Set<DataSegment> segmentsToUpgrade,
-      Map<Interval, Set<DataSegment>> committedSegmentsByInterval,
-      Map<DataSegment, Set<SegmentIdWithShardSpec>> appendSegmentToNewIds
+      Map<Interval, Set<DataSegment>> committedSegmentsByInterval
   ) throws IOException
   {
     final Set<DataSegment> committedSegments
@@ -1194,6 +1182,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Determine new IDs for each append segment by taking into account both
     // committed and pending segments for this version
+    final Set<DataSegment> upgradedSegments = new HashSet<>();
     for (DataSegment segment : segmentsToUpgrade) {
       SegmentCreateRequest request = new SegmentCreateRequest(
           segment.getId() + "__" + upgradeVersion,
@@ -1213,9 +1202,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Add to set of pending segments so that shard specs are computed taking the new id into account
       pendingSegments.add(newId);
-      appendSegmentToNewIds.computeIfAbsent(segment, s -> new HashSet<>())
-                           .add(newId);
+      upgradedSegments.add(
+          DataSegment.builder(segment)
+                     .interval(newId.getInterval())
+                     .version(newId.getVersion())
+                     .shardSpec(newId.getShardSpec())
+                     .build()
+      );
     }
+
+    return upgradedSegments;
   }
 
   private Map<SegmentCreateRequest, SegmentIdWithShardSpec> createNewSegments(
@@ -1676,6 +1672,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Set<ReplaceTaskLock> locksHeldByReplaceTask
   )
   {
+    // If a REPLACE task has locked an interval, it would commit some segments
+    // (or at least tombstones) in that interval (except in LEGACY_REPLACE ingestion mode)
+    if (replaceSegments.isEmpty() || locksHeldByReplaceTask.isEmpty()) {
+      return Collections.emptySet();
+    }
+
     // For each replace interval, find the number of core partitions and total partitions
     final Map<Interval, Integer> intervalToNumCorePartitions = new HashMap<>();
     final Map<Interval, Integer> intervalToCurrentPartitionNum = new HashMap<>();
@@ -1689,29 +1691,45 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
 
-    final Map<String, String> carryForwardSegmentToLockVersion
-        = getAppendSegmentsCommittedDuringTask(handle, locksHeldByReplaceTask);
+    // Find the segments that need to be upgraded
+    final String taskId = locksHeldByReplaceTask.stream()
+                                                .map(ReplaceTaskLock::getSupervisorTaskId)
+                                                .findFirst().orElse(null);
+    final Map<String, String> upgradeSegmentToLockVersion
+        = getAppendSegmentsCommittedDuringTask(handle, taskId);
+    final List<DataSegment> segmentsToUpgrade
+        = retrieveSegmentsById(handle, upgradeSegmentToLockVersion.keySet());
 
-    final List<DataSegment> carryForwardSegments
-        = retrieveSegmentsById(handle, carryForwardSegmentToLockVersion.keySet());
+    if (segmentsToUpgrade.isEmpty()) {
+      return Collections.emptySet();
+    }
 
-    final Set<DataSegment> segmentsToInsert = new HashSet<>();
-    for (DataSegment oldSegment : carryForwardSegments) {
-      Interval newInterval = oldSegment.getInterval();
-      for (DataSegment segment : replaceSegments) {
-        final Interval segmentInterval = segment.getInterval();
-        if (segmentInterval.contains(newInterval)) {
-          newInterval = segmentInterval;
+    final Set<Interval> replaceIntervals = intervalToNumCorePartitions.keySet();
+
+    final Set<DataSegment> upgradedSegments = new HashSet<>();
+    for (DataSegment oldSegment : segmentsToUpgrade) {
+      // Determine interval of the upgraded segment
+      final Interval oldInterval = oldSegment.getInterval();
+      Interval newInterval = null;
+      for (Interval replaceInterval : replaceIntervals) {
+        if (replaceInterval.contains(oldInterval)) {
+          newInterval = replaceInterval;
           break;
-        } else if (segmentInterval.overlaps(newInterval)) {
+        } else if (replaceInterval.overlaps(oldInterval)) {
           throw new ISE(
               "Incompatible segment intervals for commit: [%s] and [%s].",
-              newInterval, segmentInterval
+              oldInterval, replaceInterval
           );
         }
       }
 
-      // Compute shard spec for the new version of the segment
+      if (newInterval == null) {
+        // This can happen only if no replace interval contains this segment
+        // but a (revoked) REPLACE lock covers this segment
+        newInterval = oldInterval;
+      }
+
+      // Compute shard spec of the upgraded segment
       final int partitionNum = intervalToCurrentPartitionNum.compute(
           newInterval,
           (i, value) -> value == null ? 0 : value + 1
@@ -1719,16 +1737,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final int numCorePartitions = intervalToNumCorePartitions.get(newInterval);
       ShardSpec shardSpec = new NumberedShardSpec(partitionNum, numCorePartitions);
 
-      String lockVersion = carryForwardSegmentToLockVersion.get(oldSegment.getId().toString());
-      DataSegment newSegment = DataSegment.builder(oldSegment)
-                                          .interval(newInterval)
-                                          .version(lockVersion)
-                                          .shardSpec(shardSpec)
-                                          .build();
-      segmentsToInsert.add(newSegment);
+      // Create upgraded segment with the correct interval, version and shard spec
+      String lockVersion = upgradeSegmentToLockVersion.get(oldSegment.getId().toString());
+      upgradedSegments.add(
+          DataSegment.builder(oldSegment)
+                     .interval(newInterval)
+                     .version(lockVersion)
+                     .shardSpec(shardSpec)
+                     .build()
+      );
     }
 
-    return segmentsToInsert;
+    return upgradedSegments;
   }
 
   /**
@@ -1905,30 +1925,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   /**
    * Finds the append segments that were covered by the given task REPLACE locks.
-   * These append segments must now be carried forward to the same version as
-   * the segments being committed by this replace task.
+   * These append segments must now be upgraded to the same version as the segments
+   * being committed by this replace task.
    *
    * @return Map from append Segment ID to REPLACE lock version
    */
-  @VisibleForTesting
-  Map<String, String> getAppendSegmentsCommittedDuringTask(
+  private Map<String, String> getAppendSegmentsCommittedDuringTask(
       Handle handle,
-      Set<ReplaceTaskLock> replaceLocks
+      String taskId
   )
   {
-    if (CollectionUtils.isNullOrEmpty(replaceLocks)) {
-      return Collections.emptyMap();
-    }
-
     final String sql = StringUtils.format(
         "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
         dbTables.getSegmentVersionsTable()
     );
 
-    final String groupId = replaceLocks.iterator().next().getSupervisorTaskId();
     ResultIterator<Pair<String, String>> resultIterator = handle
         .createQuery(sql)
-        .bind("task_id", groupId)
+        .bind("task_id", taskId)
         .map(
             (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
         )

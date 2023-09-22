@@ -26,12 +26,12 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
-import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -206,10 +206,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
   @Deprecated
   public SegmentIdWithShardSpec allocateNewSegment(String dataSource, DateTime timestamp) throws IOException
   {
-    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(
-        timestamp,
-        TaskLockHelper.lockTypeFrom(false, getContext(), AbstractTask.IngestionMode.APPEND)
-    );
+    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(timestamp);
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, intervalAndVersion.lhs);
     return new SegmentIdWithShardSpec(
@@ -222,7 +219,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
 
   /**
    * Allocate a new segment for the given timestamp locally. This method is called when dynamic partitioning is used
-   * and {@link org.apache.druid.indexing.common.LockGranularity} is {@code TIME_CHUNK}.
+   * and {@link LockGranularity} is {@code TIME_CHUNK}.
    *
    * The allocation algorithm is similar to the Overlord-based segment allocation. It keeps the segment allocation
    * history per sequenceName. If the prevSegmentId is found in the segment allocation history, this method
@@ -239,10 +236,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       @Nullable String prevSegmentId
   ) throws IOException
   {
-    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(
-        timestamp,
-        TaskLockHelper.lockTypeFrom(false, getContext(), AbstractTask.IngestionMode.APPEND)
-    );
+    NonnullPair<Interval, String> intervalAndVersion = findIntervalAndVersion(timestamp);
 
     MutableObject<SegmentIdWithShardSpec> segmentIdHolder = new MutableObject<>();
     sequenceToSegmentIds.compute(sequenceName, (k, v) -> {
@@ -290,8 +284,9 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
     return segmentIdHolder.getValue();
   }
 
-  NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp, TaskLockType taskLockType) throws IOException
+  NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
   {
+    TaskLockType taskLockType = TaskLocks.determineLockTypeForAppend(getContext());
     return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp, taskLockType);
   }
 
