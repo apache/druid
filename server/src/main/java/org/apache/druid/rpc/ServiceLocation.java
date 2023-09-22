@@ -20,8 +20,13 @@
 package org.apache.druid.rpc;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 
+import javax.annotation.Nullable;
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -45,6 +50,37 @@ public class ServiceLocation
   public static ServiceLocation fromDruidNode(final DruidNode druidNode)
   {
     return new ServiceLocation(druidNode.getHost(), druidNode.getPlaintextPort(), druidNode.getTlsPort(), "");
+  }
+
+  private static final Splitter SPLITTER = Splitter.on(":").limit(2);
+
+  public static ServiceLocation fromDruidServerMetadata(final DruidServerMetadata druidServerMetadata)
+  {
+    final String host = getHostFromString(druidServerMetadata.getHostAndPort());
+    int plaintextPort = getPortFromString(druidServerMetadata.getHostAndPort());
+    int tlsPort = getPortFromString(druidServerMetadata.getHostAndTlsPort());
+    return new ServiceLocation(host, plaintextPort, tlsPort, "");
+  }
+
+  @Nullable
+  private static String getHostFromString(String s)
+  {
+    if (s == null) {
+      return null;
+    }
+    Iterator<String> iterator = SPLITTER.split(s).iterator();
+    ImmutableList<String> strings = ImmutableList.copyOf(iterator);
+    return strings.get(0);
+  }
+
+  private static int getPortFromString(String s)
+  {
+    if (s == null) {
+      return -1;
+    }
+    Iterator<String> iterator = SPLITTER.split(s).iterator();
+    ImmutableList<String> strings = ImmutableList.copyOf(iterator);
+    return Integer.parseInt(strings.get(1));
   }
 
   public String getHost()

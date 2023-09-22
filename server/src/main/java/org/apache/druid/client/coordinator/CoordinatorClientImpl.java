@@ -96,7 +96,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   {
     ArrayList<ImmutableSegmentLoadInfo> retVal = new ArrayList<>();
     for (Interval interval : intervals) {
-      String intervalString = interval.toString().replace("/", "_");
+      String intervalString = StringUtils.replace(interval.toString(), "/", "_");
 
       final String path = StringUtils.format(
           "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?full",

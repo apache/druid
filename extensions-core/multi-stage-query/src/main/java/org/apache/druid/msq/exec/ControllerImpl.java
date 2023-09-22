@@ -1167,7 +1167,7 @@ public class ControllerImpl implements Controller
 
       // Fetch the realtime segments first, so that we don't miss any segment if they get handed off between the two calls.
       if (isIncludeRealtime) {
-         serverViewSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
+        serverViewSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
       } else {
         serverViewSegments = ImmutableList.of();
       }

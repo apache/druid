@@ -104,7 +104,13 @@ public class IndexerWorkerContext implements WorkerContext
         toolbox,
         injector,
         indexIO,
-        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager, indexIO),
+        new TaskDataSegmentProvider(
+            toolbox.getCoordinatorClient(),
+            segmentCacheManager,
+            indexIO,
+            serviceClientFactory,
+            toolbox.getJsonMapper()
+        ),
         serviceClientFactory
     );
   }

@@ -20,10 +20,14 @@
 package org.apache.druid.msq.querykit;
 
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
+import org.apache.druid.query.Query;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public interface DataSegmentProvider
@@ -32,12 +36,22 @@ public interface DataSegmentProvider
    * Returns a supplier that fetches the segment corresponding to the provided segmentId from deep storage. The segment
    * is not actually fetched until you call {@link Supplier#get()}. Once you call this, make sure to also call
    * {@link ResourceHolder#close()}.
-   *
+   * <br>
    * It is not necessary to call {@link ResourceHolder#close()} if you never call {@link Supplier#get()}.
    */
   Supplier<ResourceHolder<Segment>> fetchSegment(
       SegmentId segmentId,
       ChannelCounters channelCounters,
       boolean isReindex
+  );
+
+  /**
+   * Returns a function that fetches the segment corresponding to the provided segmentId from a server where it is
+   * loaded. The segment is not actually fetched until you call {@link Function#apply(Object)}.
+   */
+  Function<Query<Object>, ResourceHolder<Sequence<Object>>> fetchLoadedSegment(
+      RichSegmentDescriptor richSegmentDescriptor,
+      String dataSource,
+      ChannelCounters channelCounters
   );
 }

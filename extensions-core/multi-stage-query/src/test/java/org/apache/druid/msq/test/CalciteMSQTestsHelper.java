@@ -38,13 +38,17 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -84,6 +88,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
@@ -161,7 +166,28 @@ public class CalciteMSQTestsHelper
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
+                .toInstance(new DataSegmentProvider()
+                {
+                  @Override
+                  public Supplier<ResourceHolder<Segment>> fetchSegment(
+                      SegmentId segmentId,
+                      ChannelCounters channelCounters,
+                      boolean isReindex
+                  )
+                  {
+                    return getSupplierForSegment(segmentId);
+                  }
+
+                  @Override
+                  public Function<Query<Object>, ResourceHolder<Sequence<Object>>> fetchLoadedSegment(
+                      RichSegmentDescriptor richSegmentDescriptor,
+                      String dataSource,
+                      ChannelCounters channelCounters
+                  )
+                  {
+                    throw new AssertionError();
+                  }
+                });
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
           GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(

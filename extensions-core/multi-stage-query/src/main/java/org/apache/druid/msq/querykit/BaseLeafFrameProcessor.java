@@ -156,7 +156,12 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     } else if (readableInputs.size() != inputChannels.size()) {
       return ReturnOrAwait.awaitAll(inputChannels.size());
     } else if (baseInput.hasSegment()) {
-      return runWithSegment(baseInput.getSegment());
+      SegmentWithDescriptor segment = baseInput.getSegment();
+      if (segment.isRealtimeSegment()) {
+        return runWithLoadedSegment(baseInput.getSegment());
+      } else {
+        return runWithSegment(baseInput.getSegment());
+      }
     } else {
       assert baseInput.hasChannel();
       return runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
@@ -175,6 +180,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   }
 
   protected abstract ReturnOrAwait<Long> runWithSegment(SegmentWithDescriptor segment) throws IOException;
+  protected abstract ReturnOrAwait<Long> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException;
 
   protected abstract ReturnOrAwait<Long> runWithInputChannel(
       ReadableFrameChannel inputChannel,

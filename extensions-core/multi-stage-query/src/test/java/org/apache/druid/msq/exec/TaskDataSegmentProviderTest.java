@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -69,6 +70,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -150,7 +152,9 @@ public class TaskDataSegmentProviderTest
     provider = new TaskDataSegmentProvider(
         new TestCoordinatorClientImpl(),
         cacheManager,
-        indexIO
+        indexIO,
+        Mockito.mock(ServiceClientFactory.class),
+        jsonMapper
     );
 
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(THREADS, getClass().getSimpleName() + "-%s"));

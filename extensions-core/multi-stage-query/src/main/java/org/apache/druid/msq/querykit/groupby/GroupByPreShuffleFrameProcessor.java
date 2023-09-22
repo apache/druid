@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
@@ -42,6 +43,7 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
@@ -95,6 +97,35 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         () -> resultYielder.get(),
         RowSignature.Finalization.NO
     );
+  }
+
+  private GroupByQuery prepareGroupByQuery(GroupByQuery query)
+  {
+    ImmutableMap<String, Object> overridingContext = ImmutableMap.<String, Object>builder()
+                                                                 .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown())
+                                                                 .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
+                                                                 .build();
+    return query.withOverriddenContext(overridingContext);
+  }
+
+  @Override
+  protected ReturnOrAwait<Long> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
+  {
+    if (resultYielder == null) {
+      ResourceHolder<Sequence> servedSegmentFromServer = closer.register(
+          segment.getServedSegmentFromServer(prepareGroupByQuery(query))
+      );
+      Sequence<ResultRow> rowSequence = servedSegmentFromServer.get();
+      resultYielder = Yielders.each(rowSequence);
+    }
+
+    populateFrameWriterAndFlushIfNeeded();
+
+    if (resultYielder == null || resultYielder.isDone()) {
+      return ReturnOrAwait.returnObject(rowsOutput);
+    } else {
+      return ReturnOrAwait.runAgain();
+    }
   }
 
   @Override

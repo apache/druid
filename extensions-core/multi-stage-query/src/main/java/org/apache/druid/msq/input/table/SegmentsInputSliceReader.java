@@ -94,6 +94,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
 
           return new SegmentWithDescriptor(
               dataSegmentProvider.fetchSegment(segmentId, channelCounters, isReindex),
+              dataSegmentProvider.fetchLoadedSegment(descriptor, dataSource, channelCounters),
               descriptor
           );
         }

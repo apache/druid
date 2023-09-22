@@ -22,6 +22,7 @@ package org.apache.druid.msq.querykit.scan;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -43,6 +44,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
@@ -52,18 +54,22 @@ import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.RowBasedCursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -82,6 +88,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
   private final ScanQuery query;
   private final AtomicLong runningCountForLimit;
+  private final ObjectMapper jsonMapper;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
@@ -114,6 +121,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.runningCountForLimit = runningCountForLimit;
+    this.jsonMapper = jsonMapper;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
 
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
@@ -152,6 +160,50 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     closer.register(frameWriter);
     closer.register(super::cleanup);
     closer.close();
+  }
+
+  @Override
+  protected ReturnOrAwait<Long> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
+  {
+    if (cursor == null) {
+      final ResourceHolder<Sequence> resourceHolder = closer.register(segment.getServedSegmentFromServer(query));
+      Sequence<ScanResultValue> sequence = resourceHolder.get();
+
+      Sequence<Object[]> parsedSequence = sequence.flatMap(resultRow -> {
+        ScanResultValue scanResultValue = resultRow;
+        List<List<Object>> events = (List<List<Object>>) scanResultValue.getEvents();
+        return Sequences.simple(events);
+      }).map(List::toArray);
+      RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
+      RowBasedCursor<Object[]> cursorFromIterable = IterableRowsCursorHelper.getCursorFromSequence(
+          parsedSequence,
+          rowSignature
+      );
+
+      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable)));
+
+      if (cursorYielder.isDone()) {
+        // No cursors!
+        cursorYielder.close();
+        return ReturnOrAwait.returnObject(rowsOutput);
+      } else {
+        final long rowsFlushed = setNextCursor(cursorYielder.get(), null);
+        assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
+        closer.register(cursorYielder);
+      }
+    }
+
+    populateFrameWriterAndFlushIfNeededWithExceptionHandling();
+
+    if (cursor.isDone()) {
+      flushFrameWriter();
+    }
+
+    if (cursor.isDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
+      return ReturnOrAwait.returnObject(rowsOutput);
+    } else {
+      return ReturnOrAwait.runAgain();
+    }
   }
 
   @Override

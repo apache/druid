@@ -19,16 +19,27 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.query.Queries;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.rpc.FixedSetServiceLocator;
+import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -45,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -55,17 +67,23 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManager segmentCacheManager;
   private final IndexIO indexIO;
+  private final ServiceClientFactory serviceClientFactory;
+  private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<SegmentId, SegmentHolder> holders;
 
   public TaskDataSegmentProvider(
       CoordinatorClient coordinatorClient,
       SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      IndexIO indexIO,
+      ServiceClientFactory serviceClientFactory,
+      ObjectMapper objectMapper
   )
   {
     this.coordinatorClient = coordinatorClient;
     this.segmentCacheManager = segmentCacheManager;
     this.indexIO = indexIO;
+    this.serviceClientFactory = serviceClientFactory;
+    this.objectMapper = objectMapper;
     this.holders = new ConcurrentHashMap<>();
   }
 
@@ -141,6 +159,43 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
           closer
       );
     }
+  }
+
+  @Override
+  public Function<Query<Object>, ResourceHolder<Sequence<Object>>> fetchLoadedSegment(
+      RichSegmentDescriptor segmentDescriptor,
+      String dataSource,
+      ChannelCounters channelCounters
+  )
+  {
+    return query -> fetchServedSegmentInternal(
+        segmentDescriptor,
+        dataSource,
+        channelCounters,
+        query
+    );
+  }
+
+  private <T> ResourceHolder<Sequence<T>> fetchServedSegmentInternal(
+      RichSegmentDescriptor segmentDescriptor,
+      String dataSource,
+      ChannelCounters channelCounters,
+      Query<T> query
+  )
+  {
+    query = query.withDataSource(new TableDataSource(dataSource));
+    query = Queries.withSpecificSegments(
+        query,
+        ImmutableList.of(segmentDescriptor)
+    );
+
+    DataServerClient<T> dataServerClient = new DataServerClient<>(
+        serviceClientFactory,
+        new FixedSetServiceLocator(segmentDescriptor.getServers()),
+        objectMapper
+    );
+    DefaultResponseContext responseContext = new DefaultResponseContext();
+    return dataServerClient.run(query, responseContext);
   }
 
   private static class SegmentHolder implements Supplier<ResourceHolder<Segment>>
