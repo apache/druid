@@ -123,28 +123,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     this.testCase = new DrillTestCase(filename);
   }
 
-  static class TestCaseInfo {
-    private String filename;
-    private Expectation expectation;
-
-    enum Expectation {
-      PASS
-    }
-
-    public  TestCaseInfo(String filename, Object ... details) {
-      this.filename = filename;
-      this.expectation = Expectation.PASS;
-      for (Object object : details) {
-        if(object instanceof Expectation) {
-          expectation=(Expectation) object;
-          continue;
-        }
-        throw new RuntimeException("unknown: " + details);
-      }
-    }
-  }
-
-
   static class DrillTestCase
   {
     private final String filename;
