@@ -236,7 +236,7 @@ public abstract class AbstractTask implements Task
     try {
       if (cleanupCompletionLatch != null) {
         // block until the cleanup process completes
-        return cleanupCompletionLatch.await(100, TimeUnit.SECONDS);
+        return cleanupCompletionLatch.await(300, TimeUnit.SECONDS);
       }
 
       return true;
