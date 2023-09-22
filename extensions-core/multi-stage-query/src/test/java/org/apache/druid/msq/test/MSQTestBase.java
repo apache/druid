@@ -147,6 +147,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -288,6 +289,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected MSQTestOverlordServiceClient indexingServiceClient;
   protected MSQTestTaskActionClient testTaskActionClient;
   protected SqlStatementFactory sqlStatementFactory;
+  protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
 
   private MSQTestSegmentManager segmentManager;
@@ -526,6 +528,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
+
+    authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;
   }
 
   protected CatalogResolver createMockCatalogResolver()
