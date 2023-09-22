@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -48,6 +49,9 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   private final Condition notEnough;
   private final int maxSize;
 
+  private final AtomicLong pendingQueries;
+
+
   public DefaultBlockingPool(
       Supplier<T> generator,
       int limit
@@ -62,6 +66,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 
     this.lock = new ReentrantLock();
     this.notEnough = lock.newCondition();
+
+    this.pendingQueries = new AtomicLong();
   }
 
   @Override
@@ -91,11 +97,15 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
+      pendingQueries.incrementAndGet();
       final List<T> objects = timeoutMs > 0 ? pollObjects(elementNum, timeoutMs) : pollObjects(elementNum);
       return objects.stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
+    }
+    finally {
+      pendingQueries.decrementAndGet();
     }
   }
 
@@ -104,11 +114,19 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   {
     checkInitialized();
     try {
+      pendingQueries.incrementAndGet();
       return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
+      pendingQueries.incrementAndGet();
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public long getPendingQueries()
+  {
+    return pendingQueries.get();
   }
 
   private List<T> pollObjects(int elementNum) throws InterruptedException

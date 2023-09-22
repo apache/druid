@@ -40,6 +40,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.MergeBufferPoolMonitor;
 import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -70,6 +71,7 @@ public class BrokerProcessingModule implements Module
     JsonConfigProvider.bind(binder, "druid.processing.merge", BrokerParallelMergeConfig.class);
     JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    MetricsModule.register(binder, MergeBufferPoolMonitor.class);
   }
 
   @Provides
