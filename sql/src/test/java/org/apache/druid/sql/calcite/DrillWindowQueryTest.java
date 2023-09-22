@@ -219,6 +219,28 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         new StringDimensionSchema("col7"),
         new StringDimensionSchema("col8"),
         new StringDimensionSchema("col9"));
+    attachIndex(
+        retVal,
+        "smlTbl.parquet",
+        //"col_int": 8122,
+        new LongDimensionSchema("col_int"),
+        //"col_bgint": 817200,
+        new LongDimensionSchema("col_bgint"),
+        //"col_char_2": "IN",
+        new StringDimensionSchema("col_char_2"),
+        //"col_vchar_52": "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
+        new StringDimensionSchema("col_vchar_52"),
+        //"col_tmstmp": 1409617682418,
+        new LongDimensionSchema("col_tmstmp"),
+        //"col_dt": 422717616000000,
+        new LongDimensionSchema("col_dt"),
+        //"col_booln": false,
+        new StringDimensionSchema("col_booln"),
+        //"col_dbl": 12900.48,
+        new DoubleDimensionSchema("col_dbl"),
+        //"col_tm": 33109170
+        new LongDimensionSchema("col_tm")
+        );
 
     return retVal;
   }
