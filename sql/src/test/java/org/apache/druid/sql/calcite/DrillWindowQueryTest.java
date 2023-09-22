@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -46,6 +47,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -198,6 +201,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     protected final List<String[]> expectedResults;
     @Nullable
     protected final RowSignature expectedResultRowSignature;
+    private RowSignature currentRowSignature;
 
     public TextualResultsVerifier(List<String[]> expectedResults, RowSignature expectedSignature)
     {
@@ -211,26 +215,35 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (expectedResultRowSignature != null) {
         Assert.assertEquals(expectedResultRowSignature, rowSignature);
       }
+      currentRowSignature = rowSignature;
     }
 
     @Override
     public void verify(String sql, List<Object[]> results)
     {
+//      List<Object[]>  parsedExpectedResults=parseResults(expectedResults);
+
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
         for(int i=0;i<results.size();i++) {
           Assert.assertArrayEquals(
-                "mismatch in row#%d",
-                expectedResults.get(i),
-                arrayToString(results.get(i))
-              );
+              String.format("mismatch in row#%d", i),
+              expectedResults.get(i),
+              arrayToString(results.get(i)));
 
         }
       }
       catch (AssertionError e) {
+        System.out.println("query: " + sql);
         displayResults(results);
         throw e;
       }
+    }
+
+    private Object parseResults(List<String[]> expectedResults2)
+    {
+      return null;
+
     }
 
     private String[] arrayToString(Object[] objects)
@@ -271,8 +284,15 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
       testBuilder()
           .skipVectorize(true)
+          .queryContext(ImmutableMap.of(
+              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              "windowsAllTheWayDown", true,
+              QueryContexts.ENABLE_DEBUG, true,
+              PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false
+              )
+              )
           .sql(testCase.getQueryString())
-          .queryContext(ImmutableMap.of("windowsAreForClosers", true, "windowsAllTheWayDown", true))
+//          .queryContext(ImmutableMap.of("windowsAreForClosers", true, "windowsAllTheWayDown", true))
           .expectedResults( new TextualResultsVerifier(testCase.getExpectedResults(),null))
           .run();
     }
