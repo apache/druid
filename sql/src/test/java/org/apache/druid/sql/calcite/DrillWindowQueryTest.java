@@ -226,27 +226,28 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     @Override
     public void verify(String sql, List<Object[]> results)
     {
-//      SqlToRelConverter.isOrdered(null)
+      // SqlToRelConverter.isOrdered(null)
 
       boolean unsorted = !sql.toLowerCase()
           .replaceAll("\n", " ")
-          .replaceFirst(".*\\)","")
-          . contains("order");
+          .replaceFirst(".*\\)", "")
+          .contains("order");
 
       List<Object[]> parsedExpectedResults = parseResults(currentRowSignature, expectedResults);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-        if(unsorted) {
-//          Set<Object[]> resultsSet = new TreeSet<>(results);
-//          Set<Object[]> expectedSet = new TreeSet<>(parsedExpectedResults);
-////          // FIXME: incorrectly handles multiset issue
-////
-////          if(resultsSet)
-////
-           results.sort(new ArrayRowCmp());
-           parsedExpectedResults.sort(new ArrayRowCmp());;
+        if (unsorted) {
+          // Set<Object[]> resultsSet = new TreeSet<>(results);
+          // Set<Object[]> expectedSet = new TreeSet<>(parsedExpectedResults);
+          //// // FIXME: incorrectly handles multiset issue
+          ////
+          //// if(resultsSet)
+          ////
+          results.sort(new ArrayRowCmp());
+          parsedExpectedResults.sort(new ArrayRowCmp());
+          ;
 
-        } else  {
+        } else {
           assertResultsEquals(sql, parsedExpectedResults, results);
         }
       } catch (AssertionError e) {
@@ -258,7 +259,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  static class ArrayRowCmp implements Comparator<Object[]>{
+  static class ArrayRowCmp implements Comparator<Object[]>
+  {
 
     @Override
     public int compare(Object[] arg0, Object[] arg1)
