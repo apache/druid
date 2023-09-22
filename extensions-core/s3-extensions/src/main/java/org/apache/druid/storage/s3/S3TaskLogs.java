@@ -87,7 +87,7 @@ public class S3TaskLogs implements TaskLogs
   public void pushTaskPayload(String taskid, File taskPayloadFile) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "task.json");
-    log.info("Pushing task payload %s to: %s", taskPayloadFile, taskKey);
+    log.info("Pushing task payload [%s] to location [%s]", taskPayloadFile, taskKey);
     pushTaskFile(taskPayloadFile, taskKey);
   }
 

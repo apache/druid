@@ -477,16 +477,10 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   }
 
   @Override
-  public Boolean shouldUseDeepStorageForTaskPayload(Task task)
+  public boolean shouldUseDeepStorageForTaskPayload(Task task) throws IOException
   {
-    try {
-      String compressedTaskPayload = Base64Compression.compressBase64(mapper.writeValueAsString(task));
-      return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
-    }
-    catch (Exception e) {
-      // In case there's a issue with checking how large the task is, default to using deep storage so we don't lose the task payload.
-      return true;
-    }
+    String compressedTaskPayload = Base64Compression.compressBase64(mapper.writeValueAsString(task));
+    return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
   }
 }
 

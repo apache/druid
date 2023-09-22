@@ -29,7 +29,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Something that knows how to manage task json paylods.
+ * Something that knows how to push a task payload before it is run to somewhere
+ * a ingestion worker will be able to stream the task payload from when trying to run the task.
  */
 @ExtensionPoint
 public interface TaskPayloadManager

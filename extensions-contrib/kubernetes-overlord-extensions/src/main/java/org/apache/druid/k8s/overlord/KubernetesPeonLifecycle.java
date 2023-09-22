@@ -119,7 +119,7 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, Boolean useDeepStorageForTaskPayload) throws IllegalStateException
+  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, boolean useDeepStorageForTaskPayload) throws IllegalStateException
   {
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
