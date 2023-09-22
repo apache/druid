@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class KillTaskReport implements TaskReport
@@ -65,13 +66,13 @@ public class KillTaskReport implements TaskReport
   {
     private final int numSegmentsKilled;
     private final int numBatchesProcessed;
-    private final int numSegmentsMarkedAsUnused;
+    private final Integer numSegmentsMarkedAsUnused;
 
     @JsonCreator
     public Stats(
         @JsonProperty("numSegmentsKilled") int numSegmentsKilled,
         @JsonProperty("numBatchesProcessed") int numBatchesProcessed,
-        @JsonProperty("numSegmentsMarkedAsUnused") int numSegmentsMarkedAsUnused
+        @JsonProperty("numSegmentsMarkedAsUnused") @Nullable Integer numSegmentsMarkedAsUnused
     )
     {
       this.numSegmentsKilled = numSegmentsKilled;
@@ -91,8 +92,9 @@ public class KillTaskReport implements TaskReport
       return numBatchesProcessed;
     }
 
+    @Nullable
     @JsonProperty
-    public int getNumSegmentsMarkedAsUnused()
+    public Integer getNumSegmentsMarkedAsUnused()
     {
       return numSegmentsMarkedAsUnused;
     }
@@ -106,10 +108,10 @@ public class KillTaskReport implements TaskReport
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      Stats stats = (Stats) o;
-      return numSegmentsKilled == stats.numSegmentsKilled
-             && numBatchesProcessed == stats.numBatchesProcessed
-             && numSegmentsMarkedAsUnused == stats.numSegmentsMarkedAsUnused;
+      Stats that = (Stats) o;
+      return numSegmentsKilled == that.numSegmentsKilled
+             && numBatchesProcessed == that.numBatchesProcessed
+             && Objects.equals(this.numSegmentsMarkedAsUnused, that.numSegmentsMarkedAsUnused);
     }
 
     @Override
