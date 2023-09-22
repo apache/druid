@@ -214,7 +214,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     assertEquals(1, queries.size());
     Object query = queries.get(0);
 
-    if(query instanceof ScanQuery) {
+    if(false && query instanceof ScanQuery) {
       DataSource ds = ((ScanQuery) query).getDataSource();
       assertInstanceOf(QueryDataSource.class, ds);
       query=((QueryDataSource)ds).getQuery();

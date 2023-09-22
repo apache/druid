@@ -37,10 +37,12 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
@@ -53,6 +55,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,6 +64,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -100,13 +105,53 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  private final String filename;
+  private final DrillTestCase testCase;
 
-  public DrillWindowQueryTest(
-      String filename
-  )
+  public DrillWindowQueryTest(String filename) throws IOException
   {
-    this.filename = filename;
+    this.testCase = new DrillTestCase(filename);
+  }
+
+  static class DrillTestCase {
+    private final String filename;
+    private final String query;
+    private final List<String[]> results;
+
+    public DrillTestCase(String filename) throws IOException
+    {
+      this.filename = filename;
+      this.query=readStringFromResource(".q");
+      String resultsStr = readStringFromResource(".e");
+      String[] lines = resultsStr.split("\n");
+      results = new ArrayList<>();
+      for (String string : lines) {
+        String[] cols = string.split("\t");
+        results.add(cols);
+      }
+    }
+
+    @Nonnull
+    private String getQueryString()
+    {
+      return query;
+    }
+
+    @Nonnull
+    private List<String[]> getExpectedResults()
+    {
+      return results;
+    }
+
+    @SuppressWarnings({"UnstableApiUsage", "ConstantConditions"})
+    @Nonnull
+    private String readStringFromResource(String s) throws IOException
+    {
+      final String query;
+      try (InputStream queryIn = ClassLoader.getSystemResourceAsStream("drill/window/queries/" + filename + s)) {
+        query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
+      }
+      return query;
+    }
   }
 
   @Override
@@ -148,57 +193,94 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     return retVal;
   }
 
+  public class TextualResultsVerifier implements ResultsVerifier
+  {
+    protected final List<String[]> expectedResults;
+    @Nullable
+    protected final RowSignature expectedResultRowSignature;
+
+    public TextualResultsVerifier(List<String[]> expectedResults, RowSignature expectedSignature)
+    {
+      this.expectedResults = expectedResults;
+      this.expectedResultRowSignature = expectedSignature;
+    }
+
+    @Override
+    public void verifyRowSignature(RowSignature rowSignature)
+    {
+      if (expectedResultRowSignature != null) {
+        Assert.assertEquals(expectedResultRowSignature, rowSignature);
+      }
+    }
+
+    @Override
+    public void verify(String sql, List<Object[]> results)
+    {
+      try {
+        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
+        for(int i=0;i<results.size();i++) {
+          Assert.assertArrayEquals(
+                "mismatch in row#%d",
+                expectedResults.get(i),
+                arrayToString(results.get(i))
+              );
+
+        }
+      }
+      catch (AssertionError e) {
+        displayResults(results);
+        throw e;
+      }
+    }
+
+    private String[] arrayToString(Object[] objects)
+    {
+      String[] ret = new String[objects.length];
+      for (int i = 0; i < objects.length; i++) {
+        Object o = objects[i];
+        String val = (o == null) ? "null" : o.toString();
+        ret[i] = val;
+      }
+      return ret;
+    }
+
+    public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
+    {
+      for (int i = 0; i < results.size(); i++) {
+        Assert.assertArrayEquals(
+            StringUtils.format("result #%d: %s", i + 1, sql),
+            expectedResults.get(i),
+            results.get(i)
+        );
+      }
+      Assert.assertEquals(expectedResults.size(), results.size());
+    }
+
+  }
+
+
   @Test
-  public void windowQueryTest()
+  public void windowQueryTest() throws Exception
   {
     Thread thread = null;
     String oldName = null;
     try {
       thread = Thread.currentThread();
       oldName = thread.getName();
-      thread.setName("drillWindowQuery-" + filename);
-
-      final String query = getQueryString();
-      final String results = getExpectedResults();
+      thread.setName("drillWindowQuery-" + testCase.filename);
 
       testBuilder()
           .skipVectorize(true)
-          .sql(query)
+          .sql(testCase.getQueryString())
           .queryContext(ImmutableMap.of("windowsAreForClosers", true, "windowsAllTheWayDown", true))
-          .expectedResults((sql, results1) -> Assert.assertEquals(results, String.valueOf(results1)))
+          .expectedResults( new TextualResultsVerifier(testCase.getExpectedResults(),null))
           .run();
-    }
-    catch (Throwable e) {
-      log.info(e, "Got a throwable, here it is. Ignoring for now.");
     }
     finally {
       if (thread != null && oldName != null) {
         thread.setName(oldName);
       }
     }
-  }
-
-  @Nonnull
-  private String getQueryString() throws IOException
-  {
-    return readStringFromResource(".q");
-  }
-
-  @Nonnull
-  private String getExpectedResults() throws IOException
-  {
-    return readStringFromResource(".e");
-  }
-
-  @SuppressWarnings({"UnstableApiUsage", "ConstantConditions"})
-  @Nonnull
-  private String readStringFromResource(String s) throws IOException
-  {
-    final String query;
-    try (InputStream queryIn = ClassLoader.getSystemResourceAsStream("drill/window/queries/" + filename + s)) {
-      query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
-    }
-    return query;
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
