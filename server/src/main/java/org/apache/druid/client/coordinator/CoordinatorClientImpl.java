@@ -116,7 +116,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
               }
           )
       );
-      FutureUtils.getUnchecked(segments, true).forEach(retVal::add); // TODO: reconsider
+      FutureUtils.getUnchecked(segments, true).forEach(retVal::add);
     }
 
     return retVal;
