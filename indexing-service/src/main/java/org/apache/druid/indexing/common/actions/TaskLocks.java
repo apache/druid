@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class TaskLocks
 {
@@ -89,7 +90,10 @@ public class TaskLocks
             return false;
           }
 
-          final List<TaskLock> locks = entry.getValue();
+          final List<TaskLock> locks = entry.getValue()
+                                            .stream()
+                                            .filter(lock -> !lock.isRevoked())
+                                            .collect(Collectors.toList());
           return locks.stream().anyMatch(
               lock -> {
                 if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.actions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -32,6 +33,7 @@ import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.DateTimes;
@@ -59,11 +61,13 @@ public class TaskLocksTest
   @Before
   public void setup()
   {
+    final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     lockbox = new TaskLockbox(
-        new HeapMemoryTaskStorage(new TaskStorageConfig(null)),
+        taskStorage,
         new TestIndexerMetadataStorageCoordinator()
     );
     task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
     lockbox.add(task);
   }
 
@@ -303,6 +307,19 @@ public class TaskLocksTest
         ),
         TaskLocks.findLocksForSegments(task, lockbox, segments)
     );
+  }
+
+  @Test
+  public void testRevokedLocksDoNotCoverSegments()
+  {
+    final Set<DataSegment> segments = createNumberedPartitionedSegments();
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
+
+    final TaskLock lock = tryTimeChunkLock(task, interval).getTaskLock();
+    Assert.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+
+    lockbox.revokeLock(task.getId(), lock);
+    Assert.assertFalse(TaskLocks.isLockCoversSegments(task, lockbox, segments));
   }
 
   private TimeChunkLock newTimeChunkLock(Interval interval, String version)
