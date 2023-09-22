@@ -1312,7 +1312,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 </details>
 
 #### Response Description 
-The response payload contains the following structure:
+The response `payload` contains the following structure:
 
 |Property|Type|Description|
 |---|---|---|
@@ -1329,7 +1329,7 @@ The response payload contains the following structure:
 |`offsetLastUpdated`|String|Contains the timestamp of when the stream offsets were last inspected.|
 |`suspended`|Boolean|True if the supervisor is in a SUSPENDED state.|
 |`healthy`|Boolean|True if the supervisor and its tasks are currently healthy.|
-|`state`|String|Overall state of the supervisor. (see)|
+|`state`|String|Overall state of the supervisor. |
 |`detailedState`|String|Current stage of processing for the supervisor.|
 |`recentErrors`|Array of String|Errors reported recently by supervisor managed tasks.|
 
