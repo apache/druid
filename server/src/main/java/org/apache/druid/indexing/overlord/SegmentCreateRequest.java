@@ -28,12 +28,13 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
  * The {@code sequenceName} and {@code previousSegmentId} fields are meant to
  * make it easy for two independent ingestion tasks to produce the same series
  * of segments.
+ * <p>
+ * This class does not implement equals() or hashCode() so that each request is
+ * treated as unique even if all the parameters are the same.
+ * TODO: why??
  */
 public class SegmentCreateRequest
 {
-  // DO NOT IMPLEMENT equals or hashCode for this class as each request must be
-  // treated as unique even if it is for the same parameters
-
   private final String version;
   private final String sequenceName;
   private final String previousSegmentId;

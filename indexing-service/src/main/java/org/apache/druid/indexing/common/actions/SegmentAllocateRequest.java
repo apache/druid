@@ -70,6 +70,11 @@ public class SegmentAllocateRequest
     return attempts;
   }
 
+  public int getMaxAttempts()
+  {
+    return maxAttempts;
+  }
+
   public Interval getRowInterval()
   {
     return rowInterval;

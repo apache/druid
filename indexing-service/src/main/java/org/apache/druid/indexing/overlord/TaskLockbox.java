@@ -35,11 +35,9 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
-import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -478,7 +476,7 @@ public class TaskLockbox
       LockGranularity lockGranularity
   )
   {
-    log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
+    log.info("Allocating [%d] segments for datasource[%s], interval[%s].", requests.size(), dataSource, interval);
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
@@ -514,7 +512,7 @@ public class TaskLockbox
   {
     final String taskId = holder.task.getId();
     if (!activeTasks.contains(taskId)) {
-      holder.markFailed("Unable to grant lock to inactive Task [%s]", taskId);
+      holder.markFailed("Task[%s] is not active anymore", taskId);
     }
   }
 
@@ -719,19 +717,20 @@ public class TaskLockbox
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      Collection<SegmentAllocationHolder> holders
+      Set<SegmentAllocationHolder> holderSet
   )
   {
-    if (holders.isEmpty()) {
+    if (holderSet.isEmpty()) {
       return;
     }
 
+    final List<SegmentAllocationHolder> holders = new ArrayList<>(holderSet);
     final List<SegmentCreateRequest> createRequests =
         holders.stream()
                .map(SegmentAllocationHolder::getSegmentRequest)
                .collect(Collectors.toList());
 
-    Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatedSegments =
+    final List<SegmentAllocateResult> allocateResults =
         metadataStorageCoordinator.allocatePendingSegments(
             dataSource,
             interval,
@@ -739,12 +738,13 @@ public class TaskLockbox
             createRequests
         );
 
-    for (SegmentAllocationHolder holder : holders) {
-      SegmentIdWithShardSpec segmentId = allocatedSegments.get(holder.getSegmentRequest());
-      if (segmentId == null) {
-        holder.markFailed("Storage coordinator could not allocate segment.");
+    for (int i = 0; i < holders.size(); ++i) {
+      SegmentAllocationHolder holder = holders.get(i);
+      SegmentAllocateResult result = allocateResults.get(i);
+      if (result.isSuccess()) {
+        holder.setAllocatedSegment(result.getSegmentId());
       } else {
-        holder.setAllocatedSegment(segmentId);
+        holder.markFailed(result);
       }
     }
   }
@@ -1689,14 +1689,19 @@ public class TaskLockbox
 
     void markFailed(String msgFormat, Object... args)
     {
+      markFailed(SegmentAllocateResult.failure(msgFormat, args));
+    }
+
+    void markFailed(SegmentAllocateResult result)
+    {
       list.markCompleted(this);
-      result = new SegmentAllocateResult(null, StringUtils.format(msgFormat, args));
+      this.result = result;
     }
 
     void markSucceeded()
     {
       list.markCompleted(this);
-      result = new SegmentAllocateResult(allocatedSegment, null);
+      result = SegmentAllocateResult.success(allocatedSegment);
     }
 
     void setAllocatedSegment(SegmentIdWithShardSpec segmentId)
