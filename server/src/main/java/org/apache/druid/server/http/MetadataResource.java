@@ -382,10 +382,9 @@ public class MetadataResource
     Map<String, DataSourceInformation> dataSourceSchemaMap = coordinatorSegmentMetadataCache.getDataSourceInformationMap();
 
     List<DataSourceInformation> results = new ArrayList<>();
-    List<String> dataSourcesToRetain = (null == dataSources) ? new ArrayList<>(dataSourceSchemaMap.keySet()) : dataSources;
 
     for (Map.Entry<String, DataSourceInformation> entry : dataSourceSchemaMap.entrySet()) {
-      if (dataSourcesToRetain.contains(entry.getKey())) {
+      if (dataSources.contains(entry.getKey())) {
         results.add(entry.getValue());
       }
     }
