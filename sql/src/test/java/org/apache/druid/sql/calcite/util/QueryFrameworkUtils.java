@@ -86,7 +86,6 @@ import java.util.stream.Collectors;
 
 public class QueryFrameworkUtils
 {
-
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(

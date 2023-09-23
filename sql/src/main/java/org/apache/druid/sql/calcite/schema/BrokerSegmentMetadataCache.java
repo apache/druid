@@ -46,14 +46,14 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Broker-side cache of segment metadata that combines segments to identify
- * dataSources which become "tables" in Calcite. This cache provides the "physical"
+ * Broker-side cache of segment metadata that combines segments to build
+ * datasources which become "tables" in Calcite. This cache provides the "physical"
  * metadata about a dataSource which is blended with catalog "logical" metadata
  * to provide the final user-view of each dataSource.
  * <p>
  * This class extends {@link AbstractSegmentMetadataCache} and introduces following changes,
  * <ul>
- *   <li>The refresh mechanism now includes polling the coordinator for dataSource schema,
+ *   <li>The refresh mechanism includes polling the coordinator for datasource schema,
  *       and falling back to running {@link org.apache.druid.query.metadata.metadata.SegmentMetadataQuery}.</li>
  *   <li>It builds and caches {@link PhysicalDatasourceMetadata} object for the table schema</li>
  * </ul>
@@ -116,7 +116,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     polledDataSourceMetadata.keySet().removeIf(Predicates.not(dataSourcesToQuery::contains));
 
     // update datasource metadata in the cache
-    polledDataSourceMetadata.forEach(this::updateDsMetadata);
+    polledDataSourceMetadata.forEach(this::updateDSMetadata);
 
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
@@ -147,7 +147,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       }
 
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
-      updateDsMetadata(dataSource, physicalDatasourceMetadata);
+      updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
   }
 
@@ -182,7 +182,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     return polledDataSourceMetadata;
   }
 
-  private void updateDsMetadata(String dataSource, PhysicalDatasourceMetadata physicalDatasourceMetadata)
+  private void updateDSMetadata(String dataSource, PhysicalDatasourceMetadata physicalDatasourceMetadata)
   {
     final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
     if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {

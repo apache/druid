@@ -62,10 +62,10 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
       final QueryWatcher queryWatcher,
       final @Smile ObjectMapper smileMapper,
       final @EscalatedClient HttpClient httpClient,
-      FilteredServerInventoryView baseView,
-      TierSelectorStrategy tierSelectorStrategy,
-      ServiceEmitter emitter,
-      CoordinatorSegmentWatcherConfig segmentWatcherConfig
+      final FilteredServerInventoryView baseView,
+      final TierSelectorStrategy tierSelectorStrategy,
+      final ServiceEmitter emitter,
+      final CoordinatorSegmentWatcherConfig segmentWatcherConfig
   )
   {
     super(warehouse, queryWatcher, smileMapper, httpClient, baseView, tierSelectorStrategy, emitter, new BrokerSegmentWatcherConfig() {
@@ -89,27 +89,27 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
   public VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
   {
     String table = Iterables.getOnlyElement(dataSource.getTableNames());
-    VersionedIntervalTimeline<String, ServerSelector> timeline;
+    VersionedIntervalTimeline<String, ServerSelector> baseTimeline;
 
     synchronized (lock) {
-      timeline = timelines.get(table);
+      baseTimeline = timelines.get(table);
     }
 
-    VersionedIntervalTimeline<String, SegmentLoadInfo> newTimeline =
+    VersionedIntervalTimeline<String, SegmentLoadInfo> segmentLoadInfoTimeline =
         new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-    newTimeline.addAll(
-        timeline.iterateAllObjects().stream()
+    segmentLoadInfoTimeline.addAll(
+        baseTimeline.iterateAllObjects().stream()
                 .map(serverSelector -> new VersionedIntervalTimeline.PartitionChunkEntry<>(
                     serverSelector.getSegment().getInterval(),
                     serverSelector.getSegment().getVersion(),
                     serverSelector.getSegment().getShardSpec().createChunk(serverSelector.toSegmentLoadInfo())
                 )).iterator());
 
-    return newTimeline;
+    return segmentLoadInfoTimeline;
   }
 
   @Override
-  public Map<SegmentId, SegmentLoadInfo> getSegmentLoadInfos()
+  public Map<SegmentId, SegmentLoadInfo> getLoadInfoForAllSegments()
   {
     return CollectionUtils.mapValues(selectors, ServerSelector::toSegmentLoadInfo);
   }

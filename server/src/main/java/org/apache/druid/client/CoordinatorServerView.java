@@ -212,7 +212,7 @@ public class CoordinatorServerView implements CoordinatorTimeline
   }
 
   @Override
-  public Map<SegmentId, SegmentLoadInfo> getSegmentLoadInfos()
+  public Map<SegmentId, SegmentLoadInfo> getLoadInfoForAllSegments()
   {
     return segmentLoadInfos;
   }

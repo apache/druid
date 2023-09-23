@@ -26,17 +26,18 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import java.util.Map;
 
 /**
- * Segment timeline maintained in the coordinator.
+ * Segment timeline maintained in the coordinator. It provides methods for retrieving timeline information
+ * related to datasources and {@link SegmentLoadInfo}.
  */
 public interface CoordinatorTimeline extends InventoryView
 {
   /**
-   * Retrieve timeline for a dataSource.
+   * Retrieve timeline for a datasource.
    */
   VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource);
 
   /**
    * Server information for all segments in the timeline.
    */
-  Map<SegmentId, SegmentLoadInfo> getSegmentLoadInfos();
+  Map<SegmentId, SegmentLoadInfo> getLoadInfoForAllSegments();
 }

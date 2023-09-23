@@ -365,7 +365,7 @@ public class MetadataResource
    * API to fetch {@link DataSourceInformation} for the specified dataSources.
    *
    * @param dataSources list of dataSources to be queried
-   * @return information including schema details for the specified dataSources
+   * @return information including schema details for the specified datasources
    */
   @POST
   @Path("/dataSourceInformation")

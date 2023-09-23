@@ -85,8 +85,10 @@ public class BrokerServerView implements TimelineServerView
 
   protected final Object lock = new Object();
 
+  // Map of segmentIds and the set of server where the segment is present
   protected final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
 
+  // Map of datasource and segment timeline
   protected final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
 
   @Inject

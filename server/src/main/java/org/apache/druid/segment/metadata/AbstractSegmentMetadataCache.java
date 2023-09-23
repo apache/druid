@@ -89,8 +89,9 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * An abstract class that listens for segment change events and caches segment metadata and periodically refreshes
- * the segments and datasources.
+ * An abstract class that listens for segment change events and caches segment metadata. It periodically refreshes
+ * the segments, by fetching their metadata which includes schema information from sources like
+ * data nodes, db (the logic is specificed in the child class) and builds table schema.
  *
  * <p>This class is generic and is parameterized by a type {@code T} that extends {@link DataSourceInformation}.</p>
  *
@@ -324,7 +325,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                     if (isServerViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
-                      setInitialized(stopwatch);
+                      setInitializedAndReportInitTime(stopwatch);
                     }
 
                     // Wait some more, we'll wake up when it might be time to do another refresh.
@@ -344,7 +345,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
                 refresh(segmentsToRefresh, dataSourcesToRebuild);
 
-                setInitialized(stopwatch);
+                setInitializedAndReportInitTime(stopwatch);
               }
               catch (InterruptedException e) {
                 // Fall through.
@@ -378,7 +379,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     );
   }
 
-  private void setInitialized(Stopwatch stopwatch)
+  private void setInitializedAndReportInitTime(Stopwatch stopwatch)
   {
     // report the cache init time
     if (initialized.getCount() == 1) {
