@@ -569,12 +569,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       appendSegments.add(segment);
     }
 
-    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock = expectedSegmentsToUpgrade.stream().collect(
-        Collectors.toMap(s -> s, s -> replaceLock)
-    );
+    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
+        = expectedSegmentsToUpgrade.stream()
+                                   .collect(Collectors.toMap(s -> s, s -> replaceLock));
 
     // Commit the segment and verify the results
-    SegmentPublishResult commitResult = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock);
+    SegmentPublishResult commitResult
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock);
     Assert.assertTrue(commitResult.isSuccess());
     Assert.assertEquals(appendSegments, commitResult.getSegments());
 
@@ -584,17 +585,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(retrieveUsedSegments())
     );
 
-    final Set<String> expectedUpgradeSegmentIds = expectedSegmentsToUpgrade.stream()
-                                                                           .map(s -> s.getId().toString())
-                                                                           .collect(Collectors.toSet());
+    // Verify entries in the segment task lock table
+    final Set<String> expectedUpgradeSegmentIds
+        = expectedSegmentsToUpgrade.stream()
+                                   .map(s -> s.getId().toString())
+                                   .collect(Collectors.toSet());
     final Map<String, String> observedSegmentToLock = getSegmentsCommittedDuringReplaceTask(replaceTaskId);
     Assert.assertEquals(expectedUpgradeSegmentIds, observedSegmentToLock.keySet());
 
     final Set<String> observedLockVersions = new HashSet<>(observedSegmentToLock.values());
-    Assert.assertEquals(
-        replaceLock.getVersion(),
-        Iterables.getOnlyElement(observedLockVersions)
-    );
+    Assert.assertEquals(1, observedLockVersions.size());
+    Assert.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
   }
 
   @Test
