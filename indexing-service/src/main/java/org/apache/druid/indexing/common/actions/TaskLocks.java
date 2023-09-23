@@ -28,10 +28,10 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.overlord.ReplaceTaskLock;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -135,12 +135,12 @@ public class TaskLocks
    * SinglePhaseParallelIndexTaskRunner.
    */
   public static TaskLockType determineLockTypeForAppend(
-      Map<String, Object> context
+      Map<String, Object> taskContext
   )
   {
-    final Object lockType = context.get(Tasks.TASK_LOCK_TYPE);
+    final Object lockType = taskContext.get(Tasks.TASK_LOCK_TYPE);
     if (lockType == null) {
-      final boolean useSharedLock = (boolean) context.getOrDefault(Tasks.USE_SHARED_LOCK, false);
+      final boolean useSharedLock = (boolean) taskContext.getOrDefault(Tasks.USE_SHARED_LOCK, false);
       return useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
     } else {
       return TaskLockType.valueOf(lockType.toString());

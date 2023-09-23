@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord;
+package org.apache.druid.metadata;
 
 import org.joda.time.Interval;
 
