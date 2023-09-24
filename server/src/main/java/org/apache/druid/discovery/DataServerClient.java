@@ -21,13 +21,13 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Query;
@@ -58,12 +58,14 @@ public class DataServerClient<T>
   private static final String SERVED_SEGMENT_CLIENT_NAME = "ServedSegmentClient";
   private final ServiceClient serviceClient;
   private final ObjectMapper objectMapper;
+  private final ObjectMapper smileMapper;
   private final ScheduledExecutorService queryCancellationExecutor;
 
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
       FixedSetServiceLocator fixedSetServiceLocator,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      ObjectMapper smileMapper
   )
   {
     serviceClient = serviceClientFactory.makeClient(
@@ -72,6 +74,7 @@ public class DataServerClient<T>
         StandardRetryPolicy.aboutAnHour()
     );
     this.objectMapper = objectMapper;
+    this.smileMapper = smileMapper;
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
@@ -89,11 +92,11 @@ public class DataServerClient<T>
 
     Future<InputStream> resultStreamFuture;
     try {
-      resultStreamFuture = serviceClient.asyncRequest(
+      resultStreamFuture = Futures.immediateFuture(serviceClient.request(
           new RequestBuilder(HttpMethod.POST, basePath)
-              .jsonContent(objectMapper, query), // TODO: smile
-          new InputStreamResponseHandler()
-      );
+              .smileContent(smileMapper, query),
+          new DataServerResponseHandler(query, context, smileMapper)
+      ));
 
       BaseSequence<T, JsonParserIterator<T>> baseSequence = new BaseSequence<>(
           new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
@@ -107,7 +110,7 @@ public class DataServerClient<T>
                   basePath,
                   query,
                   "",
-                  objectMapper
+                  smileMapper
               );
             }
 

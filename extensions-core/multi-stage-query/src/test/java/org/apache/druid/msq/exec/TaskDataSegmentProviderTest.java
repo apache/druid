@@ -154,6 +154,7 @@ public class TaskDataSegmentProviderTest
         cacheManager,
         indexIO,
         Mockito.mock(ServiceClientFactory.class),
+        jsonMapper,
         jsonMapper
     );
 

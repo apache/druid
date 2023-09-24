@@ -70,13 +70,15 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<SegmentId, SegmentHolder> holders;
+  private final ObjectMapper smileMapper;
 
   public TaskDataSegmentProvider(
       CoordinatorClient coordinatorClient,
       SegmentCacheManager segmentCacheManager,
       IndexIO indexIO,
       ServiceClientFactory serviceClientFactory,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      ObjectMapper smileMapper
   )
   {
     this.coordinatorClient = coordinatorClient;
@@ -85,6 +87,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
     this.holders = new ConcurrentHashMap<>();
+    this.smileMapper = smileMapper;
   }
 
   @Override
@@ -192,7 +195,8 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     DataServerClient<T> dataServerClient = new DataServerClient<>(
         serviceClientFactory,
         new FixedSetServiceLocator(segmentDescriptor.getServers()),
-        objectMapper
+        objectMapper,
+        smileMapper
     );
     DefaultResponseContext responseContext = new DefaultResponseContext();
     return dataServerClient.run(query, responseContext);

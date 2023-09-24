@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -99,6 +100,7 @@ public class IndexerWorkerContext implements WorkerContext
                 .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"));
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
+    final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
 
     return new IndexerWorkerContext(
         toolbox,
@@ -109,7 +111,8 @@ public class IndexerWorkerContext implements WorkerContext
             segmentCacheManager,
             indexIO,
             serviceClientFactory,
-            toolbox.getJsonMapper()
+            toolbox.getJsonMapper(),
+            smileMapper
         ),
         serviceClientFactory
     );
