@@ -56,7 +56,7 @@ public class SqlSegmentsMetadataManagerProviderTest
 
     final MetadataStorageTablesConfig storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     final String segmentsTable = storageConfig.getSegmentsTable().toUpperCase(Locale.ENGLISH);
-    final String segmentTaskLockTable = storageConfig.getSegmentVersionsTable().toUpperCase(Locale.ENGLISH);
+    final String segmentTaskLockTable = storageConfig.getUpgradeSegmentsTable().toUpperCase(Locale.ENGLISH);
 
     // Verify that the tables do not exist yet
     Assert.assertFalse(tableExists(segmentsTable, connector));

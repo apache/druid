@@ -279,13 +279,22 @@ public interface IndexerMetadataStorageCoordinator
   ) throws IOException;
 
   /**
-   * Commits segments created by an APPEND task. If any REPLACE segment that
-   * overlaps with these {@code appendSegments} was committed while this append
-   * task was in progress, the {@code appendSegments} are also added to the
-   * version of the replace segment.
+   * Commits segments created by an APPEND task. This method also handles the
+   * segment upgrade scenarios that may result from concurrent append and replace.
+   * <ul>
+   * <li>If a REPLACE task committed a segment that overlaps with any of the
+   * appendSegments while this APPEND task was in progress, the appendSegments
+   * are upgraded to the version of the replace segment too.</li>
+   * <li>If an appendSegment is covered by a currently active REPLACE lock, then
+   * an entry is created for it in the upgrade_segments table, so that when the
+   * REPLACE task finishes, it can upgrade the appendSegment to the version of
+   * the REPLACE lock.</li>
+   * </ul>
    *
-   * @param appendSegments
-   * @param appendSegmentToReplaceLock
+   * @param appendSegments             All segments created by an APPEND task that
+   *                                   must be committed in a single transaction.
+   * @param appendSegmentToReplaceLock Map from append segment to the currently
+   *                                   active REPLACE lock (if any) covering it
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
@@ -293,10 +302,19 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Commits segments created by a REPLACE task. If any APPEND segment that
-   * overlaps with these {@code replaceSegments} was committed while this replace
-   * task was in progress, the append segments are also added to the version of
-   * these {@code replaceSegments}.
+   * Commits segments created by a REPLACE task. This method also handles the
+   * segment upgrade scenarios that may result from concurrent append and replace.
+   * <ul>
+   * <li>If an APPEND task committed a segment covered by a REPLACE lock of this
+   * task while it was in progress, the append segment is upgraded to the version
+   * of the corresponding lock. This is done with the help of entries created in
+   * upgrade_segments table in {@link #commitAppendSegments}</li>
+   * <li></li>
+   * </ul>
+   *
+   * @param replaceSegments        All segments created by a REPLACE task that
+   *                               must be committed in a single transaction.
+   * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,

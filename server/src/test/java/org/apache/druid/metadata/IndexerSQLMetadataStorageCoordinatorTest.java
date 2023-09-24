@@ -332,7 +332,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
-    derbyConnector.createSegmentVersionTable();
+    derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
@@ -466,7 +466,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentVersionsTable();
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
     return derbyConnector.retryWithHandle(handle -> {
       final String sql = StringUtils.format(
           "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
@@ -490,10 +490,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     });
   }
 
-  private Boolean insertIntoSegmentVersionsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap)
+  private void insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentVersionsTable();
-    return derbyConnector.retryWithHandle(
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
+    derbyConnector.retryWithHandle(
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
@@ -516,7 +516,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           final int[] affectedRows = preparedBatch.execute();
           final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
           if (!succeeded) {
-            throw new ISE("Failed to publish segment to lock metadata mapping to DB");
+            throw new ISE("Failed to insert upgrade segments in DB");
           }
           return true;
         }
@@ -620,7 +620,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
     insertUsedSegments(segmentsAppendedWithReplaceLock);
-    insertIntoSegmentVersionsTable(appendedSegmentToReplaceLockMap);
+    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap);
 
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {

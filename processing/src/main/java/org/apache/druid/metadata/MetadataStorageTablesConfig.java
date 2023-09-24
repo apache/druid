@@ -57,8 +57,8 @@ public class MetadataStorageTablesConfig
   @JsonProperty("segments")
   private final String segmentsTable;
 
-  @JsonProperty("segmentVersions")
-  private final String segmentVersionsTable;
+  @JsonProperty("upgradeSegments")
+  private final String upgradeSegmentsTable;
 
   @JsonProperty("rules")
   private final String rulesTable;
@@ -94,14 +94,14 @@ public class MetadataStorageTablesConfig
       @JsonProperty("taskLock") String taskLockTable,
       @JsonProperty("audit") String auditTable,
       @JsonProperty("supervisors") String supervisorTable,
-      @JsonProperty("segmentVersions") String segmentVersionsTable
+      @JsonProperty("upgradeSegments") String upgradeSegmentsTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
     this.dataSourceTable = makeTableName(dataSourceTable, "dataSource");
     this.pendingSegmentsTable = makeTableName(pendingSegmentsTable, "pendingSegments");
     this.segmentsTable = makeTableName(segmentsTable, "segments");
-    this.segmentVersionsTable = makeTableName(segmentVersionsTable, "segmentVersions");
+    this.upgradeSegmentsTable = makeTableName(upgradeSegmentsTable, "upgradeSegments");
     this.rulesTable = makeTableName(rulesTable, "rules");
     this.configTable = makeTableName(configTable, "config");
 
@@ -147,9 +147,9 @@ public class MetadataStorageTablesConfig
     return segmentsTable;
   }
 
-  public String getSegmentVersionsTable()
+  public String getUpgradeSegmentsTable()
   {
-    return segmentVersionsTable;
+    return upgradeSegmentsTable;
   }
 
   public String getRulesTable()

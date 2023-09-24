@@ -127,7 +127,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     connector.createDataSourceTable();
     connector.createPendingSegmentsTable();
     connector.createSegmentTable();
-    connector.createSegmentVersionTable();
+    connector.createUpgradeSegmentsTable();
   }
 
   @Override
@@ -455,7 +455,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     try {
       return connector.retryTransaction(
           (handle, transactionStatus) -> {
-            insertSegmentLockVersions(handle, appendSegmentToReplaceLock);
+            insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
             return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
           },
           3,
@@ -1834,10 +1834,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Inserts entries into the segment lock version table in batches of size
+   * Inserts entries into the upgrade_segments table in batches of size
    * {@link #MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}.
    */
-  private void insertSegmentLockVersions(
+  private void insertIntoUpgradeSegmentsTable(
       Handle handle,
       Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
   )
@@ -1850,7 +1850,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         StringUtils.format(
             "INSERT INTO %1$s (task_id, segment_id, lock_version)"
             + " VALUES (:task_id, :segment_id, :lock_version)",
-            dbTables.getSegmentVersionsTable()
+            dbTables.getUpgradeSegmentsTable()
         )
     );
 
@@ -1877,7 +1877,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
       if (failedInserts.size() > 0) {
         throw new ISE(
-            "Failed to insert lock versions in DB: %s",
+            "Failed to insert upgrade segments in DB: %s",
             SegmentUtils.commaSeparatedIdentifiers(failedInserts)
         );
       }
@@ -1936,7 +1936,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final String sql = StringUtils.format(
         "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
-        dbTables.getSegmentVersionsTable()
+        dbTables.getUpgradeSegmentsTable()
     );
 
     ResultIterator<Pair<String, String>> resultIterator = handle
