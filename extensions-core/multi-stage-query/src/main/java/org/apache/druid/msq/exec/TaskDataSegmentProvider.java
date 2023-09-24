@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -165,25 +166,29 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   }
 
   @Override
-  public Function<Query<Object>, ResourceHolder<Sequence<Object>>> fetchLoadedSegment(
+  public <ReturnType, QueryReturn> TriFunction<Query<QueryReturn>, Function<Sequence<QueryReturn>, Sequence<ReturnType>>, Closer, Sequence<ReturnType>> fetchLoadedSegment(
       RichSegmentDescriptor segmentDescriptor,
       String dataSource,
       ChannelCounters channelCounters
   )
   {
-    return query -> fetchServedSegmentInternal(
+    return (query, mappingFunction, closer) -> fetchServedSegmentInternal(
         segmentDescriptor,
         dataSource,
         channelCounters,
-        query
+        query,
+        mappingFunction,
+        closer
     );
   }
 
-  private <T> ResourceHolder<Sequence<T>> fetchServedSegmentInternal(
+  private <ReturnType, QueryReturn> Sequence<ReturnType> fetchServedSegmentInternal(
       RichSegmentDescriptor segmentDescriptor,
       String dataSource,
       ChannelCounters channelCounters,
-      Query<T> query
+      Query<QueryReturn> query,
+      Function<Sequence<QueryReturn>, Sequence<ReturnType>> mappingFunction,
+      Closer closer
   )
   {
     query = query.withDataSource(new TableDataSource(dataSource));
@@ -192,14 +197,23 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
         ImmutableList.of(segmentDescriptor)
     );
 
-    DataServerClient<T> dataServerClient = new DataServerClient<>(
+    DataServerClient<QueryReturn> dataServerClient = new DataServerClient<>(
         serviceClientFactory,
         new FixedSetServiceLocator(segmentDescriptor.getServers()),
         objectMapper,
         smileMapper
     );
     DefaultResponseContext responseContext = new DefaultResponseContext();
-    return dataServerClient.run(query, responseContext);
+    ResourceHolder<Sequence<QueryReturn>> clientResponseResourceHolder = dataServerClient.run(query, responseContext);
+    closer.register(clientResponseResourceHolder);
+
+    Sequence<QueryReturn> queryReturnSequence = clientResponseResourceHolder.get();
+    Sequence<ReturnType> parsedResponse = mappingFunction.apply(queryReturnSequence);
+
+    return parsedResponse.map(row -> {
+      channelCounters.incrementRowCount();
+      return row;
+    });
   }
 
   private static class SegmentHolder implements Supplier<ResourceHolder<Segment>>

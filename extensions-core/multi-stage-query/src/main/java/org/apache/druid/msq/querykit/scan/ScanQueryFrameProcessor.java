@@ -162,21 +162,24 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     closer.close();
   }
 
+  private static Sequence<Object[]> parseFunction(Object o) {
+    Sequence<ScanResultValue> inputSequence = (Sequence<ScanResultValue>) o;
+    return inputSequence.flatMap(resultRow -> {
+      ScanResultValue scanResultValue = resultRow;
+      List<List<Object>> events = (List<List<Object>>) scanResultValue.getEvents();
+      return Sequences.simple(events);
+    }).map(List::toArray);
+  }
+
   @Override
   protected ReturnOrAwait<Long> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      final ResourceHolder<Sequence> resourceHolder = closer.register(segment.getServedSegmentFromServer(query));
-      Sequence<ScanResultValue> sequence = resourceHolder.get();
+      final Sequence<Object[]> sequence = segment.getServedSegmentFromServer(query, ScanQueryFrameProcessor::parseFunction, closer);
 
-      Sequence<Object[]> parsedSequence = sequence.flatMap(resultRow -> {
-        ScanResultValue scanResultValue = resultRow;
-        List<List<Object>> events = (List<List<Object>>) scanResultValue.getEvents();
-        return Sequences.simple(events);
-      }).map(List::toArray);
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
       RowBasedCursor<Object[]> cursorFromIterable = IterableRowsCursorHelper.getCursorFromSequence(
-          parsedSequence,
+          sequence,
           rowSignature
       );
 

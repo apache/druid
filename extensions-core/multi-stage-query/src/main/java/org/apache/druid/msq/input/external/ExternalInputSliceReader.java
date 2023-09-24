@@ -159,7 +159,7 @@ public class ExternalInputSliceReader implements InputSliceReader
           );
           return new SegmentWithDescriptor(
               () -> ResourceHolder.fromCloseable(segment),
-              query -> {
+              (query, function, closer) -> {
                 throw new AssertionError("Should not be called");
               },
               segmentId.toDescriptor()

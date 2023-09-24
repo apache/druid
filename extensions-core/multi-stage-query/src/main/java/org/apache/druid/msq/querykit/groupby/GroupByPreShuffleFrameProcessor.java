@@ -55,6 +55,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
+import java.util.function.Function;
 
 /**
  * A {@link FrameProcessor} that reads one {@link Frame} at a time from a particular segment, writes them
@@ -112,11 +113,9 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
-      ResourceHolder<Sequence> servedSegmentFromServer = closer.register(
-          segment.getServedSegmentFromServer(prepareGroupByQuery(query))
-      );
-      Sequence<ResultRow> rowSequence = servedSegmentFromServer.get();
-      resultYielder = Yielders.each(rowSequence);
+      Sequence<ResultRow> servedSegmentFromServer =
+          segment.getServedSegmentFromServer(prepareGroupByQuery(query), Function.identity(), closer);
+      resultYielder = Yielders.each(servedSegmentFromServer);
     }
 
     populateFrameWriterAndFlushIfNeeded();

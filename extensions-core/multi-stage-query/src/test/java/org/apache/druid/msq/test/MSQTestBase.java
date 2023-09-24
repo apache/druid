@@ -36,6 +36,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
@@ -432,7 +433,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   }
 
                   @Override
-                  public Function<Query<Object>, ResourceHolder<Sequence<Object>>> fetchLoadedSegment(
+                  public <ReturnType, QueryReturn> TriFunction<Query<QueryReturn>, Function<Sequence<QueryReturn>, Sequence<ReturnType>>, Closer, Sequence<ReturnType>> fetchLoadedSegment(
                       RichSegmentDescriptor segmentDescriptor,
                       String dataSource,
                       ChannelCounters channelCounters

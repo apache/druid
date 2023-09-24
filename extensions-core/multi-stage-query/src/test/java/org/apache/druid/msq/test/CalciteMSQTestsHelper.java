@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -179,7 +180,7 @@ public class CalciteMSQTestsHelper
                   }
 
                   @Override
-                  public Function<Query<Object>, ResourceHolder<Sequence<Object>>> fetchLoadedSegment(
+                  public <ReturnType, QueryReturn> TriFunction<Query<QueryReturn>, Function<Sequence<QueryReturn>, Sequence<ReturnType>>, Closer, Sequence<ReturnType>> fetchLoadedSegment(
                       RichSegmentDescriptor richSegmentDescriptor,
                       String dataSource,
                       ChannelCounters channelCounters

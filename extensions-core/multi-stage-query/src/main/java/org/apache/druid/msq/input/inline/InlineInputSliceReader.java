@@ -74,7 +74,7 @@ public class InlineInputSliceReader implements InputSliceReader
             segment -> ReadableInput.segment(
                 new SegmentWithDescriptor(
                     () -> ResourceHolder.fromCloseable(segment),
-                    query -> {
+                    (query, function, closer) -> {
                       throw new AssertionError("Should not be called");
                     },
                     DUMMY_SEGMENT_DESCRIPTOR

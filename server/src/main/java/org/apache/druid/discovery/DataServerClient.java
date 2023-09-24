@@ -92,7 +92,7 @@ public class DataServerClient<T>
 
     Future<InputStream> resultStreamFuture;
     try {
-      resultStreamFuture = Futures.immediateFuture(serviceClient.request(
+      resultStreamFuture = Futures.immediateFuture(serviceClient.request( //TODO: not immediate?
           new RequestBuilder(HttpMethod.POST, basePath)
               .smileContent(smileMapper, query),
           new DataServerResponseHandler(query, context, smileMapper)

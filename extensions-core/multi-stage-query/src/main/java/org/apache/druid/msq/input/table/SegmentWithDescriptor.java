@@ -20,8 +20,10 @@
 package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
@@ -36,7 +38,7 @@ import java.util.function.Supplier;
 public class SegmentWithDescriptor
 {
   private final Supplier<? extends ResourceHolder<Segment>> segmentSupplier;
-  private final Function<Query<Object>, ResourceHolder<Sequence<Object>>> servedSegmentRowsFunction;
+  private final TriFunction<Query<Object>, Function<Sequence<Object>, Sequence<Object>>, Closer, Sequence<Object>> servedSegmentRowsFunction;
   private final SegmentDescriptor descriptor;
 
   /**
@@ -50,7 +52,7 @@ public class SegmentWithDescriptor
    */
   public SegmentWithDescriptor(
       final Supplier<? extends ResourceHolder<Segment>> segmentSupplier,
-      final Function<Query<Object>, ResourceHolder<Sequence<Object>>> servedSegmentRowsFunction,
+      final TriFunction<Query<Object>, Function<Sequence<Object>, Sequence<Object>>, Closer, Sequence<Object>> servedSegmentRowsFunction,
       final SegmentDescriptor descriptor
   )
   {
@@ -72,10 +74,9 @@ public class SegmentWithDescriptor
   {
     return segmentSupplier.get();
   }
-
-  public ResourceHolder<Sequence> getServedSegmentFromServer(Query query)
+  public Sequence getServedSegmentFromServer(Query query, Function mappingFunction, Closer closer)
   {
-    return servedSegmentRowsFunction.apply(query);
+    return servedSegmentRowsFunction.apply(query, mappingFunction, closer);
   }
   /**
    * The segment descriptor associated with this physical segment.
